@@ -1,14 +1,26 @@
 @echo off
-echo --- Zapochvam kachvaneto v GitHub ---
+chcp 65001 >nul
 
-:: 1. Dobavyane na promhenite
+echo --- 1. Aktualizacia na GitHub ---
+:: Насилствено се връщаме на main, за да избегнем detached HEAD
+git checkout main
+
+:: Указваме точно откъде и кой клон да се издърпа
+git pull origin main
+
 git add .
+:: Ако няма нищо за качване, Git ще прескочи commit-а без грешка
+git commit -m "Auto-update: %date% %time%"
 
-:: 2. Commit s tekushtata data i chas (avtomatichno)
-git commit -m "Auto-upload: %date% %time%"
+:: Качваме директно в main в GitHub
+git push origin main
 
-:: 3. Izprashtane kum servera
-git push
+echo.
+echo --- 2. Deployment vav Firebase ---
+:: Използваме директния път до командата
+call firebase deploy --only hosting
 
-echo --- Gotovo! ---
+echo.
+echo.
+echo --- It's OK ---
 pause
