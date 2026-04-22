@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Work Sans', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 sticky top-0 z-10 border-b border-primary/10">
+<div class="flex size-10 shrink-0 items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</div>
+<h2 class="text-lg font-bold flex-1 text-center pr-10">Profile / Профил</h2>
+</div>
+<main class="flex-1 overflow-y-auto no-scrollbar pb-24">
+<section class="flex flex-col items-center py-8 px-4 bg-primary/5">
+<div class="relative">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 border-4 border-primary" data-alt="Professional portrait of a male chef smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB0kYtgPApD2lQ3iGPzDa2cCvwEKxeayiSBrQqSR100TjiHV7zdm9g2tkpKq-xGmFedln9YUMZSMJFLc1L0GXfw--g9eGH4goVs5Ga4ZUYc8YxdZLr9nr7wfgQtgE6gocQuFz1tqXkkgMGn6Shi6HJ5Qsg9fPdaBxhKrLmcsE50MSlJmhZljvri8al9_nxwJptZtE40O2WWnig60n9IceQbZBfvAugCRIocAgFB7RAs2fKAAx9tGifcb_Mhe5m7YJEm62fORDGuJZo");'>
+</div>
+<div class="absolute bottom-1 right-1 bg-primary text-background-dark rounded-full p-1.5 border-2 border-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-sm font-bold">photo_camera</span>
+</div>
+</div>
+<div class="mt-4 text-center">
+<h1 class="text-2xl font-bold tracking-tight">Ivan Petrov</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm">ivan.petrov@example.com</p>
+</div>
+<div class="mt-6">
+<button class="flex items-center gap-2 bg-primary hover:bg-primary/90 text-background-dark px-6 py-2.5 rounded-full text-sm font-bold transition-colors">
+<span class="material-symbols-outlined text-lg">edit</span>
+                    Edit Profile / Редактирай профила
+                </button>
+</div>
+</section>
+<section class="mt-6 px-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">Preferences / Предпочитания</h3>
+<div class="bg-primary/5 rounded-xl overflow-hidden divide-y divide-primary/10">
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">language</span>
+<div>
+<p class="text-sm font-medium">Language / Език</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Bulgarian &amp; English</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">dark_mode</span>
+<div>
+<p class="text-sm font-medium">Theme Mode / Тема</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Dark / Тъмна</p>
+</div>
+</div>
+<div class="w-12 h-6 bg-primary rounded-full relative">
+<div class="absolute right-1 top-1 w-4 h-4 bg-background-dark rounded-full"></div>
+</div>
+</div>
+</div>
+</section>
+<section class="mt-6 px-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">Activity / Дейност</h3>
+<div class="bg-primary/5 rounded-xl overflow-hidden divide-y divide-primary/10">
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">restaurant_menu</span>
+<p class="text-sm font-medium">My Recipes / Моите рецепти</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">reviews</span>
+<p class="text-sm font-medium">My Reviews / Моите ревюта</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+</div>
+</section>
+<section class="mt-6 px-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">App Settings / Настройки</h3>
+<div class="bg-primary/5 rounded-xl overflow-hidden divide-y divide-primary/10">
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">notifications</span>
+<p class="text-sm font-medium">Notifications / Известия</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">security</span>
+<p class="text-sm font-medium">Privacy &amp; Security / Поверителност</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+</div>
+</section>
+<section class="mt-6 px-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">Support / Поддръжка</h3>
+<div class="bg-primary/5 rounded-xl overflow-hidden divide-y divide-primary/10">
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">help</span>
+<p class="text-sm font-medium">Help Center / Помощен център</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/10 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">mail</span>
+<p class="text-sm font-medium">Contact Us / Свържете се с нас</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+</div>
+</section>
+<section class="mt-8 px-4 pb-8">
+<button class="w-full flex items-center justify-center gap-2 border border-red-500/50 text-red-500 p-4 rounded-xl hover:bg-red-500/10 transition-colors font-bold">
+<span class="material-symbols-outlined">logout</span>
+                Log Out / Изход
+            </button>
+<p class="text-center text-[10px] text-slate-500 mt-6 uppercase tracking-widest">The Best Idea Eatery v2.4.0</p>
+</section>
+</main>
+<nav class="fixed bottom-0 w-full border-t border-primary/10 bg-background-light dark:bg-background-dark px-4 pb-6 pt-2 z-20">
+<div class="flex items-center justify-between max-w-lg mx-auto">
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 flex-1" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 flex-1" href="#">
+<span class="material-symbols-outlined">restaurant</span>
+<span class="text-[10px] font-medium">Recipes</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 flex-1" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+<span class="text-[10px] font-medium">Saved</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary flex-1" href="#">
+<span class="material-symbols-outlined fill-1">person</span>
+<span class="text-[10px] font-bold">Profile</span>
+</a>
+</div>
+</nav>
+</body></html>

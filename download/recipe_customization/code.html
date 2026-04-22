@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#d4af35",
+                "background-light": "#f8f6f6",
+                "background-dark": "#1a1614",
+              },
+              fontFamily: {
+                "display": ["Work Sans", "Public Sans", "sans-serif"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<title>Recipe Customization - The Best Idea Eatery</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden max-w-md mx-auto shadow-2xl">
+<!-- Top App Bar -->
+<div class="flex items-center p-4 pb-2 justify-between sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+<div class="text-primary flex size-10 shrink-0 items-center justify-center cursor-pointer hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<div class="flex flex-col items-center flex-1">
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">Customize Recipe</h2>
+<span class="text-[10px] uppercase tracking-widest text-primary font-semibold">Персонализиране на рецепта</span>
+</div>
+<div class="size-10"></div> <!-- Spacer for symmetry -->
+</div>
+<!-- Hero Section -->
+<div class="@container">
+<div class="px-4 py-3">
+<div class="bg-cover bg-center flex flex-col justify-end overflow-hidden rounded-xl min-h-[240px] relative group" data-alt="Gourmet plated filet mignon with asparagus and sauce" style='background-image: linear-gradient(0deg, rgba(26, 22, 20, 0.9) 0%, rgba(26, 22, 20, 0.2) 50%, rgba(26, 22, 20, 0) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuA2GCI3S41Vqktq1hSjC1wzHrPk4supVxsPxudivhVwy0MEg63gBNYWfXKS_VfLw3qJFYdA6Fa-fGzLwKIu-p-mk8hV3AYU6oq2dbKdmaTlOpT8_qJOa2JIE-kURIl8p4xb4xIq-s6OcpmxWaqYrHKLlHDkfSaD6C3LdaSKIrMMR_COAf3r_QgfnuJaolezKOT90briY3K0yOAfGbMHcyqIzi2N9LtzHBj7o0dKe2kfs4SUWz4P63o9Kaweolu-2DwpMZHMbDzw-qQ");'>
+<div class="flex flex-col p-4">
+<p class="text-white text-[28px] font-bold leading-tight">Filet Mignon</p>
+<p class="text-primary text-xs font-medium uppercase tracking-wider">The Best Idea Eatery Signature</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Servings Adjuster -->
+<div class="px-4 py-6 border-b border-primary/10">
+<div class="flex justify-between items-end mb-4">
+<div>
+<h3 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight">Servings</h3>
+<p class="text-primary text-xs uppercase tracking-wide">Порции</p>
+</div>
+<div class="flex items-center gap-4 bg-primary/10 rounded-full p-1 border border-primary/20">
+<button class="size-8 flex items-center justify-center rounded-full bg-background-dark text-primary hover:bg-primary hover:text-background-dark transition-all">
+<span class="material-symbols-outlined text-sm">remove</span>
+</button>
+<span class="text-lg font-bold w-6 text-center">2</span>
+<button class="size-8 flex items-center justify-center rounded-full bg-primary text-background-dark hover:scale-105 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+</div>
+</div>
+<div class="relative flex w-full flex-col items-start justify-between gap-3">
+<div class="flex h-1.5 w-full items-center gap-4">
+<div class="flex h-1.5 flex-1 rounded-full bg-primary/20">
+<div class="h-full w-[40%] rounded-full bg-primary relative">
+<div class="absolute -right-2 -top-1.5 size-4 rounded-full bg-primary ring-4 ring-background-dark shadow-lg"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Dietary Toggles -->
+<div class="px-4 py-6 border-b border-primary/10">
+<div class="flex flex-col mb-4">
+<h3 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight">Preferences</h3>
+<p class="text-primary text-xs uppercase tracking-wide">Предпочитания</p>
+</div>
+<div class="flex flex-wrap gap-3">
+<label class="flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors">
+<input class="hidden peer" type="checkbox"/>
+<span class="material-symbols-outlined text-primary text-sm">water_drop</span>
+<span class="text-sm font-medium">Low Sodium / Малко сол</span>
+</label>
+<label class="flex items-center gap-2 px-4 py-2 rounded-full border border-primary bg-primary/20 cursor-pointer">
+<input checked="" class="hidden peer" type="checkbox"/>
+<span class="material-symbols-outlined text-primary text-sm">fitness_center</span>
+<span class="text-sm font-medium">Extra Protein / Повече протеин</span>
+</label>
+</div>
+</div>
+<!-- Ingredients List with Swap -->
+<div class="px-4 py-6 mb-24">
+<div class="flex flex-col mb-6">
+<h3 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight">Ingredients</h3>
+<p class="text-primary text-xs uppercase tracking-wide">Съставки</p>
+</div>
+<div class="space-y-4">
+<!-- Ingredient Item 1 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg overflow-hidden flex-shrink-0" data-alt="Raw filet mignon steak">
+<img alt="Steak" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDchCTii4YBNZL7FRpT38vbQ9H7HEYyZ3jL49vZIk3pzugd9JiWWi3-GAibJ2CS5TB7yzvPE6l9kzx4y7E5b5VAJufzOchfv3C9l9bnoKfOxnypMM2dIrCrkZC4h8mSRit0b5_twmFm3Vl4VhIMKNziv7UOstpUkAcLCx6nTy5JnFy6ygoTvW37rvpDapBbIfHdegPUpZqkgbuZUmZmMmkFS25ZuSE_zaYyjVgawwNNwulleErHNuLYRXakKzPmA_kQbd61rA4k2s"/>
+</div>
+<div>
+<p class="font-bold text-sm">Center-Cut Filet</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">2 x 200g</p>
+</div>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/40 text-xs font-bold text-primary uppercase hover:bg-primary hover:text-background-dark transition-all">
+<span class="material-symbols-outlined text-sm">sync</span>
+                        Swap
+                    </button>
+</div>
+<!-- Ingredient Item 2 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg overflow-hidden flex-shrink-0" data-alt="Fresh green asparagus">
+<img alt="Asparagus" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDg_I1zsto9MP_pohxgBQM8QYsO9Nlmorh6H-Ss-48daBqy0w8OhaFcXVEFuymEcRiZpCrJFUYALf8oFky1cVxMEwpuSFLs3NiHwwfUrLKUtTBWj7QvSQ4C9oojkingJqZ6Uu-Z0rr31-HeKaKC9kZKTwBOzIo-2J2wnkn-uNtl3TBYUNt48HlasARI3_mn8XtKomIHMiELGuZqaqdSJV_O1qfJC2TurRvqRT2JMwo-HynjQQQBDHbVn1iXXThJtWekN_flsynPS5I"/>
+</div>
+<div>
+<p class="font-bold text-sm">Asparagus / Аспержи</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Freshly trimmed</p>
+</div>
+</div>
+<div class="flex flex-col gap-1 items-end">
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-background-dark text-xs font-bold uppercase hover:scale-105 transition-all">
+<span class="material-symbols-outlined text-sm">sync</span>
+                            Swap / Замени
+                        </button>
+<span class="text-[10px] text-primary">Replace with Broccoli?</span>
+</div>
+</div>
+<!-- Ingredient Item 3 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg overflow-hidden flex-shrink-0" data-alt="Garlic herb butter melting">
+<img alt="Butter" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDBRpGH3lorn_1vqYWntO-jSNJvfLmTDJhE1nL4tMhA6Pzp3jpgtXIfrbsA1ASeS8lqULrD4CsDau_wagPfLmgRo8p19yZCAZk6ArTZzvpKTRZdo7GtDy-cfyBZtjJUti32-bTKzU3GOr9tv9HVtPmtXHD0I5JfUZN6zYXlrL8MaURxRFfV4UBmTST4L3lXxBXxKnYhYn2onDQOBarSnoZey69daV6iEuMRjBAJhkf-oijAS79hOfdqhMgm82kQFTOfdpDjHm7Nuc"/>
+</div>
+<div>
+<p class="font-bold text-sm">Herb Butter / Билково масло</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Artisan crafted</p>
+</div>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/40 text-xs font-bold text-primary uppercase hover:bg-primary hover:text-background-dark transition-all">
+<span class="material-symbols-outlined text-sm">sync</span>
+                        Swap
+                    </button>
+</div>
+</div>
+</div>
+<!-- Call to Action Footer -->
+<div class="fixed bottom-0 left-0 right-0 p-4 max-w-md mx-auto bg-gradient-to-t from-background-dark via-background-dark to-transparent pt-10">
+<button class="w-full bg-primary text-background-dark font-bold py-4 rounded-xl flex flex-col items-center justify-center shadow-[0_0_20px_rgba(212,175,53,0.3)] hover:brightness-110 active:scale-[0.98] transition-all">
+<span class="text-base">Save Changes</span>
+<span class="text-[10px] uppercase tracking-widest opacity-80">Запази промените</span>
+</button>
+</div>
+</div>
+</body></html>

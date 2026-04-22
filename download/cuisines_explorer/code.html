@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cuisines Explorer - The Best Idea Eatery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Header -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 sticky top-0 z-10 border-b border-primary/10">
+<button class="text-primary flex size-10 shrink-0 items-center justify-center hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex-1 text-center">
+<h1 class="text-xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">
+                    Cuisines Explorer
+                </h1>
+<p class="text-xs font-medium text-primary/80 uppercase tracking-widest">
+                    Разглеждане по кухни
+                </p>
+</div>
+<div class="size-10"></div> <!-- Spacer for balance -->
+</header>
+<!-- Search Bar -->
+<div class="px-4 py-6">
+<label class="flex flex-col w-full group">
+<div class="flex w-full items-stretch rounded-xl h-14 bg-white dark:bg-primary/5 border border-slate-200 dark:border-primary/20 focus-within:border-primary transition-all shadow-sm">
+<div class="text-primary/60 flex items-center justify-center pl-4">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:outline-0 focus:ring-0 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-base font-normal px-4" placeholder="Search cuisines... / Търсене..."/>
+</div>
+</label>
+</div>
+<!-- Section Title -->
+<div class="px-4 mb-4">
+<h2 class="text-sm font-semibold text-primary uppercase tracking-widest flex items-center gap-2">
+<span class="h-px w-8 bg-primary"></span>
+                Global Flavors / Световни вкусове
+            </h2>
+</div>
+<!-- Cuisine Grid -->
+<main class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 pb-24">
+<!-- Italian -->
+<div class="relative overflow-hidden rounded-xl aspect-[16/9] group cursor-pointer">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Authentic Italian pasta with fresh basil and tomatoes" style="background-image: linear-gradient(to top, rgba(32, 29, 18, 0.9) 0%, rgba(32, 29, 18, 0.2) 60%, rgba(32, 29, 18, 0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuDYmI3VGFEZHjmjpX67XUqUR_8GOROOkahH0ud5hHIzQe-kO1ix0eej5SWo4Uo2sE1aRbTKpSnB8G9hAEMoJ-llCL9LAMAy1s5LUgpnFM3TQMcLYGNDRjVNM5TOlY1OEr4Y0nPBN0LbKpr990rci5wnF5tBe-qFJGR-x7HgLdgU9Q6RjdzVmefwQ1NgNUybnx2psXO5PpnhhruFW-_VdGXiM5o3lN9R7snrooaaCe4FHo0AqwxpQVSPsRKZyZVEy3vOsZJS0mUgpPc');">
+</div>
+<div class="absolute bottom-0 left-0 p-5 w-full">
+<div class="flex justify-between items-end">
+<div>
+<h3 class="text-white text-xl font-bold">Italian</h3>
+<p class="text-primary text-sm font-medium">Италианска</p>
+</div>
+<span class="bg-primary/20 backdrop-blur-md text-primary text-xs font-bold px-3 py-1 rounded-full border border-primary/30">
+                            42 Recipes
+                        </span>
+</div>
+</div>
+</div>
+<!-- French -->
+<div class="relative overflow-hidden rounded-xl aspect-[16/9] group cursor-pointer">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Exquisite French pastries and artisanal bread" style="background-image: linear-gradient(to top, rgba(32, 29, 18, 0.9) 0%, rgba(32, 29, 18, 0.2) 60%, rgba(32, 29, 18, 0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuCG1oEsq5r1uBFyjNQ7ziELECTQy87PHRLvf2w_j7PU80zzYLPvazx4ndd8fBVXzbwqNdmIuPVWTVhGF8l-BXYZImtR-Kzakz1_qUZSm9m_PJO9TzMFTtPD76fY8dVbNN6RYVBlFcEOa_zPvdommeZLW_-7sitNg22SssA5HI0Haptbq5ET_ub-nhIxlxuEn2LddooiKwVOiTYy6v7Qbu9ngrMq_8c6YmTWB9qY_9y4aahn1dYhAsx1GuTra2D9LFVIJqqabSTthhY');">
+</div>
+<div class="absolute bottom-0 left-0 p-5 w-full">
+<div class="flex justify-between items-end">
+<div>
+<h3 class="text-white text-xl font-bold">French</h3>
+<p class="text-primary text-sm font-medium">Френска</p>
+</div>
+<span class="bg-primary/20 backdrop-blur-md text-primary text-xs font-bold px-3 py-1 rounded-full border border-primary/30">
+                            28 Recipes
+                        </span>
+</div>
+</div>
+</div>
+<!-- Asian -->
+<div class="relative overflow-hidden rounded-xl aspect-[16/9] group cursor-pointer">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Assorted fresh sushi and Asian fusion dishes" style="background-image: linear-gradient(to top, rgba(32, 29, 18, 0.9) 0%, rgba(32, 29, 18, 0.2) 60%, rgba(32, 29, 18, 0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuBpEV9I2E6NydT3HJN77I3CteAHU1xjzMvj65vT-itvVyKCFMs2Fpaar0xSB1wG6mKAROwkj2_swA6vWqtSwYX9dJ8DbxmqoBAlKuVDV9dc_Wn1oedYf0gWBa5MIKVqtf5xRXRbtRiGtIpx1beoM013d05xq7Rvjp8NsqwX2F13o6I_qbTNoccsxo48QTlmxguvs_A2iDqXn8Vs4Gl80RBJEd-D6hdwybpDLLZlvC5N-qkskrCyC_sniUCYm1BxZc6EeHRW2rvDnaQ');">
+</div>
+<div class="absolute bottom-0 left-0 p-5 w-full">
+<div class="flex justify-between items-end">
+<div>
+<h3 class="text-white text-xl font-bold">Asian</h3>
+<p class="text-primary text-sm font-medium">Азиатска</p>
+</div>
+<span class="bg-primary/20 backdrop-blur-md text-primary text-xs font-bold px-3 py-1 rounded-full border border-primary/30">
+                            56 Recipes
+                        </span>
+</div>
+</div>
+</div>
+<!-- Mediterranean -->
+<div class="relative overflow-hidden rounded-xl aspect-[16/9] group cursor-pointer">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Mediterranean salad with feta, olives, and oil" style="background-image: linear-gradient(to top, rgba(32, 29, 18, 0.9) 0%, rgba(32, 29, 18, 0.2) 60%, rgba(32, 29, 18, 0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuAbsmRy4BU5vSvsxrMmUtkGdg55dKfW4UFG1jV24vKr2KoaDaG6JqtWRgAAqX55eaZSPdBZyKywiTHsmET2UPGaTyfoAENGsxHAktGVT31JLpiAhjAtyWJAworV9d432ESq3hQRxSXQo2x47AY6VKwd8VR7eQpQTRKOsKhKOYXlT1ZTlVxZ4vj0oPqcad-ek7KZ02NodZVVl6RWjripJMzVUZDRAIcxbNMSv1NzMtfN9KBP6YqdyECtLlkJUiiwcROM56fhpn5MvJw');">
+</div>
+<div class="absolute bottom-0 left-0 p-5 w-full">
+<div class="flex justify-between items-end">
+<div>
+<h3 class="text-white text-xl font-bold">Mediterranean</h3>
+<p class="text-primary text-sm font-medium">Средиземноморска</p>
+</div>
+<span class="bg-primary/20 backdrop-blur-md text-primary text-xs font-bold px-3 py-1 rounded-full border border-primary/30">
+                            35 Recipes
+                        </span>
+</div>
+</div>
+</div>
+<!-- Balkan -->
+<div class="relative overflow-hidden rounded-xl aspect-[16/9] group cursor-pointer">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Traditional Balkan grill and roasted vegetables" style="background-image: linear-gradient(to top, rgba(32, 29, 18, 0.9) 0%, rgba(32, 29, 18, 0.2) 60%, rgba(32, 29, 18, 0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuBARJUeARqnlVXwvJhLCG8hzIvvGNzBkkuhvHQbjFO14qLGzKaJU7rwODDC9IL8uvGQeAGm5R206ngUAAACxN8GDbUjsOHV7rLcgRZrWVHFba6H57oetO2iglnJEEuGNFgOMscLfoi9G4wdnRTPh7LOZH48SPlPjfMXfCtII6G9V1stpyV6OORuSlT9usIDTSaFD6cN_p7C53zqGroiJvfbD3-rlwpFev39o-hejAKwLY2eZSN17JR3glQKId9hrKUbjbxlq89fUEg');">
+</div>
+<div class="absolute bottom-0 left-0 p-5 w-full">
+<div class="flex justify-between items-end">
+<div>
+<h3 class="text-white text-xl font-bold">Balkan</h3>
+<p class="text-primary text-sm font-medium">Балканска</p>
+</div>
+<span class="bg-primary/20 backdrop-blur-md text-primary text-xs font-bold px-3 py-1 rounded-full border border-primary/30">
+                            19 Recipes
+                        </span>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full bg-white/80 dark:bg-background-dark/90 backdrop-blur-xl border-t border-primary/20 px-2 pb-safe-area-inset-bottom">
+<div class="flex h-16 items-center justify-around max-w-lg mx-auto">
+<a class="flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="text-[10px] font-medium uppercase">Recipes</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-[10px] font-medium uppercase">Menu</span>
+</a>
+<a class="active-nav flex flex-col items-center justify-center gap-0.5 text-primary" href="#">
+<span class="material-symbols-outlined">public</span>
+<span class="text-[10px] font-bold uppercase">Cuisines</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">article</span>
+<span class="text-[10px] font-medium uppercase">Blog</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium uppercase">Login</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

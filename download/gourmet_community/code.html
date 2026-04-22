@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Best Idea Eatery - Gourmet Community</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#1a1812",
+                        "surface-dark": "#2a261a",
+                        "border-dark": "#3d3829",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Work Sans', sans-serif;
+        }
+        .glass-effect {
+            background: rgba(26, 24, 18, 0.8);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto border-x border-border-dark shadow-2xl overflow-x-hidden">
+<header class="sticky top-0 z-50 glass-effect border-b border-border-dark">
+<div class="flex items-center p-4 justify-between">
+<div class="text-primary flex size-10 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined text-3xl">restaurant_menu</span>
+</div>
+<div class="flex flex-col items-center">
+<h1 class="text-primary text-lg font-bold leading-tight tracking-wider uppercase">The Best Idea Eatery</h1>
+<span class="text-[10px] text-slate-400 tracking-widest uppercase">Gourmet Society / Гурме общество</span>
+</div>
+<div class="flex w-10 items-center justify-end">
+<button class="relative flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors p-2 text-slate-100">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 size-2 bg-primary rounded-full"></span>
+</button>
+</div>
+</div>
+<div class="px-4 pb-4">
+<label class="flex flex-col min-w-40 h-11 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-full bg-surface-dark border border-border-dark group focus-within:border-primary/50 transition-all">
+<div class="text-slate-400 flex items-center justify-center pl-4">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:ring-0 text-slate-100 placeholder:text-slate-500 px-3 text-sm font-normal" placeholder="Search chefs or dish styles / Търсене на готвачи или ястия"/>
+</div>
+</label>
+</div>
+</header>
+<main class="flex-1 pb-24">
+<section class="py-6 border-b border-border-dark/50">
+<div class="px-4 mb-4 flex justify-between items-end">
+<h2 class="text-slate-100 text-sm font-semibold uppercase tracking-widest">Top Chefs / Топ готвачи</h2>
+<span class="text-primary text-xs font-medium cursor-pointer">View All / Виж всички</span>
+</div>
+<div class="flex overflow-x-auto px-4 gap-5 no-scrollbar">
+<div class="flex flex-col items-center gap-2 shrink-0">
+<div class="size-16 p-0.5 rounded-full bg-gradient-to-tr from-primary to-amber-200">
+<div class="size-full bg-center bg-no-repeat bg-cover rounded-full border-2 border-background-dark" data-alt="Professional chef in a white uniform smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA0-SQd8sNhcIgVgA5Ht1qSirSlhcxcazdE3k-p5QRy5xhfIeaNH7U3Y62YI_f2kzhbLSx3ZwKKrU3CsuHkfTJOHpAv3r5VY12bGJ3c7ZupQjM9l11cwx-cr1zj0SxtdWHh019TdNdDFVopHY0bJNXxeU6DFfeP0GxrPffg3cfBf7NkOacdwCEu1PKB8KqdC1hKRvfqHCzWsKODGzxLQMmQ45KbRar6OyNglYVmYkJLXRlR3y04l-DEbxMxm16koc28ILP4ghuB1J4");'></div>
+</div>
+<p class="text-slate-300 text-[11px] font-medium">Chef Julian</p>
+</div>
+<div class="flex flex-col items-center gap-2 shrink-0 opacity-80">
+<div class="size-16 p-0.5 rounded-full border border-border-dark">
+<div class="size-full bg-center bg-no-repeat bg-cover rounded-full" data-alt="Female chef plating a gourmet dish" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDylzKza1Wf6viwffVG4T2WCPsQIuHSJ8iGpCkSRDLwZGHQ2jH731pZOt9495NbMo8VAXGbx1xXdSxuPT43cpbJMs_fDRAs5EYL_9h0UsZVN5abv9BYTs9dZS0FMvxbkmy8-yBcOQWNYEFKFHeTThFz7IWZ7_7OPwWsiGNjblt2MT7Pwp_kMo4aGbGdDgnuyDq_oPcRGLqRb8TwJpmU4KffNOuQi1Y-7hcaqTw2DiP4ZQpSkEGtfU_2ZrCmz96cTGX8VYYWELmb9A4");'></div>
+</div>
+<p class="text-slate-300 text-[11px] font-medium">Chef Maria</p>
+</div>
+<div class="flex flex-col items-center gap-2 shrink-0 opacity-80">
+<div class="size-16 p-0.5 rounded-full border border-border-dark">
+<div class="size-full bg-center bg-no-repeat bg-cover rounded-full" data-alt="Young male chef preparing pasta" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA6ysymp4kia4hFdWtWOD0y2mheEoMlNwJY32an6FLReMo6jnpeyTynmBsBqoKV0ddW2HNA5Xg-F98rdHCV7KX_fob9o8EJb2m8pHgARgpva1Q-4VWsvmGBDTU2I1TyTqcEDOIrgrtz5Uk7EuUwlnmczsXxB8x4oTOVJ2mxhNJceo9ojZw1HUqUAgUm_5-QjwPt3SB82MdvpFlYskl8RvN6wZ-xPdzjY2opcHU-qWI7VDRvfJW9awdtOtPmcdA5Wxd_QCCVQdanAOE");'></div>
+</div>
+<p class="text-slate-300 text-[11px] font-medium">Chef Ivan</p>
+</div>
+<div class="flex flex-col items-center gap-2 shrink-0 opacity-80">
+<div class="size-16 p-0.5 rounded-full border border-border-dark">
+<div class="size-full bg-center bg-no-repeat bg-cover rounded-full" data-alt="Pastry chef decorating a luxury cake" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBSas330jbNG7qsnYXMz5S6b7iUjedIZDBpIwh59Rmpbadhjr0VxbgbmIS2hr2-sJsg73fEyL2GS5qfOkmmG2phSjOvgZsj4inrcXANEep6fNdQZbsTtliM0AvzCtF0J5zAlmdTKiLKULZonqQNavDydREClHm3TQgXWVQJgraa5_3XdfOFRAggvNdUc1S3xcn7sGCHEeELv3b35_WIyypcwXjNaTy4-yRd9FeQhMvEdjJEdIcdr0zHCYLH1I4dnNipSFY7on--yYI");'></div>
+</div>
+<p class="text-slate-300 text-[11px] font-medium">Chef Elena</p>
+</div>
+<div class="flex flex-col items-center gap-2 shrink-0 opacity-80">
+<div class="size-16 p-0.5 rounded-full border border-border-dark">
+<div class="size-full bg-center bg-no-repeat bg-cover rounded-full" data-alt="Modern executive chef in kitchen" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB0TlteSAB5NucApKt7XW7x0EBV1KfufCDlublTmZxPtR99TY8GdpckI7BN58Fq0pp4uqLwTcGn3Zd5HWDVhJqv85o_S9yV_aOSCxZEKnMrlKaE3iWPlB0do1RV8_e0-yOVcg1LpIRjQJL9p-Zn9yPArDTD9cmsVcsmqg2_aDGm3Jv2IGpLamNzqUeXQOrLlARyCPBQe7NRMepP_wkoeB5ftKGywW-DEnSeGL-S2hvSweZME6rR7Zg18P0vZLwYFVqVBrPwoSZl8es");'></div>
+</div>
+<p class="text-slate-300 text-[11px] font-medium">Chef Stefan</p>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-8 py-6">
+<article class="flex flex-col gap-3">
+<div class="px-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-center bg-no-repeat bg-cover rounded-full border border-primary/30" data-alt="User profile picture of a food enthusiast" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCDYjzeAX0Bo7ctxjXLSwURH_kXgfmOM1YOtIVhPBHfMYAx_EiIK3pgwTTEHMUtYwQSeyWHXPbgN5lqaJ_79NWabwt0wxFvrKQi2_ualAyVeO7R2WkDscT7DcEembocFLkyPJ4j6IUlCWrfvDhfrJO07GwhAqdJHa9EOHAAKtK1bmWqkgjI_zXLElHZehxmL-HdriakRIt7nPZ7eW-Awsd0YXe3kSxReZGMBwYmtXkR5KjqvZ7abjxj8BElpxWjqnLdi99Y-W_6YZ4");'></div>
+<div>
+<h3 class="text-slate-100 text-sm font-bold">Sophia Rossi</h3>
+<p class="text-slate-500 text-[10px] uppercase tracking-tighter">Florence, Italy / Флоренция, Италия</p>
+</div>
+</div>
+<button class="text-slate-400"><span class="material-symbols-outlined">more_horiz</span></button>
+</div>
+<div class="relative w-full aspect-[4/5] bg-surface-dark overflow-hidden">
+<div class="absolute inset-0 bg-center bg-no-repeat bg-cover transition-transform duration-700 hover:scale-105" data-alt="Exquisite plate of wagyu beef steak with gold leaf" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBiqXyHH5Qf0VwdQW0RVFXQYqu5irEyDyPEC9_c23_5qVHlY-kJo7FHrBmwGHpCXPyKx4SibtDaW2C4kw6FzmK8i4Q3lP-LLkw6DkpzEDy3tIlCTRO3cw6PlWR6eyCuBgQfEnhscbxWgD5FzIrzSk4jEHAgbIPtvKhIucOl-un6IxDuPTFMEABKRxDx537aCpiwk4K1Npf6wKpTU9bQb0vsKvSLPpHScAfp5-EbvpJ9LIUGFCOt-NMnkY7uJ9s8gOdtC7dA3FeW2TM");'></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-primary/90 text-background-dark text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">Masterpiece / Шедьовър</span>
+</div>
+</div>
+<div class="px-4 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<button class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined fill-1">favorite</span>
+<span class="text-xs font-bold">1.2k</span>
+</button>
+<button class="flex items-center gap-1.5 text-slate-300">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="text-xs font-bold">48</span>
+</button>
+<button class="flex items-center gap-1.5 text-slate-300">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+<button class="text-primary/70">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+<div class="px-4">
+<h4 class="text-slate-100 text-base font-medium mb-1 tracking-tight">Hand-Cut Wagyu Tartare with Truffle</h4>
+<p class="text-slate-400 text-sm italic">Ръчно кълцан тартар от Уагю с трюфел</p>
+<p class="text-slate-500 text-xs mt-2 line-clamp-2">The richness of the marbled beef paired perfectly with the earthy notes of fresh black truffle. A culinary dream come true...</p>
+</div>
+</article>
+<article class="flex flex-col gap-3">
+<div class="px-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-center bg-no-repeat bg-cover rounded-full border border-primary/30" data-alt="Male user profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCmOnCVw9srSaMNb8Mrb4NWEXSQnmsQbsIDNUt2MiTyNUpuB3e-aRJV-UBUup-hB1p-GRxgD-UHZJFxqxoOz6bZMgnKLg5PbPH27DdOU8wBM3y-b0aUi6BSJKSLWl3ao9cPpt4z3YcNrz2u4wvR9e4NHK9vIfS4UUQgbRmWE6zFWXD04sFQIhwTzt1IU-RhDUT9s0IRZTT4tMwM1G05dkj3T-uoHA0ur3Wl6IpjbhadDNvZl8TcP9qdLTZN8pgx5sA5GeAwFOdeQXM");'></div>
+<div>
+<h3 class="text-slate-100 text-sm font-bold">Dimitar Petrov</h3>
+<p class="text-slate-500 text-[10px] uppercase tracking-tighter">Sofia, Bulgaria / София, България</p>
+</div>
+</div>
+<button class="text-slate-400"><span class="material-symbols-outlined">more_horiz</span></button>
+</div>
+<div class="relative w-full aspect-[4/5] bg-surface-dark overflow-hidden">
+<div class="absolute inset-0 bg-center bg-no-repeat bg-cover" data-alt="Modern interpretation of Bulgarian Shopska salad with foam" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDSBQJRlGfofazCfa5pIQ-3xAnIHg0_1vn4SWrNBho3l8ZI8V03HGiJzRba9erVkIe63MEyh6fUr3AnZ-2M5zS2f8CHo1VGAXI76oefRGHTCjv8o8YVgFbxwBQXa28q_ysT6XRFh_vhYf5vCoR0Ctqcp5OiffqGiI2iegiOD4-oOixOOkvpPvxq_1u5kpSDlmpI_bgXLhPVIxJV7JDudTz6Cewj9ZZRtCqouYhHNYg61IGa9D2yLMv9EAHWX38gddimwByB9KeYpDo");'></div>
+</div>
+<div class="px-4 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<button class="flex items-center gap-1.5 text-slate-300">
+<span class="material-symbols-outlined">favorite</span>
+<span class="text-xs font-bold">856</span>
+</button>
+<button class="flex items-center gap-1.5 text-slate-300">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="text-xs font-bold">12</span>
+</button>
+<button class="flex items-center gap-1.5 text-slate-300">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+<button class="text-slate-300">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+<div class="px-4">
+<h4 class="text-slate-100 text-base font-medium mb-1 tracking-tight">Modern Shopska Salad Deconstruction</h4>
+<p class="text-slate-400 text-sm italic">Модерна деконструкция на Шопска салата</p>
+</div>
+</article>
+</section>
+</main>
+<button class="fixed bottom-24 right-6 size-14 bg-primary text-background-dark rounded-full shadow-lg shadow-primary/20 flex items-center justify-center hover:scale-110 transition-transform active:scale-95 group overflow-hidden z-[60]">
+<span class="material-symbols-outlined text-3xl font-bold">add</span>
+<div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</button>
+<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md glass-effect border-t border-border-dark px-4 pb-6 pt-3 z-50">
+<div class="flex items-center justify-between">
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined text-2xl">home</span>
+<span class="text-[10px] font-medium tracking-tight">Home / Начало</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-2xl fill-1">diversity_3</span>
+<span class="text-[10px] font-bold tracking-tight">Community / Общност</span>
+<div class="w-4 h-0.5 bg-primary rounded-full mt-0.5"></div>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined text-2xl">menu_book</span>
+<span class="text-[10px] font-medium tracking-tight">Recipes / Рецепти</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500" href="#">
+<span class="material-symbols-outlined text-2xl">account_circle</span>
+<span class="text-[10px] font-medium tracking-tight">Profile / Профил</span>
+</a>
+</div>
+</nav>
+</div>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .fill-1 {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</body></html>

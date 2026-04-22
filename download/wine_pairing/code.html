@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#1a1812",
+                        "surface-dark": "#2a261a",
+                        "accent-dark": "#3d3621",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen pb-24">
+<!-- Header Section -->
+<header class="sticky top-0 z-50 bg-background-dark/80 backdrop-blur-md border-b border-primary/20">
+<div class="flex items-center justify-between p-4 max-w-2xl mx-auto">
+<button class="flex items-center justify-center p-2 hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<div class="flex flex-col items-center">
+<h1 class="text-primary text-sm font-semibold tracking-widest uppercase">The Best Idea Eatery</h1>
+<h2 class="text-slate-100 text-lg font-bold">Wine Pairing / Винено съчетаване</h2>
+</div>
+<button class="flex items-center justify-center p-2 hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-primary">search</span>
+</button>
+</div>
+</header>
+<main class="max-w-2xl mx-auto px-4 py-6 space-y-8">
+<!-- Featured Recipe Card -->
+<section class="bg-surface-dark rounded-xl p-4 border border-primary/10 flex items-center gap-4 shadow-xl">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-primary/30">
+<img class="w-full h-full object-cover" data-alt="Gourmet Filet Mignon with herb butter" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGF4TOugt8LyJItlw6YuDlYPva5O_3Sz_J14S87P6rpiIkHa-fRaPRXtwt74wmi6hFTLxAlwyOg113bHu4T4jfcpJbw0O-Psa3yE0r-WB6TqNHrpbq_sbVBa6w2z3k3HHgd-sTw1EbhNUxrFlsuzqWAwUueCD2HpR4KwSYWDA7UFX1Th3ToUG2qY9KYP52Me-dCprBPnrzZp35q8E-06PxuD1uxkhDeLTwZ27OdaAK5mVubdQ44qP_BmswgcmoapsdNt5Mh82jWBs"/>
+</div>
+<div class="flex flex-col flex-1">
+<span class="text-primary text-[10px] uppercase font-bold tracking-tighter">Selected Recipe / Избрана рецепта</span>
+<h3 class="text-white text-xl font-bold leading-tight">Filet Mignon / Филе миньон</h3>
+<p class="text-slate-400 text-xs mt-1">Prime Beef Cut / Първокласно говеждо</p>
+</div>
+<span class="material-symbols-outlined text-primary/50">restaurant_menu</span>
+</section>
+<!-- AI Recommendation Title -->
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">auto_awesome</span>
+<h2 class="text-slate-100 text-xl font-bold tracking-tight">AI Recommended Pairings</h2>
+</div>
+<p class="text-primary/70 text-sm font-medium">Препоръчани от AI съчетания</p>
+</div>
+<!-- Wine Cards Container -->
+<div class="space-y-6">
+<!-- Wine Card 1 -->
+<div class="bg-surface-dark rounded-xl overflow-hidden border border-primary/20 hover:border-primary/50 transition-all group">
+<div class="flex flex-col md:flex-row">
+<div class="relative h-64 md:w-1/3 overflow-hidden">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Luxury red wine bottle on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIjcTfGBEArssT93jtQfHGgfHsx1hPtU2AeBMIYrPatGutCvzapmsg1muO_exwWnLy6kLD3XLHjrSxumJpnWCGKTSgIrod1HatlgbzoVyxghN9H5QB_DFZPOI-MNhw1sDD40Tg7Lk6pRpxXzi_RpMiasuYaJD46BqcBQwyb6b3LN1og3UCC2ModzSxVUuxFXpvDyD80iMo1BNbVcP2YmpOFzxNjWn7ZE4EjonCkijL8HzFjk81-t_qilsb_Hkssjwp9Quf8HBy3Gc"/>
+<div class="absolute top-3 left-3 bg-primary text-background-dark text-[10px] font-bold px-2 py-1 rounded">PREMIUM CHOICE</div>
+</div>
+<div class="p-6 md:w-2/3 flex flex-col justify-between">
+<div>
+<h3 class="text-primary text-xl font-bold mb-2">Vintage Cabernet Sauvignon / Отлежал Каберне Совиньон</h3>
+<div class="space-y-4">
+<div>
+<p class="text-slate-400 text-xs uppercase tracking-widest font-bold">Tasting Notes / Дегустационни бележки</p>
+<p class="text-slate-100 text-sm mt-1">Oak, black cherry, tobacco / Дъб, черна череша, тютюн</p>
+</div>
+<div class="bg-accent-dark/30 p-3 rounded-lg border-l-2 border-primary">
+<p class="text-primary text-xs uppercase tracking-widest font-bold">Why it pairs / Защо си подхожда</p>
+<p class="text-slate-200 text-sm mt-1">The tannins cut through the richness of the beef. / Танините балансират наситеността на говеждото.</p>
+</div>
+</div>
+</div>
+<div class="mt-6 flex gap-3">
+<button class="flex-1 bg-primary hover:bg-primary/90 text-background-dark font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[20px]">shopping_basket</span>
+<span class="text-sm">Add to List / Добави</span>
+</button>
+<button class="p-3 border border-primary/30 rounded-lg hover:bg-primary/10 text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Expert Tip Section -->
+<section class="bg-primary/5 border border-primary/20 rounded-xl p-5 flex gap-4">
+<div class="shrink-0">
+<div class="w-12 h-12 rounded-full border-2 border-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Portrait of a professional sommelier" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgYOac-qbQZYSOqRsTWtc-r5do5ckbIcDPuUVbYTlYgsorTC3DZA2YorMMyZJX0BcKvTT2sW3RQbFyU4XNqtYiAo39SezHLJ1-9Wlzqx8hPKzcsDL1PSd_-PDlWfwE2SvX3exUIAYZhqrLfOKlOK8ZWV0losHT3PwALw5wMUxsbmN-7AVW0KihNl7yI8NBALQQ62DtEnLm_utylSdUcF-fctdLap0-82-sCjykwtZBNqDgtjJkXq9jSWDrot4EcmP1MUQ4vtuC6A4"/>
+</div>
+</div>
+<div>
+<h4 class="text-primary text-sm font-bold uppercase tracking-widest mb-1">Expert Tip / Съвет от експерт</h4>
+<p class="text-slate-200 text-sm italic">"Serve at 18°C. Let the wine breathe for 30 minutes before serving with the steak. / Сервирайте при 18°C. Оставете виното да подиша 30 минути преди поднасяне."</p>
+<p class="text-primary/60 text-[10px] mt-2 font-bold">— Head Sommelier, The Best Idea Eatery</p>
+</div>
+</section>
+<!-- Wine Card 2 -->
+<div class="bg-surface-dark rounded-xl overflow-hidden border border-primary/20 hover:border-primary/50 transition-all group">
+<div class="flex flex-col md:flex-row">
+<div class="relative h-64 md:w-1/3 overflow-hidden">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="Bottle of full-bodied red wine" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXqb9UJS_2DrFy-T73wrEy6vtaaYuWQUWLST2Uf6EPbxGOv2FhkQXXGuaxu7RAWpQ-d-42pGqTvBMd4SwJ7tBGcaOjmJpt5REthK82rhMD_XuVgKrjl20aUpOG_KZFW_Z_XpvFRb1CYBb4H9KbP6M1rrPhiUfVjGYJ83Sgvfq7VD4iIV32kOpERDRPbmnGj9Adxmt6U2Gx2t4fdRa9nGvoUuUkgBDdQQ_HCmnE-n-K83g05IwCGybXsj92aEm9xpmHyieoaaDDRZA"/>
+</div>
+<div class="p-6 md:w-2/3 flex flex-col justify-between">
+<div>
+<h3 class="text-primary text-xl font-bold mb-2">Reserve Merlot / Резерва Мерло</h3>
+<div class="space-y-4">
+<div>
+<p class="text-slate-400 text-xs uppercase tracking-widest font-bold">Tasting Notes / Дегустационни бележки</p>
+<p class="text-slate-100 text-sm mt-1">Plum, chocolate, vanilla / Слива, шоколад, ванилия</p>
+</div>
+<div class="bg-accent-dark/30 p-3 rounded-lg border-l-2 border-primary">
+<p class="text-primary text-xs uppercase tracking-widest font-bold">Why it pairs / Защо си подхожда</p>
+<p class="text-slate-200 text-sm mt-1">Softer tannins provide a velvet finish for lean cuts. / По-меките танини осигуряват кадифен финал.</p>
+</div>
+</div>
+</div>
+<div class="mt-6 flex gap-3">
+<button class="flex-1 bg-primary/10 border border-primary/50 hover:bg-primary/20 text-primary font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[20px]">shopping_basket</span>
+<span class="text-sm">Add to List / Добави</span>
+</button>
+<button class="p-3 border border-primary/30 rounded-lg hover:bg-primary/10 text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Navigation Footer -->
+<nav class="fixed bottom-0 left-0 right-0 bg-background-dark border-t border-primary/20 px-4 py-2 z-50">
+<div class="max-w-2xl mx-auto flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 p-2 text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">qr_code_scanner</span>
+<span class="text-[10px] font-medium">Scanner</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">skillet</span>
+<span class="text-[10px] font-bold">Recipes</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">kitchen</span>
+<span class="text-[10px] font-medium">Pantry</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</div>
+</nav>
+</body></html>

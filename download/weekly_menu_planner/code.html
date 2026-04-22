@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Work Sans', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(212, 175, 53, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d4af35;
+            border-radius: 10px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Header Section -->
+<header class="sticky top-0 z-50 flex items-center bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md p-4 border-b border-primary/20 justify-between">
+<div class="text-primary flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</div>
+<div class="flex flex-col items-center">
+<h1 class="text-primary text-xs font-bold uppercase tracking-widest">The Best Idea Eatery</h1>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight">Weekly Menu / Седмично меню</h2>
+</div>
+<div class="flex size-10 items-center justify-end">
+<button class="text-primary hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">calendar_month</span>
+</button>
+</div>
+</header>
+<!-- Day Selector (Horizontal Scroll) -->
+<div class="flex gap-3 p-4 overflow-x-auto custom-scrollbar no-scrollbar bg-background-light dark:bg-background-dark">
+<button class="flex h-12 shrink-0 flex-col items-center justify-center gap-0 rounded-xl bg-primary px-5 text-background-dark shadow-lg shadow-primary/20">
+<p class="text-[10px] font-bold uppercase tracking-tighter">Mon / Пон</p>
+<p class="text-sm font-bold">24</p>
+</button>
+<button class="flex h-12 shrink-0 flex-col items-center justify-center gap-0 rounded-xl border border-primary/30 bg-primary/5 px-5 text-slate-900 dark:text-slate-100">
+<p class="text-[10px] font-bold uppercase tracking-tighter opacity-70">Tue / Вт</p>
+<p class="text-sm font-bold">25</p>
+</button>
+<button class="flex h-12 shrink-0 flex-col items-center justify-center gap-0 rounded-xl border border-primary/30 bg-primary/5 px-5 text-slate-900 dark:text-slate-100">
+<p class="text-[10px] font-bold uppercase tracking-tighter opacity-70">Wed / Ср</p>
+<p class="text-sm font-bold">26</p>
+</button>
+<button class="flex h-12 shrink-0 flex-col items-center justify-center gap-0 rounded-xl border border-primary/30 bg-primary/5 px-5 text-slate-900 dark:text-slate-100">
+<p class="text-[10px] font-bold uppercase tracking-tighter opacity-70">Thu / Чт</p>
+<p class="text-sm font-bold">27</p>
+</button>
+<button class="flex h-12 shrink-0 flex-col items-center justify-center gap-0 rounded-xl border border-primary/30 bg-primary/5 px-5 text-slate-900 dark:text-slate-100">
+<p class="text-[10px] font-bold uppercase tracking-tighter opacity-70">Fri / Пт</p>
+<p class="text-sm font-bold">28</p>
+</button>
+<button class="flex h-12 shrink-0 flex-col items-center justify-center gap-0 rounded-xl border border-primary/30 bg-primary/5 px-5 text-slate-900 dark:text-slate-100">
+<p class="text-[10px] font-bold uppercase tracking-tighter opacity-70">Sat / Сб</p>
+<p class="text-sm font-bold">29</p>
+</button>
+<button class="flex h-12 shrink-0 flex-col items-center justify-center gap-0 rounded-xl border border-primary/30 bg-primary/5 px-5 text-slate-900 dark:text-slate-100">
+<p class="text-[10px] font-bold uppercase tracking-tighter opacity-70">Sun / Нд</p>
+<p class="text-sm font-bold">30</p>
+</button>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 px-4 pb-32">
+<h2 class="text-slate-900 dark:text-slate-100 text-xl font-bold pb-4 pt-6 border-b border-primary/10">Monday / Понеделник</h2>
+<!-- Meal Slots -->
+<div class="space-y-6 mt-6">
+<!-- Breakfast Slot -->
+<div class="group relative flex flex-col gap-3 rounded-xl bg-primary/5 p-4 border border-primary/10 hover:border-primary/40 transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">wb_twilight</span>
+<span class="text-xs font-bold text-primary uppercase tracking-widest">Breakfast / Закуска</span>
+</div>
+<button class="text-primary/60 hover:text-primary">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="size-16 rounded-lg bg-cover bg-center shadow-md border border-primary/20" data-alt="Healthy avocado toast with poached eggs on top" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBx0i8J95fxNAAOiuBuFrv9PkUY7fUnx3SlESeiso8pygHljckgmlm7rwRqWGqKVnDY__oxOSozEoj3DIJqDccus9R_cFY6cPZe32ezVHKWAobjsd6EIn09I2S0U6B169dANyVmJuemf8HQ_Z2ALQWBHe_YfmsOR8Y5IRqLwaR3Xrsot0nln4AHjQPwd3r1NFAPQ-LWqH_vAepOssvRuW06Bewk89q9zLADuBV3QppMrCaHrZs5GOTE_imwk8-K0jQS-SdBXLpWGz8')"></div>
+<div class="flex flex-col">
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Avocado Toast / Авокадо тост</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Poached egg, sourdough, chili flakes</p>
+</div>
+</div>
+</div>
+<!-- Lunch Slot -->
+<div class="group relative flex flex-col gap-3 rounded-xl bg-primary/5 p-4 border border-primary/10 hover:border-primary/40 transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">sunny</span>
+<span class="text-xs font-bold text-primary uppercase tracking-widest">Lunch / Обяд</span>
+</div>
+<button class="text-primary/60 hover:text-primary">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="size-16 rounded-lg bg-cover bg-center shadow-md border border-primary/20" data-alt="Vibrant mediterranean salad with fresh vegetables" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDpJ7EHn2r6AIasRSWaOhwzaykRlNHPUSXPX0LSGwK5MlmphyXz9XMtGc4Ox5K7cWUg-QSIFmTqyKCu8Pv6RqM1EzsBfxq-NjGY8Tr49qHPdXly-Q4X1Fw8BeZhLSTyLA7MlgSZ_Az3prbyYO-UwjN01h_qYxQswE2vaV8bqbxeQ9cTwo-Ibr7M8naUoZVV1A3EwuD5b23av_RP8JD4kRAe1ir2zs8GpwJzkI4Fcjd4JKgOtBxYbdldFaVmT7ced4FlT59H6S_HsSY')"></div>
+<div class="flex flex-col">
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Mediterranean Salad / Гръцка салата</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Feta cheese, kalamata olives, olive oil</p>
+</div>
+</div>
+</div>
+<!-- Dinner Slot (Highlighted Item) -->
+<div class="group relative flex flex-col gap-3 rounded-xl bg-primary/10 p-4 border border-primary/30 hover:border-primary/60 transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">dark_mode</span>
+<span class="text-xs font-bold text-primary uppercase tracking-widest">Dinner / Вечеря</span>
+</div>
+<button class="text-primary/60 hover:text-primary">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="size-16 rounded-lg bg-cover bg-center shadow-md border border-primary/20" data-alt="Gourmet filet mignon with red wine reduction" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBi43X3Q6iGD2XogyUigMZJMss5WrT_MrXX9J9vqMbCr1JrtRqqlW9EF7d-X2ME1CzM_l4Bm-btDAgP6QhMKct_etk49UAhkBpBXkf12jsiTe7npqsU4wUaksBBNXeVZcXFO0Dy0L8s55ofVxsUrzYlHEfcf_waaQ2rd9Kj79FNZFjLdhIjoVEevINtOywV_fJV2Z3aOc3LLWBH94MVTL5HvzIYy2_1KemBkU89lppy5qxcHZvloiYTKb1DR8SlIZjO5wg4Q1L8QYY')"></div>
+<div class="flex flex-col">
+<h3 class="font-bold text-slate-900 dark:text-slate-100">Filet Mignon / Филе Миньон</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Truffle mash, red wine reduction, asparagus</p>
+</div>
+</div>
+</div>
+<!-- Empty Slot Example -->
+<div class="group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/20 p-8 hover:bg-primary/5 transition-all cursor-pointer">
+<span class="material-symbols-outlined text-primary/40 text-3xl">add_circle</span>
+<p class="text-sm font-medium text-primary/60">Add Snack / Добави закуска</p>
+</div>
+</div>
+<!-- Action Button -->
+<div class="mt-10">
+<button class="w-full py-4 bg-primary hover:bg-primary/90 text-background-dark font-bold rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-xl shadow-primary/20">
+<span class="material-symbols-outlined">shopping_cart</span>
+<div class="flex flex-col items-start leading-tight">
+<span class="text-sm">Generate Shopping List</span>
+<span class="text-[10px] uppercase tracking-wider opacity-80">Генерирай списък за пазаруване</span>
+</div>
+</button>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-background-light dark:bg-background-dark border-t border-primary/20 px-2 pb-6 pt-3 flex items-center justify-around">
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">home</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-primary">Home / Начало</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">menu_book</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-primary">Recipes / Рецепти</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">bookmark</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-primary">Saved / Запазени</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<div class="flex flex-col items-center justify-center p-2 rounded-full bg-primary/10 -mt-8 shadow-lg shadow-primary/10 border border-primary/20">
+<span class="material-symbols-outlined text-primary fill-1">calendar_check</span>
+</div>
+<span class="text-[10px] font-bold text-primary">Menu / Меню</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors">person</span>
+<span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 group-hover:text-primary">Profile / Профил</span>
+</a>
+</nav>
+</div>
+</body></html>

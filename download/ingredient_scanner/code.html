@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Best Idea Eatery - Ingredient Scanner</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Work Sans", sans-serif;
+        }
+        .scanner-bracket {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: #d4af35;
+        }
+        .bracket-tl { top: 10%; left: 10%; border-top-width: 4px; border-left-width: 4px; border-top-left-radius: 12px; }
+        .bracket-tr { top: 10%; right: 10%; border-top-width: 4px; border-right-width: 4px; border-top-right-radius: 12px; }
+        .bracket-bl { bottom: 10%; left: 10%; border-bottom-width: 4px; border-left-width: 4px; border-bottom-left-radius: 12px; }
+        .bracket-br { bottom: 10%; right: 10%; border-bottom-width: 4px; border-right-width: 4px; border-bottom-right-radius: 12px; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="relative flex h-screen w-full flex-col overflow-hidden bg-background-dark">
+<!-- Top Navigation Bar -->
+<div class="flex items-center bg-background-dark/80 backdrop-blur-md p-4 justify-between z-20">
+<button class="text-slate-100 flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-white/10">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">The Best Idea Eatery</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex size-12 items-center justify-center rounded-full hover:bg-white/10 text-slate-100">
+<span class="material-symbols-outlined">flashlight_on</span>
+</button>
+</div>
+</div>
+<!-- Camera Viewfinder Area -->
+<div class="relative flex-1 bg-neutral-900 flex flex-col items-center justify-center overflow-hidden">
+<!-- Simulated Camera Feed Background -->
+<div class="absolute inset-0 z-0 bg-cover bg-center" data-alt="Close up of raw filet mignon and fresh asparagus on a dark surface" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBrS3vfdomQe5IkdACW8DXEF0f_SEEjwN83nTvtrW4Af1nXx8FUmrc-lAcE7D__CtLMSCmjeBR7CP06VBWchPFJtUEm90JZM6nCT8EK7HysSzuz-wK3pCucoo_M-xV9YptspBcR19YYOYv7-JdJXH2TLXv3xO4M5X3rwlif7rNZ9EfKgpWN07UX9NtD-l1bivN7B6m1oPLuvocCp-HmRphIjWboJwiw__0pHexw6-h-lYt225aXXvMtcogmc-9qHyG1mVH6qyN4jRw");'>
+<div class="absolute inset-0 bg-black/20"></div>
+</div>
+<!-- Scanning Brackets -->
+<div class="absolute inset-0 z-10 pointer-events-none">
+<div class="scanner-bracket bracket-tl"></div>
+<div class="scanner-bracket bracket-tr"></div>
+<div class="scanner-bracket bracket-bl"></div>
+<div class="scanner-bracket bracket-br"></div>
+</div>
+<!-- AI Floating Labels -->
+<div class="absolute top-[25%] left-[20%] z-20 flex flex-col items-start gap-1">
+<div class="bg-primary/90 text-background-dark px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+<span>Filet Mignon / Филе миньон</span>
+</div>
+<div class="h-px w-16 bg-primary/60 origin-left rotate-45"></div>
+</div>
+<div class="absolute bottom-[35%] right-[25%] z-20 flex flex-col items-end gap-1">
+<div class="bg-primary/90 text-background-dark px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+<span>Asparagus / Аспержи</span>
+</div>
+<div class="h-px w-16 bg-primary/60 origin-right -rotate-45"></div>
+</div>
+<!-- Scanning Status Text -->
+<div class="absolute top-8 left-0 w-full px-4 text-center z-20">
+<h3 class="text-white text-xl font-bold drop-shadow-md">
+                    Scanning Ingredients...<br/>
+<span class="text-primary text-lg font-medium">Сканиране на съставки...</span>
+</h3>
+</div>
+</div>
+<!-- Bottom Controls -->
+<div class="bg-background-dark p-6 pb-10 flex flex-col gap-8 z-20">
+<!-- Gallery and Shutter Row -->
+<div class="flex items-center justify-between px-6">
+<!-- Gallery Preview -->
+<button class="relative size-14 rounded-lg overflow-hidden border-2 border-primary/30 hover:border-primary group">
+<div class="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-110" data-alt="Gallery preview showing a healthy salad bowl" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD6sTpRwRU0AbreBLLZaq1PICjqnnhAvDB4htQNe5IBKwmdggIsUIDOLJcUJxb7EYYgOIs2EPZJqg2K7kU4uyeZ4IXB9uL-i0SBpjZEjZyjSPmu9RLpZJh9k_29tuD_I6Xume4uw1Q2MCOjJH0YS54w6lt8HjWGaSQHmzl0xps1jagZKLNLWx3vL_HmqLaSn_0F969OdPEH4Vpd_GQwdRAsuYH5jt296aqzXs014SZddZSJQHtMwwlx6D4hY39_nUWIil5WPaE7euI");'></div>
+<div class="absolute inset-0 bg-black/20 group-hover:bg-transparent"></div>
+</button>
+<!-- Large Gold Shutter Button -->
+<button class="size-20 rounded-full bg-primary p-1 shadow-[0_0_25px_rgba(212,175,53,0.4)] hover:scale-105 active:scale-95 transition-all">
+<div class="size-full rounded-full border-2 border-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-background-dark text-4xl font-bold">photo_camera</span>
+</div>
+</button>
+<!-- Spiral/AI Mode Button -->
+<button class="size-14 rounded-full bg-white/5 flex items-center justify-center text-primary hover:bg-white/10">
+<span class="material-symbols-outlined text-3xl">filter_center_focus</span>
+</button>
+</div>
+<!-- Bottom Navigation -->
+<div class="flex gap-2 border-t border-primary/10 pt-4">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<p class="text-[10px] font-medium uppercase tracking-wider">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">camera</span>
+<p class="text-[10px] font-medium uppercase tracking-wider">Scanner</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<p class="text-[10px] font-medium uppercase tracking-wider">Recipes</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">kitchen</span>
+<p class="text-[10px] font-medium uppercase tracking-wider">Pantry</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<p class="text-[10px] font-medium uppercase tracking-wider">Profile</p>
+</a>
+</div>
+</div>
+</div>
+</body></html>

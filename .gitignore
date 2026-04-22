@@ -1,20 +1,24 @@
-# Системни файлове (Windows и macOS)
-Thumbs.db
-Desktop.ini
-.DS_Store
-
-# Настройки на редактори
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
-# Временни файлове и логове
+# Logs
+logs
 *.log
-.firebase/
-tmp/
-temp/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Файлове със пароли/ключове (АКО ИМАШ ТАКИВА - НИКОГА НЕ ГИ КАЧВАЙ)
-.env
-secret.txt
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
