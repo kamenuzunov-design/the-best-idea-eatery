@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "the-best-idea-eatery"
-  }
+    "default": "the-best-idea-eatery",
+    "the-best-idea-eatery": "project-08fabab9-ca3c-4140-9d7"
+  },
+  "targets": {},
+  "etags": {}
 }
