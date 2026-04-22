@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>The Best Idea Eatery</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen pb-24">
+<!-- Top Header -->
+<header class="flex items-center justify-between p-6 bg-background-light/50 dark:bg-background-dark/50 backdrop-blur-md sticky top-0 z-50">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-full border-2 border-primary p-0.5">
+<img alt="Profile" class="size-full rounded-full object-cover" data-alt="Premium portrait of a smiling man" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHmW8ZuOliktoQFZi7yC8z5ewaCMW3Zyx6nSGfKRjnyoblLhxzOiKArKfde5Wov6XHtdsXzNNcd8rF6NB_bfaRckzSFWM8WLUd_pzVFDwdpJN03kwuCaRsP6Rc7tWltmCMz9QL6EmWxorEvGSh2W1zCNM_hJnFn4jTkJdMMeVUkG0_3Ds7szY82Y27z6LZNdlQ_XgEc7gxc33Gbd7oaMTCgbCXdftg6KWsEIKz2h7je8Tivel4-LcsNyyQCDgxIJLZSKkl0ccLs6Q"/>
+</div>
+<div>
+<p class="text-xs text-primary font-medium tracking-widest uppercase">The Best Idea Eatery</p>
+<h1 class="text-lg font-bold leading-tight">Julian / Юлиян</h1>
+</div>
+</div>
+<button class="bg-primary/10 dark:bg-primary/20 text-primary p-2 rounded-full">
+<span class="material-symbols-outlined">search</span>
+</button>
+</header>
+<main class="px-6">
+<!-- Welcome Section -->
+<section class="mt-4 mb-8">
+<h2 class="text-3xl font-bold tracking-tight">Good evening, <br/><span class="text-primary">Добър вечер, Юлиян</span></h2>
+</section>
+<!-- Quick Actions -->
+<section class="grid grid-cols-3 gap-4 mb-10">
+<div class="flex flex-col items-center gap-2">
+<div class="bg-primary text-background-dark size-14 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-3xl">smart_toy</span>
+</div>
+<span class="text-xs font-semibold uppercase tracking-tighter">AI Assistant</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="bg-primary/10 border border-primary/30 text-primary size-14 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">kitchen</span>
+</div>
+<span class="text-xs font-semibold uppercase tracking-tighter">Pantry</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="bg-primary/10 border border-primary/30 text-primary size-14 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">shopping_cart</span>
+</div>
+<span class="text-xs font-semibold uppercase tracking-tighter">List</span>
+</div>
+</section>
+<!-- Seasonal Spotlight -->
+<section class="mb-10">
+<div class="relative w-full h-64 rounded-xl overflow-hidden group">
+<img alt="Featured Dish" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="Exquisite cocktail with fresh seasonal garnishes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQNdpQ87jQXSDwNwQMyP84AZBJesCz9wjMOneG5ypm0ehVP4AK8SbDKXIhs0lUSr3cxCkozMsibiYBeKdMbg3o7exOK5bBagd569SWf-7_Bs9Kw_K7hBmCeCfvD20ZOMfNlurQ77gnYVaKMY7D7IHeyBnah-6tTfFiBOyZI3hqcYRK2b-s4a6rWNCYG-us3LvpPe2kq66zTUXQLv5iz5YvQ1_wb_iKa5JKVsG-RtnD2HOiuYaL0kCIkUWro0KDWLaQp9rJ7a-u5cw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent"></div>
+<div class="absolute bottom-0 p-6">
+<span class="bg-primary text-background-dark text-[10px] font-bold px-2 py-1 rounded-sm uppercase mb-2 inline-block">Seasonal Spotlight / Сезонен акцент</span>
+<h3 class="text-2xl font-bold text-white mb-1">Winter Truffle Essence</h3>
+<p class="text-slate-300 text-sm">Discover the rare white truffle selections.</p>
+</div>
+</div>
+</section>
+<!-- For You (Horizontal Carousel) -->
+<section class="mb-10">
+<div class="flex justify-between items-end mb-4">
+<h2 class="text-xl font-bold">For You / За вас</h2>
+<a class="text-primary text-xs font-bold uppercase tracking-widest" href="#">View All</a>
+</div>
+<div class="flex overflow-x-auto gap-4 pb-4 -mx-6 px-6 no-scrollbar">
+<div class="flex-none w-64">
+<div class="aspect-[3/4] rounded-xl overflow-hidden mb-3 relative">
+<img alt="Pasta" class="w-full h-full object-cover" data-alt="Gourmet pesto pasta with pine nuts" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2MzIcjX0AXovRsiUMylXDLv6tAj4MXhEhDIHXfJ6DkT_3Tr2QylMfD1SIKWO0xnKtFMDbZzKNO7oHFr1C4zg3eAEzFI-FUFeWQGFbcXcEadtroJeNmO3gGs6pYKFxW95hga3l6IyDCzdEXsnaa8e8QSYQwhDbuLMVzPYoauLnwKX5PIpHZqk4vM1ZCN95zZkycOs2ggTs2WJlRg3i2HDLf9XdLmfWnQn4n5PdLtDxI26v6Q4slDSg8MctPTYJUpkHATylUgZhH10"/>
+<div class="absolute top-3 right-3 bg-background-dark/60 backdrop-blur-md rounded-full p-1.5 text-primary">
+<span class="material-symbols-outlined text-sm">favorite</span>
+</div>
+</div>
+<p class="font-bold text-base leading-tight">Truffle Risotto / Ризото с трюфел</p>
+<p class="text-xs text-slate-500 mt-1 uppercase tracking-tighter">Chef's Choice</p>
+</div>
+<div class="flex-none w-64">
+<div class="aspect-[3/4] rounded-xl overflow-hidden mb-3 relative">
+<img alt="Steak" class="w-full h-full object-cover" data-alt="Perfectly seared medium rare wagyu steak" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAPNI-l_UwZubHDKC9XbvPCL9tH-wLibFGUfe7_y1SyJMgwta-xQOLjI0tBcqFfLW9EutS6XPBUlmzGhQyWvQ_G8GEyBiG_HminU8KsGSdz5mOaWTkOAQqna0CPOI-86FOABKd-1NuWyrGuuZBxBTMJLvd-OauUGU1DgaCuCPzWKkgDLKefFk1SmnNVRdrH_l6gLkS1WnnBZY0BUfCfeQQ2FqxTfQ_RgIbKz60jfCNM_Wcqp8KGFPnBh314W-QMKQFAiddc1cItcY"/>
+<div class="absolute top-3 right-3 bg-background-dark/60 backdrop-blur-md rounded-full p-1.5 text-primary">
+<span class="material-symbols-outlined text-sm">favorite</span>
+</div>
+</div>
+<p class="font-bold text-base leading-tight">Wagyu Steak / Стек Уагю</p>
+<p class="text-xs text-slate-500 mt-1 uppercase tracking-tighter">Highly Rated</p>
+</div>
+</div>
+</section>
+<!-- Trending Now (Vertical List) -->
+<section class="mb-8">
+<div class="flex justify-between items-end mb-4">
+<h2 class="text-xl font-bold leading-tight">Trending Now <br/><span class="text-primary font-medium text-lg">Популярни в момента</span></h2>
+</div>
+<div class="space-y-4">
+<div class="flex gap-4 bg-primary/5 border border-primary/10 p-3 rounded-xl">
+<div class="size-24 flex-none rounded-lg overflow-hidden">
+<img alt="Salmon" class="w-full h-full object-cover" data-alt="Pan-seared salmon with asparagus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDB7TSLB5H_EiRaTMav8mdsMUHyI6RYqOOQzzHMrqhsfcXxxUjv6qAmTiyA3EbHYo7NU74AE1rsXDwmiHULYvhuDaPGjvi46dfqmpJS8pT--a6noqGAW9EUbyLrKP-7wWrtSQgXEgQOd_FNI5B_h3dZkJiAPBRkodvAn7dqpi_t3wRWnidzBglOWo1Utw4VokJIXx2uZSmLliJunFCysUbbhjnptr2L5BAub4r-vaMpSc_KgUdxo3FwqszzJ08GhBiaJUNKRWCb4T8"/>
+</div>
+<div class="flex flex-col justify-between py-1">
+<div>
+<h4 class="font-bold leading-tight">Glazed Arctic Salmon</h4>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-primary text-xs fill-1">star</span>
+<span class="text-xs font-bold">4.9</span>
+<span class="text-xs text-slate-500">• 25 min</span>
+</div>
+</div>
+<p class="text-[10px] text-primary uppercase font-bold tracking-widest">Advanced / Напреднали</p>
+</div>
+</div>
+<div class="flex gap-4 bg-primary/5 border border-primary/10 p-3 rounded-xl">
+<div class="size-24 flex-none rounded-lg overflow-hidden">
+<img alt="Salad" class="w-full h-full object-cover" data-alt="Luxury Mediterranean salad with feta and olives" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPof54wGuD3Bj8NOC2RxYt9iVBTNmkJHQjUOGOoFLjfQjnubmwP0Oiwx_alk2ChVc_kakc1EGyKF29mhpzUMS2As5pB8dXroD1EHVm-AzN26xTOBf23aLfT5QBtNa960HUaElHx1Rauly_uGRFJS22svOhNoLTHWOiT4p30CXav2s9RxGnaapzVV7QjlPhRgANbm6RnMhzZhga9POhLhvOrvjWuXgAkAmhByS6Pi5zvXjMTFnTrpw7nu145kJSLODXGFDZiqKPg_Y"/>
+</div>
+<div class="flex flex-col justify-between py-1">
+<div>
+<h4 class="font-bold leading-tight">Mediterranean Gold Salad</h4>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-primary text-xs fill-1">star</span>
+<span class="text-xs font-bold">4.7</span>
+<span class="text-xs text-slate-500">• 15 min</span>
+</div>
+</div>
+<p class="text-[10px] text-primary uppercase font-bold tracking-widest">Easy / Лесно</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 bg-background-light dark:bg-background-dark border-t border-primary/20 pb-6 pt-3 px-6 z-50">
+<div class="flex justify-between items-center max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">home</span>
+<span class="text-[10px] font-bold uppercase">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="text-[10px] font-bold uppercase">Recipes</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-[10px] font-bold uppercase">Social</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold uppercase">Profile</span>
+</a>
+</div>
+</nav>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .fill-1 {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</body></html>

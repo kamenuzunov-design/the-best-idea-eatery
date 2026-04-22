@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>Cooking Progress - The Best Idea Eatery</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/20 p-4">
+<div class="max-w-md mx-auto flex items-center justify-between">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight text-center flex-1">
+                Cooking Progress / <span class="text-primary">Моят напредък</span>
+</h1>
+<div class="size-10"></div> <!-- Spacer for symmetry -->
+</div>
+</header>
+<main class="flex-1 max-w-md mx-auto w-full pb-24">
+<!-- Profile Summary -->
+<section class="p-6">
+<div class="flex items-center gap-5 mb-6">
+<div class="relative">
+<div class="size-20 rounded-full border-2 border-primary p-1">
+<div class="size-full rounded-full bg-cover bg-center" data-alt="Portrait of a professional gourmet chef" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCL8X9a1n6ugCNkrgFimD3Pd3MOUFmRo7xaazG_xSqMaBapaof4_1qxZ1TXt1W4nDhRI8X59IWi51G_nFVIskKRvIfcZw3zaZrRocST2L8QdLXQWcJ6cdPKXvXbw8jd4mGul6d0TKjYJ22GnU9qISK--rHj36NNZS7wyJVEDZ95Ofp_Ey1AZ8g6djiwSu7ulmasuaHWWPPxSJYiQFPpAYhTV7NZgI_BRC6-DWNXfeQR7Aly5-4ZVjQo845W-_plFZW7XjdbaQKUftU')"></div>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-primary text-background-dark rounded-full size-6 flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px] font-bold">verified</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h2 class="text-xl font-bold">Gourmet Enthusiast</h2>
+<p class="text-primary font-medium">Ценител</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest mt-1">Premium Member / Премиум член</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="text-sm font-semibold">Culinary Level / Ниво</span>
+<span class="text-xs font-medium text-primary">750 / 1000 XP</span>
+</div>
+<div class="h-2 w-full bg-primary/20 rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full shadow-[0_0_10px_rgba(212,175,53,0.5)]" style="width: 75%"></div>
+</div>
+</div>
+</section>
+<!-- Stats Grid -->
+<section class="px-6 py-4">
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">Stats / Статистика</h3>
+<div class="grid grid-cols-3 gap-3">
+<div class="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary mb-2">restaurant_menu</span>
+<span class="text-2xl font-bold">42</span>
+<span class="text-[10px] uppercase font-medium opacity-70">Recipes / Рецепти</span>
+</div>
+<div class="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary mb-2">schedule</span>
+<span class="text-2xl font-bold">128</span>
+<span class="text-[10px] uppercase font-medium opacity-70">Hours / Часове</span>
+</div>
+<div class="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary mb-2">set_meal</span>
+<span class="text-2xl font-bold">85</span>
+<span class="text-[10px] uppercase font-medium opacity-70">Ingredients / Съставки</span>
+</div>
+</div>
+</section>
+<!-- Achievements Horizontal Scroll -->
+<section class="py-6">
+<div class="px-6 flex justify-between items-center mb-4">
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Achievements / Постижения</h3>
+<button class="text-primary text-xs font-bold hover:underline">View All</button>
+</div>
+<div class="flex gap-4 overflow-x-auto px-6 no-scrollbar pb-2">
+<!-- Badge 1 -->
+<div class="flex-shrink-0 w-28 flex flex-col items-center text-center group">
+<div class="size-20 rounded-full bg-gradient-to-tr from-primary to-primary/40 p-0.5 mb-2 group-hover:scale-105 transition-transform">
+<div class="size-full rounded-full bg-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">skillet</span>
+</div>
+</div>
+<p class="text-[11px] font-bold leading-tight">Sauce Master</p>
+<p class="text-[9px] text-primary/80">Майстор на сосове</p>
+</div>
+<!-- Badge 2 -->
+<div class="flex-shrink-0 w-28 flex flex-col items-center text-center group">
+<div class="size-20 rounded-full bg-gradient-to-tr from-primary to-primary/40 p-0.5 mb-2 group-hover:scale-105 transition-transform">
+<div class="size-full rounded-full bg-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">outdoor_grill</span>
+</div>
+</div>
+<p class="text-[11px] font-bold leading-tight">Steak Specialist</p>
+<p class="text-[9px] text-primary/80">Специалист по стекове</p>
+</div>
+<!-- Badge 3 -->
+<div class="flex-shrink-0 w-28 flex flex-col items-center text-center group">
+<div class="size-20 rounded-full bg-gradient-to-tr from-primary to-primary/40 p-0.5 mb-2 group-hover:scale-105 transition-transform">
+<div class="size-full rounded-full bg-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">bakery_dining</span>
+</div>
+</div>
+<p class="text-[11px] font-bold leading-tight">Pastry Artist</p>
+<p class="text-[9px] text-primary/80">Майстор сладкар</p>
+</div>
+</div>
+</section>
+<!-- Recent Masterpieces -->
+<section class="px-6 py-4">
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">Recent Masterpieces / Скорошни шедьоври</h3>
+<div class="space-y-4">
+<!-- Recipe Card 1 -->
+<div class="bg-primary/5 border border-primary/10 rounded-xl overflow-hidden flex gap-4">
+<div class="w-24 h-24 bg-cover bg-center shrink-0" data-alt="Exquisitely plated healthy salmon salad" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuApJqMYod8eni_2KC_5_95LmoZchOHuGX_i9-23ksnddtOGXUGgNwoJk45wYMmHIPxr2jouvOkX9RSlS8H8eMz0EQglXLWCjBqXoohXeJX9NJtWXG7TdJMbUnzmDzLmfo0Gcsx9_Q-gZ3oe8NhG0FlMlx60YPiHl1OvEq2TenmbW7Z84c13OJZmL2eRdR2uC34toIdWg_6ggJ6_rRLUlUCqn4rWjuKLVOl5yF539aRD1JB6pG_gRuir0ZnsLHr5-SOaH9kxoqIFq1I')"></div>
+<div class="flex flex-col justify-center py-2 pr-4">
+<p class="text-xs text-primary font-bold uppercase mb-1">Oct 24, 2023</p>
+<h4 class="font-bold text-base leading-tight">Wild Atlantic Salmon</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400">Дива атлантическа сьомга</p>
+</div>
+</div>
+<!-- Recipe Card 2 -->
+<div class="bg-primary/5 border border-primary/10 rounded-xl overflow-hidden flex gap-4">
+<div class="w-24 h-24 bg-cover bg-center shrink-0" data-alt="Traditional Italian pasta with fresh ingredients" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCC3uLfIhcO0zVD2ib_56_GWuXczjvderXcKvCfCT51SXyEry7SmPIMqrvXAnLFTOnig7BoCVBPL6d-0UYPoQzaDz7-x9dXuKqpMBFgZ_zv6OZpyh98QzAtzyuMUZNeD3eBuIRSiOQQ0W9R4Wlww06q_pi7DscfbA2qfGrTyeT6hKwvPVuqoXcKFCCZ4iVjj45SCdq-DsChhvoVh-yLyRWHpna5keGlWTm-KeM7BqOSAnvDLd6yQPEfldSSzBaCazlPoQw9DORTaFs')"></div>
+<div class="flex flex-col justify-center py-2 pr-4">
+<p class="text-xs text-primary font-bold uppercase mb-1">Oct 20, 2023</p>
+<h4 class="font-bold text-base leading-tight">Truffle Pappardelle</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400">Папарделе с трюфел</p>
+</div>
+</div>
+<!-- Recipe Card 3 -->
+<div class="bg-primary/5 border border-primary/10 rounded-xl overflow-hidden flex gap-4">
+<div class="w-24 h-24 bg-cover bg-center shrink-0" data-alt="Artistic dessert presentation on a dark plate" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDDQFh8wxgoK-Gg-fR74OFzr22hjHKTJHCz2SUwDH_BPBHF6T5y3_iUM4o4oN6824svYCxdIdTaFPlrMs_dG6TirBQo98M6dMEAfhJOJ0lKV9GOYAke03KxRaqi7poRp5G824CnH0ms_lCov9HL4eRq-0PFbOgTPTb8cb5U0TIuwiePyd4KGtB87gbppTu_2QjvGRcvNhNtQzpU16q6S46_GONUVQ5gGtEEnfkDc2GvAo3FgTiE3acl8jnbyN_l5MtwWZxGn0wQ6YU')"></div>
+<div class="flex flex-col justify-center py-2 pr-4">
+<p class="text-xs text-primary font-bold uppercase mb-1">Oct 15, 2023</p>
+<h4 class="font-bold text-base leading-tight">Chocolate Lava Cake</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400">Шоколадово суфле</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 bg-background-light dark:bg-background-dark border-t border-primary/20 pb-safe-area-inset-bottom">
+<div class="max-w-md mx-auto flex justify-around p-3">
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home / Начало</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-[10px] font-medium">Recipes / Рецепти</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">analytics</span>
+<span class="text-[10px] font-bold">Progress / Прогрес</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile / Профил</span>
+</a>
+</div>
+</nav>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .fill-1 {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+</body></html>

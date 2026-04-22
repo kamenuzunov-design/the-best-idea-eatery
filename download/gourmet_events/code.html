@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<header class="sticky top-0 z-50 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-4 justify-between border-b border-primary/10">
+<div class="text-primary flex size-10 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined">menu</span>
+</div>
+<h1 class="text-primary text-xl font-bold leading-tight tracking-tight flex-1 text-center uppercase">The Best Idea Eatery</h1>
+<div class="flex w-10 items-center justify-end">
+<button class="text-primary flex items-center justify-center">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<main class="flex-1 pb-24">
+<section class="px-4 pt-8 pb-4">
+<h2 class="text-slate-900 dark:text-slate-100 text-[32px] font-bold leading-tight">Gourmet Events</h2>
+<h3 class="text-primary/80 text-lg font-medium leading-tight">Ексклузивни събития</h3>
+</section>
+<nav class="flex gap-3 px-4 py-2 overflow-x-auto no-scrollbar">
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary text-background-dark px-4 font-semibold">
+<span class="text-sm">Masterclasses / Майсторски класове</span>
+</button>
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary/10 border border-primary/20 text-slate-100 px-4">
+<span class="text-sm">Tastings / Дегустации</span>
+</button>
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary/10 border border-primary/20 text-slate-100 px-4">
+<span class="text-sm">Chef's Table / Вечеря с готвач</span>
+</button>
+</nav>
+<section class="px-4 py-6">
+<div class="relative group overflow-hidden rounded-xl bg-slate-800 aspect-[16/10]">
+<img alt="Chef teaching a pastry class" class="absolute inset-0 h-full w-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-500" data-alt="Professional chef demonstrating French pastry techniques" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsfMJXM1osP_7zGiJ3IKAFcGN9wZcuTt6Sx23Hd81eO4cYoUfdUr2fgxE9qKc2pmgSH7WOYVpZ0ywKPewBHdyTv_QvdmM2Acw1RsTyBIAzz6N6id-k6gNo0L94QQBJmF9BB202DEfLCprzhScRZYapp_vSWx20lKu7sZiiTjwf3Yu_Z51mGqP9dk0_69kAbCljFDxk9V5YuHcTcdzA8ANWTupfnXyo_5APp2yz5YKGUCY4pjttu9TUaiLasDcwIbd7wQ6jZrUbd6A"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-6 w-full">
+<span class="inline-block bg-primary text-background-dark text-[10px] font-bold px-2 py-1 rounded mb-3 uppercase tracking-wider">Featured / Акцент</span>
+<h3 class="text-2xl font-bold text-white leading-tight">French Pastry Workshop</h3>
+<p class="text-primary font-medium text-lg">Работилница за френски сладкиши</p>
+<div class="flex items-center justify-between mt-4">
+<div class="flex flex-col">
+<span class="text-slate-300 text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">calendar_today</span> Oct 24, 18:00
+                                </span>
+<span class="text-primary font-bold text-xl mt-1">120 BGN</span>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-background-dark px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shadow-lg">
+                                Book Now / Резервирай
+                            </button>
+</div>
+</div>
+</div>
+</section>
+<section class="px-4 py-2">
+<div class="flex items-center justify-between mb-4 border-l-4 border-primary pl-3">
+<div>
+<h2 class="text-xl font-bold text-slate-100 uppercase tracking-wide">Upcoming Events</h2>
+<p class="text-slate-400 text-sm italic">Предстоящи събития</p>
+</div>
+<span class="material-symbols-outlined text-primary">filter_list</span>
+</div>
+<div class="space-y-4">
+<div class="flex bg-primary/5 border border-primary/10 rounded-xl overflow-hidden p-3 gap-4">
+<div class="w-24 h-24 shrink-0 rounded-lg overflow-hidden">
+<img alt="Wine and cheese" class="w-full h-full object-cover" data-alt="Elegant wine glasses and premium cheese board" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByusm5bj3uISs92QL-ac30A-eertBbByQs1uxRJro1112jyKZb0KrEWy6S6_fkv_FBR-DVACJjoXoIfy1E6qYtKNyB3hB39ZiYEdihtwdhtYDXjTinPs07UIpM6YfYijGOnucmYzNJlFj2cjZFcZdNzZr78ERcmPIrAceirRjf5A7AgJFLFRFRXQi3ijEmAYoNEqX8XcouTv6OonPGqsgIgm7AM98Cp6ujIIY8pkIwcDsGW4jYbLV9rC23qw8YIJwyqLg4qcDLQEk"/>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<h4 class="font-bold text-slate-100 text-base leading-snug">Wine &amp; Cheese Pairing</h4>
+<p class="text-primary/80 text-xs font-medium">Вино и сирена</p>
+<div class="flex items-center gap-3 mt-2 text-[11px] text-slate-400 uppercase tracking-tighter">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_month</span> Nov 02</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]" data-location="Sofia">location_on</span> Sofia, Lozenets</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-2">
+<span class="text-primary font-bold">85 BGN</span>
+<button class="text-primary text-xs font-bold border border-primary px-3 py-1 rounded hover:bg-primary hover:text-background-dark transition-colors">
+                                    Book / Резервирай
+                                </button>
+</div>
+</div>
+</div>
+<div class="flex bg-primary/5 border border-primary/10 rounded-xl overflow-hidden p-3 gap-4">
+<div class="w-24 h-24 shrink-0 rounded-lg overflow-hidden">
+<img alt="Truffle hunting" class="w-full h-full object-cover" data-alt="Freshly harvested truffles in a forest setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuCuTTkci-9p-p-eRJwqkYmp3t1VWU_pbK54rrAC3WE_1GbhKFMnDs7ePIw1Vp0DIyibeHs3KgNUIdeumSEvXY5WMviRtU7YSIsuZoBN1TQFzRf_D-XgPxDyM-rSbB5uwRyHIBM4QLhtn2kDopK7Yw3p00LCczGd2Jx4kqqCvHUi7n0MQD5KDunoUFCIVfELsS8NAj_KgSAgvQAIEj6Re9_2estseHBQQMddawRixIJiw7DI5SFpTaCIxmG81E2Uv9ALSonIACGoE"/>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<h4 class="font-bold text-slate-100 text-base leading-snug">Truffle Hunt Experience</h4>
+<p class="text-primary/80 text-xs font-medium">Лов на трюфели</p>
+<div class="flex items-center gap-3 mt-2 text-[11px] text-slate-400 uppercase tracking-tighter">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_month</span> Nov 15</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]" data-location="Balkan Mountains">location_on</span> Central Balkan</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-2">
+<span class="text-primary font-bold">150 BGN</span>
+<button class="text-primary text-xs font-bold border border-primary px-3 py-1 rounded hover:bg-primary hover:text-background-dark transition-colors">
+                                    Book / Резервирай
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex gap-2 border-t border-primary/10 bg-background-dark/95 backdrop-blur-md px-4 pb-6 pt-3">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<p class="text-[10px] font-medium tracking-wide">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">calendar_today</span>
+<p class="text-[10px] font-medium tracking-wide">Events</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<p class="text-[10px] font-medium tracking-wide">Recipes</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+<p class="text-[10px] font-medium tracking-wide">Saved</p>
+</a>
+</nav>
+</div>
+</body></html>

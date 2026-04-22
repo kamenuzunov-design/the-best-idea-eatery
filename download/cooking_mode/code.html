@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .glowing-voice {
+            box-shadow: 0 0 15px rgba(212, 175, 53, 0.4);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Top Navigation & Progress -->
+<header class="sticky top-0 z-50 bg-background-light dark:bg-background-dark/95 backdrop-blur-sm border-b border-primary/10">
+<div class="flex items-center p-4 justify-between max-w-2xl mx-auto w-full">
+<div class="flex items-center gap-3">
+<div class="text-primary cursor-pointer">
+<span class="material-symbols-outlined text-2xl">close</span>
+</div>
+<div>
+<h2 class="text-sm font-bold uppercase tracking-widest text-primary/80">The Best Idea Eatery</h2>
+<h1 class="text-lg font-bold leading-tight">Filet Mignon Cooking Mode</h1>
+</div>
+</div>
+<button class="bg-primary/10 hover:bg-primary/20 text-primary px-4 py-1.5 rounded-full text-sm font-bold transition-colors">
+                Finish
+            </button>
+</div>
+<!-- Progress Bar -->
+<div class="px-4 pb-4 max-w-2xl mx-auto w-full">
+<div class="flex justify-between items-center mb-2">
+<p class="text-xs font-medium text-primary/60 uppercase tracking-tighter">Current Phase: Searing</p>
+<p class="text-xs font-bold text-primary">Step 1 of 4</p>
+</div>
+<div class="w-full h-1 bg-primary/20 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-1/4 rounded-full"></div>
+</div>
+</div>
+</header>
+<main class="flex-1 max-w-2xl mx-auto w-full flex flex-col">
+<!-- Main Visual Container -->
+<div class="relative group mt-4 px-4">
+<div class="aspect-video w-full rounded-xl overflow-hidden shadow-2xl border border-primary/20">
+<div class="w-full h-full bg-center bg-cover" data-alt="Close up of a filet mignon searing in a cast iron pan" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCcwC_Eg252tTM_nGr6Q2zP1MfdDZALZoXTjSxAXPg6I03FSehI3OBM8YFlYt_QH-bvgXQPIN7Vxf5sIh52YAwCgaEE4XHh_OGZkf--G0O0tPDNaqfuHjVTKCHISVeP5UgxN0SKPsrULp2GQIcFmCeu5iq4WrEe3dQHvlCNcyGB5ladsgG16ZxVDJVrVjQK9DpZH_wBFQThuZQNoOXT95rrPEDCaqxF_XmxoY3R3NXwID_RywPADpjvShNhKKyOsETZcA8NA1yQOpc');">
+</div>
+<!-- Luxury Overlay for Timer -->
+<div class="absolute bottom-4 right-4 bg-background-dark/80 backdrop-blur-md border border-primary/30 p-4 rounded-xl flex items-center gap-4">
+<div class="flex flex-col items-center">
+<span class="text-primary text-[10px] uppercase font-bold tracking-widest">Remaining</span>
+<span class="text-2xl font-light tracking-tight text-white tabular-nums">02:45</span>
+</div>
+<div class="w-[1px] h-8 bg-primary/30"></div>
+<button class="text-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined text-3xl">play_circle</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Instructions Content -->
+<div class="px-6 py-8 flex-1">
+<div class="mb-8 text-center">
+<h3 class="text-primary text-xl font-bold mb-2 tracking-tight">Step 1: Sear the steak</h3>
+<h4 class="text-slate-400 text-lg font-medium italic">Стъпка 1: Запечатайте стека</h4>
+</div>
+<div class="space-y-6 text-center">
+<p class="text-lg leading-relaxed font-light text-slate-200">
+                    Place the seasoned steak in a hot pan. Sear for 3 minutes per side until a gold-brown crust forms.
+                </p>
+<div class="h-px w-12 bg-primary/30 mx-auto"></div>
+<p class="text-base leading-relaxed text-slate-400 italic">
+                    Поставете овкусената пържола в горещ тиган. Запечатайте за 3 минути от всяка страна до златисто-кафява коричка.
+                </p>
+</div>
+</div>
+<!-- Voice & Navigation Controls -->
+<div class="p-6 space-y-8 bg-gradient-to-t from-background-dark to-transparent">
+<!-- Voice Control Indicator -->
+<div class="flex flex-col items-center justify-center gap-3">
+<div class="relative">
+<div class="absolute inset-0 bg-primary/20 rounded-full animate-ping"></div>
+<div class="relative bg-primary text-background-dark p-3 rounded-full glowing-voice flex items-center justify-center">
+<span class="material-symbols-outlined">mic</span>
+</div>
+</div>
+<div class="text-center">
+<p class="text-[10px] uppercase tracking-[0.2em] text-primary font-bold">Listening for commands</p>
+<p class="text-xs text-slate-500 italic">"Next step" / "Следваща стъпка"</p>
+</div>
+</div>
+<!-- Navigation Buttons -->
+<div class="flex items-center gap-4">
+<button class="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all group">
+<span class="material-symbols-outlined text-primary group-hover:-translate-x-1 transition-transform">arrow_back</span>
+<span class="font-bold text-sm uppercase tracking-widest text-primary">Previous</span>
+</button>
+<button class="flex-[1.5] flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-background-dark hover:brightness-110 transition-all shadow-lg shadow-primary/20">
+<span class="font-bold text-sm uppercase tracking-widest">Next Step</span>
+<span class="material-symbols-outlined font-bold">arrow_forward</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Footer Space -->
+<footer class="h-4 bg-background-dark"></footer>
+</body></html>

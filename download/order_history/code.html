@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="bg"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>The Best Idea Eatery - Order History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Work Sans", sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-display">
+<!-- Header -->
+<header class="sticky top-0 z-10 bg-background-light dark:bg-background-dark/95 backdrop-blur-md border-b border-primary/20">
+<div class="flex items-center p-4 justify-between">
+<button class="text-primary flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex-1 text-center">
+<h1 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">
+                    История на поръчките
+                </h1>
+<p class="text-primary text-xs font-medium uppercase tracking-widest">Order History</p>
+</div>
+<button class="text-primary flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+<!-- Language Selector -->
+<div class="flex border-b border-primary/10 px-4 gap-8">
+<button class="flex flex-col items-center justify-center border-b-2 border-primary text-primary pb-2 pt-2 px-2 transition-colors">
+<span class="text-sm font-bold">Български</span>
+</button>
+<button class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-2 pt-2 px-2 hover:text-primary transition-colors">
+<span class="text-sm font-bold">English</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto pb-24">
+<div class="px-4 py-6">
+<h2 class="text-slate-900 dark:text-slate-100 text-xl font-bold mb-1">Скорошни поръчки</h2>
+<p class="text-primary/70 text-sm font-medium mb-6">Recent Orders</p>
+<div class="space-y-4">
+<!-- Order Item 1 -->
+<div class="flex gap-4 bg-white dark:bg-primary/5 p-4 rounded-xl border border-primary/10 shadow-sm">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-20 shrink-0 border border-primary/20" data-alt="Luxury gourmet meal kit presentation with fresh ingredients" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBqJkHW125CNMThhTsGcF_FtY625yAwFKaTbe0h_8ouGnbnyAQD0Vntz5fys2QPiy1N553BxaWEpYKyXLAihu_X1faTe0VUIJv2yTtd3-87oH_5ZNJwke45yeeK92Ns94Cb9zI-5QEP0p--s3Upc_O9Z_gSfaXQDY13aiuWrTY5UzO7M_rYheHDKwm4sUxwESjNxQ2EMMf2FQXi0Sv1qxc0e7gsAgsW0Z7Xdke6Oeu4adJTXHb2Fu7ZortRTNGgRaiJap77Mhoqk1E");'></div>
+<div class="flex flex-1 flex-col justify-between">
+<div>
+<div class="flex justify-between items-start">
+<h3 class="text-slate-900 dark:text-slate-100 text-base font-bold">Gourmet Meal Kit</h3>
+<span class="text-primary text-sm font-bold">145.00 лв.</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs mt-1">12.10.2023 • #83921</p>
+</div>
+<div class="flex items-center justify-between mt-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                Доставено | Delivered
+                            </span>
+<span class="material-symbols-outlined text-primary text-lg">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Order Item 2 -->
+<div class="flex gap-4 bg-white dark:bg-primary/5 p-4 rounded-xl border border-primary/10 shadow-sm">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-20 shrink-0 border border-primary/20" data-alt="Private chef table experience with fine dining setup" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCDvzxqIkji7qo_XYbNtH08QVHwJV4_KhaztOppZNgisTljeZfMiMuvGPsJvFfHwJnYFQvudGqWRi0wd8g6-0dUAevD8mWZrwu6-HZ1YeNksH-4WNPDPHtVIsBy_Bws7UjH5QBrd8Bd-QkAVU8qZhTBTax8Z8wc8aWB3I4CFfLb5xw3P-L0A7-ducobUAE-9PZvszN9ufWjIlYkUfowhgV7fmSjw-nqUhz3Ja_nPgvSq-7V0j3Wp5cjEXMNCz_tB1MstTshuqkEnYE");'></div>
+<div class="flex flex-1 flex-col justify-between">
+<div>
+<div class="flex justify-between items-start">
+<h3 class="text-slate-900 dark:text-slate-100 text-base font-bold">Chef's Table Booking</h3>
+<span class="text-primary text-sm font-bold">320.00 лв.</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs mt-1">05.10.2023 • #83754</p>
+</div>
+<div class="flex items-center justify-between mt-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                Завършено | Completed
+                            </span>
+<span class="material-symbols-outlined text-primary text-lg">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Order Item 3 -->
+<div class="flex gap-4 bg-white dark:bg-primary/5 p-4 rounded-xl border border-primary/10 shadow-sm">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-20 shrink-0 border border-primary/20" data-alt="Premium organic ingredients delivery basket" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDyqQGEu8tH8XL3SN5aMDWNF_NJazCbdSZzzJPgU3DyEZ52qti6F7v5jAWpOwFdG0bHE1okmoRMevqllR-5eEeXI6k2NLMjunemOgmD6be_swIfwHA5Yio6DUb9_eGpPHiPoyTTsAyo4RJhZJNo2tLump9vruA6zEZZvD1iqVPk52VSCczY_Vo_mGrJWJlzBux46kszlMfVjcwaXX4ilgOWFcLLscD8ETYgWs6iA64qWMDMkLMh7xYG6s57vEWl00qCdPRxF98Zl34");'></div>
+<div class="flex flex-1 flex-col justify-between">
+<div>
+<div class="flex justify-between items-start">
+<h3 class="text-slate-900 dark:text-slate-100 text-base font-bold">Premium Ingredients Delivery</h3>
+<span class="text-primary text-sm font-bold">89.50 лв.</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs mt-1">28.09.2023 • #83612</p>
+</div>
+<div class="flex items-center justify-between mt-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                Доставено | Delivered
+                            </span>
+<span class="material-symbols-outlined text-primary text-lg">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Featured Promotion Section -->
+<div class="relative overflow-hidden rounded-xl bg-primary mt-8 p-6 group">
+<div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+<div class="relative z-10">
+<h4 class="text-background-dark text-lg font-bold mb-1">Подарете преживяване</h4>
+<p class="text-background-dark/80 text-sm mb-4">Give the gift of an extraordinary meal. Purchase a voucher today.</p>
+<button class="bg-background-dark text-primary px-4 py-2 rounded-lg text-sm font-bold hover:scale-105 transition-transform">
+                            Вижте ваучерите
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 z-20 bg-background-light dark:bg-background-dark border-t border-primary/20 safe-area-inset-bottom">
+<div class="flex h-20 items-center justify-around px-4">
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-primary" href="#">
+<span class="material-symbols-outlined text-2xl">home</span>
+<span class="text-[10px] font-medium tracking-tight">Начало</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-2xl active-icon">receipt_long</span>
+<span class="text-[10px] font-bold tracking-tight">Поръчки</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-primary" href="#">
+<span class="material-symbols-outlined text-2xl">person</span>
+<span class="text-[10px] font-medium tracking-tight">Профил</span>
+</a>
+</div>
+</nav>
+</body></html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .gold-gradient {
+            background: linear-gradient(135deg, #d4af35 0%, #f1d592 50%, #d4af35 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen pb-24">
+<!-- Header -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 sticky top-0 z-50 border-b border-primary/10">
+<div class="text-primary flex size-10 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</div>
+<div class="flex-1 text-center">
+<h1 class="text-slate-900 dark:text-primary text-lg font-bold tracking-tight">The Best Idea Eatery</h1>
+<p class="text-[10px] uppercase tracking-widest text-primary/70">Haute Cuisine</p>
+</div>
+<div class="flex size-10 items-center justify-end">
+<button class="text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Hero Section -->
+<div class="@container px-4 py-4">
+<div class="relative h-80 w-full overflow-hidden rounded-xl border border-primary/20 bg-slate-800 shadow-2xl">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Gourmet creamy chestnut soup with black truffle shavings" style="background-image: linear-gradient(to top, rgba(32, 29, 18, 0.9) 0%, rgba(32, 29, 18, 0.2) 60%, transparent 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuCRlEOCkkgVw9Vn7BRHYNUI2uSh7N4kDSCHL0CN58hLVR7mgU7hMM3GKoqf0TvEfITyXzKAbLYkXEQcmrbVkWtIxqmOnPhqVqJXKsMolSnPGDLWCCC5fG_2wOkCW53tyBoHP2YApzEhjykvuEOGEO3aDOCOlKiFQKnRM0S0_qH5ogxVu1b6245My6qgaNTH9kn4fSf9L0XZIfGTuBI1ClwTiM1rYtE-wf9LQcgsnECEWKTcy3MMEhv4FwMqliNMGHKPWAB-bd31TAs');">
+</div>
+<div class="absolute bottom-0 left-0 p-6 w-full">
+<span class="inline-block px-3 py-1 bg-primary text-background-dark text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">Limited Edition</span>
+<h2 class="text-white text-3xl font-bold leading-tight mb-1">Seasonal Menu</h2>
+<h3 class="text-primary text-xl font-medium leading-tight">Сезонно меню</h3>
+<p class="text-slate-300 text-sm mt-2 font-light">Winter Truffle &amp; Gold / Зимен трюфел и злато</p>
+</div>
+</div>
+</div>
+<!-- Quick Filters / Season Toggle -->
+<div class="flex gap-3 px-4 py-2 overflow-x-auto no-scrollbar items-center">
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary px-5 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-background-dark text-sm">ac_unit</span>
+<p class="text-background-dark text-xs font-bold uppercase tracking-wider">Winter / Зима</p>
+</button>
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/10 border border-primary/30 px-5">
+<span class="material-symbols-outlined text-primary text-sm">filter_list</span>
+<p class="text-primary text-xs font-bold uppercase tracking-wider">Switch Season</p>
+</button>
+<div class="h-6 w-[1px] bg-primary/20 shrink-0 mx-1"></div>
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/5 px-4 text-slate-400">
+<p class="text-xs font-medium">Drinks</p>
+</button>
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/5 px-4 text-slate-400">
+<p class="text-xs font-medium">Desserts</p>
+</button>
+</div>
+<!-- Section Title -->
+<div class="px-4 pt-8 pb-4 flex items-end justify-between">
+<div>
+<h2 class="text-slate-900 dark:text-slate-100 text-2xl font-bold tracking-tight">Winter Favorites</h2>
+<p class="text-primary text-sm font-medium">Зимни фаворити</p>
+</div>
+<a class="text-primary text-xs font-bold uppercase tracking-widest border-b border-primary/30 pb-1" href="#">View All</a>
+</div>
+<!-- Recipe Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 px-4">
+<!-- Card 1 -->
+<div class="bg-white dark:bg-background-dark/50 border border-primary/10 rounded-xl overflow-hidden shadow-sm hover:border-primary/40 transition-colors group">
+<div class="relative h-48">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500" data-alt="Black truffle pasta with gold leaf garnish" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAJ17bGAvsNW6zfJfgfQMTLm6FzsFHSSl4KjilHyfPM9AnEgUlOoBqGIz0UaK3hwgyLFSkzTYcS_hWDSr0qTa-meQlSt2Oyzu-QtSONZjS0kToPdSjrwCDSInYcO1S9y2TdWkAF1JAwF7rlqsUiqfd5Gt6h3rBejtNphxgO7IMq-OkJgLBOQkgg0koO7vW1GrCZO7ljJDA9PZuKsoP3cq3H8Gr-SrMbQw2xEfstn88Eb9qXcE4yJNf-qsf5P7y4e_s1n1_t3TK7o3s');"></div>
+<div class="absolute top-3 right-3 bg-background-dark/80 backdrop-blur-md p-2 rounded-full text-primary">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-2">
+<h4 class="text-lg font-bold dark:text-slate-100">Truffle Tagliatelle</h4>
+<span class="text-primary font-bold text-sm">$42</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs mb-4">Hand-cut pasta, 24k gold leaf, Perigord truffle.</p>
+<div class="flex items-center gap-4 border-t border-primary/10 pt-4">
+<div class="flex items-center gap-1 text-[10px] text-primary uppercase font-bold tracking-tighter">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span>25 MIN</span>
+</div>
+<div class="flex items-center gap-1 text-[10px] text-primary uppercase font-bold tracking-tighter">
+<span class="material-symbols-outlined text-sm">bar_chart</span>
+<span>Intermediate</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white dark:bg-background-dark/50 border border-primary/10 rounded-xl overflow-hidden shadow-sm hover:border-primary/40 transition-colors group">
+<div class="relative h-48">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500" data-alt="Luxurious golden pumpkin risotto with sage" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDbVarUsRNiPXtP54eVpoCHgAJwAIUql394c2z10fkGBfxLMzxc8kaJxz0aiz5-vUkMh72GbtizeEO0zc-Oc4IHrgwQdZGeYPygVR1R8-5QxPC6IenPAqjFofTtv4RWkwjLszYE6KYUkAsbC3-DjB0LORh1UgY5ONfKqk82XJ2s6fzAuCKxxr350v_UYR_7NINI-C1-yuPWkRXbIR57-j_2PBTsay21Uu2IWxPOtuFjgH0FmBmtDZpNNtDWGlsxx8M83xPo_84Khxc');"></div>
+<div class="absolute top-3 right-3 bg-background-dark/80 backdrop-blur-md p-2 rounded-full text-primary">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-2">
+<h4 class="text-lg font-bold dark:text-slate-100">Golden Risotto</h4>
+<span class="text-primary font-bold text-sm">$38</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs mb-4">Acquerello rice, saffron, roasted bone marrow.</p>
+<div class="flex items-center gap-4 border-t border-primary/10 pt-4">
+<div class="flex items-center gap-1 text-[10px] text-primary uppercase font-bold tracking-tighter">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span>45 MIN</span>
+</div>
+<div class="flex items-center gap-1 text-[10px] text-primary uppercase font-bold tracking-tighter">
+<span class="material-symbols-outlined text-sm">bar_chart</span>
+<span>Expert</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Drink Section -->
+<div class="px-4 pt-10 pb-4">
+<h2 class="text-slate-900 dark:text-slate-100 text-2xl font-bold tracking-tight">Seasonal Drinks</h2>
+<p class="text-primary text-sm font-medium">Сезонни напитки</p>
+</div>
+<div class="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-6">
+<div class="min-w-[200px] bg-background-light dark:bg-primary/5 rounded-xl border border-primary/20 p-4">
+<div class="h-32 w-full rounded-lg mb-3 bg-cover bg-center" data-alt="Hot dark chocolate with gold dust" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCIo5MHMB9K_xltgUTTU-kM_mgLjdxlCbVwXbHSmHwICQeh4tNh0D2jKpXNL4C5A_OafkZdpfSpwOTY8gsHdYlumaUJOYX74v5Og9rviuLEu6jk6M9JvIqd9cvTk6x2NzwBKLrfR-tdCAG1zEL-kBqLC8H1tv4t3-QABfA3PmTjNfn-jKKHNTo5_2IL67gij0shYuU1C8rJ6vlctiP0YWpOQP6o1i87vMd0zd8pJFlhwizxJ0FYz7r-Ej3Mae5Dpqyy0Jc9QtuAUr0');"></div>
+<h5 class="font-bold text-sm">Gold Dusted Cocoa</h5>
+<p class="text-primary text-[10px] font-bold mt-1">$12</p>
+</div>
+<div class="min-w-[200px] bg-background-light dark:bg-primary/5 rounded-xl border border-primary/20 p-4">
+<div class="h-32 w-full rounded-lg mb-3 bg-cover bg-center" data-alt="Spiced winter cocktail with cinnamon" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCmx08nbpRjCfiNa_737QiqoJ-qW5CreA-XdBqeDXz2_7XG-A50vqKqoLgUkM4Jc6FqzP2UOgg7h1KhGHoU4uhMwrxWietqClHMMVAP1CvVrUe6qmKBBJW1g1Vq7K5TWlhFluufIKiHzqKZwciaQNzW_eFtHQMw5UlVMBKcIhgtjX_HSIgH-2R2kcC9PZ6MPPFzBWqenN6qbi1w1ZC2qAmOnrJsTnu-eKCRaTT--Ku0WE8LoPAcbqvuhZwinqwcij_uY5F6hIhM6EE');"></div>
+<h5 class="font-bold text-sm">Winter Spiced Old Fashioned</h5>
+<p class="text-primary text-[10px] font-bold mt-1">$18</p>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-background-light dark:bg-background-dark border-t border-primary/20 px-4 pb-6 pt-3 flex justify-between items-center max-w-full overflow-hidden">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-2xl">home</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl">restaurant_menu</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Menu</span>
+</a>
+<div class="relative -top-6">
+<div class="absolute inset-0 gold-gradient blur-lg opacity-40 rounded-full scale-125"></div>
+<button class="relative gold-gradient text-background-dark size-14 rounded-full flex items-center justify-center shadow-xl border-4 border-background-dark">
+<span class="material-symbols-outlined text-3xl font-bold">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl">favorite</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Saved</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl">person</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Profile</span>
+</a>
+</nav>
+</body></html>

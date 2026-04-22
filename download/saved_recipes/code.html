@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>Saved Recipes - The Best Idea Eatery</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<header class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-primary/10 px-4 py-4">
+<div class="max-w-md mx-auto flex items-center justify-between">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<div class="text-center">
+<h1 class="text-lg font-bold tracking-tight">Saved Recipes</h1>
+<p class="text-[10px] uppercase tracking-widest text-primary font-semibold">Запазени рецепти</p>
+</div>
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-primary">more_vert</span>
+</button>
+</div>
+</header>
+<main class="flex-1 max-w-md mx-auto w-full px-4 py-6 pb-24">
+<div class="mb-6">
+<label class="relative block group">
+<span class="absolute inset-y-0 left-0 flex items-center pl-4">
+<span class="material-symbols-outlined text-primary/60 group-focus-within:text-primary transition-colors">search</span>
+</span>
+<input class="w-full bg-slate-200/50 dark:bg-primary/5 border-none rounded-xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/50 placeholder:text-slate-500 dark:placeholder:text-slate-400 transition-all" placeholder="Search saved items... / Търсене..." type="text"/>
+</label>
+</div>
+<div class="flex gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
+<button class="bg-primary text-background-dark px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap">
+                All / Всички
+            </button>
+<button class="bg-primary/10 text-primary border border-primary/20 px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap">
+                Mains / Основни
+            </button>
+<button class="bg-primary/10 text-primary border border-primary/20 px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap">
+                Desserts / Десерти
+            </button>
+</div>
+<div class="grid grid-cols-1 gap-6">
+<div class="group relative bg-white dark:bg-primary/5 rounded-2xl overflow-hidden border border-primary/10 hover:border-primary/30 transition-all shadow-sm">
+<div class="relative h-48 w-full overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Juicy filet mignon steak with herbs" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBu61YO_VOgY9oCgJE0ge45fzIcnqE5kqAUbMzZQaSG9cdYqmj7s-uUoA-dbuk3BMCLp7uM4qMIn7ywl8hJYqePYYuFUYWbBttsKcTQA_abVEJKcp-e_qO7Cxukw4cjBfhIA4Yliy3qrb5SF0mvLzd0DDdoe_8FeJMoUpIeKezqeMyyEl-vcj5Qd-Ct3igMWKOc08ssUv9knmsEwovhlA_EDxEmUy61KNqcao_gVQJv_SkNiUSBJFOhMzlcFGne7POkRYiu9SdRuAw')">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark/80 to-transparent"></div>
+<button class="absolute top-4 right-4 bg-primary text-background-dark size-10 rounded-full flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined fill-1">bookmark</span>
+</button>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-lg font-bold">Filet Mignon</h3>
+<span class="flex items-center gap-1 text-xs text-primary font-medium">
+<span class="material-symbols-outlined text-sm">schedule</span> 25 min
+                        </span>
+</div>
+<p class="text-sm text-primary/80 font-medium mb-3">Филе Миньон</p>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-primary/10 text-[10px] font-bold text-primary uppercase">Gourmet</span>
+<span class="px-2 py-0.5 rounded bg-primary/10 text-[10px] font-bold text-primary uppercase">Dinner</span>
+</div>
+</div>
+</div>
+<div class="group relative bg-white dark:bg-primary/5 rounded-2xl overflow-hidden border border-primary/10 hover:border-primary/30 transition-all shadow-sm">
+<div class="relative h-48 w-full overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Fresh colorful quinoa salad bowl" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCl00dyejJDwE-pdX2M_o7D1u2F56uScIE0oR7O_1QI2yz6F8ilPjWjWQVJ4RddCBQE65J1ltnYl2JZEfyCkuf6qIPA-O5LGxgB4TzZ99QNW1A7Nb-eHdquXYbtl0PeZMYMSrYx623vOGr5xYBJ1PXEmaehCVucdp0OP5H230IAzaxp2IgI-dcXWTTLO7ZRBaBKp5ilfp2P3T3YZOmTtHfraw-UsKhQBFgK9bUCXXgrMYPDQ2zd79iMiUBdTzAGwxsQw4nCApgSGYI')">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark/80 to-transparent"></div>
+<button class="absolute top-4 right-4 bg-primary text-background-dark size-10 rounded-full flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined fill-1">bookmark</span>
+</button>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-lg font-bold">Quinoa Salad</h3>
+<span class="flex items-center gap-1 text-xs text-primary font-medium">
+<span class="material-symbols-outlined text-sm">schedule</span> 15 min
+                        </span>
+</div>
+<p class="text-sm text-primary/80 font-medium mb-3">Салата Киноа</p>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-primary/10 text-[10px] font-bold text-primary uppercase">Healthy</span>
+<span class="px-2 py-0.5 rounded bg-primary/10 text-[10px] font-bold text-primary uppercase">Lunch</span>
+</div>
+</div>
+</div>
+<div class="group relative bg-white dark:bg-primary/5 rounded-2xl overflow-hidden border border-primary/10 hover:border-primary/30 transition-all shadow-sm">
+<div class="relative h-48 w-full overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Creamy truffle pasta with mushrooms" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBzIw220kljgVAYrpGnQHHbAQnxoR40j3j7Y5JMedPmu4t0MkBRcx0rqDf8a8urewRI-5SCJw75tdTinPKdq46pTvp1zfgtJtkG-8L34_mfQq45Ez_fnHiCG4ItF_kWpyNPAO6XUJk_1auD-xj4ebwIfRWrq4QygwnGqHw7C77oFcYqrgjdWND1NNGEPko6OA-oDvWhCSw_1pF_3rAxyEEj_Uq4EULbNUuzBH4WvwksVGPVmo65kKz7XfPGQeiYQN7vVmfVUMUFyqs')">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark/80 to-transparent"></div>
+<button class="absolute top-4 right-4 bg-primary text-background-dark size-10 rounded-full flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined fill-1">bookmark</span>
+</button>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-lg font-bold">Truffle Pasta</h3>
+<span class="flex items-center gap-1 text-xs text-primary font-medium">
+<span class="material-symbols-outlined text-sm">schedule</span> 20 min
+                        </span>
+</div>
+<p class="text-sm text-primary/80 font-medium mb-3">Паста с трюфел</p>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-primary/10 text-[10px] font-bold text-primary uppercase">Italian</span>
+<span class="px-2 py-0.5 rounded bg-primary/10 text-[10px] font-bold text-primary uppercase">Premium</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-background-light dark:bg-background-dark border-t border-primary/10 pb-safe">
+<div class="max-w-md mx-auto flex justify-around items-center h-16 px-4">
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home / Начало</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="text-[10px] font-medium">Recipes / Рецепти</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">bookmark</span>
+<span class="text-[10px] font-bold">Saved / Запазени</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile / Профил</span>
+</a>
+</div>
+</nav>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .fill-1 {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</body></html>

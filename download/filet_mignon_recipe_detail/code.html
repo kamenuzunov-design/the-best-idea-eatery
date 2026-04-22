@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d4af35",
+                        "background-light": "#f8f7f6",
+                        "background-dark": "#201d12",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Work Sans", sans-serif;
+        }
+        .recipe-gradient {
+            background: linear-gradient(to top, rgba(32, 29, 18, 1) 0%, rgba(32, 29, 18, 0.4) 50%, rgba(32, 29, 18, 0) 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full max-w-md mx-auto flex-col bg-background-light dark:bg-background-dark overflow-x-hidden border-x border-primary/10">
+<!-- Header Navigation -->
+<div class="sticky top-0 z-50 flex items-center bg-background-dark/80 backdrop-blur-md p-4 justify-between border-b border-primary/10">
+<div class="text-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-primary text-sm font-bold tracking-widest uppercase flex-1 text-center">The Best Idea Eatery</h2>
+<div class="flex gap-2">
+<button class="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</div>
+<!-- Hero Section -->
+<div class="relative w-full aspect-[4/5] overflow-hidden">
+<div class="absolute inset-0 bg-center bg-no-repeat bg-cover" data-alt="Gourmet filet mignon steak with rosemary and butter" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB6qNxiIWAS0Q4BdHwwzrCDDxeHwyMyMYudRaMu6DTo2NlIoE8bFuPyYgjEvQ8rTo8THtSeCH9JAt0-sUCqhHGivcW2OX0FZ8nVd8wPtoyYYQQovJeGRQAOOmyPjWqV6Wa_Tc5GocrSeU4VT5ixxV6ASMr12relnUvSLdqVFnj3IZNYNpK8Kvq4h8yRmLcZxA2NgKMktUW8lgawoWRDEsPYGy0rq2SLH4BAspVoF3XtcZONUOy77OBJao_KZOz04REJwTrBVAyjChU");'>
+</div>
+<div class="absolute inset-0 recipe-gradient"></div>
+<div class="absolute bottom-0 left-0 p-6 w-full">
+<div class="flex items-center gap-2 mb-2">
+<span class="px-2 py-1 rounded bg-primary text-background-dark text-[10px] font-bold uppercase tracking-tighter">Premium Selection</span>
+</div>
+<h1 class="text-slate-100 text-4xl font-bold leading-tight">Filet Mignon <br/> <span class="text-primary/90 font-light italic text-2xl">Филе Миньон</span></h1>
+</div>
+</div>
+<!-- Stats Grid -->
+<div class="flex flex-wrap gap-3 p-4">
+<div class="flex flex-1 flex-col gap-1 rounded-xl p-4 border border-primary/20 bg-primary/5">
+<p class="text-primary/60 text-[10px] font-bold uppercase tracking-widest">Prep Time / Време</p>
+<p class="text-slate-100 text-lg font-bold">45 min</p>
+</div>
+<div class="flex flex-1 flex-col gap-1 rounded-xl p-4 border border-primary/20 bg-primary/5">
+<p class="text-primary/60 text-[10px] font-bold uppercase tracking-widest">Difficulty / Трудност</p>
+<p class="text-slate-100 text-lg font-bold">Hard / Трудно</p>
+</div>
+<div class="flex flex-1 flex-col gap-1 rounded-xl p-4 border border-primary/20 bg-primary/5">
+<p class="text-primary/60 text-[10px] font-bold uppercase tracking-widest">Servings / Порции</p>
+<p class="text-slate-100 text-lg font-bold">2 / 2 порции</p>
+</div>
+</div>
+<!-- Nutrition Summary -->
+<div class="px-4 py-2">
+<div class="flex justify-between items-center bg-slate-900/50 rounded-lg p-4 border border-primary/10">
+<div class="text-center">
+<p class="text-primary text-sm font-bold">650</p>
+<p class="text-slate-400 text-[10px] uppercase">Calories</p>
+</div>
+<div class="w-px h-8 bg-primary/20"></div>
+<div class="text-center">
+<p class="text-primary text-sm font-bold">52g</p>
+<p class="text-slate-400 text-[10px] uppercase">Protein</p>
+</div>
+<div class="w-px h-8 bg-primary/20"></div>
+<div class="text-center">
+<p class="text-primary text-sm font-bold">42g</p>
+<p class="text-slate-400 text-[10px] uppercase">Fat</p>
+</div>
+</div>
+</div>
+<!-- Ingredients Section -->
+<div class="p-6">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-slate-100 text-xl font-bold flex flex-col">
+                    Ingredients
+                    <span class="text-primary text-sm font-normal">Съставки</span>
+</h3>
+<span class="material-symbols-outlined text-primary">shopping_bag</span>
+</div>
+<ul class="space-y-4">
+<li class="flex justify-between items-center border-b border-primary/10 pb-2">
+<span class="text-slate-300">2x 250g Beef Tenderloin <br/> <span class="text-slate-500 text-xs italic">2x 250г Телешко филе</span></span>
+<span class="material-symbols-outlined text-primary/40 size-5">check_circle</span>
+</li>
+<li class="flex justify-between items-center border-b border-primary/10 pb-2">
+<span class="text-slate-300">50g Unsalted Butter <br/> <span class="text-slate-500 text-xs italic">50г Безсолно масло</span></span>
+<span class="material-symbols-outlined text-primary/40 size-5">check_circle</span>
+</li>
+<li class="flex justify-between items-center border-b border-primary/10 pb-2">
+<span class="text-slate-300">Fresh Rosemary &amp; Thyme <br/> <span class="text-slate-500 text-xs italic">Пресен розмарин и мащерка</span></span>
+<span class="material-symbols-outlined text-primary/40 size-5">check_circle</span>
+</li>
+<li class="flex justify-between items-center border-b border-primary/10 pb-2">
+<span class="text-slate-300">3 Cloves of Garlic <br/> <span class="text-slate-500 text-xs italic">3 скилидки чесън</span></span>
+<span class="material-symbols-outlined text-primary/40 size-5">check_circle</span>
+</li>
+<li class="flex justify-between items-center border-b border-primary/10 pb-2">
+<span class="text-slate-300">Maldon Salt &amp; Black Pepper <br/> <span class="text-slate-500 text-xs italic">Сол Малдон и черен пипер</span></span>
+<span class="material-symbols-outlined text-primary/40 size-5">check_circle</span>
+</li>
+</ul>
+</div>
+<!-- Preparation Steps -->
+<div class="p-6 bg-primary/5">
+<h3 class="text-slate-100 text-xl font-bold mb-6 flex flex-col">
+                Preparation
+                <span class="text-primary text-sm font-normal">Начин на приготвяне</span>
+</h3>
+<div class="space-y-8 relative">
+<div class="absolute left-4 top-0 bottom-0 w-px bg-primary/20"></div>
+<div class="relative pl-10">
+<div class="absolute left-2 top-0 size-4 rounded-full bg-primary border-4 border-background-dark"></div>
+<p class="text-primary font-bold text-xs uppercase mb-1">Step 1 / Стъпка 1</p>
+<p class="text-slate-300 text-sm leading-relaxed">Bring the meat to room temperature and season generously with salt and pepper.</p>
+<p class="text-slate-500 text-xs italic mt-1">Оставете месото на стайна температура и подправете обилно със сол и пипер.</p>
+</div>
+<div class="relative pl-10">
+<div class="absolute left-2 top-0 size-4 rounded-full bg-primary border-4 border-background-dark"></div>
+<p class="text-primary font-bold text-xs uppercase mb-1">Step 2 / Стъпка 2</p>
+<p class="text-slate-300 text-sm leading-relaxed">Sear in a smoking hot cast-iron pan for 3-4 minutes on each side for medium-rare.</p>
+<p class="text-slate-500 text-xs italic mt-1">Запечатайте в силно сгорещен чугунен тиган за 3-4 минути от всяка страна за medium-rare.</p>
+</div>
+<div class="relative pl-10">
+<div class="absolute left-2 top-0 size-4 rounded-full bg-primary border-4 border-background-dark"></div>
+<p class="text-primary font-bold text-xs uppercase mb-1">Step 3 / Стъпка 3</p>
+<p class="text-slate-300 text-sm leading-relaxed">Add butter, herbs, and crushed garlic. Baste the steaks continuously for 2 minutes.</p>
+<p class="text-slate-500 text-xs italic mt-1">Добавете маслото, билките и чесъна. Поливайте пържолите непрекъснато за 2 минути.</p>
+</div>
+<div class="relative pl-10">
+<div class="absolute left-2 top-0 size-4 rounded-full bg-primary border-4 border-background-dark"></div>
+<p class="text-primary font-bold text-xs uppercase mb-1">Step 4 / Стъпка 4</p>
+<p class="text-slate-300 text-sm leading-relaxed">Let the meat rest for 5-10 minutes before slicing to keep the juices inside.</p>
+<p class="text-slate-500 text-xs italic mt-1">Оставете месото да почине за 5-10 минути преди рязане, за да запазите соковете.</p>
+</div>
+</div>
+</div>
+<!-- Action Button -->
+<div class="p-6">
+<button class="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">bookmark</span>
+                SAVE TO MY RECIPES / ЗАПАЗИ РЕЦЕПТАТА
+            </button>
+</div>
+<div class="h-20"></div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50">
+<div class="flex gap-2 border-t border-primary/20 bg-background-dark/95 backdrop-blur-md px-4 pb-6 pt-3">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary/60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<p class="text-[10px] font-medium tracking-wider uppercase">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-[1]">restaurant_menu</span>
+<p class="text-[10px] font-medium tracking-wider uppercase">Recipes</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary/60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+<p class="text-[10px] font-medium tracking-wider uppercase">Saved</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary/60 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<p class="text-[10px] font-medium tracking-wider uppercase">Profile</p>
+</a>
+</div>
+</div>
+</div>
+</body></html>
