@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, setDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
@@ -17,11 +17,21 @@ const ManageMeasurements = () => {
 
   // Form State
   const [editingId, setEditingId] = useState(null);
+  const [unitId, setUnitId] = useState('');
   const [nameBg, setNameBg] = useState('');
   const [nameEn, setNameEn] = useState('');
-  const [type, setType] = useState('weight');
-  const [baseWeight, setBaseWeight] = useState('');
-  const [isSystemUnit, setIsSystemUnit] = useState(true);
+  const [shortBg, setShortBg] = useState('');
+  const [shortEn, setShortEn] = useState('');
+  const [category, setCategory] = useState('mass'); // mass, volume, count, custom
+  const [isStandard, setIsStandard] = useState(false);
+  
+  // Conversions metric
+  const [toMl, setToMl] = useState('');
+  const [toGaverage, setToGaverage] = useState('');
+  
+  // Conversions imperial
+  const [imperialEquivalent, setImperialEquivalent] = useState('');
+  const [conversionFactor, setConversionFactor] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'measurements'));
@@ -38,20 +48,34 @@ const ManageMeasurements = () => {
     e.preventDefault();
     if (!nameBg || !nameEn) return;
 
+    const actualUnitId = editingId || unitId || nameEn.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+
     try {
       const unitData = {
+        unit_id: actualUnitId,
         name_bg: nameBg,
         name_en: nameEn,
-        type,
-        base_weight_grams: baseWeight ? parseFloat(baseWeight) : null,
-        is_system_unit: isSystemUnit
+        short_bg: shortBg,
+        short_en: shortEn,
+        category: category,
+        is_standard: isStandard,
+        conversions: {
+          metric: {
+            to_ml: toMl ? parseFloat(toMl) : null,
+            to_g_average: toGaverage ? parseFloat(toGaverage) : null
+          },
+          imperial: {
+            imperial_equivalent: imperialEquivalent,
+            conversion_factor: conversionFactor ? parseFloat(conversionFactor) : null
+          }
+        }
       };
 
       if (editingId) {
         await updateDoc(doc(db, 'measurements', editingId), unitData);
         await logActivity(user.uid, user.email, 'edit_measurement', `Edited measurement unit: ${nameEn}`);
       } else {
-        await addDoc(collection(db, 'measurements'), unitData);
+        await setDoc(doc(db, 'measurements', actualUnitId), unitData);
         await logActivity(user.uid, user.email, 'add_measurement', `Added measurement unit: ${nameEn}`);
       }
       
@@ -64,22 +88,42 @@ const ManageMeasurements = () => {
 
   const handleEditClick = (m) => {
     setEditingId(m.id);
+    setUnitId(m.unit_id || m.id);
     setNameBg(m.name_bg || m.name || '');
     setNameEn(m.name_en || '');
-    setType(m.type || 'weight');
-    setBaseWeight(m.base_weight_grams || '');
-    setIsSystemUnit(m.is_system_unit !== false);
-    // scroll to top to see form
+    setShortBg(m.short_bg || '');
+    setShortEn(m.short_en || '');
+    
+    let cat = m.category || 'mass';
+    if (!m.category && m.type) {
+        cat = m.type === 'weight' ? 'mass' : m.type;
+    }
+    setCategory(cat);
+    
+    setIsStandard(m.is_standard || m.is_system_unit || false);
+    
+    setToMl(m.conversions?.metric?.to_ml || '');
+    setToGaverage(m.conversions?.metric?.to_g_average || m.base_weight_grams || '');
+    
+    setImperialEquivalent(m.conversions?.imperial?.imperial_equivalent || '');
+    setConversionFactor(m.conversions?.imperial?.conversion_factor || '');
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setUnitId('');
     setNameBg('');
     setNameEn('');
-    setType('weight');
-    setBaseWeight('');
-    setIsSystemUnit(true);
+    setShortBg('');
+    setShortEn('');
+    setCategory('mass');
+    setIsStandard(false);
+    setToMl('');
+    setToGaverage('');
+    setImperialEquivalent('');
+    setConversionFactor('');
   };
 
   const handleDelete = async (id, mName) => {
@@ -123,34 +167,62 @@ const ManageMeasurements = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-slate-400">{isBg ? 'Име (BG)' : 'Name (BG)'}</label>
-              <input value={nameBg} onChange={(e) => setNameBg(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Чаена лъжица" />
+              <input value={nameBg} onChange={(e) => setNameBg(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Супена лъжица" />
             </div>
             
             <div>
               <label className="text-xs text-slate-400">{isBg ? 'Име (EN)' : 'Name (EN)'}</label>
-              <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Teaspoon" />
+              <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Tablespoon" />
             </div>
-            
+
             <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Тип' : 'Type'}</label>
-              <select value={type} onChange={(e) => setType(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm">
-                <option value="weight">{isBg ? 'Тегло (Weight)' : 'Weight'}</option>
-                <option value="volume">{isBg ? 'Обем (Volume)' : 'Volume'}</option>
+              <label className="text-xs text-slate-400">{isBg ? 'Съкращение (BG)' : 'Short (BG)'}</label>
+              <input value={shortBg} onChange={(e) => setShortBg(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="с.л." />
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-400">{isBg ? 'Съкращение (EN)' : 'Short (EN)'}</label>
+              <input value={shortEn} onChange={(e) => setShortEn(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="tbsp" />
+            </div>
+          </div>
+
+          <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-slate-400">{isBg ? 'Категория' : 'Category'}</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm">
+                <option value="mass">{isBg ? 'Маса (Mass) - g, kg' : 'Mass (g, kg)'}</option>
+                <option value="volume">{isBg ? 'Обем (Volume) - ml, l' : 'Volume (ml, l)'}</option>
                 <option value="count">{isBg ? 'Брой (Count)' : 'Count'}</option>
-                <option value="custom">{isBg ? 'Специфично (Custom)' : 'Custom'}</option>
+                <option value="custom">{isBg ? 'Специфично (Custom) - чаша, лъжица' : 'Custom (cup, spoon)'}</option>
               </select>
             </div>
-            
-            <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Грамаж (Base)' : 'Base Grams'}</label>
-              <input type="number" step="0.01" value={baseWeight} onChange={(e) => setBaseWeight(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="напр. 5" />
-            </div>
-            
-            <div className="col-span-2 flex items-center gap-2 mt-2">
-              <input type="checkbox" id="isSystem" checked={isSystemUnit} onChange={(e) => setIsSystemUnit(e.target.checked)} className="accent-primary" />
-              <label htmlFor="isSystem" className="text-sm text-slate-300">
-                {isBg ? 'Системна единица (Стандартна)' : 'System Unit (Standard)'}
+            <div className="flex items-center gap-2 mt-6">
+              <input type="checkbox" id="isStandard" checked={isStandard} onChange={(e) => setIsStandard(e.target.checked)} className="accent-primary" />
+              <label htmlFor="isStandard" className="text-sm text-slate-300">
+                {isBg ? 'Стандартна единица' : 'Standard Unit'}
               </label>
+            </div>
+          </div>
+
+          <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-slate-400">{isBg ? 'Метрична базова стойност (ml)' : 'Metric Base (ml)'}</label>
+              <input type="number" step="0.01" value={toMl} onChange={(e) => setToMl(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="15" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">{isBg ? 'Метрична базова стойност (g - средно)' : 'Metric Base (g - avg)'}</label>
+              <input type="number" step="0.01" value={toGaverage} onChange={(e) => setToGaverage(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="12" />
+            </div>
+          </div>
+
+          <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-slate-400">{isBg ? 'Имперски Еквивалент' : 'Imperial Equivalent'}</label>
+              <input value={imperialEquivalent} onChange={(e) => setImperialEquivalent(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="fl_oz" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">{isBg ? 'Коефициент за конвертиране' : 'Conversion Factor'}</label>
+              <input type="number" step="0.000001" value={conversionFactor} onChange={(e) => setConversionFactor(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="0.5" />
             </div>
           </div>
           
@@ -166,14 +238,41 @@ const ManageMeasurements = () => {
               <span className="material-symbols-outlined animate-spin text-4xl">refresh</span>
             </div>
           ) : (
-            measurements.map(m => (
+            measurements.map(m => {
+              const catIcon = {
+                'mass': 'scale',
+                'volume': 'water_drop',
+                'count': 'tag',
+                'custom': 'restaurant_menu'
+              }[m.category || (m.type === 'weight' ? 'mass' : m.type)] || 'category';
+              
+              return (
               <div key={m.id} className="bg-surface-dark/50 border border-primary/10 rounded-xl p-3 flex justify-between items-center group hover:border-primary/30 transition-colors">
-                <div>
-                  <h4 className="font-bold text-slate-100">{m.name_bg || m.name} <span className="text-slate-500 font-normal text-xs ml-1">/ {m.name_en || 'липсва EN'}</span></h4>
-                  <div className="flex gap-2 text-xs text-slate-400 mt-1">
-                    <span className="bg-background-dark px-2 rounded border border-primary/10 uppercase">{m.type}</span>
-                    {m.base_weight_grams && <span className="text-[#b8860b]">{m.base_weight_grams}g</span>}
-                    {m.is_system_unit && <span className="text-emerald-500 material-symbols-outlined text-[14px]" title="System Unit">verified</span>}
+                <div className="flex gap-3 items-center">
+                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[20px]">{catIcon}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-100 flex items-baseline gap-2">
+                      <span>
+                        {isBg ? (m.name_bg || m.name) : (m.name_en || 'Missing EN')}
+                        {(isBg ? m.short_bg : m.short_en) && <span className="text-primary/70 font-normal text-xs ml-1">({isBg ? m.short_bg : m.short_en})</span>}
+                      </span>
+                      <span className="text-slate-600 font-normal text-xs">/</span>
+                      <span className="text-slate-400 font-medium text-sm">
+                        {!isBg ? (m.name_bg || m.name) : (m.name_en || 'Missing EN')}
+                        {(!isBg ? m.short_bg : m.short_en) && <span className="text-slate-500 font-normal text-[10px] ml-1">({!isBg ? m.short_bg : m.short_en})</span>}
+                      </span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 mt-1 items-center">
+                      <span className="bg-background-dark px-1.5 py-0.5 rounded border border-primary/10 uppercase">
+                        {m.category || m.type}
+                      </span>
+                      {m.conversions?.metric?.to_ml && <span className="text-blue-400">{m.conversions.metric.to_ml} ml</span>}
+                      {(m.conversions?.metric?.to_g_average || m.base_weight_grams) && <span className="text-amber-500">{m.conversions?.metric?.to_g_average || m.base_weight_grams} g</span>}
+                      {(m.is_standard || m.is_system_unit) && <span className="text-emerald-500 material-symbols-outlined text-[14px]" title="Standard Unit">verified</span>}
+                      <span className="text-slate-500 ml-1">ID: {m.unit_id || m.id}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
@@ -185,7 +284,7 @@ const ManageMeasurements = () => {
                   </button>
                 </div>
               </div>
-            ))
+            )})
           )}
         </div>
       </div>

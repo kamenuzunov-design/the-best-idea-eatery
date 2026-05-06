@@ -45,8 +45,8 @@ src/
 ### Колекции (Предложени)
 
 1.  **`users`** (Имплементирана)
-    *   Съхранява профилна информация за потребителите (uid, name, email, role, createdAt).
-    *   Служи като разширение на Firebase Auth за запазване на специфичните роли.
+    *   Съхранява вложена (nested) профилна информация за потребителите (`auth.email`, `profile.nickname`, `status.level`, `preferences`).
+    *   Служи като разширение на Firebase Auth. Съдържа статус за активност (`is_active`).
 2.  **`recipes`**
     *   Съдържа детайли за рецептите (време за приготвяне, порции, стъпки).
     *   *Под-колекции:* `translations` (за различни езици), `ratings` (оценки).
@@ -60,7 +60,8 @@ src/
 6.  **`meal_plans`**
     *   Планирани хранения от потребителите.
 7.  **`measurements`** (Имплементирана)
-    *   Списък с мерни единици (name_bg, name_en, type, base_weight_grams, is_system_unit).
+    *   Използва четими `unit_id` като ключ на документа (напр. `tablespoon`).
+    *   Съдържа вложена структура за конверсии (`conversions.metric`, `conversions.imperial`) и категории (`mass`, `volume`, `count`, `custom`).
 8.  **`activity_logs`** (Имплементирана)
     *   Дневник на всички действия (userId, userEmail, action, details, timestamp).
 

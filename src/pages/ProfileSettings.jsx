@@ -1,16 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const ProfileSettings = () => {
-  const { user, logout, isGuest, isAdmin, isSuperuser } = useAuth();
+  const { user, logout, isGuest, isAdmin, isSuperuser, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  
+  const [resendStatus, setResendStatus] = useState(''); // '' | 'loading' | 'sent' | 'error'
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleResendEmail = async () => {
+    if (resendStatus === 'loading' || resendStatus === 'sent') return;
+    setResendStatus('loading');
+    try {
+      await resendVerificationEmail();
+      setResendStatus('sent');
+      setTimeout(() => setResendStatus(''), 5000); // clear after 5s
+    } catch (error) {
+      console.error(error);
+      setResendStatus('error');
+      setTimeout(() => setResendStatus(''), 5000);
+    }
   };
 
   const isBg = i18n.language === 'bg';
@@ -22,8 +38,8 @@ const ProfileSettings = () => {
       <section className="flex flex-col items-center py-10 px-4 bg-gradient-to-b from-surface-dark to-background-dark border-b border-primary/10">
         <div className="relative group">
           <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 border-4 border-primary shadow-[0_0_30px_rgba(212,175,53,0.3)] flex items-center justify-center bg-primary/10 overflow-hidden">
-            {user.photoURL && !isGuest ? (
-              <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+            {user.profile?.avatar && !isGuest ? (
+              <img src={user.profile.avatar} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <span className="material-symbols-outlined text-6xl text-primary">person</span>
             )}
@@ -36,17 +52,47 @@ const ProfileSettings = () => {
         </div>
         
         <div className="mt-5 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.name}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.profile?.nickname || user.name || 'Потребител'}</h1>
           <p className="text-primary/80 font-bold text-xs uppercase tracking-widest mt-1">
+            {user.reputation?.label && !isGuest ? `${user.reputation.label} • ` : ''}
             {isAdmin ? 'Administrator' : isSuperuser ? 'Super User' : isGuest ? 'Guest' : 'Registered User'}
           </p>
           {user.email && <p className="text-slate-400 text-sm mt-1">{user.email}</p>}
+          {!user.isVerified && !isGuest && (
+            <div className="mt-3 flex flex-col items-center">
+              <button 
+                onClick={handleResendEmail}
+                disabled={resendStatus === 'loading' || resendStatus === 'sent'}
+                className="flex items-center justify-center gap-1 bg-rose-500/10 border border-rose-500/20 py-1 px-3 rounded-full hover:bg-rose-500/20 active:scale-95 transition-all disabled:opacity-70 disabled:hover:scale-100"
+              >
+                {resendStatus === 'loading' ? (
+                  <span className="material-symbols-outlined text-[14px] text-rose-500 animate-spin">refresh</span>
+                ) : resendStatus === 'sent' ? (
+                  <span className="material-symbols-outlined text-[14px] text-emerald-500">check_circle</span>
+                ) : (
+                  <span className="material-symbols-outlined text-[14px] text-rose-500">warning</span>
+                )}
+                <span className={`text-xs font-medium ${resendStatus === 'sent' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {resendStatus === 'loading' 
+                    ? (isBg ? 'Изпращане...' : 'Sending...')
+                    : resendStatus === 'sent'
+                      ? (isBg ? 'Имейлът е изпратен!' : 'Email sent!')
+                      : (isBg ? 'Неверифициран имейл. Натиснете за нов линк.' : 'Unverified Email. Click to resend.')}
+                </span>
+              </button>
+              {resendStatus === 'error' && (
+                <p className="text-[10px] text-rose-500 mt-1">
+                  {isBg ? 'Възникна грешка. Опитайте по-късно.' : 'An error occurred. Try again later.'}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
-        {user.bio && !isGuest && (
+        {user.profile?.bio && !isGuest && (
           <div className="mt-4 px-6 max-w-sm w-full">
             <p className="text-slate-300 text-sm italic border-l-2 border-primary/30 pl-3 text-left">
-              {user.bio}
+              {user.profile.bio}
             </p>
           </div>
         )}
@@ -149,11 +195,17 @@ const ProfileSettings = () => {
 
       {isAdmin && (
         <section className="mt-6 px-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">
-            {isBg ? 'Администрация' : 'Administration'}
-          </h3>
           <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-primary/10 border border-primary/20 shadow-lg">
             <Link to="/admin" className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group">
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined">admin_panel_settings</span>
+                </div>
+                <p className="text-sm font-bold text-slate-100">{isBg ? 'Администрация' : 'Administration'}</p>
+              </div>
+              <span className="material-symbols-outlined text-slate-400">chevron_right</span>
+            </Link>
+            <Link to="/admin/data" className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group">
               <div className="flex items-center gap-4">
                 <div className="size-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">add_box</span>

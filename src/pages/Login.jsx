@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const Login = () => {
-  const { login, register, loginAsGuest } = useAuth();
+  const { login, register, loginAsGuest, loginWithGoogle, loginWithApple } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   
@@ -45,6 +45,28 @@ const Login = () => {
   const handleGuestLogin = () => {
     loginAsGuest();
     navigate('/');
+  };
+
+  const handleSocialLogin = async (providerName) => {
+    setError('');
+    setLoading(true);
+    try {
+      if (providerName === 'google') {
+        await loginWithGoogle();
+      } else if (providerName === 'apple') {
+        await loginWithApple();
+      }
+      navigate('/');
+    } catch (err) {
+      console.error(err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        // Ignored error
+      } else {
+        setError(isBg ? 'Възникна грешка при вписване.' : 'Error signing in.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isBg = i18n.language === 'bg';
@@ -165,11 +187,11 @@ const Login = () => {
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <button className="flex items-center justify-center h-12 border border-primary/20 rounded-xl bg-surface-dark hover:bg-primary/10 hover:border-primary/40 transition-all shadow-sm" type="button">
+                <button onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center h-12 border border-primary/20 rounded-xl bg-surface-dark hover:bg-primary/10 hover:border-primary/40 transition-all shadow-sm disabled:opacity-50" type="button">
                   <img alt="Google" className="w-5 h-5 mr-2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaosnMYulSPMVgQeppOGOl12S3NxjqorMyhg-qIHaeD5XRJ3Vw8w0ppThIZYMft7rbEpQ7hvTCHarNe42fNBpxn8zdSXKLlnaGLKI4Wq5kYYGYoazq2KeTMNKZd3fzDJ4whJHSqf8-2KWHqmND1O-nw1EIoYQkAmNO0UEV-qXvImLs_VrqmOrN69GjtuI5UbY_-RIiwppm9I5rCrQg18v8Ug6JfItxZT1AGNhxWmRvj1roaYmTdRUZBpewaUyEPQvnOFwQe3427pU"/>
                   <span className="text-sm font-bold text-slate-200">Google</span>
                 </button>
-                <button className="flex items-center justify-center h-12 border border-primary/20 rounded-xl bg-surface-dark hover:bg-primary/10 hover:border-primary/40 transition-all shadow-sm" type="button">
+                <button onClick={() => handleSocialLogin('apple')} disabled={loading} className="flex items-center justify-center h-12 border border-primary/20 rounded-xl bg-surface-dark hover:bg-primary/10 hover:border-primary/40 transition-all shadow-sm disabled:opacity-50" type="button">
                   <span className="material-symbols-outlined text-xl mr-2 text-slate-200">apple</span>
                   <span className="text-sm font-bold text-slate-200">Apple</span>
                 </button>

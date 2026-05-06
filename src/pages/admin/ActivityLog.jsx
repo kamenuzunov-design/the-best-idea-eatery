@@ -14,6 +14,7 @@ const ActivityLog = () => {
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterKey, setFilterKey] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
@@ -89,6 +90,21 @@ const ActivityLog = () => {
       </div>
 
       <div className="p-4 overflow-y-auto">
+        {filterKey && (
+          <div className="mb-4 flex items-center justify-between bg-primary/10 border border-primary/30 rounded-xl p-3">
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <span className="material-symbols-outlined text-[18px]">filter_alt</span>
+              <span>{isBg ? 'Филтрирано по:' : 'Filtered by:'} <strong className="font-mono bg-background-dark px-1 py-0.5 rounded ml-1">{filterKey}</strong></span>
+            </div>
+            <button 
+              onClick={() => setFilterKey(null)}
+              className="text-xs font-bold text-slate-400 hover:text-rose-500 uppercase tracking-wider transition-colors"
+            >
+              {isBg ? 'Изчисти' : 'Clear'}
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center p-10 text-primary">
             <span className="material-symbols-outlined animate-spin text-4xl">refresh</span>
@@ -100,18 +116,27 @@ const ActivityLog = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {logs.map(log => (
+            {(filterKey ? logs.filter(log => log.action === filterKey) : logs).map(log => (
               <div key={log.id} className="bg-surface-dark/50 border border-primary/10 rounded-xl p-4 shadow-sm">
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-bold text-primary/80 uppercase bg-primary/10 px-2 py-0.5 rounded">
+                  <button 
+                    onClick={() => setFilterKey(log.action)}
+                    title={isBg ? 'Филтрирай по това действие' : 'Filter by this action'}
+                    className="text-xs font-bold text-primary/80 uppercase bg-primary/10 hover:bg-primary/20 hover:text-primary transition-colors px-2 py-0.5 rounded cursor-pointer"
+                  >
                     {log.action}
-                  </span>
+                  </button>
                   <span className="text-[10px] text-slate-500">{formatDate(log.timestamp)}</span>
                 </div>
                 <p className="text-sm text-slate-200 mb-1">{log.details}</p>
                 <p className="text-xs text-slate-500 font-mono">{log.userEmail}</p>
               </div>
             ))}
+            {filterKey && logs.filter(log => log.action === filterKey).length === 0 && (
+              <div className="text-center p-6 text-slate-500">
+                <p>{isBg ? 'Няма намерени записи за този филтър.' : 'No logs found for this filter.'}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
