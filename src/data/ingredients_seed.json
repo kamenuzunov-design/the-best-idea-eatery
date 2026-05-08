@@ -1,0 +1,3650 @@
+[
+  {
+    "name_bg": "Лук",
+    "name_en": "Onion",
+    "slug": "onion",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Кореноплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 40,
+      "proteins": 1.1,
+      "carbs": 9.3,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 110
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 160
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 30
+    },
+    "price_per_100": 0.15,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Чесън",
+    "name_en": "Garlic",
+    "slug": "garlic",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Кореноплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 149,
+      "proteins": 6.4,
+      "carbs": 33.1,
+      "fats": 0.5
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 5
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 135
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 90
+    },
+    "price_per_100": 0.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Домат",
+    "name_en": "Tomato",
+    "slug": "tomato",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Плодови",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 18,
+      "proteins": 0.9,
+      "carbs": 3.9,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 120
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Картоф",
+    "name_en": "Potato",
+    "slug": "potato",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Кореноплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 77,
+      "proteins": 2,
+      "carbs": 17.5,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 150
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 30
+    },
+    "price_per_100": 0.1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Морков",
+    "name_en": "Carrot",
+    "slug": "carrot",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Кореноплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 41,
+      "proteins": 0.9,
+      "carbs": 9.6,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 60
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 110
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 20
+    },
+    "price_per_100": 0.15,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Чушка",
+    "name_en": "Bell Pepper",
+    "slug": "bell-pepper",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Плодови",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 20,
+      "proteins": 0.9,
+      "carbs": 4.6,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 120
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 10
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Спанак",
+    "name_en": "Spinach",
+    "slug": "spinach",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Листни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 23,
+      "proteins": 2.9,
+      "carbs": 3.6,
+      "fats": 0.4
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 30
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "суперхрана"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 0.6,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Броколи",
+    "name_en": "Broccoli",
+    "slug": "broccoli",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Цветови",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 34,
+      "proteins": 2.8,
+      "carbs": 6.6,
+      "fats": 0.4
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 90
+      },
+      {
+        "unit_id": "piece",
+        "weight_grams": 300
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.35,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Тиквичка",
+    "name_en": "Zucchini",
+    "slug": "zucchini",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Плодови",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 17,
+      "proteins": 1.2,
+      "carbs": 3.1,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 200
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 125
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "кето"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.25,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Краставица",
+    "name_en": "Cucumber",
+    "slug": "cucumber",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Плодови",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 15,
+      "proteins": 0.6,
+      "carbs": 3.6,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 250
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 130
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "кето"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Патладжан",
+    "name_en": "Eggplant",
+    "slug": "eggplant",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Плодови",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 25,
+      "proteins": 1,
+      "carbs": 5.9,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 300
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 80
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.35,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Зеле",
+    "name_en": "Cabbage",
+    "slug": "cabbage",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Листни",
+      "cuisine_origin": "Европейска"
+    },
+    "nutrition_per_100": {
+      "calories": 25,
+      "proteins": 1.3,
+      "carbs": 5.8,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 1000
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 90
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 0.1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Гъби",
+    "name_en": "Mushroom",
+    "slug": "mushroom",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Гъби",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 22,
+      "proteins": 3.1,
+      "carbs": 3.3,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 70
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "кето"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 0.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Целина",
+    "name_en": "Celery",
+    "slug": "celery",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Стъблени",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 16,
+      "proteins": 0.7,
+      "carbs": 3,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 40
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 100
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "кето"
+      ],
+      "average_shelf_life_days": 10
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Аспержи",
+    "name_en": "Asparagus",
+    "slug": "asparagus",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Стъблени",
+      "cuisine_origin": "Западна"
+    },
+    "nutrition_per_100": {
+      "calories": 20,
+      "proteins": 2.2,
+      "carbs": 3.9,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 15
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 135
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "кето"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 1.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Маруля",
+    "name_en": "Lettuce",
+    "slug": "lettuce",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Листни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 15,
+      "proteins": 1.4,
+      "carbs": 2.9,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 200
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 35
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "кето"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Карфиол",
+    "name_en": "Cauliflower",
+    "slug": "cauliflower",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Цветови",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 25,
+      "proteins": 1.9,
+      "carbs": 5,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 500
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 100
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "кето"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Сладък картоф",
+    "name_en": "Sweet Potato",
+    "slug": "sweet-potato",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Кореноплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 86,
+      "proteins": 1.6,
+      "carbs": 20.1,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 130
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 200
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 30
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Праз",
+    "name_en": "Leek",
+    "slug": "leek",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Стъблени",
+      "cuisine_origin": "Европейска"
+    },
+    "nutrition_per_100": {
+      "calories": 61,
+      "proteins": 1.5,
+      "carbs": 14.1,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 100
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 90
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Зелен боб",
+    "name_en": "Green Beans",
+    "slug": "green-beans",
+    "classification": {
+      "main_group": "Зеленчуци",
+      "sub_group": "Бобови",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 31,
+      "proteins": 1.8,
+      "carbs": 7,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 100
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Лимон",
+    "name_en": "Lemon",
+    "slug": "lemon",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Цитруси",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 29,
+      "proteins": 1.1,
+      "carbs": 9.3,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 60
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Ябълка",
+    "name_en": "Apple",
+    "slug": "apple",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Семчести",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 52,
+      "proteins": 0.3,
+      "carbs": 13.8,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 180
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 125
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 30
+    },
+    "price_per_100": 0.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Банан",
+    "name_en": "Banana",
+    "slug": "banana",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Тропически",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 89,
+      "proteins": 1.1,
+      "carbs": 22.8,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 120
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Портокал",
+    "name_en": "Orange",
+    "slug": "orange",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Цитруси",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 47,
+      "proteins": 0.9,
+      "carbs": 11.8,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 130
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 180
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 0.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Ягоди",
+    "name_en": "Strawberry",
+    "slug": "strawberry",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Ягодоплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 32,
+      "proteins": 0.7,
+      "carbs": 7.7,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 12
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 144
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 0.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Авокадо",
+    "name_en": "Avocado",
+    "slug": "avocado",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Тропически",
+      "cuisine_origin": "Латиноамериканска"
+    },
+    "nutrition_per_100": {
+      "calories": 160,
+      "proteins": 2,
+      "carbs": 8.5,
+      "fats": 14.7
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 150
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "кето",
+        "суперхрана"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Лайм",
+    "name_en": "Lime",
+    "slug": "lime",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Цитруси",
+      "cuisine_origin": "Латиноамериканска"
+    },
+    "nutrition_per_100": {
+      "calories": 30,
+      "proteins": 0.7,
+      "carbs": 10.5,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 50
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Грозде",
+    "name_en": "Grape",
+    "slug": "grape",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Ягодоплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 69,
+      "proteins": 0.7,
+      "carbs": 18.1,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 10
+    },
+    "price_per_100": 0.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Праскова",
+    "name_en": "Peach",
+    "slug": "peach",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Костилкови",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 39,
+      "proteins": 0.9,
+      "carbs": 9.5,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 150
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Боровинки",
+    "name_en": "Blueberry",
+    "slug": "blueberry",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Ягодоплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 57,
+      "proteins": 0.7,
+      "carbs": 14.5,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 148
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "суперхрана"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 1.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Малини",
+    "name_en": "Raspberry",
+    "slug": "raspberry",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Ягодоплодни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 52,
+      "proteins": 1.2,
+      "carbs": 11.9,
+      "fats": 0.6
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 123
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "суперхрана"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Ананас",
+    "name_en": "Pineapple",
+    "slug": "pineapple",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Тропически",
+      "cuisine_origin": "Тропическа"
+    },
+    "nutrition_per_100": {
+      "calories": 50,
+      "proteins": 0.5,
+      "carbs": 13.1,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 900
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 165
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 10
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Манго",
+    "name_en": "Mango",
+    "slug": "mango",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Тропически",
+      "cuisine_origin": "Южноазиатска"
+    },
+    "nutrition_per_100": {
+      "calories": 60,
+      "proteins": 0.8,
+      "carbs": 15,
+      "fats": 0.4
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 200
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 165
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Нар",
+    "name_en": "Pomegranate",
+    "slug": "pomegranate",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Субтропични",
+      "cuisine_origin": "Близкоизточна"
+    },
+    "nutrition_per_100": {
+      "calories": 83,
+      "proteins": 1.7,
+      "carbs": 18.7,
+      "fats": 1.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 280
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 174
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "суперхрана"
+      ],
+      "average_shelf_life_days": 20
+    },
+    "price_per_100": 0.6,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Круша",
+    "name_en": "Pear",
+    "slug": "pear",
+    "classification": {
+      "main_group": "Плодове",
+      "sub_group": "Семчести",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 57,
+      "proteins": 0.4,
+      "carbs": 15.2,
+      "fats": 0.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 180
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 140
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Пилешко филе",
+    "name_en": "Chicken Breast",
+    "slug": "chicken-breast",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Птиче",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 165,
+      "proteins": 31,
+      "carbs": 0,
+      "fats": 3.6
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 200
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето",
+        "високопротеинова"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 0.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Телешки стек",
+    "name_en": "Beef Steak",
+    "slug": "beef-steak",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Телешко",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 250,
+      "proteins": 26,
+      "carbs": 0,
+      "fats": 15
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 250
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето",
+        "високопротеинова"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 2.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Свинско филе",
+    "name_en": "Pork Loin",
+    "slug": "pork-loin",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Свинско",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 143,
+      "proteins": 26,
+      "carbs": 0,
+      "fats": 3.5
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 200
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 0.9,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Бекон",
+    "name_en": "Bacon",
+    "slug": "bacon",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Свинско",
+      "cuisine_origin": "Американска"
+    },
+    "nutrition_per_100": {
+      "calories": 541,
+      "proteins": 37,
+      "carbs": 1.4,
+      "fats": 42
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 15
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Телешка кайма",
+    "name_en": "Minced Beef",
+    "slug": "minced-beef",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Телешко",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 250,
+      "proteins": 26,
+      "carbs": 0,
+      "fats": 15
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 220
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 3
+    },
+    "price_per_100": 1.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Свинска кайма",
+    "name_en": "Minced Pork",
+    "slug": "minced-pork",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Свинско",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 260,
+      "proteins": 25,
+      "carbs": 0,
+      "fats": 17
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 220
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 3
+    },
+    "price_per_100": 0.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Агнешки котлет",
+    "name_en": "Lamb Chop",
+    "slug": "lamb-chop",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Агнешко",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 294,
+      "proteins": 25,
+      "carbs": 0,
+      "fats": 21
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 4
+    },
+    "price_per_100": 2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Пуешко филе",
+    "name_en": "Turkey Breast",
+    "slug": "turkey-breast",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Птиче",
+      "cuisine_origin": "Американска"
+    },
+    "nutrition_per_100": {
+      "calories": 114,
+      "proteins": 24,
+      "carbs": 0,
+      "fats": 1.5
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 200
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето",
+        "високопротеинова"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Прошуто",
+    "name_en": "Prosciutto",
+    "slug": "prosciutto",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Деликатеси",
+      "cuisine_origin": "Италианска"
+    },
+    "nutrition_per_100": {
+      "calories": 200,
+      "proteins": 28,
+      "carbs": 0,
+      "fats": 10
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 10
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 30
+    },
+    "price_per_100": 3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Чоризо",
+    "name_en": "Chorizo",
+    "slug": "chorizo",
+    "classification": {
+      "main_group": "Месо",
+      "sub_group": "Деликатеси",
+      "cuisine_origin": "Испанска"
+    },
+    "nutrition_per_100": {
+      "calories": 455,
+      "proteins": 24,
+      "carbs": 1.9,
+      "fats": 38
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 15
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 30
+    },
+    "price_per_100": 2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Сьомга",
+    "name_en": "Salmon",
+    "slug": "salmon",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Риба",
+      "cuisine_origin": "Северна"
+    },
+    "nutrition_per_100": {
+      "calories": 208,
+      "proteins": 20,
+      "carbs": 0,
+      "fats": 13
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "fish"
+      ],
+      "tags": [
+        "кето",
+        "пескатерианска"
+      ],
+      "average_shelf_life_days": 3
+    },
+    "price_per_100": 2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Риба Тон",
+    "name_en": "Tuna",
+    "slug": "tuna",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Риба",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 132,
+      "proteins": 28,
+      "carbs": 0,
+      "fats": 1.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "fish"
+      ],
+      "tags": [
+        "кето",
+        "високопротеинова",
+        "пескатерианска"
+      ],
+      "average_shelf_life_days": 300
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Скариди",
+    "name_en": "Shrimp",
+    "slug": "shrimp",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Ракообразни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 99,
+      "proteins": 24,
+      "carbs": 0.2,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 10
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 140
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "shellfish"
+      ],
+      "tags": [
+        "кето",
+        "високопротеинова"
+      ],
+      "average_shelf_life_days": 3
+    },
+    "price_per_100": 2.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Треска",
+    "name_en": "Cod",
+    "slug": "cod",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Риба",
+      "cuisine_origin": "Северна"
+    },
+    "nutrition_per_100": {
+      "calories": 82,
+      "proteins": 18,
+      "carbs": 0,
+      "fats": 0.7
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "fish"
+      ],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 3
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Миди",
+    "name_en": "Mussels",
+    "slug": "mussels",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Мекотели",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 86,
+      "proteins": 12,
+      "carbs": 3.7,
+      "fats": 2.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 15
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "shellfish"
+      ],
+      "tags": [
+        "пескатерианска"
+      ],
+      "average_shelf_life_days": 2
+    },
+    "price_per_100": 1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Калмари",
+    "name_en": "Squid",
+    "slug": "squid",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Мекотели",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 92,
+      "proteins": 15.6,
+      "carbs": 3.1,
+      "fats": 1.4
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 100
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "shellfish"
+      ],
+      "tags": [
+        "пескатерианска"
+      ],
+      "average_shelf_life_days": 2
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Октопод",
+    "name_en": "Octopus",
+    "slug": "octopus",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Мекотели",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 82,
+      "proteins": 15,
+      "carbs": 2.2,
+      "fats": 1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "shellfish"
+      ],
+      "tags": [
+        "пескатерианска"
+      ],
+      "average_shelf_life_days": 2
+    },
+    "price_per_100": 2.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Лаврак",
+    "name_en": "Sea Bass",
+    "slug": "sea-bass",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Риба",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 97,
+      "proteins": 18,
+      "carbs": 0,
+      "fats": 2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 200
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "fish"
+      ],
+      "tags": [
+        "кето",
+        "пескатерианска"
+      ],
+      "average_shelf_life_days": 3
+    },
+    "price_per_100": 2.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Пъстърва",
+    "name_en": "Trout",
+    "slug": "trout",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Риба",
+      "cuisine_origin": "Европейска"
+    },
+    "nutrition_per_100": {
+      "calories": 141,
+      "proteins": 20,
+      "carbs": 0,
+      "fats": 6
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 200
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "fish"
+      ],
+      "tags": [
+        "кето",
+        "пескатерианска"
+      ],
+      "average_shelf_life_days": 3
+    },
+    "price_per_100": 1.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Миди Сен Жак",
+    "name_en": "Scallops",
+    "slug": "scallops",
+    "classification": {
+      "main_group": "Морски дарове",
+      "sub_group": "Мекотели",
+      "cuisine_origin": "Западна"
+    },
+    "nutrition_per_100": {
+      "calories": 69,
+      "proteins": 12,
+      "carbs": 3.2,
+      "fats": 0.5
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 20
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "shellfish"
+      ],
+      "tags": [
+        "пескатерианска"
+      ],
+      "average_shelf_life_days": 2
+    },
+    "price_per_100": 4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Яйца",
+    "name_en": "Eggs",
+    "slug": "eggs",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Яйца",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 143,
+      "proteins": 12.6,
+      "carbs": 0.7,
+      "fats": 9.5
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 50
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "eggs"
+      ],
+      "tags": [
+        "кето",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 21
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Прясно мляко",
+    "name_en": "Milk",
+    "slug": "milk",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Мляко",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 42,
+      "proteins": 3.4,
+      "carbs": 5,
+      "fats": 1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 250
+      },
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 15
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 0.15,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Масло",
+    "name_en": "Butter",
+    "slug": "butter",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Масла",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 717,
+      "proteins": 0.9,
+      "carbs": 0.1,
+      "fats": 81
+    },
+    "units_mapping": [
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 14
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 227
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "кето",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 60
+    },
+    "price_per_100": 1.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Чедър",
+    "name_en": "Cheddar",
+    "slug": "cheddar",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Сирена",
+      "cuisine_origin": "Британска"
+    },
+    "nutrition_per_100": {
+      "calories": 403,
+      "proteins": 25,
+      "carbs": 1.3,
+      "fats": 33
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 132
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "кето",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 30
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Пармезан",
+    "name_en": "Parmesan",
+    "slug": "parmesan",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Сирена",
+      "cuisine_origin": "Италианска"
+    },
+    "nutrition_per_100": {
+      "calories": 431,
+      "proteins": 38,
+      "carbs": 4.1,
+      "fats": 29
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 100
+      },
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 5
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "кето",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 90
+    },
+    "price_per_100": 2.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Моцарела",
+    "name_en": "Mozzarella",
+    "slug": "mozzarella",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Сирена",
+      "cuisine_origin": "Италианска"
+    },
+    "nutrition_per_100": {
+      "calories": 280,
+      "proteins": 28,
+      "carbs": 3.1,
+      "fats": 17
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 125
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 112
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "кето",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Кисело мляко",
+    "name_en": "Yogurt",
+    "slug": "yogurt",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Мляко",
+      "cuisine_origin": "Балканска"
+    },
+    "nutrition_per_100": {
+      "calories": 59,
+      "proteins": 3.6,
+      "carbs": 4.7,
+      "fats": 3.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 245
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 0.25,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Сметана (животинска)",
+    "name_en": "Heavy Cream",
+    "slug": "heavy-cream",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Сметана",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 345,
+      "proteins": 2.1,
+      "carbs": 2.8,
+      "fats": 37
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 240
+      },
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 15
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "кето",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 14
+    },
+    "price_per_100": 0.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Крема сирене",
+    "name_en": "Cream Cheese",
+    "slug": "cream-cheese",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Сирена",
+      "cuisine_origin": "Американска"
+    },
+    "nutrition_per_100": {
+      "calories": 342,
+      "proteins": 6,
+      "carbs": 4.1,
+      "fats": 34
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 230
+      },
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 14
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "кето",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 20
+    },
+    "price_per_100": 0.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Сирене Фета",
+    "name_en": "Feta",
+    "slug": "feta",
+    "classification": {
+      "main_group": "Млечни",
+      "sub_group": "Сирена",
+      "cuisine_origin": "Гръцка"
+    },
+    "nutrition_per_100": {
+      "calories": 264,
+      "proteins": 14,
+      "carbs": 4.1,
+      "fats": 21
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 150
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "кето",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 30
+    },
+    "price_per_100": 1.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Брашно пшенично",
+    "name_en": "Wheat Flour",
+    "slug": "wheat-flour",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Брашна",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 364,
+      "proteins": 10,
+      "carbs": 76,
+      "fats": 1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 125
+      },
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 8
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "gluten"
+      ],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 0.1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Ориз",
+    "name_en": "Rice",
+    "slug": "rice",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Ориз",
+      "cuisine_origin": "Азиатска"
+    },
+    "nutrition_per_100": {
+      "calories": 130,
+      "proteins": 2.7,
+      "carbs": 28,
+      "fats": 0.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 195
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 0.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Паста",
+    "name_en": "Pasta",
+    "slug": "pasta",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Макаронени",
+      "cuisine_origin": "Италианска"
+    },
+    "nutrition_per_100": {
+      "calories": 131,
+      "proteins": 5,
+      "carbs": 25,
+      "fats": 1.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 140
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "gluten"
+      ],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 0.25,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Хляб",
+    "name_en": "Bread",
+    "slug": "bread",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Печива",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 265,
+      "proteins": 9,
+      "carbs": 49,
+      "fats": 3.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "piece",
+        "weight_grams": 30
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "gluten"
+      ],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 5
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Овесени ядки",
+    "name_en": "Oats",
+    "slug": "oats",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Ядки",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 389,
+      "proteins": 16.9,
+      "carbs": 66.3,
+      "fats": 6.9
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 90
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "суперхрана"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 0.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Киноа",
+    "name_en": "Quinoa",
+    "slug": "quinoa",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Семена",
+      "cuisine_origin": "Латиноамериканска"
+    },
+    "nutrition_per_100": {
+      "calories": 120,
+      "proteins": 4.4,
+      "carbs": 21.3,
+      "fats": 1.9
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 185
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "суперхрана",
+        "безглутеново"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 0.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Кускус",
+    "name_en": "Couscous",
+    "slug": "couscous",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Макаронени",
+      "cuisine_origin": "Северноафриканска"
+    },
+    "nutrition_per_100": {
+      "calories": 112,
+      "proteins": 3.8,
+      "carbs": 23.2,
+      "fats": 0.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 157
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "gluten"
+      ],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Царевично брашно",
+    "name_en": "Cornmeal",
+    "slug": "cornmeal",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Брашна",
+      "cuisine_origin": "Латиноамериканска"
+    },
+    "nutrition_per_100": {
+      "calories": 362,
+      "proteins": 8.1,
+      "carbs": 77,
+      "fats": 3.6
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 120
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "безглутеново"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 0.15,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Елда",
+    "name_en": "Buckwheat",
+    "slug": "buckwheat",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Семена",
+      "cuisine_origin": "Източноевропейска"
+    },
+    "nutrition_per_100": {
+      "calories": 343,
+      "proteins": 13.3,
+      "carbs": 71.5,
+      "fats": 3.4
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 170
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "вегетарианска",
+        "безглутеново"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Булгур",
+    "name_en": "Bulgur",
+    "slug": "bulgur",
+    "classification": {
+      "main_group": "Зърнени",
+      "sub_group": "Зърна",
+      "cuisine_origin": "Близкоизточна"
+    },
+    "nutrition_per_100": {
+      "calories": 342,
+      "proteins": 12.3,
+      "carbs": 76,
+      "fats": 1.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 140
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "gluten"
+      ],
+      "tags": [
+        "веган",
+        "вегетарианска"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 0.25,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Зехтин Екстра Върджин",
+    "name_en": "Extra Virgin Olive Oil",
+    "slug": "olive-oil",
+    "classification": {
+      "main_group": "Мазнини",
+      "sub_group": "Растителни масла",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 884,
+      "proteins": 0,
+      "carbs": 0,
+      "fats": 100
+    },
+    "units_mapping": [
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 14
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 216
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето",
+        "безглутеново"
+      ],
+      "average_shelf_life_days": 540
+    },
+    "price_per_100": 1.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Олио слънчогледово",
+    "name_en": "Sunflower Oil",
+    "slug": "sunflower-oil",
+    "classification": {
+      "main_group": "Мазнини",
+      "sub_group": "Растителни масла",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 884,
+      "proteins": 0,
+      "carbs": 0,
+      "fats": 100
+    },
+    "units_mapping": [
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 14
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 218
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 0.3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Кокосово масло",
+    "name_en": "Coconut Oil",
+    "slug": "coconut-oil",
+    "classification": {
+      "main_group": "Мазнини",
+      "sub_group": "Растителни масла",
+      "cuisine_origin": "Тропическа"
+    },
+    "nutrition_per_100": {
+      "calories": 862,
+      "proteins": 0,
+      "carbs": 0,
+      "fats": 100
+    },
+    "units_mapping": [
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 14
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 216
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Свинска мас",
+    "name_en": "Lard",
+    "slug": "lard",
+    "classification": {
+      "main_group": "Мазнини",
+      "sub_group": "Животински мазнини",
+      "cuisine_origin": "Европейска"
+    },
+    "nutrition_per_100": {
+      "calories": 902,
+      "proteins": 0,
+      "carbs": 0,
+      "fats": 100
+    },
+    "units_mapping": [
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 13
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 205
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "кето"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 0.4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Сусамово олио",
+    "name_en": "Sesame Oil",
+    "slug": "sesame-oil",
+    "classification": {
+      "main_group": "Мазнини",
+      "sub_group": "Растителни масла",
+      "cuisine_origin": "Азиатска"
+    },
+    "nutrition_per_100": {
+      "calories": 884,
+      "proteins": 0,
+      "carbs": 0,
+      "fats": 100
+    },
+    "units_mapping": [
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 14
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "sesame"
+      ],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Сол",
+    "name_en": "Salt",
+    "slug": "salt",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Основни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 0,
+      "proteins": 0,
+      "carbs": 0,
+      "fats": 0
+    },
+    "units_mapping": [
+      {
+        "unit_id": "teaspoon",
+        "weight_grams": 6
+      },
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 18
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 3650
+    },
+    "price_per_100": 0.05,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Черен пипер",
+    "name_en": "Black Pepper",
+    "slug": "black-pepper",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Основни",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 251,
+      "proteins": 10.4,
+      "carbs": 64,
+      "fats": 3.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "teaspoon",
+        "weight_grams": 2
+      },
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 6
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Босилек",
+    "name_en": "Basil",
+    "slug": "basil",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Билки",
+      "cuisine_origin": "Италианска"
+    },
+    "nutrition_per_100": {
+      "calories": 23,
+      "proteins": 3.2,
+      "carbs": 2.7,
+      "fats": 0.6
+    },
+    "units_mapping": [
+      {
+        "unit_id": "teaspoon",
+        "weight_grams": 1
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 24
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 3,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Риган",
+    "name_en": "Oregano",
+    "slug": "oregano",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Билки",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 265,
+      "proteins": 9,
+      "carbs": 68.9,
+      "fats": 4.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "teaspoon",
+        "weight_grams": 1
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 2.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Магданоз",
+    "name_en": "Parsley",
+    "slug": "parsley",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Билки",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 36,
+      "proteins": 3,
+      "carbs": 6.3,
+      "fats": 0.8
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 60
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Кориандър",
+    "name_en": "Coriander",
+    "slug": "coriander",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Билки",
+      "cuisine_origin": "Азиатска"
+    },
+    "nutrition_per_100": {
+      "calories": 23,
+      "proteins": 2.1,
+      "carbs": 3.7,
+      "fats": 0.5
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 16
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 7
+    },
+    "price_per_100": 1.2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Кимион",
+    "name_en": "Cumin",
+    "slug": "cumin",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Семена",
+      "cuisine_origin": "Близкоизточна"
+    },
+    "nutrition_per_100": {
+      "calories": 375,
+      "proteins": 17.8,
+      "carbs": 44.2,
+      "fats": 22.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "teaspoon",
+        "weight_grams": 2
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Червен пипер",
+    "name_en": "Paprika",
+    "slug": "paprika",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Смлени",
+      "cuisine_origin": "Унгарска"
+    },
+    "nutrition_per_100": {
+      "calories": 282,
+      "proteins": 14.1,
+      "carbs": 53.9,
+      "fats": 12.9
+    },
+    "units_mapping": [
+      {
+        "unit_id": "teaspoon",
+        "weight_grams": 2
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Канела",
+    "name_en": "Cinnamon",
+    "slug": "cinnamon",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Смлени",
+      "cuisine_origin": "Азиатска"
+    },
+    "nutrition_per_100": {
+      "calories": 247,
+      "proteins": 4,
+      "carbs": 80.6,
+      "fats": 1.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "teaspoon",
+        "weight_grams": 3
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 2.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Куркума",
+    "name_en": "Turmeric",
+    "slug": "turmeric",
+    "classification": {
+      "main_group": "Подправки",
+      "sub_group": "Смлени",
+      "cuisine_origin": "Индийска"
+    },
+    "nutrition_per_100": {
+      "calories": 312,
+      "proteins": 9.7,
+      "carbs": 67.1,
+      "fats": 3.3
+    },
+    "units_mapping": [
+      {
+        "unit_id": "teaspoon",
+        "weight_grams": 3
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето",
+        "суперхрана"
+      ],
+      "average_shelf_life_days": 730
+    },
+    "price_per_100": 2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Бадеми",
+    "name_en": "Almonds",
+    "slug": "almonds",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Ядки",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 579,
+      "proteins": 21.2,
+      "carbs": 21.6,
+      "fats": 49.9
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 143
+      },
+      {
+        "unit_id": "piece",
+        "weight_grams": 1
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "nuts"
+      ],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Орехи",
+    "name_en": "Walnuts",
+    "slug": "walnuts",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Ядки",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 654,
+      "proteins": 15.2,
+      "carbs": 13.7,
+      "fats": 65.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 117
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "nuts"
+      ],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 1.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Фъстъци",
+    "name_en": "Peanuts",
+    "slug": "peanuts",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Ядки",
+      "cuisine_origin": "Американска"
+    },
+    "nutrition_per_100": {
+      "calories": 567,
+      "proteins": 25.8,
+      "carbs": 16.1,
+      "fats": 49.2
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 146
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "peanuts"
+      ],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 0.8,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Чиа семена",
+    "name_en": "Chia Seeds",
+    "slug": "chia-seeds",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Семена",
+      "cuisine_origin": "Латиноамериканска"
+    },
+    "nutrition_per_100": {
+      "calories": 486,
+      "proteins": 16.5,
+      "carbs": 42.1,
+      "fats": 30.7
+    },
+    "units_mapping": [
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 10
+      },
+      {
+        "unit_id": "cup",
+        "weight_grams": 160
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето",
+        "суперхрана"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Сусамово семе",
+    "name_en": "Sesame Seeds",
+    "slug": "sesame-seeds",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Семена",
+      "cuisine_origin": "Близкоизточна"
+    },
+    "nutrition_per_100": {
+      "calories": 573,
+      "proteins": 17.7,
+      "carbs": 23.4,
+      "fats": 49.7
+    },
+    "units_mapping": [
+      {
+        "unit_id": "tablespoon",
+        "weight_grams": 9
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "sesame"
+      ],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 365
+    },
+    "price_per_100": 1,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Слънчогледови семки",
+    "name_en": "Sunflower Seeds",
+    "slug": "sunflower-seeds",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Семена",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 584,
+      "proteins": 20.8,
+      "carbs": 20,
+      "fats": 51.5
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 140
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 0.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Тиквени семки",
+    "name_en": "Pumpkin Seeds",
+    "slug": "pumpkin-seeds",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Семена",
+      "cuisine_origin": "Световна"
+    },
+    "nutrition_per_100": {
+      "calories": 559,
+      "proteins": 30.2,
+      "carbs": 10.7,
+      "fats": 49.1
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 130
+      }
+    ],
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 0.7,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Кашу",
+    "name_en": "Cashews",
+    "slug": "cashews",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Ядки",
+      "cuisine_origin": "Тропическа"
+    },
+    "nutrition_per_100": {
+      "calories": 553,
+      "proteins": 18.2,
+      "carbs": 30.2,
+      "fats": 43.8
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 130
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "nuts"
+      ],
+      "tags": [
+        "веган"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 2,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Кедрови ядки",
+    "name_en": "Pine Nuts",
+    "slug": "pine-nuts",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Ядки",
+      "cuisine_origin": "Средиземноморска"
+    },
+    "nutrition_per_100": {
+      "calories": 673,
+      "proteins": 13.7,
+      "carbs": 13.1,
+      "fats": 68.4
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 135
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "nuts"
+      ],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 4,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  },
+  {
+    "name_bg": "Пекан",
+    "name_en": "Pecans",
+    "slug": "pecans",
+    "classification": {
+      "main_group": "Ядки и семена",
+      "sub_group": "Ядки",
+      "cuisine_origin": "Американска"
+    },
+    "nutrition_per_100": {
+      "calories": 691,
+      "proteins": 9.2,
+      "carbs": 13.9,
+      "fats": 72
+    },
+    "units_mapping": [
+      {
+        "unit_id": "cup",
+        "weight_grams": 109
+      }
+    ],
+    "meta": {
+      "allergens": [
+        "nuts"
+      ],
+      "tags": [
+        "веган",
+        "кето"
+      ],
+      "average_shelf_life_days": 180
+    },
+    "price_per_100": 2.5,
+    "currency": "EUR",
+    "is_active": true,
+    "is_deleted": false
+  }
+]

@@ -13,6 +13,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ActivityLog from './pages/admin/ActivityLog';
 import ManageUsers from './pages/admin/ManageUsers';
 import ManageMeasurements from './pages/admin/ManageMeasurements';
+import ManageIngredients from './pages/admin/ManageIngredients';
 import DataDashboard from './pages/admin/DataDashboard';
 import Moderation from './pages/admin/Moderation';
 import RecipeDetail from './pages/RecipeDetail';
@@ -142,6 +143,11 @@ function App() {
           <Route path="/admin/measurements" element={
             <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPERUSER]}>
               <ManageMeasurements />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/ingredients" element={
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPERUSER]}>
+              <ManageIngredients />
             </ProtectedRoute>
           } />
           <Route path="/admin/users" element={
