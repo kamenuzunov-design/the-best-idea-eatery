@@ -24,7 +24,9 @@
     *   `GourmetCommunity.jsx`, `GourmetEvents.jsx`: Социални функции (общност, събития).
     *   `ProfileSettings.jsx`, `EditProfile.jsx`: Настройки и редакция на потребителски профил.
     *   `AdminDashboard.jsx`: Административен панел (Hub).
+    *   `admin/DataDashboard.jsx`: Панел за управление на данните.
     *   `admin/ActivityLog.jsx`, `admin/ManageUsers.jsx`, `admin/ManageMeasurements.jsx`, `admin/Moderation.jsx`: Административни под-модули.
+    *   `admin/ManageIngredients.jsx`, `admin/ManageRecipes.jsx`: Модули за създаване на кулинарно съдържание.
 
 ## 4. Services & Config (Firebase)
 *   **Локация:** `src/lib/firebase.js`, `src/lib/activityLogger.js`

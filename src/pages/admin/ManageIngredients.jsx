@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, setDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, setDoc, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
@@ -15,6 +15,11 @@ const ManageIngredients = () => {
   const [ingredients, setIngredients] = useState([]);
   const [measurements, setMeasurements] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters and Views
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'deactivated' | 'deleted'
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Form State
   const [editingId, setEditingId] = useState(null);
@@ -39,15 +44,13 @@ const ManageIngredients = () => {
   const [allergensStr, setAllergensStr] = useState('');
   const [tagsStr, setTagsStr] = useState('');
   const [shelfLife, setShelfLife] = useState('');
+  const [isLiquid, setIsLiquid] = useState(false);
   
   // Pricing
   const [pricePer100, setPricePer100] = useState('');
   
   // Units Mapping
   const [unitsMapping, setUnitsMapping] = useState([]); // [{unit_id, weight_grams}]
-
-  // Search
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const qIngredients = query(collection(db, 'ingredients'));
@@ -115,12 +118,11 @@ const ManageIngredients = () => {
         meta: {
           allergens: allergensStr ? allergensStr.split(',').map(s => s.trim()).filter(Boolean) : [],
           tags: tagsStr ? tagsStr.split(',').map(s => s.trim()).filter(Boolean) : [],
-          average_shelf_life_days: parseInt(shelfLife) || 0
+          average_shelf_life_days: parseInt(shelfLife) || 0,
+          is_liquid: isLiquid
         },
         price_per_100: parseFloat(pricePer100) || 0,
         currency: 'EUR',
-        is_active: true,
-        is_deleted: false,
         updatedAt: new Date().toISOString()
       };
 
@@ -129,6 +131,8 @@ const ManageIngredients = () => {
         await logActivity(user.uid, user.email, 'edit_ingredient', `Edited ingredient: ${nameEn}`);
       } else {
         ingredientData.createdAt = new Date().toISOString();
+        ingredientData.is_active = true;
+        ingredientData.is_deleted = false;
         await setDoc(doc(db, 'ingredients', slug), ingredientData);
         await logActivity(user.uid, user.email, 'add_ingredient', `Added ingredient: ${nameEn}`);
       }
@@ -155,6 +159,7 @@ const ManageIngredients = () => {
     setAllergensStr(ing.meta?.allergens?.join(', ') || '');
     setTagsStr(ing.meta?.tags?.join(', ') || '');
     setShelfLife(ing.meta?.average_shelf_life_days ?? '');
+    setIsLiquid(ing.meta?.is_liquid || false);
     setPricePer100(ing.price_per_100 ?? '');
     setUnitsMapping(ing.units_mapping || []);
 
@@ -176,35 +181,145 @@ const ManageIngredients = () => {
     setAllergensStr('');
     setTagsStr('');
     setShelfLife('');
+    setIsLiquid(false);
     setPricePer100('');
     setUnitsMapping([]);
   };
 
-  const handleDelete = async (id, ingName) => {
-    if (!window.confirm(isBg ? 'Сигурни ли сте, че искате да изтриете този продукт?' : 'Are you sure you want to delete this ingredient?')) return;
+  const handleToggleActive = async (targetId, targetName, currentActiveStatus) => {
+    const actionName = currentActiveStatus ? (isBg ? 'деактивирате' : 'deactivate') : (isBg ? 'активирате' : 'activate');
+    if (!window.confirm(isBg ? `Сигурни ли сте, че искате да ${actionName} ${targetName}?` : `Are you sure you want to ${actionName} ${targetName}?`)) return;
+
+    try {
+      const ingRef = doc(db, 'ingredients', targetId);
+      await updateDoc(ingRef, { 'is_active': !currentActiveStatus });
+      await logActivity(user.uid, user.email, 'ingredient_status_change', `${!currentActiveStatus ? 'Activated' : 'Deactivated'} ingredient ${targetName}`);
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
+  };
+
+  const handleDelete = async (targetId, targetName) => {
+    if (!window.confirm(isBg ? `Сигурни ли сте, че искате да изтриете ${targetName}?` : `Are you sure you want to delete ${targetName}?`)) return;
     
     try {
-      await deleteDoc(doc(db, 'ingredients', id));
-      await logActivity(user.uid, user.email, 'delete_ingredient', `Deleted ingredient: ${ingName}`);
+      const ingRef = doc(db, 'ingredients', targetId);
+      await updateDoc(ingRef, { 'is_deleted': true, 'is_active': false });
+      await logActivity(user.uid, user.email, 'delete_ingredient', `Deleted ingredient: ${targetName}`);
     } catch (error) {
       console.error("Error deleting ingredient:", error);
     }
   };
 
-  const filteredIngredients = ingredients.filter(ing => 
-    (ing.name_bg?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
-    (ing.name_en?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-  );
+  const handleRestore = async (targetId, targetName) => {
+    try {
+      const ingRef = doc(db, 'ingredients', targetId);
+      await updateDoc(ingRef, { 'is_deleted': false, 'is_active': true });
+      await logActivity(user.uid, user.email, 'restore_ingredient', `Restored ingredient: ${targetName}`);
+    } catch (error) {
+      console.error("Error restoring ingredient:", error);
+    }
+  };
+
+  const filteredIngredients = ingredients.filter(ing => {
+    const isDeleted = ing.is_deleted === true;
+    const isActive = ing.is_active !== false && !isDeleted;
+    const isDeactivated = ing.is_active === false && !isDeleted;
+    
+    // Status Filter
+    if (statusFilter === 'active' && !isActive) return false;
+    if (statusFilter === 'deactivated' && !isDeactivated) return false;
+    if (statusFilter === 'deleted' && !isDeleted) return false;
+
+    // Search term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      if (!(ing.name_bg?.toLowerCase() || '').includes(term) && 
+          !(ing.name_en?.toLowerCase() || '').includes(term)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const renderManageButtons = (ing, isActive, ingName) => {
+    if (statusFilter === 'deleted') {
+      return (
+        <button 
+          onClick={() => handleRestore(ing.id, ingName)}
+          className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors"
+        >
+          {isBg ? 'Възстанови' : 'Restore'}
+        </button>
+      );
+    }
+    
+    return (
+      <div className="flex gap-1">
+        <button onClick={() => handleEditClick(ing)} className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg" title={isBg ? 'Редактирай' : 'Edit'}>
+          <span className="material-symbols-outlined text-[16px]">edit</span>
+        </button>
+        <button 
+          onClick={() => handleToggleActive(ing.id, ingName, isActive)}
+          className={`p-1.5 rounded-lg transition-colors ${
+            isActive 
+              ? 'bg-background-dark/50 text-amber-500 hover:bg-amber-500/20' 
+              : 'bg-background-dark/50 text-emerald-500 hover:bg-emerald-500/20'
+          }`}
+          title={isActive ? (isBg ? 'Деактивирай' : 'Deactivate') : (isBg ? 'Активирай' : 'Activate')}
+        >
+          <span className="material-symbols-outlined text-[16px]">{isActive ? 'power_settings_new' : 'play_arrow'}</span>
+        </button>
+        <button onClick={() => handleDelete(ing.id, ingName)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg" title={isBg ? 'Изтрий' : 'Delete'}>
+          <span className="material-symbols-outlined text-[16px]">delete</span>
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 h-screen">
-      <div className="sticky top-0 z-10 flex items-center p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
-        <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Продукти / Съставки' : 'Ingredients'}</h1>
-          <p className="text-xs font-medium text-primary/70">{ingredients.length} {isBg ? 'въведени' : 'items'}</p>
+      <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Продукти' : 'Ingredients'}</h1>
+              <p className="text-xs font-medium text-primary/70">{ingredients.length} {isBg ? 'въведени общо' : 'items total'}</p>
+            </div>
+          </div>
+          <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
+            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
+              <span className="material-symbols-outlined text-[18px]">grid_view</span>
+            </button>
+            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
+              <span className="material-symbols-outlined text-[18px]">view_list</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Global Filters */}
+        <div className="flex gap-2 text-xs font-bold overflow-x-auto hide-scrollbar pb-1">
+          <button 
+            onClick={() => setStatusFilter('active')}
+            className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'active' ? 'bg-primary text-background-dark border-primary' : 'bg-surface-dark text-slate-400 border-primary/30 hover:bg-primary/10'}`}
+          >
+            {isBg ? 'Активни' : 'Active'}
+          </button>
+          <button 
+            onClick={() => setStatusFilter('deactivated')}
+            className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deactivated' ? 'bg-amber-500 text-background-dark border-amber-500' : 'bg-surface-dark text-slate-400 border-amber-500/30 hover:bg-amber-500/10'}`}
+          >
+            {isBg ? 'Деактивирани' : 'Deactivated'}
+          </button>
+          <button 
+            onClick={() => setStatusFilter('deleted')}
+            className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deleted' ? 'bg-rose-500 text-white border-rose-500' : 'bg-surface-dark text-slate-400 border-rose-500/30 hover:bg-rose-500/10'}`}
+          >
+            {isBg ? 'Изтрити' : 'Deleted'}
+          </button>
         </div>
       </div>
 
@@ -218,7 +333,7 @@ const ManageIngredients = () => {
                 : (isBg ? 'Нов продукт' : 'New Ingredient')}
             </h3>
             {editingId && (
-              <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold">
+              <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded">
                 {isBg ? 'Отказ' : 'Cancel'}
               </button>
             )}
@@ -233,9 +348,22 @@ const ManageIngredients = () => {
               <label className="text-xs text-slate-400">{isBg ? 'Име (BG) *' : 'Name (BG) *'}</label>
               <input value={nameBg} onChange={(e) => setNameBg(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Домат" />
             </div>
-            <div className="col-span-2">
-              <label className="text-xs text-slate-400">{isBg ? 'Slug (ID) *' : 'Slug (ID) *'}</label>
-              <input value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={!!editingId} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm opacity-70" placeholder="tomato" />
+            <div className="col-span-2 flex gap-4">
+              <div className="flex-1">
+                <label className="text-xs text-slate-400">{isBg ? 'Slug (ID) *' : 'Slug (ID) *'}</label>
+                <input value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={!!editingId} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm opacity-70" placeholder="tomato" />
+              </div>
+              <div className="flex flex-col justify-end pb-1">
+                <label className="flex items-center gap-2 cursor-pointer bg-background-dark border border-primary/20 px-4 py-2 rounded">
+                  <input 
+                    type="checkbox" 
+                    checked={isLiquid} 
+                    onChange={(e) => setIsLiquid(e.target.checked)}
+                    className="accent-primary w-4 h-4"
+                  />
+                  <span className="text-sm text-slate-200 font-bold">{isBg ? 'Течност' : 'Liquid'}</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -363,45 +491,82 @@ const ManageIngredients = () => {
             <div className="flex justify-center p-10 text-primary">
               <span className="material-symbols-outlined animate-spin text-4xl">refresh</span>
             </div>
-          ) : (
-            filteredIngredients.map(ing => (
-              <div key={ing.id} className="bg-surface-dark/50 border border-primary/10 rounded-xl p-3 flex justify-between items-center group hover:border-primary/30 transition-colors">
-                <div className="flex gap-3 items-center w-full overflow-hidden pr-2">
-                  <div className="size-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <span className="material-symbols-outlined text-[20px]">kitchen</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-100 truncate">
-                      {isBg ? ing.name_bg : ing.name_en}
-                      <span className="text-primary/70 font-normal text-xs ml-2">({isBg ? ing.name_en : ing.name_bg})</span>
-                    </h4>
-                    <div className="flex flex-wrap gap-1 text-[10px] text-slate-400 mt-1 items-center">
-                      <span className="bg-background-dark px-1.5 py-0.5 rounded border border-primary/10 truncate max-w-[100px]">
-                        {ing.classification?.main_group}
-                      </span>
-                      <span className="text-amber-500 ml-1">{ing.nutrition_per_100?.calories || 0} kcal</span>
-                      <span className="text-slate-500 ml-1 truncate max-w-[150px]">
-                        {ing.units_mapping?.map(u => u.unit_id).join(', ')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEditClick(ing)} className="p-2 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg">
-                    <span className="material-symbols-outlined text-[20px]">edit</span>
-                  </button>
-                  <button onClick={() => handleDelete(ing.id, ing.name_en)} className="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg">
-                    <span className="material-symbols-outlined text-[20px]">delete</span>
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-          {!loading && filteredIngredients.length === 0 && (
-             <div className="text-center p-8 text-slate-500">
+          ) : filteredIngredients.length === 0 ? (
+            <div className="text-center p-8 text-slate-500">
                <span className="material-symbols-outlined text-4xl opacity-50 mb-2">search_off</span>
                <p>{isBg ? 'Няма намерени продукти' : 'No ingredients found'}</p>
-             </div>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 gap-3">
+              {filteredIngredients.map(ing => {
+                const isActive = ing.is_active !== false;
+                const isDeleted = ing.is_deleted === true;
+                const ingName = isBg ? ing.name_bg : ing.name_en;
+
+                return (
+                  <div key={ing.id} className={`bg-surface-dark/50 border rounded-xl p-3 flex justify-between items-center group transition-colors ${isDeleted ? 'border-rose-500/30 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/10 hover:border-primary/30'}`}>
+                    <div className="flex gap-3 items-center w-full overflow-hidden pr-2">
+                      <div className="size-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary relative">
+                        <span className="material-symbols-outlined text-[20px]">{ing.meta?.is_liquid ? 'water_drop' : 'kitchen'}</span>
+                        {!isActive && !isDeleted && <div className="absolute -top-1 -right-1 size-3 bg-amber-500 rounded-full border-2 border-background-dark"></div>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 onClick={() => handleEditClick(ing)} className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors">
+                          {ingName}
+                        </h4>
+                        <div className="flex flex-wrap gap-1 text-[10px] text-slate-400 mt-1 items-center">
+                          <span className="bg-background-dark px-1.5 py-0.5 rounded border border-primary/10 truncate max-w-[100px]">
+                            {ing.classification?.main_group || '-'}
+                          </span>
+                          <span className="text-amber-500 ml-1">{ing.nutrition_per_100?.calories || 0} kcal</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex items-center">
+                      {renderManageButtons(ing, isActive, ingName)}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="bg-surface-dark/50 border border-primary/10 rounded-xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-300">
+                  <thead className="text-xs text-slate-400 uppercase bg-background-dark border-b border-primary/20">
+                    <tr>
+                      <th className="px-3 py-2">{isBg ? 'Име' : 'Name'}</th>
+                      <th className="px-3 py-2">{isBg ? 'Основна група' : 'Main Group'}</th>
+                      <th className="px-3 py-2 text-right">{isBg ? 'Управление' : 'Manage'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredIngredients.map(ing => {
+                      const isActive = ing.is_active !== false;
+                      const isDeleted = ing.is_deleted === true;
+                      const ingName = isBg ? ing.name_bg : ing.name_en;
+
+                      return (
+                        <tr key={ing.id} className={`border-b border-primary/5 hover:bg-primary/5 transition-colors ${isDeleted ? 'opacity-60' : !isActive ? 'opacity-75' : ''}`}>
+                          <td className="px-3 py-2">
+                            <button onClick={() => handleEditClick(ing)} className="font-bold text-slate-200 hover:text-primary transition-colors text-left text-[12px] flex items-center gap-1">
+                              {!isActive && !isDeleted && <span className="size-1.5 bg-amber-500 rounded-full inline-block"></span>}
+                              {ingName}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2 text-[11px] text-slate-400">{ing.classification?.main_group || '-'}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex justify-end">
+                              {renderManageButtons(ing, isActive, ingName)}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       </div>
