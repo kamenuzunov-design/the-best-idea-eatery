@@ -5,6 +5,7 @@ import { collection, query, onSnapshot, setDoc, updateDoc, doc } from 'firebase/
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
+import { CUISINES } from '../../data/cuisines';
 
 const ManageIngredients = () => {
   const { i18n } = useTranslation();
@@ -14,6 +15,7 @@ const ManageIngredients = () => {
 
   const [ingredients, setIngredients] = useState([]);
   const [measurements, setMeasurements] = useState([]);
+  const [ingredientGroups, setIngredientGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters and Views
@@ -66,9 +68,16 @@ const ManageIngredients = () => {
       setMeasurements(data);
     });
 
+    const qGroups = query(collection(db, 'ingredient_groups'));
+    const unsubGroups = onSnapshot(qGroups, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setIngredientGroups(data);
+    });
+
     return () => {
       unsubIngredients();
       unsubMeasurements();
+      unsubGroups();
     };
   }, []);
 
@@ -348,19 +357,12 @@ const ManageIngredients = () => {
               <label className="text-xs text-slate-400">{isBg ? 'Име (BG) *' : 'Name (BG) *'}</label>
               <input value={nameBg} onChange={(e) => setNameBg(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Домат" />
             </div>
-            <div className="col-span-2 flex gap-4">
-              <div className="flex-1">
-                <label className="text-xs text-slate-400">{isBg ? 'Slug (ID) *' : 'Slug (ID) *'}</label>
-                <input value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={!!editingId} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm opacity-70" placeholder="tomato" />
-              </div>
-              <div className="flex flex-col justify-end pb-1">
-                <label className="flex items-center gap-2 cursor-pointer bg-background-dark border border-primary/20 px-4 py-2 rounded">
-                  <input 
-                    type="checkbox" 
-                    checked={isLiquid} 
-                    onChange={(e) => setIsLiquid(e.target.checked)}
-                    className="accent-primary w-4 h-4"
-                  />
+            <div className="col-span-2">
+              <label className="text-xs text-slate-400">{isBg ? 'Slug (ID) *' : 'Slug (ID) *'}</label>
+              <div className="flex gap-4 items-center">
+                <input value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={!!editingId} className="flex-1 bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm opacity-70" placeholder="tomato" />
+                <label className="flex items-center gap-2 cursor-pointer pr-2">
+                  <input type="checkbox" checked={isLiquid} onChange={(e) => setIsLiquid(e.target.checked)} className="accent-primary w-4 h-4" />
                   <span className="text-sm text-slate-200 font-bold">{isBg ? 'Течност' : 'Liquid'}</span>
                 </label>
               </div>
@@ -370,15 +372,33 @@ const ManageIngredients = () => {
           <div className="border-t border-primary/10 pt-2 grid grid-cols-3 gap-2">
             <div>
               <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Основна Група' : 'Main Group'}</label>
-              <input value={mainGroup} onChange={(e) => setMainGroup(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="Зеленчуци" />
+              <select value={mainGroup} onChange={(e) => {
+                setMainGroup(e.target.value);
+                setSubGroup('');
+              }} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm">
+                <option value="">-- {isBg ? 'Избери' : 'Select'} --</option>
+                {ingredientGroups.filter(g => g.level === 0).map(g => (
+                  <option key={g.id} value={g.name?.bg}>{isBg ? g.name?.bg : g.name?.en}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Подгрупа' : 'Sub Group'}</label>
-              <input value={subGroup} onChange={(e) => setSubGroup(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="Кореноплодни" />
+              <select value={subGroup} onChange={(e) => setSubGroup(e.target.value)} disabled={!mainGroup} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm">
+                <option value="">-- {isBg ? 'Избери' : 'Select'} --</option>
+                {ingredientGroups.filter(g => g.level === 1 && ingredientGroups.find(p => p.name?.bg === mainGroup)?.id === g.parentId).map(g => (
+                  <option key={g.id} value={g.name?.bg}>{isBg ? g.name?.bg : g.name?.en}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Кухня (Произход)' : 'Cuisine'}</label>
-              <input value={cuisineOrigin} onChange={(e) => setCuisineOrigin(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="Световна" />
+              <select value={cuisineOrigin} onChange={(e) => setCuisineOrigin(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm">
+                <option value="">-- {isBg ? 'Избери' : 'Select'} --</option>
+                {CUISINES.map(c => (
+                  <option key={c.id} value={c.name?.bg}>{isBg ? c.name?.bg : c.name?.en}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -414,32 +434,32 @@ const ManageIngredients = () => {
             {unitsMapping.length === 0 && <p className="text-[10px] text-slate-500 italic">{isBg ? 'Няма въведени мерки' : 'No units mapped'}</p>}
             <div className="space-y-2">
               {unitsMapping.map((mapping, idx) => (
-                <div key={idx} className="flex gap-2 items-center">
+                <div key={idx} className="flex gap-1.5 items-center">
                   <select 
                     value={mapping.unit_id} 
                     onChange={(e) => handleUnitMappingChange(idx, 'unit_id', e.target.value)}
-                    className="flex-1 bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm"
+                    className="flex-1 bg-background-dark border border-primary/20 rounded p-1 text-slate-100 text-[11px]"
                   >
                     <option value="">-- {isBg ? 'Избери мярка' : 'Select unit'} --</option>
                     {measurements.map(m => (
                       <option key={m.unit_id || m.id} value={m.unit_id || m.id}>
-                        {isBg ? (m.name_bg || m.name) : (m.name_en || m.name)} ({m.category || m.type})
+                        {isBg ? (m.name_bg || m.name) : (m.name_en || m.name)}
                       </option>
                     ))}
                   </select>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">=</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[10px] text-slate-400">=</span>
                     <input 
                       type="number" step="0.1" 
                       value={mapping.weight_grams} 
                       onChange={(e) => handleUnitMappingChange(idx, 'weight_grams', e.target.value)}
-                      className="w-20 bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" 
-                      placeholder="Grams" 
+                      className="w-14 bg-background-dark border border-primary/20 rounded p-1 text-slate-100 text-[11px] text-center" 
+                      placeholder="g" 
                     />
-                    <span className="text-xs text-slate-400">g/ml</span>
+                    <span className="text-[10px] text-slate-400">g/ml</span>
                   </div>
-                  <button type="button" onClick={() => handleRemoveUnitMapping(idx)} className="p-1 text-slate-500 hover:text-rose-500 transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">close</span>
+                  <button type="button" onClick={() => handleRemoveUnitMapping(idx)} className="p-0.5 shrink-0 text-slate-500 hover:text-rose-500 transition-colors">
+                    <span className="material-symbols-outlined text-[16px]">close</span>
                   </button>
                 </div>
               ))}
@@ -449,7 +469,7 @@ const ManageIngredients = () => {
           <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Тагове (запетая)' : 'Tags (comma separated)'}</label>
-              <input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="веган, кето, суперхрана" />
+              <input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="vegan, keto, superfood" />
             </div>
             <div>
               <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Алергени (запетая)' : 'Allergens (comma separated)'}</label>

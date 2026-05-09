@@ -6,6 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
+import { CUISINES } from '../../data/cuisines';
 
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
@@ -24,6 +25,7 @@ const ManageRecipes = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Form State
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [activeTab, setActiveTab] = useState('basic'); // basic, media, ingredients, steps
 
@@ -33,13 +35,11 @@ const ManageRecipes = () => {
   const [slug, setSlug] = useState('');
   const [descBg, setDescBg] = useState('');
   const [descEn, setDescEn] = useState('');
-  const [cuisineBg, setCuisineBg] = useState('');
-  const [cuisineEn, setCuisineEn] = useState('');
+  const [cuisineId, setCuisineId] = useState('');
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
   const [servings, setServings] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
-  const [calories, setCalories] = useState('');
 
   // Media & Sources
   const [videoUrl, setVideoUrl] = useState('');
@@ -72,6 +72,32 @@ const ManageRecipes = () => {
 
     return () => { unsubRecipes(); unsubIng(); unsubMeas(); };
   }, []);
+
+  const calculatedCalories = React.useMemo(() => {
+    let totalCalories = 0;
+    recipeIngredients.forEach(ing => {
+      const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id);
+      if (dbIng && dbIng.nutrition_per_100 && ing.amount && ing.unit_id) {
+        let weightGrams = 0;
+        const mapping = dbIng.units_mapping?.find(m => m.unit_id === ing.unit_id);
+        if (mapping && mapping.weight_grams) {
+          weightGrams = parseFloat(mapping.weight_grams) * parseFloat(ing.amount);
+        } else {
+          const unitObj = measurementsList.find(m => m.id === ing.unit_id);
+          if (unitObj && (unitObj.unit_id === 'g' || unitObj.unit_id === 'ml' || unitObj.base_unit === 'g' || unitObj.base_unit === 'ml')) {
+            weightGrams = parseFloat(ing.amount);
+          } else if (ing.unit_id === 'g' || ing.unit_id === 'ml') {
+            weightGrams = parseFloat(ing.amount);
+          }
+        }
+        if (weightGrams > 0) {
+          totalCalories += (parseFloat(dbIng.nutrition_per_100.calories) / 100) * weightGrams;
+        }
+      }
+    });
+    const srv = parseInt(servings) || 1;
+    return Math.round(totalCalories / srv);
+  }, [recipeIngredients, ingredientsList, measurementsList, servings]);
 
   const handleTitleEnChange = (e) => {
     const val = e.target.value;
@@ -148,13 +174,13 @@ const ManageRecipes = () => {
         slug: slug,
         description_bg: descBg,
         description_en: descEn,
-        cuisine_bg: cuisineBg,
-        cuisine_en: cuisineEn,
+        description_en: descEn,
+        cuisine_id: cuisineId,
         prep_time: parseInt(prepTime) || 0,
         cook_time: parseInt(cookTime) || 0,
         servings: parseInt(servings) || 0,
         difficulty: difficulty,
-        calories_per_serving: parseInt(calories) || 0,
+        calories_per_serving: calculatedCalories,
         video_url: videoUrl,
         original_author: originalAuthor,
         source_link: sourceLink,
@@ -208,13 +234,12 @@ const ManageRecipes = () => {
     setSlug(recipe.slug || recipe.id);
     setDescBg(recipe.description_bg || '');
     setDescEn(recipe.description_en || '');
-    setCuisineBg(recipe.cuisine_bg || '');
-    setCuisineEn(recipe.cuisine_en || '');
+    setDescEn(recipe.description_en || '');
+    setCuisineId(recipe.cuisine_id || '');
     setPrepTime(recipe.prep_time || '');
     setCookTime(recipe.cook_time || '');
     setServings(recipe.servings || '');
     setDifficulty(recipe.difficulty || 'medium');
-    setCalories(recipe.calories_per_serving || '');
     setVideoUrl(recipe.video_url || '');
     setOriginalAuthor(recipe.original_author || '');
     setSourceLink(recipe.source_link || '');
@@ -230,6 +255,7 @@ const ManageRecipes = () => {
     setRecipeSteps(recipe.steps ? recipe.steps.map((s, idx) => ({ ...s, id: Date.now() + idx })) : []);
 
     setActiveTab('basic');
+    setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -237,14 +263,15 @@ const ManageRecipes = () => {
     setEditingId(null);
     setTitleBg(''); setTitleEn(''); setSlug('');
     setDescBg(''); setDescEn('');
-    setCuisineBg(''); setCuisineEn('');
+    setCuisineId('');
     setPrepTime(''); setCookTime(''); setServings('');
-    setDifficulty('medium'); setCalories('');
+    setDifficulty('medium');
     setVideoUrl(''); setOriginalAuthor(''); setSourceLink('');
     setMainImageUrl(''); setExtra1Url(''); setExtra2Url('');
     setMainImageFile(null); setExtra1File(null); setExtra2File(null);
     setRecipeIngredients([]); setRecipeSteps([]);
     setActiveTab('basic');
+    setShowForm(false);
   };
 
   const handleToggleActive = async (targetId, targetName, currentActiveStatus) => {
@@ -346,21 +373,25 @@ const ManageRecipes = () => {
       </div>
 
       <div className="p-4 overflow-y-auto">
+        {!showForm && !editingId ? (
+          <button onClick={() => setShowForm(true)} className="w-full border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 p-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-colors mb-6">
+            <span className="material-symbols-outlined">add</span>
+            {isBg ? 'Добави Рецепта' : 'Add Recipe'}
+          </button>
+        ) : (
         <form onSubmit={handleSaveRecipe} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg mb-6 transition-colors ${editingId ? 'bg-[#b8860b]/10 border-[#b8860b]/40' : 'bg-surface-dark/80 border-primary/20'}`}>
           <div className="flex justify-between items-center border-b border-primary/10 pb-2 mb-4">
             <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest text-[#b8860b]">
               {editingId ? (isBg ? 'Редакция на рецепта' : 'Edit Recipe') : (isBg ? 'Нова рецепта' : 'New Recipe')}
             </h3>
-            {editingId && (
-              <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded">
-                {isBg ? 'Отказ' : 'Cancel'}
-              </button>
-            )}
+            <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded">
+              {isBg ? 'Отказ' : 'Cancel'}
+            </button>
           </div>
 
           <div className="flex gap-2 border-b border-primary/20 mb-4 overflow-x-auto hide-scrollbar">
-            <button type="button" onClick={() => setActiveTab('basic')} className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === 'basic' ? 'border-[#b8860b] text-[#b8860b]' : 'border-transparent text-slate-400'}`}>{isBg ? 'Основна Инфо' : 'Basic Info'}</button>
-            <button type="button" onClick={() => setActiveTab('media')} className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === 'media' ? 'border-[#b8860b] text-[#b8860b]' : 'border-transparent text-slate-400'}`}>{isBg ? 'Медия & Източници' : 'Media & Sources'}</button>
+            <button type="button" onClick={() => setActiveTab('basic')} className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === 'basic' ? 'border-[#b8860b] text-[#b8860b]' : 'border-transparent text-slate-400'}`}>{isBg ? 'Основна' : 'Basic'}</button>
+            <button type="button" onClick={() => setActiveTab('media')} className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === 'media' ? 'border-[#b8860b] text-[#b8860b]' : 'border-transparent text-slate-400'}`}>{isBg ? 'Медия' : 'Media'}</button>
             <button type="button" onClick={() => setActiveTab('ingredients')} className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === 'ingredients' ? 'border-[#b8860b] text-[#b8860b]' : 'border-transparent text-slate-400'}`}>{isBg ? 'Съставки' : 'Ingredients'}</button>
             <button type="button" onClick={() => setActiveTab('steps')} className={`px-3 py-2 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === 'steps' ? 'border-[#b8860b] text-[#b8860b]' : 'border-transparent text-slate-400'}`}>{isBg ? 'Стъпки' : 'Steps'}</button>
           </div>
@@ -382,29 +413,30 @@ const ManageRecipes = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="text-xs text-slate-400">{isBg ? 'Описание (EN)' : 'Description (EN)'}</label>
-                  <textarea value={descEn} onChange={(e) => setDescEn(e.target.value)} rows="3" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
+                  <textarea value={descEn} onChange={(e) => setDescEn(e.target.value)} rows="2" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
                 </div>
                 <div>
                   <label className="text-xs text-slate-400">{isBg ? 'Описание (BG)' : 'Description (BG)'}</label>
-                  <textarea value={descBg} onChange={(e) => setDescBg(e.target.value)} rows="3" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
+                  <textarea value={descBg} onChange={(e) => setDescBg(e.target.value)} rows="2" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Кухня (EN)' : 'Cuisine (EN)'}</label>
-                  <input value={cuisineEn} onChange={(e) => setCuisineEn(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="Italian" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Кухня (BG)' : 'Cuisine (BG)'}</label>
-                  <input value={cuisineBg} onChange={(e) => setCuisineBg(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="Италианска" />
+              <div className="grid grid-cols-4 gap-4">
+                <div className="col-span-4">
+                  <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Кухня' : 'Cuisine'}</label>
+                  <select value={cuisineId} onChange={(e) => setCuisineId(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm outline-none">
+                    <option value="">-- {isBg ? 'Избери Кухня' : 'Select Cuisine'} --</option>
+                    {CUISINES.map(c => (
+                      <option key={c.id} value={c.id}>{isBg ? c.name.bg : c.name.en}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Подготовка (мин)' : 'Prep (min)'}</label>
                   <input type="number" value={prepTime} onChange={(e) => setPrepTime(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm text-center" />
@@ -415,11 +447,10 @@ const ManageRecipes = () => {
                 </div>
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Порции' : 'Servings'}</label>
-                  <input type="number" value={servings} onChange={(e) => setServings(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm text-center" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Калории (1 порция)' : 'Cal (serving)'}</label>
-                  <input type="number" value={calories} onChange={(e) => setCalories(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-amber-500 text-sm text-center" />
+                  <select value={servings} onChange={(e) => setServings(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm outline-none text-center">
+                    <option value="">--</option>
+                    {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
                 </div>
               </div>
               
@@ -484,7 +515,13 @@ const ManageRecipes = () => {
           {activeTab === 'ingredients' && (
             <div className="space-y-2">
               <div className="flex justify-between items-center mb-2">
-                <p className="text-xs text-slate-400">{isBg ? 'Добавете съставките за рецептата.' : 'Add recipe ingredients.'}</p>
+                <div>
+                  <p className="text-xs text-slate-400">{isBg ? 'Добавете съставките за рецептата.' : 'Add recipe ingredients.'}</p>
+                  <div className="text-[10px] text-amber-500 font-bold mt-1">
+                    {isBg ? 'Изчислени калории (1 порция): ' : 'Calculated calories (per serving): '}
+                    {calculatedCalories} kcal
+                  </div>
+                </div>
                 <button type="button" onClick={addIngredientRow} className="text-xs font-bold text-[#b8860b] bg-[#b8860b]/10 px-3 py-1.5 rounded hover:bg-[#b8860b]/20 transition-colors flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">add</span> {isBg ? 'Добави' : 'Add'}
                 </button>
@@ -535,9 +572,10 @@ const ManageRecipes = () => {
           
           <button type="submit" className={`w-full font-bold py-3 rounded-lg transition-colors border mt-4 flex justify-center items-center gap-2 ${editingId ? 'bg-[#b8860b]/20 hover:bg-[#b8860b]/30 text-[#b8860b] border-[#b8860b]/30' : 'bg-primary/20 hover:bg-primary/30 text-primary border-primary/30'}`}>
             <span className="material-symbols-outlined text-[20px]">{editingId ? 'save' : 'add'}</span>
-            {editingId ? (isBg ? 'Запази промените' : 'Save Changes') : (isBg ? 'Добави рецепта' : 'Add Recipe')}
+            {editingId ? (isBg ? 'Запази промените' : 'Save Changes') : (isBg ? 'Запиши рецепта' : 'Save Recipe')}
           </button>
         </form>
+        )}
 
         <div className="mb-4 relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>

@@ -1,0 +1,308 @@
+[
+  {
+    "id": "vegetables",
+    "name": { "bg": "Зеленчуци", "en": "Vegetables" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "vegetables_root",
+    "name": { "bg": "Кореноплодни", "en": "Root vegetables" },
+    "parentId": "vegetables",
+    "level": 1
+  },
+  {
+    "id": "vegetables_fruit",
+    "name": { "bg": "Плодови", "en": "Fruit vegetables" },
+    "parentId": "vegetables",
+    "level": 1
+  },
+  {
+    "id": "vegetables_leafy",
+    "name": { "bg": "Листни", "en": "Leafy greens" },
+    "parentId": "vegetables",
+    "level": 1
+  },
+  {
+    "id": "vegetables_inflorescent",
+    "name": { "bg": "Цветови", "en": "Inflorescent / Flowers" },
+    "parentId": "vegetables",
+    "level": 1
+  },
+  {
+    "id": "vegetables_mushrooms",
+    "name": { "bg": "Гъби", "en": "Mushrooms" },
+    "parentId": "vegetables",
+    "level": 1
+  },
+  {
+    "id": "vegetables_stem",
+    "name": { "bg": "Стъблени", "en": "Stem vegetables" },
+    "parentId": "vegetables",
+    "level": 1
+  },
+  {
+    "id": "vegetables_legumes",
+    "name": { "bg": "Бобови", "en": "Legumes" },
+    "parentId": "vegetables",
+    "level": 1
+  },
+  {
+    "id": "fruits",
+    "name": { "bg": "Плодове", "en": "Fruits" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "fruits_citrus",
+    "name": { "bg": "Цитруси", "en": "Citrus" },
+    "parentId": "fruits",
+    "level": 1
+  },
+  {
+    "id": "fruits_pomes",
+    "name": { "bg": "Семчести", "en": "Pomes" },
+    "parentId": "fruits",
+    "level": 1
+  },
+  {
+    "id": "fruits_tropical",
+    "name": { "bg": "Тропически", "en": "Tropical" },
+    "parentId": "fruits",
+    "level": 1
+  },
+  {
+    "id": "fruits_berries",
+    "name": { "bg": "Ягодоплодни", "en": "Berries" },
+    "parentId": "fruits",
+    "level": 1
+  },
+  {
+    "id": "fruits_stone",
+    "name": { "bg": "Костилкови", "en": "Stone fruits" },
+    "parentId": "fruits",
+    "level": 1
+  },
+  {
+    "id": "fruits_subtropical",
+    "name": { "bg": "Субтропични", "en": "Subtropical" },
+    "parentId": "fruits",
+    "level": 1
+  },
+  {
+    "id": "meat",
+    "name": { "bg": "Месо", "en": "Meat" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "meat_poultry",
+    "name": { "bg": "Птиче", "en": "Poultry" },
+    "parentId": "meat",
+    "level": 1
+  },
+  {
+    "id": "meat_beef",
+    "name": { "bg": "Телешко", "en": "Beef / Veal" },
+    "parentId": "meat",
+    "level": 1
+  },
+  {
+    "id": "meat_pork",
+    "name": { "bg": "Свинско", "en": "Pork" },
+    "parentId": "meat",
+    "level": 1
+  },
+  {
+    "id": "meat_lamb",
+    "name": { "bg": "Агнешко", "en": "Lamb" },
+    "parentId": "meat",
+    "level": 1
+  },
+  {
+    "id": "meat_delicacies",
+    "name": { "bg": "Деликатеси", "en": "Cured meats / Delicacies" },
+    "parentId": "meat",
+    "level": 1
+  },
+  {
+    "id": "seafood",
+    "name": { "bg": "Морски дарове", "en": "Seafood" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "seafood_fish",
+    "name": { "bg": "Риба", "en": "Fish" },
+    "parentId": "seafood",
+    "level": 1
+  },
+  {
+    "id": "seafood_crustaceans",
+    "name": { "bg": "Ракообразни", "en": "Crustaceans" },
+    "parentId": "seafood",
+    "level": 1
+  },
+  {
+    "id": "seafood_molluscs",
+    "name": { "bg": "Мекотели", "en": "Molluscs" },
+    "parentId": "seafood",
+    "level": 1
+  },
+  {
+    "id": "dairy",
+    "name": { "bg": "Млечни", "en": "Dairy & Eggs" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "dairy_eggs",
+    "name": { "bg": "Яйца", "en": "Eggs" },
+    "parentId": "dairy",
+    "level": 1
+  },
+  {
+    "id": "dairy_milk",
+    "name": { "bg": "Мляко", "en": "Milk" },
+    "parentId": "dairy",
+    "level": 1
+  },
+  {
+    "id": "dairy_butter",
+    "name": { "bg": "Масла", "en": "Butter" },
+    "parentId": "dairy",
+    "level": 1
+  },
+  {
+    "id": "dairy_cheese",
+    "name": { "bg": "Сирена", "en": "Cheese" },
+    "parentId": "dairy",
+    "level": 1
+  },
+  {
+    "id": "dairy_cream",
+    "name": { "bg": "Сметана", "en": "Cream" },
+    "parentId": "dairy",
+    "level": 1
+  },
+  {
+    "id": "grains",
+    "name": { "bg": "Зърнени", "en": "Grains" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "grains_flour",
+    "name": { "bg": "Брашна", "en": "Flours" },
+    "parentId": "grains",
+    "level": 1
+  },
+  {
+    "id": "grains_rice",
+    "name": { "bg": "Ориз", "en": "Rice" },
+    "parentId": "grains",
+    "level": 1
+  },
+  {
+    "id": "grains_pasta",
+    "name": { "bg": "Макаронени", "en": "Pasta" },
+    "parentId": "grains",
+    "level": 1
+  },
+  {
+    "id": "grains_baked",
+    "name": { "bg": "Печива", "en": "Baked goods" },
+    "parentId": "grains",
+    "level": 1
+  },
+  {
+    "id": "grains_nuts",
+    "name": { "bg": "Ядки", "en": "Nuts (Grains)" },
+    "parentId": "grains",
+    "level": 1
+  },
+  {
+    "id": "grains_seeds",
+    "name": { "bg": "Семена", "en": "Seeds (Grains)" },
+    "parentId": "grains",
+    "level": 1
+  },
+  {
+    "id": "grains_whole",
+    "name": { "bg": "Зърна", "en": "Whole grains" },
+    "parentId": "grains",
+    "level": 1
+  },
+  {
+    "id": "fats",
+    "name": { "bg": "Мазнини", "en": "Fats" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "fats_plant",
+    "name": { "bg": "Растителни масла", "en": "Vegetable oils" },
+    "parentId": "fats",
+    "level": 1
+  },
+  {
+    "id": "fats_animal",
+    "name": { "bg": "Животински мазнини", "en": "Animal fats" },
+    "parentId": "fats",
+    "level": 1
+  },
+  {
+    "id": "spices",
+    "name": { "bg": "Подправки", "en": "Spices & Herbs" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "spices_basic",
+    "name": { "bg": "Основни", "en": "Basic seasonings" },
+    "parentId": "spices",
+    "level": 1
+  },
+  {
+    "id": "spices_herbs",
+    "name": { "bg": "Билки", "en": "Herbs" },
+    "parentId": "spices",
+    "level": 1
+  },
+  {
+    "id": "spices_seeds",
+    "name": { "bg": "Семена", "en": "Seeds (Spices)" },
+    "parentId": "spices",
+    "level": 1
+  },
+  {
+    "id": "spices_ground",
+    "name": { "bg": "Смлени", "en": "Ground spices" },
+    "parentId": "spices",
+    "level": 1
+  },
+  {
+    "id": "nuts_and_seeds",
+    "name": { "bg": "Ядки и семена", "en": "Nuts & Seeds" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "nuts_and_seeds_nuts",
+    "name": { "bg": "Ядки", "en": "Nuts" },
+    "parentId": "nuts_and_seeds",
+    "level": 1
+  },
+  {
+    "id": "nuts_and_seeds_seeds",
+    "name": { "bg": "Семена", "en": "Seeds" },
+    "parentId": "nuts_and_seeds",
+    "level": 1
+  },
+  {
+    "id": "other",
+    "name": { "bg": "Други", "en": "Other" },
+    "parentId": null,
+    "level": 0
+  }
+]

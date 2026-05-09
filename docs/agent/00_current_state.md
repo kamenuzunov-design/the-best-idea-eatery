@@ -11,7 +11,7 @@
 
 ## Текуща структура на директориите
 - `src/components/`: Общи компоненти (Navigation, Header и др.)
-- `src/pages/`: Основните екрани на приложението (AIAssistant, AdminDashboard, CookingMode, Home, Login, Pantry, RecipeDetail и др.)
+- `src/pages/`: Основните екрани на приложението (AIAssistant, AdminDashboard, CookingMode, Home, Login, Pantry, RecipeDetail, ManageIngredientGroups и др.)
 - `src/lib/`: Библиотеки и конфигурации (firebase.js)
 - `docs/agent/`: Документация за AI агентите
 
