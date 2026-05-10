@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, setDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
@@ -10,8 +10,11 @@ import { CUISINES } from '../../data/cuisines';
 const ManageIngredients = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const isBg = i18n.language === 'bg';
+  const csvImportRef = useRef(null);
+  const [csvStatus, setCsvStatus] = useState(''); // '' | 'parsing' | 'saving' | 'done' | 'error'
+  const [csvPreview, setCsvPreview] = useState(null); // { newRows, duplicateRows } | null
 
   const [ingredients, setIngredients] = useState([]);
   const [measurements, setMeasurements] = useState([]);
@@ -251,6 +254,174 @@ const ManageIngredients = () => {
     return true;
   });
 
+  // ── CSV Export ──────────────────────────────────────────────────────────────
+  const handleExportCSV = () => {
+    const exportable = ingredients.filter(i => !i.is_deleted);
+    const headers = [
+      'slug','name_en','name_bg','main_group','sub_group','cuisine_origin',
+      'calories','proteins','carbs','fats',
+      'allergens','tags','shelf_life_days','is_liquid','price_per_100',
+      'units_mapping'
+    ];
+    const escape = (v) => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+    const rows = exportable.map(ing => [
+      escape(ing.slug || ing.id),
+      escape(ing.name_en),
+      escape(ing.name_bg),
+      escape(ing.classification?.main_group),
+      escape(ing.classification?.sub_group),
+      escape(ing.classification?.cuisine_origin),
+      escape(ing.nutrition_per_100?.calories ?? 0),
+      escape(ing.nutrition_per_100?.proteins ?? 0),
+      escape(ing.nutrition_per_100?.carbs ?? 0),
+      escape(ing.nutrition_per_100?.fats ?? 0),
+      escape((ing.meta?.allergens || []).join(';')),
+      escape((ing.meta?.tags || []).join(';')),
+      escape(ing.meta?.average_shelf_life_days ?? 0),
+      escape(ing.meta?.is_liquid ? '1' : '0'),
+      escape(ing.price_per_100 ?? 0),
+      escape(JSON.stringify(ing.units_mapping || [])),
+    ].join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ingredients_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    logActivity(user.uid, user.email, 'export_ingredients_csv', `Exported ${exportable.length} ingredients`);
+  };
+
+  // ── CSV Import: Step 1 — parse & detect duplicates ─────────────────────────
+  const handleImportCSV = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    setCsvStatus('parsing');
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const header = lines[0].replace(/^\uFEFF/, '').split(',');
+      const idx = (name) => header.indexOf(name);
+
+      const parseRow = (line) => {
+        const result = [];
+        let cur = '', inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"' && inQuote && line[i+1] === '"') { cur += '"'; i++; }
+          else if (ch === '"') { inQuote = !inQuote; }
+          else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
+          else { cur += ch; }
+        }
+        result.push(cur);
+        return result;
+      };
+
+      const existingSlugs = new Set(ingredients.map(i => i.slug || i.id));
+      const existingNamesBg = new Set(ingredients.map(i => (i.name_bg || '').toLowerCase()));
+      const existingNamesEn = new Set(ingredients.map(i => (i.name_en || '').toLowerCase()));
+
+      const newRows = [];
+      const duplicateRows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseRow(lines[i]);
+        if (cols.length < 3) continue;
+        const slug    = cols[idx('slug')]?.trim();
+        const name_en = cols[idx('name_en')]?.trim();
+        const name_bg = cols[idx('name_bg')]?.trim();
+        if (!slug || !name_en || !name_bg) continue;
+
+        let units_mapping = [];
+        try { units_mapping = JSON.parse(cols[idx('units_mapping')] || '[]'); } catch {}
+
+        const row = {
+          slug, name_en, name_bg,
+          classification: {
+            main_group: cols[idx('main_group')] || '',
+            sub_group: cols[idx('sub_group')] || '',
+            cuisine_origin: cols[idx('cuisine_origin')] || ''
+          },
+          nutrition_per_100: {
+            calories: parseFloat(cols[idx('calories')]) || 0,
+            proteins: parseFloat(cols[idx('proteins')]) || 0,
+            carbs:    parseFloat(cols[idx('carbs')]) || 0,
+            fats:     parseFloat(cols[idx('fats')]) || 0,
+          },
+          meta: {
+            allergens: cols[idx('allergens')]?.split(';').map(s=>s.trim()).filter(Boolean) || [],
+            tags:      cols[idx('tags')]?.split(';').map(s=>s.trim()).filter(Boolean) || [],
+            average_shelf_life_days: parseInt(cols[idx('shelf_life_days')]) || 0,
+            is_liquid: cols[idx('is_liquid')] === '1',
+          },
+          price_per_100: parseFloat(cols[idx('price_per_100')]) || 0,
+          currency: 'EUR',
+          units_mapping,
+          is_active: true,
+          is_deleted: false,
+        };
+
+        const isDuplicate =
+          existingSlugs.has(slug) ||
+          existingNamesBg.has(name_bg.toLowerCase()) ||
+          existingNamesEn.has(name_en.toLowerCase());
+
+        if (isDuplicate) duplicateRows.push(row);
+        else newRows.push(row);
+      }
+
+      setCsvPreview({ newRows, duplicateRows });
+      setCsvStatus('');
+    } catch (err) {
+      console.error('CSV parse error:', err);
+      setCsvStatus('error');
+      setTimeout(() => setCsvStatus(''), 4000);
+    }
+  };
+
+  // ── CSV Import: Step 2 — execute write ───────────────────────────────────────
+  const executeImport = async (mode) => {
+    // mode: 'new' | 'all' | 'cancel'
+    if (mode === 'cancel') { setCsvPreview(null); return; }
+    const rows = mode === 'new'
+      ? csvPreview.newRows
+      : [...csvPreview.newRows, ...csvPreview.duplicateRows];
+
+    setCsvPreview(null);
+    setCsvStatus('saving');
+    try {
+      const now = new Date().toISOString();
+      // Firestore batch limit = 500 docs
+      const BATCH_SIZE = 400;
+      for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        rows.slice(offset, offset + BATCH_SIZE).forEach(row => {
+          batch.set(
+            doc(db, 'ingredients', row.slug),
+            { ...row, createdAt: now, updatedAt: now },
+            { merge: true }
+          );
+        });
+        await batch.commit();
+      }
+      await logActivity(user.uid, user.email, 'import_ingredients_csv',
+        `Imported ${rows.length} ingredients (mode: ${mode})`);
+      setCsvStatus('done');
+      setTimeout(() => setCsvStatus(''), 4000);
+    } catch (err) {
+      console.error('CSV write error:', err);
+      setCsvStatus('error');
+      setTimeout(() => setCsvStatus(''), 4000);
+    }
+  };
+
   const renderManageButtons = (ing, isActive, ingName) => {
     if (statusFilter === 'deleted') {
       return (
@@ -299,13 +470,54 @@ const ManageIngredients = () => {
               <p className="text-xs font-medium text-primary/70">{ingredients.length} {isBg ? 'въведени общо' : 'items total'}</p>
             </div>
           </div>
-          <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
-              <span className="material-symbols-outlined text-[18px]">grid_view</span>
-            </button>
-            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
-              <span className="material-symbols-outlined text-[18px]">view_list</span>
-            </button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <>
+                <button
+                  onClick={handleExportCSV}
+                  title={isBg ? 'Експорт CSV' : 'Export CSV'}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-[11px] font-bold border border-emerald-500/20"
+                >
+                  <span className="material-symbols-outlined text-[16px]">download</span>
+                  CSV
+                </button>
+                <button
+                  onClick={() => csvImportRef.current?.click()}
+                  title={isBg ? 'Импорт CSV' : 'Import CSV'}
+                  className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors text-[11px] font-bold border ${
+                    csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                    csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                    csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                    'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
+                     csvStatus === 'done'    ? 'check_circle' :
+                     csvStatus === 'error'   ? 'error' : 'upload'}
+                  </span>
+                  {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
+                   csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
+                   csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
+                   csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : 'CSV'}
+                </button>
+                <input
+                  ref={csvImportRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={handleImportCSV}
+                />
+              </>
+            )}
+            <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
+              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
+                <span className="material-symbols-outlined text-[18px]">grid_view</span>
+              </button>
+              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
+                <span className="material-symbols-outlined text-[18px]">view_list</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -590,6 +802,97 @@ const ManageIngredients = () => {
           )}
         </div>
       </div>
+
+      {/* ── CSV Import Confirmation Modal ─────────────────────────────── */}
+      {csvPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-md p-6 shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
+            
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <span className="material-symbols-outlined">warning</span>
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-100">
+                  {isBg ? 'Преглед на импорта' : 'Import Preview'}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {isBg ? 'Намерени са съвпадения. Изберете действие.' : 'Duplicates detected. Choose an action.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                <p className="text-2xl font-extrabold text-emerald-400">{csvPreview.newRows.length}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
+                  {isBg ? 'Нови продукта' : 'New ingredients'}
+                </p>
+              </div>
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-center">
+                <p className="text-2xl font-extrabold text-amber-400">{csvPreview.duplicateRows.length}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
+                  {isBg ? 'Дублирани' : 'Duplicates'}
+                </p>
+              </div>
+            </div>
+
+            {/* Duplicates list */}
+            {csvPreview.duplicateRows.length > 0 && (
+              <div className="mb-5 max-h-32 overflow-y-auto space-y-1 bg-background-dark/60 rounded-xl p-3 border border-amber-500/20">
+                <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mb-2">
+                  {isBg ? 'Дублирани записи:' : 'Duplicate entries:'}
+                </p>
+                {csvPreview.duplicateRows.map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[11px] text-slate-400">
+                    <span className="material-symbols-outlined text-[12px] text-amber-500">content_copy</span>
+                    <span className="font-medium text-slate-300">{isBg ? r.name_bg : r.name_en}</span>
+                    <span className="text-slate-600 text-[9px]">({r.slug})</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex flex-col gap-2">
+              {csvPreview.newRows.length > 0 && (
+                <button
+                  onClick={() => executeImport('new')}
+                  className="w-full py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-sm hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                  {isBg
+                    ? `Импортирай само новите (${csvPreview.newRows.length})`
+                    : `Import new only (${csvPreview.newRows.length})`}
+                </button>
+              )}
+
+              {csvPreview.duplicateRows.length > 0 && (
+                <button
+                  onClick={() => executeImport('all')}
+                  className="w-full py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-sm hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">sync</span>
+                  {isBg
+                    ? `Импортирай всички и презапиши (${csvPreview.newRows.length + csvPreview.duplicateRows.length})`
+                    : `Import all & overwrite (${csvPreview.newRows.length + csvPreview.duplicateRows.length})`}
+                </button>
+              )}
+
+              <button
+                onClick={() => executeImport('cancel')}
+                className="w-full py-3 rounded-xl border border-rose-500/30 text-rose-400 font-bold text-sm hover:bg-rose-500/10 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[18px]">cancel</span>
+                {isBg ? 'Откажи импорта' : 'Cancel import'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

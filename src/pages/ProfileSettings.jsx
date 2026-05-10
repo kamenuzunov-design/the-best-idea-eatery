@@ -89,11 +89,27 @@ const ProfileSettings = () => {
           )}
         </div>
 
-        {user.profile?.bio && !isGuest && (
-          <div className="mt-4 px-6 max-w-sm w-full">
-            <p className="text-slate-300 text-sm italic border-l-2 border-primary/30 pl-3 text-left">
-              {user.profile.bio}
-            </p>
+        {!isGuest && (() => {
+          const bioText = isBg
+            ? (user.profile?.bio_bg || user.profile?.bio || '')
+            : (user.profile?.bio_en || user.profile?.bio || '');
+          return bioText ? (
+            <div className="mt-4 px-6 max-w-sm w-full">
+              <p className="text-slate-300 text-sm italic border-l-2 border-primary/30 pl-3 text-left">
+                {bioText}
+              </p>
+            </div>
+          ) : null;
+        })()}
+
+        {user.profile?.location?.show_location && !isGuest && (user.profile.location.city_bg || user.profile.location.country_bg) && (
+          <div className="mt-3 flex items-center gap-1.5 text-slate-400 text-xs font-medium">
+            <span className="material-symbols-outlined text-primary text-base">location_on</span>
+            <span>
+              {isBg
+                ? [user.profile.location.city_bg, user.profile.location.country_bg].filter(Boolean).join(', ')
+                : [user.profile.location.city_en, user.profile.location.country_en].filter(Boolean).join(', ')}
+            </span>
           </div>
         )}
         

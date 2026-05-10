@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
+import { resizeImage } from '../lib/imageUtils';
 
 const EditProfile = () => {
   const { user, updateUserProfile } = useAuth();
@@ -16,9 +17,17 @@ const EditProfile = () => {
   const [name, setName] = useState(user?.profile?.nickname || '');
   const [firstName, setFirstName] = useState(user?.profile?.first_name || '');
   const [lastName, setLastName] = useState(user?.profile?.last_name || '');
-  const [bio, setBio] = useState(user?.profile?.bio || '');
+  const [bioBg, setBioBg] = useState(user?.profile?.bio_bg || user?.profile?.bio || '');
+  const [bioEn, setBioEn] = useState(user?.profile?.bio_en || '');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(user?.profile?.avatar || '');
+
+  // Location State
+  const [cityBg, setCityBg] = useState(user?.profile?.location?.city_bg || '');
+  const [cityEn, setCityEn] = useState(user?.profile?.location?.city_en || '');
+  const [countryBg, setCountryBg] = useState(user?.profile?.location?.country_bg || '');
+  const [countryEn, setCountryEn] = useState(user?.profile?.location?.country_en || '');
+  const [showLocation, setShowLocation] = useState(user?.profile?.location?.show_location ?? true);
 
   // Preferences State
   const [diet, setDiet] = useState(user?.preferences?.diet?.join(', ') || '');
@@ -41,9 +50,10 @@ const EditProfile = () => {
       let photoURL = user?.profile?.avatar || '';
 
       if (imageFile) {
+        const resizedImage = await resizeImage(imageFile, 800);
         const fileExtension = imageFile.name.split('.').pop();
         const storageRef = ref(storage, `profiles/${user.uid}/avatar_${Date.now()}.${fileExtension}`);
-        await uploadBytes(storageRef, imageFile);
+        await uploadBytes(storageRef, resizedImage);
         photoURL = await getDownloadURL(storageRef);
       }
 
@@ -55,7 +65,15 @@ const EditProfile = () => {
         'profile.first_name': firstName,
         'profile.last_name': lastName,
         'profile.avatar': photoURL, 
-        'profile.bio': bio,
+        'profile.bio_bg': bioBg,
+        'profile.bio_en': bioEn,
+        'profile.location': {
+          city_bg: cityBg,
+          city_en: cityEn,
+          country_bg: countryBg,
+          country_en: countryEn,
+          show_location: showLocation,
+        },
         'preferences.diet': toArray(diet),
         'preferences.allergies': toArray(allergies),
         'preferences.exclusions': toArray(exclusions),
@@ -186,16 +204,91 @@ const EditProfile = () => {
 
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center justify-between">
-                  <span>{isBg ? 'За мен (Кратко представяне)' : 'About Me'}</span>
+                  <span>🇧🇬 За мен (Кратко представяне)</span>
                   <span className="text-[10px] text-primary/70">{isBg ? 'Не е задължително' : 'Optional'}</span>
                 </label>
                 <textarea 
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full h-28 bg-surface-dark/50 backdrop-blur-md border border-primary/20 rounded-xl p-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-slate-100 shadow-inner resize-none text-sm" 
-                  placeholder={isBg ? 'Споделете вашия кулинарен опит, любима кухня или нещо интересно за вас...' : 'Share your culinary experience, favorite cuisine, etc...'} 
+                  value={bioBg}
+                  onChange={(e) => setBioBg(e.target.value)}
+                  className="w-full h-24 bg-surface-dark/50 backdrop-blur-md border border-primary/20 rounded-xl p-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-slate-100 shadow-inner resize-none text-sm" 
+                  placeholder="Споделете вашия кулинарен опит, любима кухня..."
                 />
               </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                  <span>🇬🇧 About Me</span>
+                  <span className="text-[10px] text-primary/70">{isBg ? 'Не е задължително' : 'Optional'}</span>
+                </label>
+                <textarea 
+                  value={bioEn}
+                  onChange={(e) => setBioEn(e.target.value)}
+                  className="w-full h-24 bg-surface-dark/50 backdrop-blur-md border border-primary/20 rounded-xl p-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-slate-100 shadow-inner resize-none text-sm" 
+                  placeholder="Share your culinary experience, favorite cuisine..."
+                />
+              </div>
+
+              {/* Location */}
+              <div className="border border-primary/20 rounded-xl p-4 space-y-3 bg-primary/5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-primary">location_on</span>
+                    {isBg ? 'Местоположение' : 'Location'}
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-[10px] text-slate-400 font-medium">{isBg ? 'Покажи публично' : 'Show publicly'}</span>
+                    <div
+                      onClick={() => setShowLocation(v => !v)}
+                      className={`w-10 h-5 rounded-full relative transition-colors cursor-pointer ${
+                        showLocation ? 'bg-gradient-to-r from-primary to-[#b8860b]' : 'bg-slate-700'
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${
+                        showLocation ? 'right-0.5' : 'left-0.5'
+                      }`} />
+                    </div>
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">{isBg ? 'Град (BG)' : 'City (BG)'}</label>
+                    <input
+                      value={cityBg}
+                      onChange={(e) => setCityBg(e.target.value)}
+                      placeholder={isBg ? 'напр. София' : 'e.g. София'}
+                      className="w-full h-10 bg-background-dark border border-primary/20 rounded-lg px-3 text-slate-100 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">{isBg ? 'Град (EN)' : 'City (EN)'}</label>
+                    <input
+                      value={cityEn}
+                      onChange={(e) => setCityEn(e.target.value)}
+                      placeholder="e.g. Sofia"
+                      className="w-full h-10 bg-background-dark border border-primary/20 rounded-lg px-3 text-slate-100 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">{isBg ? 'Държава (BG)' : 'Country (BG)'}</label>
+                    <input
+                      value={countryBg}
+                      onChange={(e) => setCountryBg(e.target.value)}
+                      placeholder={isBg ? 'напр. България' : 'e.g. България'}
+                      className="w-full h-10 bg-background-dark border border-primary/20 rounded-lg px-3 text-slate-100 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider">{isBg ? 'Държава (EN)' : 'Country (EN)'}</label>
+                    <input
+                      value={countryEn}
+                      onChange={(e) => setCountryEn(e.target.value)}
+                      placeholder="e.g. Bulgaria"
+                      className="w-full h-10 bg-background-dark border border-primary/20 rounded-lg px-3 text-slate-100 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 

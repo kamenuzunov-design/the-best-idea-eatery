@@ -5,8 +5,10 @@ import { collection, query, onSnapshot, setDoc, updateDoc, doc } from 'firebase/
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
+import { resizeImage } from '../../lib/imageUtils';
 import { logActivity } from '../../lib/activityLogger';
 import { CUISINES } from '../../data/cuisines';
+import { getRootCategories, getSubCategories, getCategoryById } from '../../data/recipe_categories';
 
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
@@ -17,6 +19,7 @@ const ManageRecipes = () => {
   const [recipes, setRecipes] = useState([]);
   const [ingredientsList, setIngredientsList] = useState([]);
   const [measurementsList, setMeasurementsList] = useState([]);
+  const [ingredientGroups, setIngredientGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters & Views
@@ -36,6 +39,8 @@ const ManageRecipes = () => {
   const [descBg, setDescBg] = useState('');
   const [descEn, setDescEn] = useState('');
   const [cuisineId, setCuisineId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [subCategoryId, setSubCategoryId] = useState('');
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
   const [servings, setServings] = useState('');
@@ -69,8 +74,11 @@ const ManageRecipes = () => {
     const unsubMeas = onSnapshot(query(collection(db, 'measurements')), (snapshot) => {
       setMeasurementsList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+    const unsubGroups = onSnapshot(query(collection(db, 'ingredient_groups')), (snapshot) => {
+      setIngredientGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
 
-    return () => { unsubRecipes(); unsubIng(); unsubMeas(); };
+    return () => { unsubRecipes(); unsubIng(); unsubMeas(); unsubGroups(); };
   }, []);
 
   const calculatedCalories = React.useMemo(() => {
@@ -98,6 +106,22 @@ const ManageRecipes = () => {
     const srv = parseInt(servings) || 1;
     return Math.round(totalCalories / srv);
   }, [recipeIngredients, ingredientsList, measurementsList, servings]);
+
+  const groupedIngredients = React.useMemo(() => {
+    const groups = {};
+    ingredientsList.forEach(ing => {
+      const groupName = ing.classification?.main_group || (isBg ? 'Други' : 'Other');
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(ing);
+    });
+    // Sort group names
+    return Object.keys(groups).sort().reduce((acc, key) => {
+      acc[key] = groups[key].sort((a, b) => 
+        (isBg ? a.name_bg : a.name_en).localeCompare(isBg ? b.name_bg : b.name_en)
+      );
+      return acc;
+    }, {});
+  }, [ingredientsList, isBg]);
 
   const handleTitleEnChange = (e) => {
     const val = e.target.value;
@@ -148,8 +172,9 @@ const ManageRecipes = () => {
 
   const uploadImage = async (file, path) => {
     if (!file) return null;
+    const resizedImage = await resizeImage(file, 800);
     const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
+    await uploadBytes(storageRef, resizedImage);
     return await getDownloadURL(storageRef);
   };
 
@@ -180,6 +205,8 @@ const ManageRecipes = () => {
         cook_time: parseInt(cookTime) || 0,
         servings: parseInt(servings) || 0,
         difficulty: difficulty,
+        category_id: categoryId,
+        sub_category_id: subCategoryId,
         calories_per_serving: calculatedCalories,
         video_url: videoUrl,
         original_author: originalAuthor,
@@ -236,6 +263,8 @@ const ManageRecipes = () => {
     setDescEn(recipe.description_en || '');
     setDescEn(recipe.description_en || '');
     setCuisineId(recipe.cuisine_id || '');
+    setCategoryId(recipe.category_id || '');
+    setSubCategoryId(recipe.sub_category_id || '');
     setPrepTime(recipe.prep_time || '');
     setCookTime(recipe.cook_time || '');
     setServings(recipe.servings || '');
@@ -264,6 +293,8 @@ const ManageRecipes = () => {
     setTitleBg(''); setTitleEn(''); setSlug('');
     setDescBg(''); setDescEn('');
     setCuisineId('');
+    setCategoryId('');
+    setSubCategoryId('');
     setPrepTime(''); setCookTime(''); setServings('');
     setDifficulty('medium');
     setVideoUrl(''); setOriginalAuthor(''); setSourceLink('');
@@ -436,6 +467,45 @@ const ManageRecipes = () => {
                 </div>
               </div>
 
+              {/* Category */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">
+                    {isBg ? 'Категория' : 'Category'}
+                  </label>
+                  <select
+                    value={categoryId}
+                    onChange={(e) => { setCategoryId(e.target.value); setSubCategoryId(''); }}
+                    className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm outline-none focus:border-[#b8860b]"
+                  >
+                    <option value="">-- {isBg ? 'Избери категория' : 'Select category'} --</option>
+                    {getRootCategories().map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {isBg ? c.name.bg : c.name.en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">
+                    {isBg ? 'Подкатегория' : 'Sub-category'}
+                  </label>
+                  <select
+                    value={subCategoryId}
+                    onChange={(e) => setSubCategoryId(e.target.value)}
+                    disabled={!categoryId}
+                    className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm outline-none focus:border-[#b8860b] disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <option value="">-- {isBg ? 'Избери подкатегория' : 'Select sub-category'} --</option>
+                    {getSubCategories(categoryId).map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon} {isBg ? c.name.bg : c.name.en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Подготовка (мин)' : 'Prep (min)'}</label>
@@ -527,24 +597,114 @@ const ManageRecipes = () => {
                 </button>
               </div>
               {recipeIngredients.length === 0 && <div className="text-center py-4 border border-dashed border-primary/20 rounded text-slate-500 text-xs">{isBg ? 'Няма добавени съставки' : 'No ingredients added'}</div>}
-              {recipeIngredients.map((ing, idx) => (
-                <div key={ing.id} className="bg-background-dark border border-primary/10 rounded p-2 flex flex-col gap-2 relative group">
-                  <div className="flex gap-2 items-center">
-                    <span className="text-xs text-slate-500 w-4 font-bold">{idx + 1}.</span>
-                    <select value={ing.ingredient_id} onChange={(e) => updateIngredientRow(ing.id, 'ingredient_id', e.target.value)} className="flex-1 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs">
-                      <option value="">-- {isBg ? 'Продукт' : 'Ingredient'} --</option>
-                      {ingredientsList.map(i => <option key={i.id} value={i.id}>{isBg ? i.name_bg : i.name_en}</option>)}
-                    </select>
-                    <input type="number" step="0.1" value={ing.amount} onChange={(e) => updateIngredientRow(ing.id, 'amount', e.target.value)} placeholder="Qty" className="w-16 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs text-center" />
-                    <select value={ing.unit_id} onChange={(e) => updateIngredientRow(ing.id, 'unit_id', e.target.value)} className="w-24 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs">
-                      <option value="">-- {isBg ? 'Мярка' : 'Unit'} --</option>
-                      {measurementsList.map(m => <option key={m.id} value={m.id}>{isBg ? m.name_bg : m.name_en}</option>)}
-                    </select>
-                    <button type="button" onClick={() => removeIngredientRow(ing.id)} className="p-1 text-slate-500 hover:text-rose-500 transition-colors"><span className="material-symbols-outlined text-[18px]">close</span></button>
+              {recipeIngredients.map((ing, idx) => {
+                // Find the selected ingredient's definition
+                const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id);
+
+                // Determine which units to show:
+                // - If ingredient has units_mapping entries → filter measurementsList to only those unit_ids
+                // - If no units_mapping or it's empty → show all measurements
+                const mappedUnitIds = dbIng?.units_mapping?.length > 0
+                  ? dbIng.units_mapping.map(m => m.unit_id)
+                  : null;
+
+                const availableUnits = mappedUnitIds
+                  ? measurementsList.filter(m => mappedUnitIds.includes(m.id))
+                  : measurementsList;
+
+                const unitDisabled = !ing.ingredient_id;
+
+                return (
+                  <div key={ing.id} className="bg-background-dark border border-primary/10 rounded p-2 flex flex-col gap-2 relative group">
+                    <div className="flex gap-2 items-center">
+                      <span className="text-xs text-slate-500 w-4 font-bold">{idx + 1}.</span>
+                      {/* Ingredient selector */}
+                      <select
+                        value={ing.ingredient_id}
+                        onChange={(e) => {
+                          // Reset unit when ingredient changes
+                          updateIngredientRow(ing.id, 'ingredient_id', e.target.value);
+                          updateIngredientRow(ing.id, 'unit_id', '');
+                        }}
+                        className="flex-1 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs"
+                      >
+                        <option value="">-- {isBg ? 'Продукт' : 'Ingredient'} --</option>
+                        {Object.entries(groupedIngredients).map(([groupName, ings]) => (
+                          <optgroup key={groupName} label={groupName.toUpperCase()}>
+                            {ings.map(i => (
+                              <option key={i.id} value={i.id}>
+                                &nbsp;&nbsp;— {isBg ? i.name_bg : i.name_en}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+
+                      {/* Quantity */}
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={ing.amount}
+                        onChange={(e) => updateIngredientRow(ing.id, 'amount', e.target.value)}
+                        placeholder="Qty"
+                        className="w-16 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs text-center"
+                      />
+
+                      {/* Smart unit selector */}
+                      <select
+                        value={ing.unit_id}
+                        onChange={(e) => updateIngredientRow(ing.id, 'unit_id', e.target.value)}
+                        disabled={unitDisabled}
+                        title={unitDisabled ? (isBg ? 'Изберете продукт първо' : 'Select ingredient first') : ''}
+                        className={`w-28 bg-surface-dark border rounded p-1.5 text-xs transition-colors ${
+                          unitDisabled
+                            ? 'border-primary/10 text-slate-600 cursor-not-allowed opacity-50'
+                            : mappedUnitIds
+                              ? 'border-[#b8860b]/40 text-slate-100'
+                              : 'border-primary/20 text-slate-100'
+                        }`}
+                      >
+                        <option value="">-- {isBg ? 'Мярка' : 'Unit'} --</option>
+                        {availableUnits.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {isBg ? m.name_bg : m.name_en}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() => removeIngredientRow(ing.id)}
+                        className="p-1 text-slate-500 hover:text-rose-500 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                      </button>
+                    </div>
+
+                    {/* Notes + unit source hint */}
+                    <div className="ml-6 flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={ing.notes}
+                        onChange={(e) => updateIngredientRow(ing.id, 'notes', e.target.value)}
+                        placeholder={isBg ? "Бележки (напр. 'нарязан на ситно')" : "Notes (e.g. 'finely chopped')"}
+                        className="flex-1 bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px]"
+                      />
+                      {dbIng && (
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                          mappedUnitIds
+                            ? 'bg-[#b8860b]/10 text-[#b8860b]'
+                            : 'bg-slate-700/50 text-slate-500'
+                        }`}>
+                          {mappedUnitIds
+                            ? (isBg ? `${mappedUnitIds.length} специфични мерки` : `${mappedUnitIds.length} specific units`)
+                            : (isBg ? 'Всички мерки' : 'All units')}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <input type="text" value={ing.notes} onChange={(e) => updateIngredientRow(ing.id, 'notes', e.target.value)} placeholder={isBg ? "Бележки (напр. 'нарязан на ситно')" : "Notes (e.g. 'finely chopped')"} className="ml-6 w-[calc(100%-1.5rem)] bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px]" />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
