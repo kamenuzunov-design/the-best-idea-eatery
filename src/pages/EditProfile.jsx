@@ -5,11 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
 import { resizeImage } from '../lib/imageUtils';
+import { checkImageSafety } from '../lib/moderationUtils';
+import { ROLES } from '../constants/roles';
 
 const EditProfile = () => {
   const { user, updateUserProfile } = useAuth();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'preferences'
   
@@ -41,6 +43,15 @@ const EditProfile = () => {
 
   const isBg = i18n.language === 'bg';
 
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -50,6 +61,21 @@ const EditProfile = () => {
       let photoURL = user?.profile?.avatar || '';
 
       if (imageFile) {
+        // AI Safety Check (Skip for Admins to save resources)
+        const isPowerUser = user?.status?.level === ROLES.ADMIN || user?.status?.level === ROLES.OWNER;
+        
+        if (!isPowerUser) {
+          const b64 = await fileToBase64(imageFile);
+          const safety = await checkImageSafety(b64);
+          if (!safety.safe) {
+            setError(isBg 
+              ? `Снимката бе отхвърлена от AI филтъра (Причина: ${safety.reason}). Моля качете друга.` 
+              : `Image was rejected by AI filter (Reason: ${safety.reason}). Please upload another one.`);
+            setLoading(false);
+            return;
+          }
+        }
+
         const resizedImage = await resizeImage(imageFile, 800);
         const fileExtension = imageFile.name.split('.').pop();
         const storageRef = ref(storage, `profiles/${user.uid}/avatar_${Date.now()}.${fileExtension}`);

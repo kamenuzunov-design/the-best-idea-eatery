@@ -1,0 +1,137 @@
+
+> temp-app@0.0.0 lint C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery
+> eslint .
+
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\context\AppContext.jsx
+   1:54  error  'useEffect' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-unused-vars
+  46:32  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  44 |       quantity: 1.2,
+  45 |       unit: 'kg',
+> 46 |       expirationDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days
+     |                                ^^^^^^^^^^ Cannot call impure function
+  47 |       imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBhZljcxKLWpJQPXH1Kmbr0ATAm0M4ZofD6DppF6jCoSNSfieCTyi_41E38xje8gMuvNkgHQnUWWLhWtdMrtS7BC_qM1g1j9NbZpwQ_KyeNKiI68hXXIvxWTjZOYLG-V5KG3J4n1nV2im1DmosFCpkjbRSKG3594itTIl6WEZBQV5p3A3N0rmBDpha86ljBdJPyBGH3oIvewlQXtef1Mt9AWM7s5KjA-HjVTwFvf4ALG7SifmNR9xZKMLXvkkW84fdbb9OoOIe6PbU'
+  48 |     },
+  49 |     {  react-hooks/purity
+  58:32  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  56 |       quantity: 45,
+  57 |       unit: 'g',
+> 58 |       expirationDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+     |                                ^^^^^^^^^^ Cannot call impure function
+  59 |       imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAocbB6zvSzggnsrJyiqU46UJY-joO_PGOKH1gaeXGAw85D70m_DQUEGOyDv0k9uzUgeMgG5H-VZ5T6MZBHuiWvYSI_xeFeJuOC-PYMYzF6jqu2Ut4AoSt59upZ8a6dARNWEc-PASuLDj7Dy6mgh-cxZIDex3Xa_Gn1oaKahMAqXjt5hcLZ94FnwZr3OEZ4vvDH5HhdBx3Ge-QG20bsza-3TzksXxTSWwW7bta0lUgZ2Eo7wpDhGJJLQPmtqcfW1MBUCHrPcgNx5M8'
+  60 |     }
+  61 |   ]);              react-hooks/purity
+  87:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-refresh/only-export-components
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\context\AuthContext.jsx
+   19:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  304:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\data\import_data.js
+   5:24  error  'collection' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  51:7   error  'process' is not defined                                                           no-undef
+  76:7   error  'process' is not defined                                                           no-undef
+  80:5   error  'process' is not defined                                                           no-undef
+  83:5   error  'process' is not defined                                                           no-undef
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\data\import_ingredients.js
+   5:24  error  'collection' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  56:7   error  'process' is not defined                                                           no-undef
+  60:5   error  'process' is not defined                                                           no-undef
+  63:5   error  'process' is not defined                                                           no-undef
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\AIIngredientsSearch.jsx
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\AdminDashboard.jsx
+  6:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\CookingMode.jsx
+  6:11  error  'id' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  8:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\CookingProgress.jsx
+  8:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\CuisinesExplorer.jsx
+  1:17  error  'useState' is defined but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\EditProfile.jsx
+  12:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\GourmetCommunity.jsx
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\GourmetEvents.jsx
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\IngredientScanner.jsx
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\Login.jsx
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\OrderHistory.jsx
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\RecipeCustomization.jsx
+  6:11  error  'id' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  8:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\RecipeDetail.jsx
+   1:17  error  'useState' is defined but never used. Allowed unused vars must match /^[A-Z_]/u          no-unused-vars
+   9:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u        no-unused-vars
+  10:11  error  'isGuest' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\SeasonalMenu.jsx
+  1:17  error  'useState' is defined but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\WeeklyMenuPlanner.jsx
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\WinePairing.jsx
+  2:23  error  'useParams' is defined but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+  7:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\admin\ActivityLog.jsx
+  10:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\admin\ManageIngredients.jsx
+  343:88  error  'e' is defined but never used  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\admin\ManageMeasurements.jsx
+  10:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\admin\ManageRecipes.jsx
+    1:38  error  'useRef' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+   11:47  error  'getCategoryById' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        no-unused-vars
+   22:10  error  'ingredientGroups' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              no-unused-vars
+  186:25  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+  184 |
+  185 |     try {
+> 186 |       const timestamp = Date.now();
+      |                         ^^^^^^^^^^ Cannot call impure function
+  187 |       // 1. Upload Images if new files exist
+  188 |       let mUrl = mainImageUrl;
+  189 |       let e1Url = extra1Url;  react-hooks/purity
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\admin\ManageUsers.jsx
+  10:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\KAMEH Y3YHOB\Documents\GitHub\the-best-idea-eatery\src\pages\admin\Moderation.jsx
+  10:11  error  't' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+✖ 47 problems (47 errors, 0 warnings)
+
+ ELIFECYCLE  Command failed with exit code 1.

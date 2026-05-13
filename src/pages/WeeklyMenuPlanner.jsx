@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 const WeeklyMenuPlanner = () => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const isBg = i18n.language === 'bg';
 
   const [activeDay, setActiveDay] = useState('Mon');

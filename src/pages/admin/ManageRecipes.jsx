@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, onSnapshot, setDoc, updateDoc, doc } from 'firebase/firestore';
@@ -7,8 +7,11 @@ import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { resizeImage } from '../../lib/imageUtils';
 import { logActivity } from '../../lib/activityLogger';
+import { archiveVersion } from '../../lib/archiveUtils';
+import { checkImageSafety } from '../../lib/moderationUtils';
 import { CUISINES } from '../../data/cuisines';
-import { getRootCategories, getSubCategories, getCategoryById } from '../../data/recipe_categories';
+import { ROLES } from '../../constants/roles';
+import { getRootCategories, getSubCategories } from '../../data/recipe_categories';
 
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
@@ -19,7 +22,6 @@ const ManageRecipes = () => {
   const [recipes, setRecipes] = useState([]);
   const [ingredientsList, setIngredientsList] = useState([]);
   const [measurementsList, setMeasurementsList] = useState([]);
-  const [ingredientGroups, setIngredientGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters & Views
@@ -74,11 +76,8 @@ const ManageRecipes = () => {
     const unsubMeas = onSnapshot(query(collection(db, 'measurements')), (snapshot) => {
       setMeasurementsList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    const unsubGroups = onSnapshot(query(collection(db, 'ingredient_groups')), (snapshot) => {
-      setIngredientGroups(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
 
-    return () => { unsubRecipes(); unsubIng(); unsubMeas(); unsubGroups(); };
+    return () => { unsubRecipes(); unsubIng(); unsubMeas(); };
   }, []);
 
   const calculatedCalories = React.useMemo(() => {
@@ -178,19 +177,52 @@ const ManageRecipes = () => {
     return await getDownloadURL(storageRef);
   };
 
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleSaveRecipe = async (e) => {
     e.preventDefault();
     if (!titleBg || !titleEn || !slug) return;
 
     try {
-      // 1. Upload Images if new files exist
+      // eslint-disable-next-line react-hooks/purity
+      const timestamp = Date.now();
+      // 1. AI Safety Check for new images (Skip for Admins to save resources)
+      const isPowerUser = user?.status?.level === ROLES.ADMIN || user?.status?.level === ROLES.OWNER;
+      
+      if (!isPowerUser) {
+        const newFiles = [
+          { file: mainImageFile, label: isBg ? 'Основна снимка' : 'Main Image' },
+          { file: extra1File, label: isBg ? 'Допълнителна 1' : 'Extra 1' },
+          { file: extra2File, label: isBg ? 'Допълнителна 2' : 'Extra 2' }
+        ].filter(item => item.file);
+
+        for (const item of newFiles) {
+          const b64 = await fileToBase64(item.file);
+          const safety = await checkImageSafety(b64);
+          if (!safety.safe) {
+            alert(isBg 
+              ? `Снимката "${item.label}" бе отхвърлена от AI филтъра (Причина: ${safety.reason}). Моля качете друго изображение.` 
+              : `Image "${item.label}" was rejected by AI filter (Reason: ${safety.reason}). Please upload another image.`);
+            return; // Stop saving
+          }
+        }
+      }
+
+      // 2. Upload Images if new files exist
       let mUrl = mainImageUrl;
       let e1Url = extra1Url;
       let e2Url = extra2Url;
 
-      if (mainImageFile) mUrl = await uploadImage(mainImageFile, `recipes/${slug}/main_${Date.now()}`);
-      if (extra1File) e1Url = await uploadImage(extra1File, `recipes/${slug}/extra1_${Date.now()}`);
-      if (extra2File) e2Url = await uploadImage(extra2File, `recipes/${slug}/extra2_${Date.now()}`);
+      if (mainImageFile) mUrl = await uploadImage(mainImageFile, `recipes/${slug}/main_${timestamp}`);
+      if (extra1File) e1Url = await uploadImage(extra1File, `recipes/${slug}/extra1_${timestamp}`);
+      if (extra2File) e2Url = await uploadImage(extra2File, `recipes/${slug}/extra2_${timestamp}`);
 
       // 2. Prepare Data
       const recipeData = {
@@ -198,7 +230,6 @@ const ManageRecipes = () => {
         title_en: titleEn,
         slug: slug,
         description_bg: descBg,
-        description_en: descEn,
         description_en: descEn,
         cuisine_id: cuisineId,
         prep_time: parseInt(prepTime) || 0,
@@ -230,6 +261,8 @@ const ManageRecipes = () => {
       };
 
       if (editingId) {
+        // Archive before update
+        await archiveVersion('recipes', editingId, user.uid, user.email, 'UPDATE');
         await updateDoc(doc(db, 'recipes', editingId), recipeData);
         await logActivity(user.uid, user.email, 'edit_recipe', `Edited recipe: ${titleEn}`);
       } else {
@@ -260,7 +293,6 @@ const ManageRecipes = () => {
     setTitleEn(recipe.title_en || '');
     setSlug(recipe.slug || recipe.id);
     setDescBg(recipe.description_bg || '');
-    setDescEn(recipe.description_en || '');
     setDescEn(recipe.description_en || '');
     setCuisineId(recipe.cuisine_id || '');
     setCategoryId(recipe.category_id || '');
@@ -310,6 +342,8 @@ const ManageRecipes = () => {
     if (!window.confirm(isBg ? `Сигурни ли сте, че искате да ${actionName} ${targetName}?` : `Are you sure you want to ${actionName} ${targetName}?`)) return;
 
     try {
+      // Archive before status change
+      await archiveVersion('recipes', targetId, user.uid, user.email, 'UPDATE');
       await updateDoc(doc(db, 'recipes', targetId), { 'is_active': !currentActiveStatus });
       await logActivity(user.uid, user.email, 'recipe_status_change', `${!currentActiveStatus ? 'Activated' : 'Deactivated'} recipe ${targetName}`);
     } catch (error) {
@@ -320,6 +354,8 @@ const ManageRecipes = () => {
   const handleDelete = async (targetId, targetName) => {
     if (!window.confirm(isBg ? `Сигурни ли сте, че искате да изтриете ${targetName}?` : `Are you sure you want to delete ${targetName}?`)) return;
     try {
+      // Archive before delete
+      await archiveVersion('recipes', targetId, user.uid, user.email, 'DELETE');
       await updateDoc(doc(db, 'recipes', targetId), { 'is_deleted': true, 'is_active': false });
       await logActivity(user.uid, user.email, 'delete_recipe', `Deleted recipe: ${targetName}`);
     } catch (error) {

@@ -3,14 +3,21 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, onSnapshot, writeBatch, getDocs, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, ROLES } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 
 const ActivityLog = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const isBg = i18n.language === 'bg';
+  const isOwner = user?.status?.level === ROLES.OWNER;
+
+  useEffect(() => {
+    if (!loading && !isOwner) {
+      navigate('/admin');
+    }
+  }, [loading, isOwner, navigate]);
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);

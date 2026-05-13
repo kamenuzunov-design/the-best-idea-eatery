@@ -25,13 +25,13 @@
     *   `ProfileSettings.jsx`, `EditProfile.jsx`: Настройки и редакция на потребителски профил.
     *   `AdminDashboard.jsx`: Административен панел (Hub).
     *   `admin/DataDashboard.jsx`: Панел за управление на данните.
-    *   `admin/ActivityLog.jsx`, `admin/ManageUsers.jsx`, `admin/ManageMeasurements.jsx`, `admin/Moderation.jsx`: Административни под-модули.
+    *   `admin/ActivityLog.jsx`, `admin/ManageUsers.jsx`, `admin/ManageMeasurements.jsx`, `admin/Moderation.jsx`, `admin/BackupRecovery.jsx`: Административни под-модули.
     *   `admin/ManageIngredients.jsx`, `admin/ManageRecipes.jsx`: Модули за създаване на кулинарно съдържание.
 
 ## 4. Services & Config (Firebase)
-*   **Локация:** `src/lib/firebase.js`, `src/lib/activityLogger.js`
-*   **Отговорности:** Инициализация на Firebase SDK (Auth, Firestore, Storage) и глобално логване на действията.
-*   **Връзки:** Използва се в цялото приложение за данни и проследяване.
+*   **Локация:** `src/lib/firebase.js`, `src/lib/activityLogger.js`, `src/lib/moderationUtils.js`, `src/lib/imageUtils.js`
+*   **Отговорности:** Инициализация на Firebase SDK, глобално логване на действията, AI модерация на изображения и клиентско преоразмеряване.
+*   **Връзки:** Използва се в цялото приложение за данни, сигурност и оптимизация.
 
 ## 5. i18n (Интернационализация)
 *   **Локация:** `src/i18n.js` (конфигурация)
@@ -39,6 +39,6 @@
 *   **Връзки:** Интегриран в `src/main.jsx` чрез `<I18nextProvider>` или инициализиран директно, за да бъде наличен в цялото приложение (чрез хука `useTranslation`).
 
 ## 6. Context/State Management (`src/context/`)
-*   **Локация:** `src/context/`
-*   **Отговорности:** Глобално управление на състоянието (напр. потребителска сесия и роли чрез `AuthContext`).
-*   **Връзки:** Извиква се от компонентите/страниците чрез хукове (като `useAuth`), за да управлява достъпа и изобразяването на UI елементи.
+*   **Локация:** `src/context/`, `src/constants/roles.js`
+*   **Отговорности:** Глобално управление на състоянието (потребителска сесия и роли) и дефиниция на RBAC нивата.
+*   **Връзки:** Извиква се от компонентите/страниците чрез хукове (като `useAuth`).

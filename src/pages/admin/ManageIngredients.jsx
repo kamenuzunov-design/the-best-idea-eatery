@@ -5,6 +5,7 @@ import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch } fro
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
+import { archiveVersion } from '../../lib/archiveUtils';
 import { CUISINES } from '../../data/cuisines';
 
 const ManageIngredients = () => {
@@ -139,6 +140,8 @@ const ManageIngredients = () => {
       };
 
       if (editingId) {
+        // Archive before update
+        await archiveVersion('ingredients', editingId, user.uid, user.email, 'UPDATE');
         await updateDoc(doc(db, 'ingredients', editingId), ingredientData);
         await logActivity(user.uid, user.email, 'edit_ingredient', `Edited ingredient: ${nameEn}`);
       } else {
@@ -203,6 +206,8 @@ const ManageIngredients = () => {
     if (!window.confirm(isBg ? `Сигурни ли сте, че искате да ${actionName} ${targetName}?` : `Are you sure you want to ${actionName} ${targetName}?`)) return;
 
     try {
+      // Archive before update
+      await archiveVersion('ingredients', targetId, user.uid, user.email, 'UPDATE');
       const ingRef = doc(db, 'ingredients', targetId);
       await updateDoc(ingRef, { 'is_active': !currentActiveStatus });
       await logActivity(user.uid, user.email, 'ingredient_status_change', `${!currentActiveStatus ? 'Activated' : 'Deactivated'} ingredient ${targetName}`);
@@ -215,6 +220,8 @@ const ManageIngredients = () => {
     if (!window.confirm(isBg ? `Сигурни ли сте, че искате да изтриете ${targetName}?` : `Are you sure you want to delete ${targetName}?`)) return;
     
     try {
+      // Archive before delete
+      await archiveVersion('ingredients', targetId, user.uid, user.email, 'DELETE');
       const ingRef = doc(db, 'ingredients', targetId);
       await updateDoc(ingRef, { 'is_deleted': true, 'is_active': false });
       await logActivity(user.uid, user.email, 'delete_ingredient', `Deleted ingredient: ${targetName}`);
@@ -340,7 +347,7 @@ const ManageIngredients = () => {
         if (!slug || !name_en || !name_bg) continue;
 
         let units_mapping = [];
-        try { units_mapping = JSON.parse(cols[idx('units_mapping')] || '[]'); } catch {}
+        try { units_mapping = JSON.parse(cols[idx('units_mapping')] || '[]'); } catch { /* ignore parse error */ }
 
         const row = {
           slug, name_en, name_bg,

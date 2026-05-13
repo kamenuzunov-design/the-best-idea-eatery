@@ -3,14 +3,23 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { useAuth, ROLES } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { ROLES } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
 
 const ManageUsers = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const isBg = i18n.language === 'bg';
+  const isOwner = user?.status?.level === ROLES.OWNER;
+
+  // Redirect or show error if not owner
+  useEffect(() => {
+    if (!loading && !isOwner) {
+      navigate('/admin');
+    }
+  }, [loading, isOwner, navigate]);
 
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +106,7 @@ const ManageUsers = () => {
 
   const saveProfile = async (e) => {
     e.preventDefault();
-    if (user.role !== ROLES.ADMIN) return; // Super user is read-only
+    if (!isOwner) return; // Only owner can save profiles from here
 
     try {
       const userRef = doc(db, 'users', editingUser.id);
@@ -115,14 +124,16 @@ const ManageUsers = () => {
   };
 
   const roleLabels = {
+    [ROLES.OWNER]: isBg ? 'Собственик' : 'Owner',
     [ROLES.ADMIN]: isBg ? 'Администратор' : 'Admin',
-    [ROLES.SUPERUSER]: isBg ? 'Супер Потребител' : 'Super User',
+    [ROLES.MODERATOR]: isBg ? 'Модератор' : 'Moderator',
     [ROLES.USER]: isBg ? 'Потребител' : 'User'
   };
 
   const shortRoleLabels = {
+    [ROLES.OWNER]: isBg ? 'С' : 'O',
     [ROLES.ADMIN]: isBg ? 'А' : 'A',
-    [ROLES.SUPERUSER]: isBg ? 'СП' : 'SU',
+    [ROLES.MODERATOR]: isBg ? 'М' : 'M',
     [ROLES.USER]: isBg ? 'П' : 'U'
   };
 
@@ -195,8 +206,9 @@ const ManageUsers = () => {
         className="bg-background-dark border border-primary/20 rounded text-slate-200 text-[10px] py-1 px-1 focus:outline-none focus:border-primary"
       >
         <option value={ROLES.USER}>{roleLabels[ROLES.USER]}</option>
-        <option value={ROLES.SUPERUSER}>{roleLabels[ROLES.SUPERUSER]}</option>
+        <option value={ROLES.MODERATOR}>{roleLabels[ROLES.MODERATOR]}</option>
         <option value={ROLES.ADMIN}>{roleLabels[ROLES.ADMIN]}</option>
+        <option value={ROLES.OWNER}>{roleLabels[ROLES.OWNER]}</option>
       </select>
     );
   };
@@ -289,8 +301,9 @@ const ManageUsers = () => {
                   <button 
                     onClick={() => setRoleFilter(userRole)}
                     className={`text-[10px] font-bold uppercase px-2 py-1 rounded border hover:scale-105 transition-transform ${
+                      userRole === ROLES.OWNER ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' :
                       userRole === ROLES.ADMIN ? 'bg-rose-500/10 text-rose-500 border-rose-500/30' :
-                      userRole === ROLES.SUPERUSER ? 'bg-[#b8860b]/10 text-[#b8860b] border-[#b8860b]/30' :
+                      userRole === ROLES.MODERATOR ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' :
                       'bg-primary/10 text-primary border-primary/30'
                     }`}
                   >
@@ -350,8 +363,9 @@ const ManageUsers = () => {
                           <button 
                             onClick={() => setRoleFilter(userRole)}
                             className={`text-[9px] font-bold px-1.5 py-0.5 rounded border hover:bg-white/5 transition-colors ${
+                              userRole === ROLES.OWNER ? 'text-amber-500 border-amber-500/30' :
                               userRole === ROLES.ADMIN ? 'text-rose-500 border-rose-500/30' :
-                              userRole === ROLES.SUPERUSER ? 'text-[#b8860b] border-[#b8860b]/30' :
+                              userRole === ROLES.MODERATOR ? 'text-blue-500 border-blue-500/30' :
                               'text-primary border-primary/30'
                             }`}
                             title={roleLabels[userRole]}
@@ -448,7 +462,7 @@ const ManageUsers = () => {
               >
                 {isBg ? 'Затвори' : 'Close'}
               </button>
-              {user.role === ROLES.ADMIN && (
+              {isOwner && (
                 <button 
                   type="submit" 
                   form="profileForm"

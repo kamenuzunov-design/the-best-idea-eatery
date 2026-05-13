@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
 
 const RecipeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
-  const { isGuest } = useAuth();
+  const { i18n } = useTranslation();
   const isBg = i18n.language === 'bg';
 
   // Mock data for Filet Mignon, normally fetched based on `id`

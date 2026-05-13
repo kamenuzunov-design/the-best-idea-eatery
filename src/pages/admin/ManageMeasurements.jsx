@@ -5,9 +5,10 @@ import { collection, query, onSnapshot, setDoc, updateDoc, deleteDoc, doc } from
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
+import { archiveVersion } from '../../lib/archiveUtils';
 
 const ManageMeasurements = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const isBg = i18n.language === 'bg';
@@ -72,6 +73,8 @@ const ManageMeasurements = () => {
       };
 
       if (editingId) {
+        // Archive before update
+        await archiveVersion('measurements', editingId, user.uid, user.email, 'UPDATE');
         await updateDoc(doc(db, 'measurements', editingId), unitData);
         await logActivity(user.uid, user.email, 'edit_measurement', `Edited measurement unit: ${nameEn}`);
       } else {
@@ -130,6 +133,8 @@ const ManageMeasurements = () => {
     if (!window.confirm(isBg ? 'Сигурни ли сте, че искате да изтриете тази мярка?' : 'Are you sure you want to delete this unit?')) return;
     
     try {
+      // Archive before delete
+      await archiveVersion('measurements', id, user.uid, user.email, 'DELETE');
       await deleteDoc(doc(db, 'measurements', id));
       await logActivity(user.uid, user.email, 'delete_measurement', `Deleted measurement unit: ${mName}`);
     } catch (error) {

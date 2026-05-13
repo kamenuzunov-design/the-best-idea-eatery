@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 const CookingProgress = () => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const { user } = useAuth();
   const isBg = i18n.language === 'bg';
 

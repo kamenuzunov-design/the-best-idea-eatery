@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 
 const Moderation = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const isBg = i18n.language === 'bg';
