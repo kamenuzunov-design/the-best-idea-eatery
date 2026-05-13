@@ -3,21 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, onSnapshot, writeBatch, getDocs, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { useAuth, ROLES } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { ROLES } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
 
 const ActivityLog = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isBg = i18n.language === 'bg';
-  const isOwner = user?.status?.level === ROLES.OWNER;
+  const isAuthorized = user.role === ROLES.OWNER || user.role === ROLES.ADMIN;
 
   useEffect(() => {
-    if (!loading && !isOwner) {
+    if (!authLoading && !isAuthorized) {
       navigate('/admin');
     }
-  }, [loading, isOwner, navigate]);
+  }, [authLoading, isAuthorized, navigate]);
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,11 +26,27 @@ const ActivityLog = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
   useEffect(() => {
+    console.log("Fetching logs...");
     const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log("Logs fetched successfully:", snapshot.size);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setLogs(data);
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching logs:", error);
+      // Try again without orderBy if it fails (likely index issue)
+      if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+        console.warn("Index missing, falling back to unordered query.");
+        const q2 = query(collection(db, 'activity_logs'));
+        onSnapshot(q2, (snap) => {
+          const d = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setLogs(d.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)));
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
@@ -108,7 +125,7 @@ const ActivityLog = () => {
   const displayedLogs = filterKey ? logs.filter(log => log.action === filterKey) : logs;
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 h-screen">
+    <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
         <div className="flex items-center">
           <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const isBg = i18n.language === 'bg';
 
@@ -56,7 +56,19 @@ const AdminDashboard = () => {
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-bold text-slate-100">{isBg ? 'Дневник на действията' : 'Activity Log'}</h3>
-            <p className="text-xs text-slate-400">{isBg ? 'История на промените в системата' : 'System change history'}</p>
+            <p className="text-xs text-slate-400">{isBg ? 'Всички действия в системата' : 'All system actions'}</p>
+          </div>
+          <span className="material-symbols-outlined text-slate-500">chevron_right</span>
+        </Link>
+
+        {/* System History / Restore */}
+        <Link to="/admin/history" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-primary/20 shadow-[0_0_20px_rgba(var(--color-primary-rgb),0.05)] hover:shadow-[0_0_30px_rgba(var(--color-primary-rgb),0.1)] transition-all cursor-pointer group flex items-center gap-4">
+          <div className="size-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0">
+            <span className="material-symbols-outlined text-2xl font-bold">history_toggle_off</span>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-slate-100">{isBg ? 'Възстановяване (Undo)' : 'System Restore (Undo)'}</h3>
+            <p className="text-xs text-slate-400">{isBg ? 'Преглед и връщане на стари версии' : 'View and revert to old versions'}</p>
           </div>
           <span className="material-symbols-outlined text-slate-500">chevron_right</span>
         </Link>

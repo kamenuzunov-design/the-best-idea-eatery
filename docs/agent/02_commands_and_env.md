@@ -37,9 +37,19 @@ VITE_ADMIN_EMAIL=admin@example.com
 
 Забележка: Файлът `.env.local` се използва за локална разработка и съдържа реални ключове (име на администратор).
 
+## Деплоймент (Deployment)
+
+Проектът е конфигуриран за **Firebase Hosting**.
+- **URL на живо**: [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app)
+
+За деплой на нова версия:
+1. Изпълнете производствен билд: `pnpm run build`
+2. Качете в Firebase: `firebase deploy --only hosting`
+
 ## Firebase CLI
 
-За работа с Firebase (напр. деплоймънт), се използва Firebase CLI.
-*   Инициализация: `firebase init`
+За работа с Firebase се използва Firebase CLI:
+*   Логване: `firebase login`
+*   Списък с проекти: `firebase projects:list`
 *   Деплоймънт: `firebase deploy`
 (Проектът вече съдържа `firebase.json` и `.firebaserc`, което означава, че е конфигуриран за Firebase Hosting).

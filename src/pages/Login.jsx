@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 const Login = () => {
   const { login, register, loginAsGuest, loginWithGoogle, loginWithApple } = useAuth();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');

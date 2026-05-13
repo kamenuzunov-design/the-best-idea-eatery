@@ -10,16 +10,16 @@ import { logActivity } from '../../lib/activityLogger';
 const ManageUsers = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isBg = i18n.language === 'bg';
-  const isOwner = user?.status?.level === ROLES.OWNER;
+  const isAuthorized = user.role === ROLES.OWNER || user.role === ROLES.ADMIN;
 
-  // Redirect or show error if not owner
+  // Redirect or show error if not authorized
   useEffect(() => {
-    if (!loading && !isOwner) {
+    if (!authLoading && !isAuthorized) {
       navigate('/admin');
     }
-  }, [loading, isOwner, navigate]);
+  }, [authLoading, isAuthorized, navigate]);
 
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,10 +34,15 @@ const ManageUsers = () => {
   const [profileForm, setProfileForm] = useState({ name: '', bio: '' });
 
   useEffect(() => {
+    console.log("Fetching users...");
     const q = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log("Users fetched successfully:", snapshot.size);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsersList(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching users:", error);
       setLoading(false);
     });
 
@@ -106,7 +111,7 @@ const ManageUsers = () => {
 
   const saveProfile = async (e) => {
     e.preventDefault();
-    if (!isOwner) return; // Only owner can save profiles from here
+    if (!isAuthorized) return; // Only authorized can save profiles from here
 
     try {
       const userRef = doc(db, 'users', editingUser.id);
@@ -214,7 +219,7 @@ const ManageUsers = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 h-screen">
+    <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -462,7 +467,7 @@ const ManageUsers = () => {
               >
                 {isBg ? 'Затвори' : 'Close'}
               </button>
-              {isOwner && (
+              {isAuthorized && (
                 <button 
                   type="submit" 
                   form="profileForm"

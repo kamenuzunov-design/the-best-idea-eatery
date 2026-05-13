@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 const ProfileSettings = () => {
   const { user, logout, isGuest, isAdmin, isSuperuser, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   
   const [resendStatus, setResendStatus] = useState(''); // '' | 'loading' | 'sent' | 'error'
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Navigation from './components/Navigation';
+import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Pantry from './pages/Pantry';
 import AIAssistant from './pages/AIAssistant';
@@ -18,6 +19,7 @@ import ManageRecipes from './pages/admin/ManageRecipes';
 import ManageIngredientGroups from './pages/admin/ManageIngredientGroups';
 import DataDashboard from './pages/admin/DataDashboard';
 import Moderation from './pages/admin/Moderation';
+import SystemHistory from './pages/admin/SystemHistory';
 import RecipeDetail from './pages/RecipeDetail';
 import RecipeCustomization from './pages/RecipeCustomization';
 import WinePairing from './pages/WinePairing';
@@ -31,29 +33,15 @@ import CuisinesExplorer from './pages/CuisinesExplorer';
 import GourmetCommunity from './pages/GourmetCommunity';
 import GourmetEvents from './pages/GourmetEvents';
 import OrderHistory from './pages/OrderHistory';
-import { useAuth, ROLES } from './context/AuthContext';
+import { useAuth } from './context/AuthContext';
+import { ROLES } from './constants/roles';
 
-// Guard component for routes requiring specific roles
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user } = useAuth();
-  
-  // If route has specific allowed roles and user's role is not in them
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // If user is guest, redirect to login. Otherwise, redirect to home.
-    if (user.role === ROLES.GUEST) {
-      return <Navigate to="/login" replace />;
-    }
-    return <Navigate to="/" replace />;
-  }
-
-  return children;
-};
 
 function App() {
   const { user } = useAuth();
   
   // Define commonly used role arrays
-  const requiresLogin = [ROLES.USER, ROLES.SUPERUSER, ROLES.ADMIN];
+  const requiresLogin = [ROLES.USER, ROLES.MODERATOR, ROLES.ADMIN, ROLES.OWNER];
 
   return (
     <Router>
@@ -128,47 +116,52 @@ function App() {
 
           {/* Admin Routes */}
           <Route path="/admin" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
           <Route path="/admin/data" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPERUSER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <DataDashboard />
             </ProtectedRoute>
           } />
           <Route path="/admin/moderation" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPERUSER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR]}>
               <Moderation />
             </ProtectedRoute>
           } />
+          <Route path="/admin/history" element={
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+              <SystemHistory />
+            </ProtectedRoute>
+          } />
           <Route path="/admin/measurements" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPERUSER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <ManageMeasurements />
             </ProtectedRoute>
           } />
           <Route path="/admin/ingredients" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPERUSER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <ManageIngredients />
             </ProtectedRoute>
           } />
           <Route path="/admin/ingredient-groups" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPERUSER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <ManageIngredientGroups />
             </ProtectedRoute>
           } />
           <Route path="/admin/recipes" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPERUSER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR]}>
               <ManageRecipes />
             </ProtectedRoute>
           } />
           <Route path="/admin/users" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <ManageUsers />
             </ProtectedRoute>
           } />
           <Route path="/admin/activity" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <ActivityLog />
             </ProtectedRoute>
           } />

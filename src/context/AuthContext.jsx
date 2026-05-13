@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   onAuthStateChanged, 
@@ -13,15 +14,9 @@ import {
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { logActivity } from '../lib/activityLogger';
+import { ROLES } from '../constants/roles';
 
 const AuthContext = createContext();
-
-export const ROLES = {
-  GUEST: 'guest',
-  USER: 'user',
-  SUPERUSER: 'superuser',
-  ADMIN: 'admin'
-};
 
 const DEFAULT_GUEST = { role: ROLES.GUEST, name: 'Гост' };
 
@@ -123,7 +118,12 @@ export const AuthProvider = ({ children }) => {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             isVerified: firebaseUser.emailVerified || (firebaseUser.providerData.some(p => p.providerId !== 'password')),
-            role: userData.status?.level || ROLES.USER,
+            role: (() => {
+              const r = (userData.status?.level || ROLES.USER).toLowerCase();
+              if (r === 'administrator') return ROLES.ADMIN;
+              if (r === 'superuser') return ROLES.OWNER;
+              return r;
+            })(),
             profile: userData.profile,
             reputation: userData.reputation,
             preferences: userData.preferences,
@@ -284,8 +284,9 @@ export const AuthProvider = ({ children }) => {
       logout,
       updateUserProfile,
       resendVerificationEmail,
+      isOwner: user.role === ROLES.OWNER,
       isAdmin: user.role === ROLES.ADMIN,
-      isSuperuser: user.role === ROLES.SUPERUSER,
+      isModerator: user.role === ROLES.MODERATOR,
       isUser: user.role === ROLES.USER,
       isGuest: user.role === ROLES.GUEST,
       isAuthenticated: user.role !== ROLES.GUEST,

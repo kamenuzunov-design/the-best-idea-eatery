@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { useAuth } from '../../context/AuthContext';
 import { ROLES } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
 
 const BackupRecovery = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const isBg = i18n.language === 'bg';
   
   const [loading, setLoading] = useState(false);
