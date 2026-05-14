@@ -19,7 +19,7 @@ import ManageRecipes from './pages/admin/ManageRecipes';
 import ManageIngredientGroups from './pages/admin/ManageIngredientGroups';
 import DataDashboard from './pages/admin/DataDashboard';
 import Moderation from './pages/admin/Moderation';
-import SystemHistory from './pages/admin/SystemHistory';
+import BackupRecovery from './pages/admin/BackupRecovery';
 import RecipeDetail from './pages/RecipeDetail';
 import RecipeCustomization from './pages/RecipeCustomization';
 import WinePairing from './pages/WinePairing';
@@ -130,11 +130,6 @@ function App() {
               <Moderation />
             </ProtectedRoute>
           } />
-          <Route path="/admin/history" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
-              <SystemHistory />
-            </ProtectedRoute>
-          } />
           <Route path="/admin/measurements" element={
             <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <ManageMeasurements />
@@ -161,8 +156,13 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/admin/activity" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+            <ProtectedRoute allowedRoles={[ROLES.OWNER]}>
               <ActivityLog />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/backup" element={
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+              <BackupRecovery />
             </ProtectedRoute>
           } />
 

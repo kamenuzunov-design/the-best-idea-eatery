@@ -118,12 +118,7 @@ export const AuthProvider = ({ children }) => {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             isVerified: firebaseUser.emailVerified || (firebaseUser.providerData.some(p => p.providerId !== 'password')),
-            role: (() => {
-              const r = (userData.status?.level || ROLES.USER).toLowerCase();
-              if (r === 'administrator') return ROLES.ADMIN;
-              if (r === 'superuser') return ROLES.OWNER;
-              return r;
-            })(),
+            role: (userData.status?.level || ROLES.USER).toLowerCase(),
             profile: userData.profile,
             reputation: userData.reputation,
             preferences: userData.preferences,

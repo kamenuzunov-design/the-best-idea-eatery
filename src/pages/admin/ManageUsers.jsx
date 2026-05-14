@@ -51,17 +51,30 @@ const ManageUsers = () => {
 
   const handleRoleChange = async (targetUserId, targetUserEmail, currentRole, newRole) => {
     if (currentRole === newRole) return;
+    
+    // Safety check: Only OWNER can promote to OWNER
+    if (newRole === ROLES.OWNER && user.role !== ROLES.OWNER) {
+      alert(isBg ? 'Само собственикът може да назначава други собственици.' : 'Only the owner can appoint other owners.');
+      return;
+    }
+
     try {
       const userRef = doc(db, 'users', targetUserId);
       await updateDoc(userRef, { 'status.level': newRole });
-      await logActivity(user.uid, user.email, 'role_change', `Changed role of ${targetUserEmail} to ${newRole}`);
+      await logActivity(user.uid, user.email, 'role_change', `Changed role of ${targetUserEmail} from ${currentRole} to ${newRole}`);
     } catch (error) {
       console.error("Error updating role:", error);
       alert(isBg ? 'Възникна грешка при обновяване на ролята.' : 'Error updating role.');
     }
   };
 
-  const handleToggleActive = async (targetUserId, targetUserEmail, currentActiveStatus) => {
+  const handleToggleActive = async (targetUserId, targetUserEmail, currentActiveStatus, targetUserRole) => {
+    // Safety: Admin cannot touch Owner
+    if (targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER) {
+      alert(isBg ? 'Нямате права да променяте статуса на собственик.' : 'You do not have permission to change an owner\'s status.');
+      return;
+    }
+
     const actionName = currentActiveStatus ? (isBg ? 'деактивирате' : 'deactivate') : (isBg ? 'активирате' : 'activate');
     if (!window.confirm(isBg ? `Сигурни ли сте, че искате да ${actionName} ${targetUserEmail}?` : `Are you sure you want to ${actionName} ${targetUserEmail}?`)) {
       return;
@@ -77,7 +90,13 @@ const ManageUsers = () => {
     }
   };
 
-  const handleDeleteUser = async (targetUserId, targetUserEmail) => {
+  const handleDeleteUser = async (targetUserId, targetUserEmail, targetUserRole) => {
+    // Safety: Admin cannot touch Owner
+    if (targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER) {
+      alert(isBg ? 'Нямате права да изтривате собственик.' : 'You do not have permission to delete an owner.');
+      return;
+    }
+
     if (!window.confirm(isBg ? `Сигурни ли сте, че искате да изтриете ${targetUserEmail}?` : `Are you sure you want to delete ${targetUserEmail}?`)) return;
     
     try {
@@ -160,7 +179,9 @@ const ManageUsers = () => {
     return true;
   });
 
-  const renderStatusToggle = (u, isActive, userEmail) => {
+  const renderStatusToggle = (u, isActive, userEmail, userRole) => {
+    if (userRole === ROLES.OWNER && user.role !== ROLES.OWNER) return null;
+
     if (statusFilter === 'deleted') {
       return (
         <button 
@@ -174,7 +195,7 @@ const ManageUsers = () => {
     
     return (
       <button 
-        onClick={() => handleToggleActive(u.id, userEmail, isActive)}
+        onClick={() => handleToggleActive(u.id, userEmail, isActive, userRole)}
         className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${
           isActive 
             ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' 
@@ -186,12 +207,13 @@ const ManageUsers = () => {
     );
   };
 
-  const renderDeleteBtn = (u, userEmail) => {
+  const renderDeleteBtn = (u, userEmail, userRole) => {
+    if (userRole === ROLES.OWNER && user.role !== ROLES.OWNER) return null;
     if (statusFilter === 'deleted') return null; // Already deleted
     
     return (
       <button 
-        onClick={() => handleDeleteUser(u.id, userEmail)}
+        onClick={() => handleDeleteUser(u.id, userEmail, userRole)}
         className="text-[10px] font-bold px-2 py-1 rounded bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors ml-1"
       >
         {isBg ? 'Изтрий' : 'Delete'}
@@ -203,6 +225,11 @@ const ManageUsers = () => {
     if (statusFilter === 'deleted') {
       return <span className="text-[10px] font-bold text-slate-400 px-1">{roleLabels[userRole]}</span>;
     }
+
+    // Admin cannot change roles of an OWNER
+    if (userRole === ROLES.OWNER && user.role !== ROLES.OWNER) {
+      return <span className="text-[10px] font-bold text-amber-500 px-1">{roleLabels[userRole]}</span>;
+    }
     
     return (
       <select 
@@ -213,7 +240,10 @@ const ManageUsers = () => {
         <option value={ROLES.USER}>{roleLabels[ROLES.USER]}</option>
         <option value={ROLES.MODERATOR}>{roleLabels[ROLES.MODERATOR]}</option>
         <option value={ROLES.ADMIN}>{roleLabels[ROLES.ADMIN]}</option>
-        <option value={ROLES.OWNER}>{roleLabels[ROLES.OWNER]}</option>
+        {/* Only OWNER can see and assign OWNER role */}
+        {user.role === ROLES.OWNER && (
+          <option value={ROLES.OWNER}>{roleLabels[ROLES.OWNER]}</option>
+        )}
       </select>
     );
   };
@@ -327,8 +357,8 @@ const ManageUsers = () => {
                       </div>
 
                       <div className="flex items-center">
-                        {renderStatusToggle(u, isActive, userEmail)}
-                        {renderDeleteBtn(u, userEmail)}
+                        {renderStatusToggle(u, isActive, userEmail, userRole)}
+                        {renderDeleteBtn(u, userEmail, userRole)}
                       </div>
                     </div>
                   </div>
@@ -384,8 +414,8 @@ const ManageUsers = () => {
                               <>
                                 {renderRoleSelect(u, userRole, userEmail)}
                                 <div className="flex gap-1">
-                                  {renderStatusToggle(u, isActive, userEmail)}
-                                  {renderDeleteBtn(u, userEmail)}
+                                  {renderStatusToggle(u, isActive, userEmail, userRole)}
+                                  {renderDeleteBtn(u, userEmail, userRole)}
                                 </div>
                               </>
                             )}

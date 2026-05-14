@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const ProfileSettings = () => {
-  const { user, logout, isGuest, isAdmin, isSuperuser, resendVerificationEmail } = useAuth();
+  const { user, logout, isGuest, isAdmin, isOwner, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   
@@ -55,7 +55,7 @@ const ProfileSettings = () => {
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.profile?.nickname || user.name || 'Потребител'}</h1>
           <p className="text-primary/80 font-bold text-xs uppercase tracking-widest mt-1">
             {user.reputation?.label && !isGuest ? `${user.reputation.label} • ` : ''}
-            {isAdmin ? 'Administrator' : isSuperuser ? 'Super User' : isGuest ? 'Guest' : 'Registered User'}
+            {isAdmin ? (isBg ? 'Администратор' : 'Administrator') : isOwner ? (isBg ? 'Собственик' : 'Owner') : isGuest ? (isBg ? 'Гост' : 'Guest') : (isBg ? 'Потребител' : 'Registered User')}
           </p>
           {user.email && <p className="text-slate-400 text-sm mt-1">{user.email}</p>}
           {!user.isVerified && !isGuest && (
@@ -122,6 +122,53 @@ const ProfileSettings = () => {
           </div>
         )}
       </section>
+
+      {!isGuest && (
+        <section className="mt-6 px-4">
+          <button 
+            onClick={handleLogout} 
+            className="w-full flex items-center justify-center gap-2 border border-rose-500/30 text-rose-500 bg-rose-500/5 py-4 rounded-2xl hover:bg-rose-500/10 active:scale-95 transition-all font-extrabold shadow-sm"
+          >
+            <span className="material-symbols-outlined">logout</span>
+            {isBg ? 'Изход' : 'Log Out'}
+          </button>
+        </section>
+      )}
+
+      {(isAdmin || isOwner) && (
+        <section className="mt-8 px-4">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2 flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">shield_person</span>
+            {isBg ? 'АДМИНИСТРАЦИЯ' : 'ADMINISTRATION'}
+          </h3>
+          <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-rose-500/20 border-2 border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+            <Link to="/admin" className="flex items-center justify-between p-4 cursor-pointer hover:bg-rose-500/5 transition-colors group">
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined">admin_panel_settings</span>
+                </div>
+                <div>
+                  <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{isBg ? 'Администрация' : 'Administration'}</p>
+                  <p className="text-[10px] text-rose-500/60 font-bold uppercase">{isBg ? 'Контролен панел' : 'Control Panel'}</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-rose-500/50">chevron_right</span>
+            </Link>
+            <Link to="/admin/data" className="flex items-center justify-between p-4 cursor-pointer hover:bg-rose-500/5 transition-colors group">
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined">edit_square</span>
+                </div>
+                <div>
+                  <p className="text-sm font-black text-rose-500 uppercase tracking-wide">Редактиране Рецепти/Продукти</p>
+                  <p className="text-[10px] text-rose-500/60 font-bold uppercase">{isBg ? 'Управление на данни' : 'Data Management'}</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-rose-500/50">chevron_right</span>
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="mt-6 px-4">
         <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">
@@ -209,36 +256,8 @@ const ProfileSettings = () => {
         </div>
       </section>
 
-      {isAdmin && (
-        <section className="mt-6 px-4">
-          <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-primary/10 border border-primary/20 shadow-lg">
-            <Link to="/admin" className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group">
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined">admin_panel_settings</span>
-                </div>
-                <p className="text-sm font-bold text-slate-100">{isBg ? 'Администрация' : 'Administration'}</p>
-              </div>
-              <span className="material-symbols-outlined text-slate-400">chevron_right</span>
-            </Link>
-            <Link to="/admin/data" className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group">
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined">add_box</span>
-                </div>
-                <p className="text-sm font-bold text-slate-100">{isBg ? 'Добави Рецепта/Продукт' : 'Add Data'}</p>
-              </div>
-              <span className="material-symbols-outlined text-slate-400">chevron_right</span>
-            </Link>
-          </div>
-        </section>
-      )}
 
-      <section className="mt-10 px-4 pb-8">
-        <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 border border-rose-500/30 text-rose-500 bg-rose-500/5 p-4 rounded-2xl hover:bg-rose-500/10 active:scale-95 transition-all font-extrabold shadow-sm">
-          <span className="material-symbols-outlined">logout</span>
-          {isBg ? 'Изход' : 'Log Out'}
-        </button>
+      <section className="mt-4 px-4 pb-8">
         <p className="text-center text-[10px] text-slate-500 mt-8 font-bold uppercase tracking-widest">The Best Idea Eatery v3.0</p>
       </section>
     </div>
