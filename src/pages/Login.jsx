@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { GDPR_CONSENT_KEY } from '../components/GDPRConsent';
 
 const Login = () => {
   const { login, register, loginAsGuest, loginWithGoogle, loginWithApple } = useAuth();
@@ -14,6 +15,14 @@ const Login = () => {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [gdprAccepted, setGdprAccepted] = useState(false);
+  const [showGdprWarning, setShowGdprWarning] = useState(false);
+
+  // Check initial consent status
+  useState(() => {
+    const consent = localStorage.getItem(GDPR_CONSENT_KEY);
+    if (consent === 'agreed') setGdprAccepted(true);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +33,14 @@ const Login = () => {
       if (isLogin) {
         await login(email, password);
       } else {
+        if (!gdprAccepted) {
+          setError(isBg ? 'Трябва да приемете условията, за да продължите.' : 'You must accept the terms to continue.');
+          setLoading(false);
+          return;
+        }
         await register(email, password, name);
+        // Persist consent if they registered
+        localStorage.setItem(GDPR_CONSENT_KEY, 'agreed');
       }
       navigate('/');
     } catch (err) {
@@ -45,6 +61,29 @@ const Login = () => {
   const handleGuestLogin = () => {
     loginAsGuest();
     navigate('/');
+  };
+
+  const handleUnlockGDPR = () => {
+    localStorage.setItem(GDPR_CONSENT_KEY, 'agreed');
+    setGdprAccepted(true);
+    setShowGdprWarning(false);
+  };
+
+  const renderTextWithLinks = (text) => {
+    const parts = text.split(/\[|\]/);
+    return (
+      <>
+        {parts[0]}
+        <Link to="/terms" className="text-primary hover:underline font-bold">
+          {parts[1]}
+        </Link>
+        {parts[2]}
+        <Link to="/privacy" className="text-primary hover:underline font-bold">
+          {parts[3]}
+        </Link>
+        {parts[4]}
+      </>
+    );
   };
 
   const handleSocialLogin = async (providerName) => {
@@ -153,6 +192,39 @@ const Login = () => {
               </div>
             </div>
           </div>
+          
+          {!isLogin && (
+            <div className="space-y-4">
+              {sessionStorage.getItem(GDPR_CONSENT_KEY) === 'declined' && !gdprAccepted && (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-500 leading-relaxed font-medium">
+                  {isBg ? 'За да създадете профил и да запазвате вашите рецепти и продукти, е необходимо да приемете условията за поверителност. Можете да продължите да използвате приложението като гост с ограничени функции.' : 'To create a profile and save your recipes and products, it is necessary to accept the privacy terms. You can continue to use the app as a guest with limited features.'}
+                </div>
+              )}
+
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div className="relative flex items-center mt-1">
+                  <input 
+                    type="checkbox" 
+                    checked={gdprAccepted}
+                    onChange={(e) => setGdprAccepted(e.target.checked)}
+                    className="peer appearance-none size-5 border-2 border-primary/30 rounded-md checked:bg-primary checked:border-primary transition-all cursor-pointer" 
+                  />
+                  <span className="material-symbols-outlined absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-background-dark text-base font-bold opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">check</span>
+                </div>
+                <span className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors leading-relaxed">
+                  {renderTextWithLinks(isBg ? 'Съгласен съм с [Общите условия] и [Политиката за поверителност]. Потвърждавам, че съм запознат с начина, по който моите лични данни се събират и обработват за нуждите на приложението.' : 'I agree to the [Terms of Service] and [Privacy Policy]. I confirm that I am aware of how my personal data is collected and processed for the purposes of the application.')}
+                </span>
+              </label>
+
+              {!gdprAccepted && !isLogin && (
+                <div className="text-[10px] text-primary font-bold uppercase tracking-widest text-center">
+                   <button type="button" onClick={handleUnlockGDPR} className="hover:underline">
+                    {isBg ? 'Вие не сте дали съгласие за съхранение на данни. [Кликнете тук, за да отключите всички функции]' : "You haven't given consent for data storage. [Click here to unlock all features]"}
+                   </button>
+                </div>
+              )}
+            </div>
+          )}
           
           <div className="pt-4">
             <button disabled={loading} type="submit" className="w-full h-14 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-lg rounded-xl shadow-[0_10px_30px_rgba(212,175,53,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100">

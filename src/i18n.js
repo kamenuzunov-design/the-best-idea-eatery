@@ -45,7 +45,18 @@ const resources = {
       "saved.title": "Saved Recipes & List",
       "saved.shopping_list": "Shopping List",
       "saved.empty_list": "Your list is empty.",
-      "saved.recipes": "Saved Recipes"
+      "saved.recipes": "Saved Recipes",
+      "gdpr.consent_text": "I agree to the [Terms of Service] and [Privacy Policy]. I confirm that I am aware of how my personal data is collected and processed for the purposes of the application.",
+      "gdpr.agree": "Agree",
+      "gdpr.disagree": "I Disagree",
+      "gdpr.decline_msg": "To create a profile and save your recipes and products, it is necessary to accept the privacy terms. You can continue to use the app as a guest with limited features.",
+      "gdpr.unlock_features": "You haven't given consent for data storage. [Click here to unlock all features]",
+      "gdpr.tos": "Terms of Service",
+      "gdpr.privacy": "Privacy Policy",
+      "profile.delete_account": "Delete Account",
+      "profile.delete_confirm_title": "Delete your account?",
+      "profile.delete_confirm_desc": "This action is permanent. All your personal data will be deleted. Your recipes will remain but without your name.",
+      "profile.legal": "Legal & Privacy"
     }
   },
   bg: {
@@ -91,7 +102,18 @@ const resources = {
       "saved.title": "Запазени Рецепти и Списък",
       "saved.shopping_list": "Списък за пазаруване",
       "saved.empty_list": "Списъкът е празен.",
-      "saved.recipes": "Запазени Рецепти"
+      "saved.recipes": "Запазени Рецепти",
+      "gdpr.consent_text": "Съгласен съм с [Общите условия] и [Политиката за поверителност]. Потвърждавам, че съм запознат с начина, по който моите лични данни се събират и обработват за нуждите на приложението.",
+      "gdpr.agree": "Съгласен",
+      "gdpr.disagree": "Не съм съгласен",
+      "gdpr.decline_msg": "За да създадете профил и да запазвате вашите рецепти и продукти, е необходимо да приемете условията за поверителност. Можете да продължите да използвате приложението като гост с ограничени функции.",
+      "gdpr.unlock_features": "Вие не сте дали съгласие за съхранение на данни. [Кликнете тук, за да отключите всички функции]",
+      "gdpr.tos": "Общи условия",
+      "gdpr.privacy": "Политика за поверителност",
+      "profile.delete_account": "Изтриване на профила",
+      "profile.delete_confirm_title": "Изтриване на Вашия профил?",
+      "profile.delete_confirm_desc": "Това действие е постоянно. Всички Ваши лични данни ще бъдат изтрити. Вашите рецепти ще останат в системата, но без Вашето име.",
+      "profile.legal": "Правна информация и поверителност"
     }
   }
 };

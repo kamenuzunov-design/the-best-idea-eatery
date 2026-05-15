@@ -11,10 +11,23 @@ import {
   GoogleAuthProvider,
   OAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  writeBatch 
+} from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { logActivity } from '../lib/activityLogger';
+import { deleteUser } from 'firebase/auth';
 import { ROLES } from '../constants/roles';
+import { awardReputationPoints } from '../lib/reputationUtils';
 
 const AuthContext = createContext();
 
@@ -112,6 +125,21 @@ export const AuthProvider = ({ children }) => {
             };
             
             await setDoc(userDocRef, userData);
+          }
+
+          // Check for daily login bonus
+          const today = new Date().toISOString().split('T')[0];
+          const lastBonusDate = userData.reputation?.last_daily_bonus || '';
+          
+          if (lastBonusDate !== today) {
+            awardReputationPoints(firebaseUser.uid, 1); // +1 point for daily login
+            updateDoc(userDocRef, {
+              'reputation.last_daily_bonus': today
+            });
+            // Update local object to reflect the change immediately in state
+            if (!userData.reputation) userData.reputation = {};
+            userData.reputation.score = (userData.reputation.score || 0) + 1;
+            userData.reputation.last_daily_bonus = today;
           }
 
           setUser({
@@ -268,6 +296,43 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const deleteAccount = async () => {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const email = user.email;
+
+    try {
+      // 1. Anonymize recipes
+      const recipesRef = collection(db, 'recipes');
+      const q = query(recipesRef, where('publisher_id', '==', uid));
+      const querySnapshot = await getDocs(q);
+      
+      const batch = writeBatch(db);
+      querySnapshot.forEach((recipeDoc) => {
+        batch.update(recipeDoc.ref, {
+          publisher_id: null,
+          publisher_name: 'Deleted User / Анонимен готвач'
+        });
+      });
+      await batch.commit();
+
+      // 2. Log activity (before deletion)
+      await logActivity(uid, email, 'delete_account', 'User deleted their account and all associated data');
+
+      // 3. Delete user document
+      await deleteDoc(doc(db, 'users', uid));
+
+      // 4. Delete Firebase Auth user
+      await deleteUser(auth.currentUser);
+      
+      // Reset state
+      setUser(DEFAULT_GUEST);
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -279,6 +344,8 @@ export const AuthProvider = ({ children }) => {
       logout,
       updateUserProfile,
       resendVerificationEmail,
+      deleteAccount,
+      awardPoints: awardReputationPoints,
       isOwner: user.role === ROLES.OWNER,
       isAdmin: user.role === ROLES.ADMIN,
       isModerator: user.role === ROLES.MODERATOR,

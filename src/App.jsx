@@ -20,6 +20,7 @@ import ManageIngredientGroups from './pages/admin/ManageIngredientGroups';
 import DataDashboard from './pages/admin/DataDashboard';
 import Moderation from './pages/admin/Moderation';
 import BackupRecovery from './pages/admin/BackupRecovery';
+import ManageAds from './pages/admin/ManageAds';
 import RecipeDetail from './pages/RecipeDetail';
 import RecipeCustomization from './pages/RecipeCustomization';
 import WinePairing from './pages/WinePairing';
@@ -33,6 +34,9 @@ import CuisinesExplorer from './pages/CuisinesExplorer';
 import GourmetCommunity from './pages/GourmetCommunity';
 import GourmetEvents from './pages/GourmetEvents';
 import OrderHistory from './pages/OrderHistory';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import GDPRConsent from './components/GDPRConsent';
 import { useAuth } from './context/AuthContext';
 import { ROLES } from './constants/roles';
 
@@ -46,6 +50,7 @@ function App() {
   return (
     <Router>
       <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl border-x border-primary/10">
+        <GDPRConsent />
         <Header />
         
         <Routes>
@@ -64,6 +69,8 @@ function App() {
           <Route path="/community" element={<GourmetCommunity />} />
           <Route path="/events" element={<GourmetEvents />} />
           <Route path="/seasonal" element={<SeasonalMenu />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           
           {/* Protected Routes (Require Login) */}
           <Route path="/pantry" element={
@@ -163,6 +170,11 @@ function App() {
           <Route path="/admin/backup" element={
             <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <BackupRecovery />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/ads" element={
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+              <ManageAds />
             </ProtectedRoute>
           } />
 

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, setDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -12,12 +12,18 @@ import { checkImageSafety } from '../../lib/moderationUtils';
 import { CUISINES } from '../../data/cuisines';
 import { ROLES } from '../../constants/roles';
 import { getRootCategories, getSubCategories } from '../../data/recipe_categories';
+import { REPUTATION_POINTS } from '../../lib/reputationUtils';
 
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin, isOwner, awardPoints } = useAuth();
   const isBg = i18n.language === 'bg';
+  const isPowerUser = isAdmin || isOwner;
+
+  const csvImportRef = useRef(null);
+  const [csvStatus, setCsvStatus] = useState(''); // '' | 'parsing' | 'saving' | 'done' | 'error'
+  const [csvPreview, setCsvPreview] = useState(null); // { newRows, duplicateRows } | null
 
   const [recipes, setRecipes] = useState([]);
   const [ingredientsList, setIngredientsList] = useState([]);
@@ -145,7 +151,7 @@ const ManageRecipes = () => {
   // --- Dynamic Steps ---
   const addStepRow = () => {
     const newId = `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setRecipeSteps([...recipeSteps, { id: newId, instruction_bg: '', instruction_en: '' }]);
+    setRecipeSteps([...recipeSteps, { id: newId, instruction_bg: '', instruction_en: '', timer_minutes: '' }]);
   };
   const removeStepRow = (id) => {
     setRecipeSteps(recipeSteps.filter(s => s.id !== id));
@@ -269,7 +275,8 @@ const ManageRecipes = () => {
         })).filter(i => i.ingredient_id && i.amount && i.unit_id),
         steps: recipeSteps.map(s => ({
           instruction_bg: s.instruction_bg,
-          instruction_en: s.instruction_en
+          instruction_en: s.instruction_en,
+          timer_minutes: parseInt(s.timer_minutes) || null
         })).filter(s => s.instruction_bg || s.instruction_en),
         updatedAt: new Date().toISOString()
       };
@@ -292,6 +299,9 @@ const ManageRecipes = () => {
 
         await setDoc(doc(db, 'recipes', slug), recipeData);
         await logActivity(user.uid, user.email, 'add_recipe', `Added recipe: ${titleEn}`);
+        
+        // Award Reputation Points for Publishing
+        await awardPoints(user.uid, REPUTATION_POINTS.PUBLISH_RECIPE);
       }
 
       handleCancelEdit();
@@ -343,6 +353,162 @@ const ManageRecipes = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // --- CSV Export ---
+  const handleExportCSV = () => {
+    const exportable = recipes.filter(r => !r.is_deleted);
+    const headers = [
+      'slug','title_bg','title_en','description_bg','description_en',
+      'cuisine_id','category_id','sub_category_id','prep_time','cook_time',
+      'servings','difficulty','video_url','original_author','source_link',
+      'ingredients','steps'
+    ];
+    
+    const escape = (v) => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+
+    const rows = exportable.map(r => [
+      escape(r.slug || r.id),
+      escape(r.title_bg),
+      escape(r.title_en),
+      escape(r.description_bg),
+      escape(r.description_en),
+      escape(r.cuisine_id),
+      escape(r.category_id),
+      escape(r.sub_category_id),
+      escape(r.prep_time),
+      escape(r.cook_time),
+      escape(r.servings),
+      escape(r.difficulty),
+      escape(r.video_url),
+      escape(r.original_author),
+      escape(r.source_link),
+      escape(JSON.stringify(r.ingredients || [])),
+      escape(JSON.stringify(r.steps || [])),
+    ].join(','));
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `recipes_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    logActivity(user.uid, user.email, 'export_recipes_csv', `Exported ${exportable.length} recipes`);
+  };
+
+  // --- CSV Import ---
+  const handleImportCSV = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    setCsvStatus('parsing');
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const header = lines[0].replace(/^\uFEFF/, '').split(',');
+      const idx = (name) => header.indexOf(name);
+
+      const parseRow = (line) => {
+        const result = [];
+        let cur = '', inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"' && inQuote && line[i+1] === '"') { cur += '"'; i++; }
+          else if (ch === '"') { inQuote = !inQuote; }
+          else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
+          else { cur += ch; }
+        }
+        result.push(cur);
+        return result;
+      };
+
+      const existingSlugs = new Set(recipes.map(r => r.slug || r.id));
+      const existingTitlesBg = new Set(recipes.map(r => (r.title_bg || '').toLowerCase()));
+      const existingTitlesEn = new Set(recipes.map(r => (r.title_en || '').toLowerCase()));
+
+      const newRows = [];
+      const duplicateRows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseRow(lines[i]);
+        if (cols.length < 3) continue;
+        const slug = cols[idx('slug')]?.trim();
+        const title_bg = cols[idx('title_bg')]?.trim();
+        const title_en = cols[idx('title_en')]?.trim();
+        if (!slug || !title_bg || !title_en) continue;
+
+        let ingredients = [];
+        let steps = [];
+        try { ingredients = JSON.parse(cols[idx('ingredients')] || '[]'); } catch { }
+        try { steps = JSON.parse(cols[idx('steps')] || '[]'); } catch { }
+
+        const row = {
+          slug, title_bg, title_en,
+          description_bg: cols[idx('description_bg')] || '',
+          description_en: cols[idx('description_en')] || '',
+          cuisine_id: cols[idx('cuisine_id')] || '',
+          category_id: cols[idx('category_id')] || '',
+          sub_category_id: cols[idx('sub_category_id')] || '',
+          prep_time: parseInt(cols[idx('prep_time')]) || 0,
+          cook_time: parseInt(cols[idx('cook_time')]) || 0,
+          servings: parseInt(cols[idx('servings')]) || 1,
+          difficulty: cols[idx('difficulty')] || 'medium',
+          video_url: cols[idx('video_url')] || '',
+          original_author: cols[idx('original_author')] || '',
+          source_link: cols[idx('source_link')] || '',
+          ingredients,
+          steps,
+          is_active: true,
+          is_deleted: false,
+        };
+
+        const isDuplicate = existingSlugs.has(slug) || 
+                          existingTitlesBg.has(title_bg.toLowerCase()) || 
+                          existingTitlesEn.has(title_en.toLowerCase());
+        
+        if (isDuplicate) duplicateRows.push(row);
+        else newRows.push(row);
+      }
+
+      setCsvPreview({ newRows, duplicateRows });
+      setCsvStatus('');
+    } catch (err) {
+      console.error('CSV parse error:', err);
+      setCsvStatus('error');
+      setTimeout(() => setCsvStatus(''), 4000);
+    }
+  };
+
+  const executeImport = async (mode) => {
+    if (mode === 'cancel') { setCsvPreview(null); return; }
+    const rows = mode === 'new' ? csvPreview.newRows : [...csvPreview.newRows, ...csvPreview.duplicateRows];
+    setCsvPreview(null);
+    setCsvStatus('saving');
+    try {
+      const now = new Date().toISOString();
+      const BATCH_SIZE = 400;
+      for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        rows.slice(offset, offset + BATCH_SIZE).forEach(row => {
+          batch.set(doc(db, 'recipes', row.slug), { ...row, updatedAt: now, createdAt: now }, { merge: true });
+        });
+        await batch.commit();
+      }
+      await logActivity(user.uid, user.email, 'import_recipes_csv', `Imported ${rows.length} recipes`);
+      setCsvStatus('done');
+      setTimeout(() => setCsvStatus(''), 4000);
+    } catch (err) {
+      console.error('CSV Import error:', err);
+      setCsvStatus('error');
+      setTimeout(() => setCsvStatus(''), 4000);
+    }
+  };
+
   const handleCancelEdit = () => {
     setEditingId(null);
     setTitleBg(''); setTitleEn(''); setSlug('');
@@ -387,11 +553,26 @@ const ManageRecipes = () => {
   };
 
   const handleRestore = async (targetId, targetName) => {
+    const newAuthor = window.prompt(
+      isBg ? `Възстановяване на "${targetName}". Въведете име на нов автор:` : `Restoring "${targetName}". Enter new author name:`, 
+      isBg ? 'Неизвестен' : 'Unknown'
+    );
+    
+    if (!newAuthor) return;
+
     try {
-      await updateDoc(doc(db, 'recipes', targetId), { 'is_deleted': false, 'is_active': true });
-      await logActivity(user.uid, user.email, 'restore_recipe', `Restored recipe: ${targetName}`);
-    } catch (error) {
-      console.error("Error restoring recipe:", error);
+      await updateDoc(doc(db, 'recipes', targetId), {
+        is_deleted: false,
+        is_active: true,
+        publisher_name: newAuthor,
+        publisher_id: 'anonymous_restored',
+        restored_at: new Date().toISOString()
+      });
+      await logActivity(user.uid, user.email, 'restore_recipe', `Restored recipe: ${targetName} with new author: ${newAuthor}`);
+      alert(isBg ? 'Рецептата е възстановена.' : 'Recipe restored.');
+    } catch (err) {
+      console.error("Error restoring recipe:", err);
+      alert(isBg ? 'Грешка при възстановяване.' : 'Error restoring.');
     }
   };
 
@@ -423,6 +604,13 @@ const ManageRecipes = () => {
     }
     return (
       <div className="flex gap-1">
+        <button 
+          onClick={() => navigate(`/recipe/${r.id}`)} 
+          className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-background-dark/50 rounded-lg"
+          title={isBg ? 'Виж публично' : 'View Public'}
+        >
+          <span className="material-symbols-outlined text-[16px]">visibility</span>
+        </button>
         <button onClick={() => handleEditClick(r)} className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg">
           <span className="material-symbols-outlined text-[16px]">edit</span>
         </button>
@@ -446,12 +634,47 @@ const ManageRecipes = () => {
             </button>
             <div>
               <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Рецепти' : 'Recipes'}</h1>
-              <p className="text-xs font-medium text-primary/70">{recipes.length} {isBg ? 'общо' : 'total'}</p>
+              <p className="text-xs font-medium text-primary/70">{recipes.length} {isBg ? 'въведени общо' : 'items total'}</p>
             </div>
           </div>
-          <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500'}`}><span className="material-symbols-outlined text-[18px]">grid_view</span></button>
-            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500'}`}><span className="material-symbols-outlined text-[18px]">view_list</span></button>
+          <div className="flex items-center gap-2">
+            {isPowerUser && (
+              <>
+                <button
+                  onClick={handleExportCSV}
+                  title={isBg ? 'Експорт CSV' : 'Export CSV'}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-[11px] font-bold border border-emerald-500/20"
+                >
+                  <span className="material-symbols-outlined text-[16px]">download</span>
+                  CSV
+                </button>
+                <button
+                  onClick={() => csvImportRef.current?.click()}
+                  title={isBg ? 'Импорт CSV' : 'Import CSV'}
+                  className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors text-[11px] font-bold border ${
+                    csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                    csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                    csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                    'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
+                     csvStatus === 'done'    ? 'check_circle' :
+                     csvStatus === 'error'   ? 'error' : 'upload'}
+                  </span>
+                  {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
+                   csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
+                   csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
+                   csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : 'CSV'}
+                </button>
+                <input ref={csvImportRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportCSV} />
+              </>
+            )}
+            <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
+              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500'}`}><span className="material-symbols-outlined text-[18px]">grid_view</span></button>
+              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500'}`}><span className="material-symbols-outlined text-[18px]">view_list</span></button>
+            </div>
           </div>
         </div>
 
@@ -685,7 +908,7 @@ const ManageRecipes = () => {
                           updateIngredientRow(ing.id, 'ingredient_id', val);
                           updateIngredientRow(ing.id, 'unit_id', '');
                         }}
-                        className="w-40 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs shrink-0"
+                        className="w-36 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-[11px] shrink-0"
                       >
                         <option value="">-- {isBg ? 'Продукт' : 'Ingredient'} --</option>
                         {Object.entries(groupedIngredients).map(([groupName, ings]) => (
@@ -706,7 +929,7 @@ const ManageRecipes = () => {
                         value={ing.amount}
                         onChange={(e) => updateIngredientRow(ing.id, 'amount', e.target.value)}
                         placeholder="Qty"
-                        className="w-16 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs text-center shrink-0"
+                        className="w-12 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-[11px] text-center shrink-0"
                       />
 
                       {/* Smart unit selector */}
@@ -715,7 +938,7 @@ const ManageRecipes = () => {
                         onChange={(e) => updateIngredientRow(ing.id, 'unit_id', e.target.value)}
                         disabled={unitDisabled}
                         title={unitDisabled ? (isBg ? 'Изберете продукт първо' : 'Select ingredient first') : ''}
-                        className={`w-28 bg-surface-dark border rounded p-1.5 text-xs transition-colors shrink-0 ${
+                        className={`w-24 bg-surface-dark border rounded p-1.5 text-[11px] transition-colors shrink-0 ${
                           unitDisabled
                             ? 'border-primary/10 text-slate-600 cursor-not-allowed opacity-50'
                             : mappedUnitIds
@@ -731,7 +954,7 @@ const ManageRecipes = () => {
                         ))}
                       </select>
 
-                      <div className="flex-1" /> {/* Spacer to push delete button to end */}
+
 
                       <button
                         type="button"
@@ -775,13 +998,43 @@ const ManageRecipes = () => {
               </div>
               {recipeSteps.length === 0 && <div className="text-center py-4 border border-dashed border-primary/20 rounded text-slate-500 text-xs">{isBg ? 'Няма въведени стъпки' : 'No steps added'}</div>}
               {recipeSteps.map((step, idx) => (
-                <div key={step.id} className="bg-background-dark border border-primary/10 rounded p-2 relative flex flex-col gap-2">
+                <div key={step.id} className="bg-background-dark border border-primary/10 rounded p-3 relative flex flex-col gap-2 group">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-bold text-[#b8860b] uppercase">{isBg ? 'Стъпка' : 'Step'} {idx + 1}</span>
-                    <button type="button" onClick={() => removeStepRow(step.id)} className="text-rose-500 hover:text-rose-400 transition-colors"><span className="material-symbols-outlined text-[16px]">delete</span></button>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-black text-[#b8860b] uppercase tracking-widest">{isBg ? 'Стъпка' : 'Step'} {idx + 1}</span>
+                      
+                      <div className="flex items-center gap-1 bg-surface-dark border border-primary/10 rounded px-2 py-0.5">
+                        <span className="material-symbols-outlined text-[14px] text-primary">schedule</span>
+                        <input 
+                          type="number" 
+                          value={step.timer_minutes || ''} 
+                          onChange={(e) => updateStepRow(step.id, 'timer_minutes', e.target.value)}
+                          placeholder={isBg ? 'Мин.' : 'Min.'}
+                          className="w-10 bg-transparent text-[11px] text-slate-100 outline-none text-center"
+                        />
+                        <span className="text-[9px] text-slate-500 uppercase font-bold">{isBg ? 'мин' : 'min'}</span>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => removeStepRow(step.id)} className="text-rose-500/50 hover:text-rose-500 transition-colors p-1 rounded hover:bg-rose-500/10">
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
                   </div>
-                  <textarea value={step.instruction_bg} onChange={(e) => updateStepRow(step.id, 'instruction_bg', e.target.value)} placeholder={isBg ? 'Описание на български...' : 'Description in BG...'} rows="2" className="w-full bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b]"></textarea>
-                  <textarea value={step.instruction_en} onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} placeholder={isBg ? 'Описание на английски...' : 'Description in EN...'} rows="2" className="w-full bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b]"></textarea>
+                  <div className="grid grid-cols-1 gap-2">
+                    <textarea 
+                      value={step.instruction_bg} 
+                      onChange={(e) => updateStepRow(step.id, 'instruction_bg', e.target.value)} 
+                      placeholder={isBg ? 'Описание на български...' : 'Description in Bulgarian...'} 
+                      rows="2" 
+                      className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
+                    ></textarea>
+                    <textarea 
+                      value={step.instruction_en} 
+                      onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
+                      placeholder={isBg ? 'Description in English...' : 'Description in English...'} 
+                      rows="2" 
+                      className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
+                    ></textarea>
+                  </div>
                 </div>
               ))}
             </div>
@@ -813,7 +1066,7 @@ const ManageRecipes = () => {
                 const isActive = r.is_active !== false;
                 const isDeleted = r.is_deleted === true;
                 const rName = isBg ? r.title_bg : r.title_en;
-                const placeholderImg = "https://images.unsplash.com/photo-1495195134817-a169d0d346dc?auto=format&fit=crop&q=80&w=200";
+                const placeholderImg = "/images/recipe-placeholder.png";
 
                 return (
                   <div key={r.id} className={`bg-surface-dark/50 border rounded-xl overflow-hidden flex flex-col group transition-colors ${isDeleted ? 'border-rose-500/30 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/10 hover:border-[#b8860b]/30'}`}>
@@ -856,7 +1109,7 @@ const ManageRecipes = () => {
                       const isActive = r.is_active !== false;
                       const isDeleted = r.is_deleted === true;
                       const rName = isBg ? r.title_bg : r.title_en;
-                      const placeholderImg = "https://images.unsplash.com/photo-1495195134817-a169d0d346dc?auto=format&fit=crop&q=80&w=100";
+                      const placeholderImg = "/images/recipe-placeholder.png";
 
                       return (
                         <tr key={r.id} className={`border-b border-primary/5 hover:bg-[#b8860b]/5 transition-colors ${isDeleted ? 'opacity-60' : !isActive ? 'opacity-75' : ''}`}>
@@ -891,6 +1144,49 @@ const ManageRecipes = () => {
           )}
         </div>
       </div>
+
+      {/* CSV Import Preview Modal */}
+      {csvPreview && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
+          <div className="bg-surface-dark border border-primary/30 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-primary mb-2">
+              <span className="material-symbols-outlined text-3xl">fact_check</span>
+              <h3 className="text-lg font-bold uppercase tracking-widest">{isBg ? 'Проверка на импорта' : 'Import Check'}</h3>
+            </div>
+            
+            <p className="text-slate-300 text-sm">
+              {isBg 
+                ? `Открихме ${csvPreview.newRows.length} нови рецепти и ${csvPreview.duplicateRows.length} потенциални дубликата.` 
+                : `Found ${csvPreview.newRows.length} new recipes and ${csvPreview.duplicateRows.length} potential duplicates.`}
+            </p>
+
+            <div className="space-y-3 pt-4">
+              <button 
+                onClick={() => executeImport('new')}
+                className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined">add_circle</span>
+                {isBg ? 'Импортирай само НОВИТЕ' : 'Import ONLY NEW'}
+              </button>
+              
+              <button 
+                onClick={() => executeImport('all')}
+                className="w-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined">library_add</span>
+                {isBg ? 'Импортирай ВСИЧКИ (презапиши)' : 'Import ALL (overwrite)'}
+              </button>
+              
+              <button 
+                onClick={() => executeImport('cancel')}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl font-bold transition-all"
+              >
+                {isBg ? 'Отказ' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

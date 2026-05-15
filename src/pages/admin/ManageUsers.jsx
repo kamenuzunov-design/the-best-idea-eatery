@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, query, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
@@ -31,7 +32,23 @@ const ManageUsers = () => {
 
   // Profile Modal
   const [editingUser, setEditingUser] = useState(null);
-  const [profileForm, setProfileForm] = useState({ name: '', bio: '' });
+  const [profileForm, setProfileForm] = useState({ 
+    firstName: '', 
+    lastName: '', 
+    nickname: '', 
+    bioBg: '',
+    bioEn: '',
+    avatar: '',
+    preferences: {
+      diet: [],
+      exclusions: [],
+      allergies: [],
+      servings_default: 2,
+      unit_system: 'metric'
+    }
+  });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef(null);
 
   useEffect(() => {
     console.log("Fetching users...");
@@ -123,24 +140,68 @@ const ManageUsers = () => {
   const openProfileModal = (u) => {
     setEditingUser(u);
     setProfileForm({
-      name: u.profile?.nickname || u.name || '',
-      bio: u.profile?.bio || ''
+      firstName: u.profile?.first_name || '',
+      lastName: u.profile?.last_name || '',
+      nickname: u.profile?.nickname || u.name || '',
+      bioBg: u.profile?.bio_bg || u.profile?.bio || '', // Fallback to old bio field if exists
+      bioEn: u.profile?.bio_en || '',
+      avatar: u.profile?.avatar || '',
+      preferences: {
+        diet: u.preferences?.diet || [],
+        exclusions: u.preferences?.exclusions || [],
+        allergies: u.preferences?.allergies || [],
+        servings_default: u.preferences?.servings_default ?? 2,
+        unit_system: u.preferences?.unit_system || 'metric'
+      }
     });
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !editingUser) return;
+
+    setUploading(true);
+    try {
+      const storageRef = ref(storage, `avatars/${editingUser.id}_${Date.now()}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      setProfileForm(prev => ({ ...prev, avatar: downloadURL }));
+      alert(isBg ? 'Снимката е качена временно. Натиснете "Запази", за да приложите промените.' : 'Image uploaded temporary. Press "Save" to apply changes.');
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert(isBg ? 'Грешка при качване.' : 'Upload error.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const saveProfile = async (e) => {
     e.preventDefault();
-    if (!isAuthorized) return; // Only authorized can save profiles from here
+    if (!isAuthorized) return;
 
     try {
+      // Security Check: Admin cannot edit Owner
+      const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
+      if (targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER) {
+        alert(isBg ? 'Нямате права да редактирате профила на собственик.' : 'You do not have permission to edit an owner profile.');
+        return;
+      }
+
       const userRef = doc(db, 'users', editingUser.id);
       await updateDoc(userRef, {
-        'profile.nickname': profileForm.name,
-        'name': profileForm.name, // keep legacy field synced
-        'profile.bio': profileForm.bio
+        'profile.first_name': profileForm.firstName,
+        'profile.last_name': profileForm.lastName,
+        'profile.nickname': profileForm.nickname,
+        'profile.bio_bg': profileForm.bioBg,
+        'profile.bio_en': profileForm.bioEn,
+        'profile.avatar': profileForm.avatar,
+        'preferences': profileForm.preferences,
+        'name': profileForm.nickname // keep legacy field synced
       });
-      await logActivity(user.uid, user.email, 'profile_edit', `Edited profile for ${editingUser.auth?.email || editingUser.email}`);
+      await logActivity(user.uid, user.email, 'profile_edit_admin', `Admin edited profile for ${editingUser.auth?.email || editingUser.email}`);
       setEditingUser(null);
+      alert(isBg ? 'Профилът е обновен.' : 'Profile updated.');
     } catch (error) {
       console.error("Error updating profile:", error);
       alert(isBg ? 'Грешка при запазване на профила.' : 'Error saving profile.');
@@ -437,54 +498,225 @@ const ManageUsers = () => {
           <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
               <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">person</span>
-                {isBg ? 'Профил' : 'Profile'}
+                <span className="material-symbols-outlined text-primary">manage_accounts</span>
+                {isBg ? 'Редактиране на профил' : 'Edit User Profile'}
               </h3>
               <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-rose-500 p-1">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="flex justify-center mb-6">
-                <div className="size-24 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center overflow-hidden">
-                  {editingUser.profile?.photoURL ? (
-                    <img src={editingUser.profile.photoURL} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="material-symbols-outlined text-4xl text-primary/50">account_circle</span>
-                  )}
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+              <div className="flex flex-col items-center mb-6">
+                <div className="relative group">
+                  <div className="size-28 rounded-full bg-primary/10 border-4 border-primary/30 flex items-center justify-center overflow-hidden shadow-2xl">
+                    {profileForm.avatar ? (
+                      <img src={profileForm.avatar} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="material-symbols-outlined text-5xl text-primary/50">account_circle</span>
+                    )}
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <span className="material-symbols-outlined animate-spin text-white">refresh</span>
+                      </div>
+                    )}
+                  </div>
+                  {(() => {
+                    const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
+                    const canEdit = isAuthorized && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
+                    if (!canEdit) return null;
+                    
+                    return (
+                      <button 
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute bottom-0 right-0 size-9 rounded-full bg-primary text-background-dark flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all border-2 border-background-dark"
+                        title={isBg ? 'Промени снимка' : 'Change Photo'}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
+                      </button>
+                    );
+                  })()}
+                  <input 
+                    ref={fileInputRef}
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageUpload} 
+                  />
                 </div>
               </div>
 
               <form id="profileForm" onSubmit={saveProfile} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{isBg ? 'Имейл' : 'Email'}</label>
-                  <input 
-                    type="email" 
-                    value={editingUser.auth?.email || editingUser.email || ''} 
-                    disabled 
-                    className="w-full bg-background-dark/50 border border-primary/10 rounded-lg p-2 text-slate-500 text-sm cursor-not-allowed" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{isBg ? 'Име' : 'Name'}</label>
-                  <input 
-                    type="text" 
-                    value={profileForm.name} 
-                    onChange={e => setProfileForm({...profileForm, name: e.target.value})}
-                    disabled={user.role !== ROLES.ADMIN}
-                    className="w-full bg-background-dark border border-primary/20 rounded-lg p-2 text-slate-100 text-sm focus:border-primary disabled:opacity-50" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{isBg ? 'За мен (Bio)' : 'Bio'}</label>
-                  <textarea 
-                    value={profileForm.bio} 
-                    onChange={e => setProfileForm({...profileForm, bio: e.target.value})}
-                    disabled={user.role !== ROLES.ADMIN}
-                    rows="3"
-                    className="w-full bg-background-dark border border-primary/20 rounded-lg p-2 text-slate-100 text-sm focus:border-primary disabled:opacity-50 resize-none" 
-                  />
+                {(() => {
+                  const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
+                  const canEdit = isAuthorized && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
+                  
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Име' : 'First Name'}</label>
+                          <input 
+                            type="text" 
+                            disabled={!canEdit}
+                            value={profileForm.firstName} 
+                            onChange={e => setProfileForm({...profileForm, firstName: e.target.value})}
+                            className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Фамилия' : 'Last Name'}</label>
+                          <input 
+                            type="text" 
+                            disabled={!canEdit}
+                            value={profileForm.lastName} 
+                            onChange={e => setProfileForm({...profileForm, lastName: e.target.value})}
+                            className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Псевдоним (Nickname)' : 'Nickname'}</label>
+                        <input 
+                          type="text" 
+                          disabled={!canEdit}
+                          value={profileForm.nickname} 
+                          onChange={e => setProfileForm({...profileForm, nickname: e.target.value})}
+                          className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                        />
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
+                            {isBg ? 'За мен (BG)' : 'Bio (BG)'}
+                          </label>
+                          <textarea 
+                            value={profileForm.bioBg} 
+                            disabled={!canEdit}
+                            onChange={e => setProfileForm({...profileForm, bioBg: e.target.value})}
+                            rows="3"
+                            className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors resize-none disabled:opacity-50" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
+                            {isBg ? 'За мен (EN)' : 'Bio (EN)'}
+                          </label>
+                          <textarea 
+                            value={profileForm.bioEn} 
+                            disabled={!canEdit}
+                            onChange={e => setProfileForm({...profileForm, bioEn: e.target.value})}
+                            rows="3"
+                            className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors resize-none disabled:opacity-50" 
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Имейл (Само за четене)' : 'Email (Read-only)'}</label>
+                        <div className="w-full bg-background-dark/30 border border-primary/10 rounded-xl p-2 text-slate-500 text-xs font-mono">
+                          {editingUser.auth?.email || editingUser.email || 'N/A'}
+                        </div>
+                      </div>
+
+                      {/* Preferences Section */}
+                      <div className="pt-6 border-t border-primary/20 space-y-4">
+                        <h4 className="text-sm font-bold text-primary flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[18px]">settings_accessibility</span>
+                          {isBg ? 'Предпочитания и Режим' : 'Preferences & Diet'}
+                        </h4>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
+                              {isBg ? 'Порции по подразбиране' : 'Default Servings'}
+                            </label>
+                            <input 
+                              type="number" 
+                              disabled={!canEdit}
+                              value={profileForm.preferences.servings_default} 
+                              onChange={e => setProfileForm({
+                                ...profileForm, 
+                                preferences: { ...profileForm.preferences, servings_default: parseInt(e.target.value) || 2 }
+                              })}
+                              min="1"
+                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
+                              {isBg ? 'Мерна система' : 'Unit System'}
+                            </label>
+                            <select 
+                              disabled={!canEdit}
+                              value={profileForm.preferences.unit_system} 
+                              onChange={e => setProfileForm({
+                                ...profileForm, 
+                                preferences: { ...profileForm.preferences, unit_system: e.target.value }
+                              })}
+                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50"
+                            >
+                              <option value="metric">{isBg ? 'Метрична' : 'Metric'}</option>
+                              <option value="imperial">{isBg ? 'Имперска' : 'Imperial'}</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
+                              {isBg ? 'Диети (Разделени със запетая)' : 'Diets (Comma separated)'}
+                            </label>
+                            <input 
+                              type="text" 
+                              disabled={!canEdit}
+                              value={profileForm.preferences.diet.join(', ')} 
+                              onChange={e => setProfileForm({
+                                ...profileForm, 
+                                preferences: { ...profileForm.preferences, diet: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }
+                              })}
+                              placeholder="Keto, Vegan..."
+                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
+                              {isBg ? 'Изключения / Алергии' : 'Exclusions / Allergies'}
+                            </label>
+                            <input 
+                              type="text" 
+                              disabled={!canEdit}
+                              value={[...profileForm.preferences.exclusions, ...profileForm.preferences.allergies].join(', ')} 
+                              onChange={e => {
+                                const vals = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                                setProfileForm({
+                                  ...profileForm, 
+                                  preferences: { ...profileForm.preferences, exclusions: vals }
+                                });
+                              }}
+                              placeholder="Peanuts, Seafood..."
+                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* Extra readonly info */}
+                <div className="pt-4 border-t border-primary/10 grid grid-cols-2 gap-4">
+                   <div>
+                      <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{isBg ? 'Репутация' : 'Reputation'}</label>
+                      <p className="text-primary text-xs font-bold">{editingUser.reputation?.score || 0} pts ({editingUser.reputation?.label || 'Novice'})</p>
+                   </div>
+                   <div>
+                      <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{isBg ? 'Член от' : 'Member since'}</label>
+                      <p className="text-slate-400 text-[10px]">{editingUser.status?.created_at ? new Date(editingUser.status.created_at).toLocaleDateString(isBg ? 'bg-BG' : 'en-US') : 'N/A'}</p>
+                   </div>
                 </div>
               </form>
             </div>
@@ -497,15 +729,22 @@ const ManageUsers = () => {
               >
                 {isBg ? 'Затвори' : 'Close'}
               </button>
-              {isAuthorized && (
-                <button 
-                  type="submit" 
-                  form="profileForm"
-                  className="px-4 py-2 text-sm font-bold bg-primary text-background-dark rounded-lg shadow-lg hover:scale-105 active:scale-95 transition-all"
-                >
-                  {isBg ? 'Запази' : 'Save'}
-                </button>
-              )}
+              {(() => {
+                const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
+                const canEdit = isAuthorized && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
+                
+                if (!canEdit) return null;
+                
+                return (
+                  <button 
+                    type="submit" 
+                    form="profileForm"
+                    className="px-4 py-2 text-sm font-bold bg-primary text-background-dark rounded-lg shadow-lg hover:scale-105 active:scale-95 transition-all"
+                  >
+                    {isBg ? 'Запази' : 'Save'}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>

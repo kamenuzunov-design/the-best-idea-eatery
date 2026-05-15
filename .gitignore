@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.firebase
+scratch
+public/upload
+public/images/recipe-placeholder.png
+download/
+upload/
+*.env
+*.env.*
+!.env.example

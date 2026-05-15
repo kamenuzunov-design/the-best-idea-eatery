@@ -11,7 +11,7 @@ import { CUISINES } from '../../data/cuisines';
 const ManageIngredients = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isOwner } = useAuth();
   const isBg = i18n.language === 'bg';
   const csvImportRef = useRef(null);
   const [csvStatus, setCsvStatus] = useState(''); // '' | 'parsing' | 'saving' | 'done' | 'error'
@@ -164,8 +164,14 @@ const ManageIngredients = () => {
     setNameBg(ing.name_bg || '');
     setNameEn(ing.name_en || '');
     setSlug(ing.slug || ing.id);
-    setMainGroup(ing.classification?.main_group || '');
-    setSubGroup(ing.classification?.sub_group || '');
+    const mg = ing.classification?.main_group || '';
+    const mainGroupObj = ingredientGroups.find(g => g.id === mg || g.name?.bg === mg || g.name?.en === mg);
+    setMainGroup(mainGroupObj ? mainGroupObj.id : mg);
+
+    const sg = ing.classification?.sub_group || '';
+    const subGroupObj = ingredientGroups.find(g => g.id === sg || g.name?.bg === sg || g.name?.en === sg);
+    setSubGroup(subGroupObj ? subGroupObj.id : sg);
+
     setCuisineOrigin(ing.classification?.cuisine_origin || '');
     setCalories(ing.nutrition_per_100?.calories ?? '');
     setProteins(ing.nutrition_per_100?.proteins ?? '');
@@ -238,6 +244,36 @@ const ManageIngredients = () => {
     } catch (error) {
       console.error("Error restoring ingredient:", error);
     }
+  };
+
+  const getGroupName = (val) => {
+    if (!val) return '-';
+    let group = ingredientGroups.find(g => g.id === val || g.name?.bg === val);
+    return group ? (isBg ? group.name?.bg : group.name?.en) : val;
+  };
+
+  const getSubGroupName = (val) => {
+    if (!val) return '-';
+    let group = ingredientGroups.find(g => g.id === val || g.name?.bg === val);
+    return group ? (isBg ? group.name?.bg : group.name?.en) : val;
+  };
+
+  const getGroupIcon = (val) => {
+    const v = String(val || '').toLowerCase();
+    if (v.includes('veg') || v.includes('зеленчуци')) return 'eco';
+    if (v.includes('fruit') || v.includes('плодове')) return 'nutrition';
+    if (v.includes('meat') || v.includes('месо')) return 'kebab_dining';
+    if (v.includes('fish') || v.includes('риба') || v.includes('sea')) return 'set_meal';
+    if (v.includes('dairy') || v.includes('млечни')) return 'water_drop';
+    if (v.includes('spice') || v.includes('подправки')) return 'spa';
+    if (v.includes('grain') || v.includes('зърнени')) return 'grass';
+    if (v.includes('bakery') || v.includes('тестени')) return 'bakery_dining';
+    if (v.includes('sweet') || v.includes('десерт')) return 'icecream';
+    if (v.includes('drink') || v.includes('напитки')) return 'local_drink';
+    if (v.includes('oil') || v.includes('мазнини')) return 'oil_barrel';
+    if (v.includes('egg') || v.includes('яйца')) return 'egg';
+    if (v.includes('nut') || v.includes('ядки')) return 'nut';
+    return 'category';
   };
 
   const filteredIngredients = ingredients.filter(ing => {
@@ -478,7 +514,7 @@ const ManageIngredients = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isAdmin && (
+            {(isAdmin || isOwner) && (
               <>
                 <button
                   onClick={handleExportCSV}
@@ -597,7 +633,7 @@ const ManageIngredients = () => {
               }} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm">
                 <option value="">-- {isBg ? 'Избери' : 'Select'} --</option>
                 {ingredientGroups.filter(g => g.level === 0).map(g => (
-                  <option key={g.id} value={g.name?.bg}>{isBg ? g.name?.bg : g.name?.en}</option>
+                  <option key={g.id} value={g.id}>{isBg ? g.name?.bg : g.name?.en}</option>
                 ))}
               </select>
             </div>
@@ -605,8 +641,8 @@ const ManageIngredients = () => {
               <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Подгрупа' : 'Sub Group'}</label>
               <select value={subGroup} onChange={(e) => setSubGroup(e.target.value)} disabled={!mainGroup} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm">
                 <option value="">-- {isBg ? 'Избери' : 'Select'} --</option>
-                {ingredientGroups.filter(g => g.level === 1 && ingredientGroups.find(p => p.name?.bg === mainGroup)?.id === g.parentId).map(g => (
-                  <option key={g.id} value={g.name?.bg}>{isBg ? g.name?.bg : g.name?.en}</option>
+                {ingredientGroups.filter(g => g.level === 1 && (g.parentId === mainGroup || ingredientGroups.find(p => p.name?.bg === mainGroup)?.id === g.parentId)).map(g => (
+                  <option key={g.id} value={g.id}>{isBg ? g.name?.bg : g.name?.en}</option>
                 ))}
               </select>
             </div>
@@ -725,7 +761,7 @@ const ManageIngredients = () => {
         </div>
 
         {/* List */}
-        <div className="space-y-3">
+        <div className="space-y-6">
           {loading ? (
             <div className="flex justify-center p-10 text-primary">
               <span className="material-symbols-outlined animate-spin text-4xl">refresh</span>
@@ -735,78 +771,103 @@ const ManageIngredients = () => {
                <span className="material-symbols-outlined text-4xl opacity-50 mb-2">search_off</span>
                <p>{isBg ? 'Няма намерени продукти' : 'No ingredients found'}</p>
             </div>
-          ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 gap-3">
-              {filteredIngredients.map(ing => {
-                const isActive = ing.is_active !== false;
-                const isDeleted = ing.is_deleted === true;
-                const ingName = isBg ? ing.name_bg : ing.name_en;
+          ) : (() => {
+            // Grouping logic
+            const grouped = {};
+            filteredIngredients.forEach(ing => {
+              const groupVal = ing.classification?.main_group || 'other';
+              if (!grouped[groupVal]) grouped[groupVal] = [];
+              grouped[groupVal].push(ing);
+            });
 
-                return (
-                  <div key={ing.id} className={`bg-surface-dark/50 border rounded-xl p-3 flex justify-between items-center group transition-colors ${isDeleted ? 'border-rose-500/30 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/10 hover:border-primary/30'}`}>
-                    <div className="flex gap-3 items-center w-full overflow-hidden pr-2">
-                      <div className="size-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary relative">
-                        <span className="material-symbols-outlined text-[20px]">{ing.meta?.is_liquid ? 'water_drop' : 'kitchen'}</span>
-                        {!isActive && !isDeleted && <div className="absolute -top-1 -right-1 size-3 bg-amber-500 rounded-full border-2 border-background-dark"></div>}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 onClick={() => handleEditClick(ing)} className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors">
-                          {ingName}
-                        </h4>
-                        <div className="flex flex-wrap gap-1 text-[10px] text-slate-400 mt-1 items-center">
-                          <span className="bg-background-dark px-1.5 py-0.5 rounded border border-primary/10 truncate max-w-[100px]">
-                            {ing.classification?.main_group || '-'}
-                          </span>
-                          <span className="text-amber-500 ml-1">{ing.nutrition_per_100?.calories || 0} kcal</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="shrink-0 flex items-center">
-                      {renderManageButtons(ing, isActive, ingName)}
-                    </div>
+            // Sort group values (localized)
+            const sortedGroupKeys = Object.keys(grouped).sort((a, b) => {
+              if (a === 'other') return 1;
+              if (b === 'other') return -1;
+              return getGroupName(a).localeCompare(getGroupName(b));
+            });
+
+            return sortedGroupKeys.map(groupKey => (
+              <div key={groupKey} className="space-y-3">
+                <div className="flex items-center gap-3 px-2">
+                  <span className="h-[1px] flex-1 bg-primary/20"></span>
+                  <div className="flex items-center gap-2 text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      {groupKey === 'other' ? 'inventory_2' : getGroupIcon(groupKey)}
+                    </span>
+                    <h3 className="text-[18px] font-black uppercase tracking-[0.2em]">
+                      {groupKey === 'other' ? (isBg ? 'ДРУГИ' : 'OTHERS') : getGroupName(groupKey).toUpperCase()}
+                    </h3>
                   </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="bg-surface-dark/50 border border-primary/10 rounded-xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300">
-                  <thead className="text-xs text-slate-400 uppercase bg-background-dark border-b border-primary/20">
-                    <tr>
-                      <th className="px-3 py-2">{isBg ? 'Име' : 'Name'}</th>
-                      <th className="px-3 py-2">{isBg ? 'Основна група' : 'Main Group'}</th>
-                      <th className="px-3 py-2 text-right">{isBg ? 'Управление' : 'Manage'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredIngredients.map(ing => {
+                  <span className="h-[1px] flex-1 bg-primary/20"></span>
+                </div>
+
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    {grouped[groupKey].map(ing => {
                       const isActive = ing.is_active !== false;
                       const isDeleted = ing.is_deleted === true;
                       const ingName = isBg ? ing.name_bg : ing.name_en;
 
                       return (
-                        <tr key={ing.id} className={`border-b border-primary/5 hover:bg-primary/5 transition-colors ${isDeleted ? 'opacity-60' : !isActive ? 'opacity-75' : ''}`}>
-                          <td className="px-3 py-2">
-                            <button onClick={() => handleEditClick(ing)} className="font-bold text-slate-200 hover:text-primary transition-colors text-left text-[12px] flex items-center gap-1">
-                              {!isActive && !isDeleted && <span className="size-1.5 bg-amber-500 rounded-full inline-block"></span>}
-                              {ingName}
-                            </button>
-                          </td>
-                          <td className="px-3 py-2 text-[11px] text-slate-400">{ing.classification?.main_group || '-'}</td>
-                          <td className="px-3 py-2">
-                            <div className="flex justify-end">
-                              {renderManageButtons(ing, isActive, ingName)}
+                        <div key={ing.id} className={`bg-surface-dark/50 border rounded-xl p-3 flex justify-between items-center group transition-colors ${isDeleted ? 'border-rose-500/30 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/10 hover:border-primary/30'}`}>
+                          <div className="flex gap-3 items-center w-full overflow-hidden pr-2">
+                            <div className="size-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary relative">
+                              <span className="material-symbols-outlined text-[20px]">{ing.meta?.is_liquid ? 'water_drop' : 'kitchen'}</span>
+                              {!isActive && !isDeleted && <div className="absolute -top-1 -right-1 size-3 bg-amber-500 rounded-full border-2 border-background-dark"></div>}
                             </div>
-                          </td>
-                        </tr>
-                      )
+                            <div className="flex-1 min-w-0">
+                              <h4 onClick={() => handleEditClick(ing)} className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors">
+                                {ingName}
+                              </h4>
+                              <div className="flex flex-wrap gap-1 text-[10px] text-slate-400 mt-1 items-center">
+                                <span className="bg-background-dark px-1.5 py-0.5 rounded border border-primary/10 truncate max-w-[100px]">
+                                  {getSubGroupName(ing.classification?.sub_group)}
+                                </span>
+                                <span className="text-amber-500 ml-1">{ing.nutrition_per_100?.calories || 0} kcal</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="shrink-0 flex items-center">
+                            {renderManageButtons(ing, isActive, ingName)}
+                          </div>
+                        </div>
+                      );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+                ) : (
+                  <div className="bg-surface-dark/50 border border-primary/10 rounded-xl overflow-hidden shadow-sm">
+                    <table className="w-full text-left text-sm text-slate-300">
+                      <tbody>
+                        {grouped[groupKey].map(ing => {
+                          const isActive = ing.is_active !== false;
+                          const isDeleted = ing.is_deleted === true;
+                          const ingName = isBg ? ing.name_bg : ing.name_en;
+
+                          return (
+                            <tr key={ing.id} className={`border-b border-primary/5 hover:bg-primary/5 transition-colors ${isDeleted ? 'opacity-60' : !isActive ? 'opacity-75' : ''}`}>
+                              <td className="px-3 py-2 w-full">
+                                <button onClick={() => handleEditClick(ing)} className="font-bold text-slate-200 hover:text-primary transition-colors text-left text-[12px] flex items-center gap-2">
+                                  {!isActive && !isDeleted && <span className="size-1.5 bg-amber-500 rounded-full inline-block"></span>}
+                                  {ingName}
+                                  <span className="text-[10px] text-slate-500 font-normal">({getSubGroupName(ing.classification?.sub_group)})</span>
+                                </button>
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="flex justify-end">
+                                  {renderManageButtons(ing, isActive, ingName)}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            ));
+          })()}
         </div>
       </div>
 

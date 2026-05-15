@@ -9,11 +9,13 @@ import { checkImageSafety } from '../lib/moderationUtils';
 import { ROLES } from '../constants/roles';
 
 const EditProfile = () => {
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, deleteAccount, isGuest } = useAuth();
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'preferences'
+  const [deleteStep, setDeleteStep] = useState(0); 
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Profile State
   const [name, setName] = useState(user?.profile?.nickname || '');
@@ -37,11 +39,30 @@ const EditProfile = () => {
   const [exclusions, setExclusions] = useState(user?.preferences?.exclusions?.join(', ') || '');
   const [unitSystem, setUnitSystem] = useState(user?.preferences?.unit_system || 'metric');
   const [servings, setServings] = useState(user?.preferences?.servings_default || 2);
+  const [pantryActive, setPantryActive] = useState(user?.preferences?.pantry_active ?? true);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const isBg = i18n.language === 'bg';
+
+  const handleDeleteAccount = async () => {
+    if (deleteStep < 2) {
+      setDeleteStep(deleteStep + 1);
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      navigate('/login');
+    } catch (error) {
+      console.error(error);
+      alert(isBg ? 'Възникна грешка при изтриване. Може да е необходимо да влезете в профила си отново.' : 'Error deleting account. You might need to re-login first.');
+      setIsDeleting(false);
+      setDeleteStep(0);
+    }
+  };
 
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -103,8 +124,9 @@ const EditProfile = () => {
         'preferences.diet': toArray(diet),
         'preferences.allergies': toArray(allergies),
         'preferences.exclusions': toArray(exclusions),
-        'preferences.unit_system': unitSystem,
-        'preferences.servings_default': Number(servings) || 2
+         'preferences.unit_system': unitSystem,
+        'preferences.servings_default': Number(servings) || 2,
+        'preferences.pantry_active': pantryActive
       });
       navigate('/profile');
     } catch (err) {
@@ -315,6 +337,51 @@ const EditProfile = () => {
                 </div>
               </div>
 
+              {/* Delete Account Section */}
+              {!isGuest && (
+                <div className="pt-8 mt-4 border-t border-rose-500/10">
+                  {deleteStep === 0 ? (
+                    <button 
+                      type="button"
+                      onClick={() => setDeleteStep(1)}
+                      className="w-full py-4 text-xs font-bold text-rose-500/50 hover:text-rose-500 transition-colors uppercase tracking-widest flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-sm">person_remove</span>
+                      {t('profile.delete_account')}
+                    </button>
+                  ) : (
+                    <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
+                      <div className="text-center space-y-2">
+                        <h4 className="text-rose-500 font-black uppercase tracking-tight">
+                          {deleteStep === 1 ? t('profile.delete_confirm_title') : (isBg ? 'ПОСЛЕДНО ПОТВЪРЖДЕНИЕ' : 'FINAL CONFIRMATION')}
+                        </h4>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                          {t('profile.delete_confirm_desc')}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button 
+                          type="button"
+                          onClick={handleDeleteAccount}
+                          disabled={isDeleting}
+                          className="w-full py-3 bg-rose-500 text-white font-black rounded-xl hover:bg-rose-600 transition-colors disabled:opacity-50"
+                        >
+                          {isDeleting ? '...' : (deleteStep === 1 ? (isBg ? 'Да, изтрий го' : 'Yes, delete it') : (isBg ? 'ПОТВЪРЖДАВАМ ИЗТРИВАНЕТО' : 'I CONFIRM DELETION'))}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setDeleteStep(0)}
+                          disabled={isDeleting}
+                          className="w-full py-3 bg-transparent text-slate-400 font-bold hover:text-slate-200 transition-colors"
+                        >
+                          {isBg ? 'Отказ' : 'Cancel'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           )}
 
@@ -388,6 +455,30 @@ const EditProfile = () => {
                     type="number"
                   />
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-primary/10">
+                <label className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl cursor-pointer group hover:bg-primary/10 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`size-10 rounded-full flex items-center justify-center transition-all ${pantryActive ? 'bg-primary text-background-dark shadow-lg shadow-primary/30' : 'bg-slate-700 text-slate-400'}`}>
+                      <span className="material-symbols-outlined">kitchen</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-100 uppercase tracking-wide">{isBg ? 'Активирай Килер' : 'Activate Pantry'}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">{isBg ? 'Следене на продукти и наличности' : 'Track ingredients & stocks'}</p>
+                    </div>
+                  </div>
+                  <div
+                    onClick={(e) => { e.preventDefault(); setPantryActive(v => !v); }}
+                    className={`w-12 h-6 rounded-full relative transition-all ${
+                      pantryActive ? 'bg-gradient-to-r from-primary to-[#b8860b]' : 'bg-slate-700'
+                    }`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all ${
+                      pantryActive ? 'right-1' : 'left-1'
+                    }`} />
+                  </div>
+                </label>
               </div>
             </div>
           )}
