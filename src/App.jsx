@@ -123,12 +123,12 @@ function App() {
 
           {/* Admin Routes */}
           <Route path="/admin" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR]}>
               <AdminDashboard />
             </ProtectedRoute>
           } />
           <Route path="/admin/data" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR, ROLES.USER]}>
               <DataDashboard />
             </ProtectedRoute>
           } />
@@ -143,7 +143,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/admin/ingredients" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR]}>
               <ManageIngredients />
             </ProtectedRoute>
           } />
@@ -153,12 +153,12 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/admin/recipes" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR, ROLES.USER]}>
               <ManageRecipes />
             </ProtectedRoute>
           } />
           <Route path="/admin/users" element={
-            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR]}>
               <ManageUsers />
             </ProtectedRoute>
           } />

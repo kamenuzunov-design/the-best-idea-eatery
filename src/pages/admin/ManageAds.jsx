@@ -14,10 +14,13 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const ManageAds = () => {
-  const { user, isAdmin, isOwner } = useAuth();
+  const { isAdmin, isOwner } = useAuth();
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isBg = i18n.language === 'bg';
   const [ads, setAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);

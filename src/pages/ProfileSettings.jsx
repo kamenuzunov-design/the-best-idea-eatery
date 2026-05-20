@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const ProfileSettings = () => {
-  const { user, logout, deleteAccount, isGuest, isAdmin, isOwner, resendVerificationEmail } = useAuth();
+  const { user, logout, isGuest, isAdmin, isOwner, isModerator, isUser, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   
@@ -94,14 +94,14 @@ const ProfileSettings = () => {
         let ingredients = [];
         try {
           ingredients = JSON.parse(r.ingredients_json || '[]');
-        } catch (jErr) {
+        } catch {
           console.warn("Invalid ingredients JSON for row:", r.title_en);
         }
 
         let steps = [];
         try {
           steps = JSON.parse(r.steps_json || '[]');
-        } catch (jErr) {
+        } catch {
           console.warn("Invalid steps JSON for row:", r.title_en);
         }
 
@@ -250,25 +250,27 @@ const ProfileSettings = () => {
         </section>
       )}
 
-      {(isAdmin || isOwner) && (
+      {(isAdmin || isOwner || isModerator || isUser) && (
         <section className="mt-8 px-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2 flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">shield_person</span>
             {isBg ? 'АДМИНИСТРАЦИЯ' : 'ADMINISTRATION'}
           </h3>
           <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-rose-500/20 border-2 border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
-            <Link to="/admin" className="flex items-center justify-between p-4 cursor-pointer hover:bg-rose-500/5 transition-colors group">
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined">admin_panel_settings</span>
+            {(isAdmin || isOwner || isModerator) && (
+              <Link to="/admin" className="flex items-center justify-between p-4 cursor-pointer hover:bg-rose-500/5 transition-colors group">
+                <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined">admin_panel_settings</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{isBg ? 'Администрация' : 'Administration'}</p>
+                    <p className="text-[10px] text-rose-500/60 font-bold uppercase">{isBg ? 'Контролен панел' : 'Control Panel'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{isBg ? 'Администрация' : 'Administration'}</p>
-                  <p className="text-[10px] text-rose-500/60 font-bold uppercase">{isBg ? 'Контролен панел' : 'Control Panel'}</p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-rose-500/50">chevron_right</span>
-            </Link>
+                <span className="material-symbols-outlined text-rose-500/50">chevron_right</span>
+              </Link>
+            )}
             <Link to="/admin/data" className="flex items-center justify-between p-4 cursor-pointer hover:bg-rose-500/5 transition-colors group">
               <div className="flex items-center gap-4">
                 <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">

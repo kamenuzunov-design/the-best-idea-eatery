@@ -31,7 +31,10 @@ const Moderation = () => {
   const handleAction = async (itemId, type, newStatus, itemTitle) => {
     try {
       const itemRef = doc(db, type === 'recipe' ? 'recipes' : 'ingredients', itemId);
-      await updateDoc(itemRef, { status: newStatus });
+      await updateDoc(itemRef, { 
+        status: newStatus,
+        is_active: newStatus === 'approved'
+      });
       
       await logActivity(
         user.uid, 
@@ -68,35 +71,45 @@ const Moderation = () => {
             <p>{isBg ? 'Няма съдържание за одобрение.' : 'No pending content.'}</p>
           </div>
         ) : (
-          pendingItems.map(item => (
-            <div key={item.id} className="bg-surface-dark/80 backdrop-blur-md border border-primary/20 rounded-2xl p-4 shadow-lg">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded">
-                  {item.type === 'recipe' ? (isBg ? 'Рецепта' : 'Recipe') : (isBg ? 'Продукт' : 'Product')}
-                </span>
-                <span className="text-xs text-slate-400">от {item.authorName || 'Неизвестен'}</span>
+          pendingItems.map(item => {
+            const title = isBg 
+              ? (item.title_bg || item.title || item.name_bg || item.id) 
+              : (item.title_en || item.title || item.name_en || item.id);
+            const description = isBg
+              ? (item.description_bg || item.description || (isBg ? 'Няма описание' : 'No description'))
+              : (item.description_en || item.description || (isBg ? 'Няма описание' : 'No description'));
+            const author = item.publisher_name || item.authorName || (isBg ? 'Неизвестен' : 'Unknown');
+
+            return (
+              <div key={item.id} className="bg-surface-dark/80 backdrop-blur-md border border-primary/20 rounded-2xl p-4 shadow-lg">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded">
+                    {item.type === 'recipe' ? (isBg ? 'Рецепта' : 'Recipe') : (isBg ? 'Продукт' : 'Product')}
+                  </span>
+                  <span className="text-xs text-slate-400">{isBg ? 'от' : 'by'} {author}</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-100 mb-1">{title}</h3>
+                <p className="text-sm text-slate-400 line-clamp-2 mb-4">{description}</p>
+                
+                <div className="flex gap-2 border-t border-primary/10 pt-3">
+                  <button 
+                    onClick={() => handleAction(item.id, item.type, 'approved', title)}
+                    className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 font-bold py-2 rounded-lg transition-colors border border-emerald-500/30 flex items-center justify-center gap-1 text-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">check</span>
+                    {isBg ? 'Одобри' : 'Approve'}
+                  </button>
+                  <button 
+                    onClick={() => handleAction(item.id, item.type, 'rejected', title)}
+                    className="flex-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold py-2 rounded-lg transition-colors border border-rose-500/30 flex items-center justify-center gap-1 text-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">close</span>
+                    {isBg ? 'Отхвърли' : 'Reject'}
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-slate-100 mb-1">{item.title}</h3>
-              <p className="text-sm text-slate-400 line-clamp-2 mb-4">{item.description || 'Няма описание'}</p>
-              
-              <div className="flex gap-2 border-t border-primary/10 pt-3">
-                <button 
-                  onClick={() => handleAction(item.id, item.type, 'approved', item.title)}
-                  className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 font-bold py-2 rounded-lg transition-colors border border-emerald-500/30 flex items-center justify-center gap-1 text-sm"
-                >
-                  <span className="material-symbols-outlined text-[18px]">check</span>
-                  {isBg ? 'Одобри' : 'Approve'}
-                </button>
-                <button 
-                  onClick={() => handleAction(item.id, item.type, 'rejected', item.title)}
-                  className="flex-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold py-2 rounded-lg transition-colors border border-rose-500/30 flex items-center justify-center gap-1 text-sm"
-                >
-                  <span className="material-symbols-outlined text-[18px]">close</span>
-                  {isBg ? 'Отхвърли' : 'Reject'}
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

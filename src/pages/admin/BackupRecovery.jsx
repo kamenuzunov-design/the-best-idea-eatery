@@ -10,7 +10,6 @@ import {
   serverTimestamp, 
   query, 
   orderBy, 
-  limit as firestoreLimit, 
   onSnapshot, 
   deleteDoc 
 } from 'firebase/firestore';

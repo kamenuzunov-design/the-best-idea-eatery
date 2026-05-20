@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -13,7 +13,8 @@ const ManageUsers = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const isBg = i18n.language === 'bg';
-  const isAuthorized = user.role === ROLES.OWNER || user.role === ROLES.ADMIN;
+  const isAuthorized = user.role === ROLES.OWNER || user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR;
+  const isReadOnly = user.role === ROLES.MODERATOR;
 
   // Redirect or show error if not authorized
   useEffect(() => {
@@ -67,6 +68,10 @@ const ManageUsers = () => {
   }, []);
 
   const handleRoleChange = async (targetUserId, targetUserEmail, currentRole, newRole) => {
+    if (isReadOnly) {
+      alert(isBg ? 'Модераторите имат само права за преглед.' : 'Moderators have read-only access.');
+      return;
+    }
     if (currentRole === newRole) return;
     
     // Safety check: Only OWNER can promote to OWNER
@@ -86,6 +91,10 @@ const ManageUsers = () => {
   };
 
   const handleToggleActive = async (targetUserId, targetUserEmail, currentActiveStatus, targetUserRole) => {
+    if (isReadOnly) {
+      alert(isBg ? 'Модераторите имат само права за преглед.' : 'Moderators have read-only access.');
+      return;
+    }
     // Safety: Admin cannot touch Owner
     if (targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER) {
       alert(isBg ? 'Нямате права да променяте статуса на собственик.' : 'You do not have permission to change an owner\'s status.');
@@ -108,6 +117,10 @@ const ManageUsers = () => {
   };
 
   const handleDeleteUser = async (targetUserId, targetUserEmail, targetUserRole) => {
+    if (isReadOnly) {
+      alert(isBg ? 'Модераторите имат само права за преглед.' : 'Moderators have read-only access.');
+      return;
+    }
     // Safety: Admin cannot touch Owner
     if (targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER) {
       alert(isBg ? 'Нямате права да изтривате собственик.' : 'You do not have permission to delete an owner.');
@@ -127,6 +140,10 @@ const ManageUsers = () => {
   };
 
   const handleRestoreUser = async (targetUserId, targetUserEmail) => {
+    if (isReadOnly) {
+      alert(isBg ? 'Модераторите имат само права за преглед.' : 'Moderators have read-only access.');
+      return;
+    }
     try {
       const userRef = doc(db, 'users', targetUserId);
       await updateDoc(userRef, { 'status.is_deleted': false, 'status.is_active': true });
@@ -157,6 +174,10 @@ const ManageUsers = () => {
   };
 
   const handleImageUpload = async (e) => {
+    if (isReadOnly) {
+      alert(isBg ? 'Модераторите имат само права за преглед.' : 'Moderators have read-only access.');
+      return;
+    }
     const file = e.target.files[0];
     if (!file || !editingUser) return;
 
@@ -178,7 +199,10 @@ const ManageUsers = () => {
 
   const saveProfile = async (e) => {
     e.preventDefault();
-    if (!isAuthorized) return;
+    if (!isAuthorized || isReadOnly) {
+      alert(isBg ? 'Модераторите имат само права за преглед.' : 'Moderators have read-only access.');
+      return;
+    }
 
     try {
       // Security Check: Admin cannot edit Owner
@@ -241,6 +265,7 @@ const ManageUsers = () => {
   });
 
   const renderStatusToggle = (u, isActive, userEmail, userRole) => {
+    if (isReadOnly) return null;
     if (userRole === ROLES.OWNER && user.role !== ROLES.OWNER) return null;
 
     if (statusFilter === 'deleted') {
@@ -269,6 +294,7 @@ const ManageUsers = () => {
   };
 
   const renderDeleteBtn = (u, userEmail, userRole) => {
+    if (isReadOnly) return null;
     if (userRole === ROLES.OWNER && user.role !== ROLES.OWNER) return null;
     if (statusFilter === 'deleted') return null; // Already deleted
     
@@ -283,7 +309,7 @@ const ManageUsers = () => {
   };
 
   const renderRoleSelect = (u, userRole, userEmail) => {
-    if (statusFilter === 'deleted') {
+    if (statusFilter === 'deleted' || isReadOnly) {
       return <span className="text-[10px] font-bold text-slate-400 px-1">{roleLabels[userRole]}</span>;
     }
 
@@ -523,7 +549,7 @@ const ManageUsers = () => {
                   </div>
                   {(() => {
                     const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
-                    const canEdit = isAuthorized && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
+                    const canEdit = isAuthorized && !isReadOnly && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
                     if (!canEdit) return null;
                     
                     return (
@@ -550,7 +576,7 @@ const ManageUsers = () => {
               <form id="profileForm" onSubmit={saveProfile} className="space-y-4">
                 {(() => {
                   const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
-                  const canEdit = isAuthorized && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
+                  const canEdit = isAuthorized && !isReadOnly && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
                   
                   return (
                     <>
@@ -731,7 +757,7 @@ const ManageUsers = () => {
               </button>
               {(() => {
                 const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
-                const canEdit = isAuthorized && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
+                const canEdit = isAuthorized && !isReadOnly && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
                 
                 if (!canEdit) return null;
                 

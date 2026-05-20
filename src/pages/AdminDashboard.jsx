@@ -99,28 +99,32 @@ const AdminDashboard = () => {
 
 
         {/* Backup & Recovery */}
-        <Link to="/admin/backup" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-primary/20 shadow-lg hover:shadow-primary/10 transition-all cursor-pointer group flex items-center gap-4">
-          <div className="size-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0">
-            <span className="material-symbols-outlined text-2xl font-bold">cloud_sync</span>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-slate-100">{isBg ? 'Бекъп и Сигурност' : 'Backup & Security'}</h3>
-            <p className="text-xs text-slate-400">{isBg ? 'Облачни архиви и локален експорт' : 'Cloud backups and local export'}</p>
-          </div>
-          <span className="material-symbols-outlined text-slate-500">chevron_right</span>
-        </Link>
+        {(user.role === ROLES.OWNER || user.role === ROLES.ADMIN) && (
+          <Link to="/admin/backup" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-primary/20 shadow-lg hover:shadow-primary/10 transition-all cursor-pointer group flex items-center gap-4">
+            <div className="size-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0">
+              <span className="material-symbols-outlined text-2xl font-bold">cloud_sync</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-slate-100">{isBg ? 'Бекъп и Сигурност' : 'Backup & Security'}</h3>
+              <p className="text-xs text-slate-400">{isBg ? 'Облачни архиви и локален експорт' : 'Cloud backups and local export'}</p>
+            </div>
+            <span className="material-symbols-outlined text-slate-500">chevron_right</span>
+          </Link>
+        )}
 
         {/* Advertising */}
-        <Link to="/admin/ads" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.1)] hover:shadow-[0_0_30px_rgba(245,158,11,0.2)] transition-all cursor-pointer group flex items-center gap-4">
-          <div className="size-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0">
-            <span className="material-symbols-outlined text-2xl font-bold">campaign</span>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-slate-100">{isBg ? 'Реклами' : 'Advertising'}</h3>
-            <p className="text-xs text-slate-400">{isBg ? 'Кампании и промоции' : 'Campaigns and promotions'}</p>
-          </div>
-          <span className="material-symbols-outlined text-slate-500">chevron_right</span>
-        </Link>
+        {(user.role === ROLES.OWNER || user.role === ROLES.ADMIN) && (
+          <Link to="/admin/ads" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.1)] hover:shadow-[0_0_30px_rgba(245,158,11,0.2)] transition-all cursor-pointer group flex items-center gap-4">
+            <div className="size-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0">
+              <span className="material-symbols-outlined text-2xl font-bold">campaign</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-slate-100">{isBg ? 'Реклами' : 'Advertising'}</h3>
+              <p className="text-xs text-slate-400">{isBg ? 'Кампании и промоции' : 'Campaigns and promotions'}</p>
+            </div>
+            <span className="material-symbols-outlined text-slate-500">chevron_right</span>
+          </Link>
+        )}
 
       </div>
     </div>

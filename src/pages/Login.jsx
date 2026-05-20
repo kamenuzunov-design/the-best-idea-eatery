@@ -16,7 +16,6 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [gdprAccepted, setGdprAccepted] = useState(false);
-  const [showGdprWarning, setShowGdprWarning] = useState(false);
 
   // Check initial consent status
   useState(() => {
@@ -66,7 +65,6 @@ const Login = () => {
   const handleUnlockGDPR = () => {
     localStorage.setItem(GDPR_CONSENT_KEY, 'agreed');
     setGdprAccepted(true);
-    setShowGdprWarning(false);
   };
 
   const renderTextWithLinks = (text) => {

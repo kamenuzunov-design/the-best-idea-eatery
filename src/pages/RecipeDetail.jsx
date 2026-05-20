@@ -4,13 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { doc, getDoc, updateDoc, arrayUnion, increment, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import { REPUTATION_POINTS, getPointsForRating } from '../lib/reputationUtils';
 
 const RecipeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { i18n, t } = useTranslation();
-  const { user, isAdmin, isOwner, awardPoints } = useAuth();
+  const { i18n } = useTranslation();
+  const { user, isGuest, isAdmin, isOwner, awardPoints } = useAuth();
+  const { pantry, generateShoppingList } = useAppContext();
+  const isPantryActive = !isGuest && (user?.preferences?.pantry_active !== false);
   const isPowerUser = isAdmin || isOwner;
   const isBg = i18n.language === 'bg';
 
@@ -22,7 +25,9 @@ const RecipeDetail = () => {
   const [parentRecipe, setParentRecipe] = useState(null);
   const [authorData, setAuthorData] = useState(null);
   const [units, setUnits] = useState({});
+  const [ingredientsList, setIngredientsList] = useState([]);
   const [currentServings, setCurrentServings] = useState(1);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -33,6 +38,7 @@ const RecipeDetail = () => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setRecipe({ id: docSnap.id, ...data });
+          setActiveImageIndex(0);
           
           // Fetch units to display names instead of IDs
           try {
@@ -44,6 +50,14 @@ const RecipeDetail = () => {
             setUnits(unitsMap);
           } catch (uErr) {
             console.warn("Units fetch restricted or failed:", uErr.message);
+          }
+
+          // Fetch master ingredients
+          try {
+            const ingSnap = await getDocs(collection(db, 'ingredients'));
+            setIngredientsList(ingSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } catch (iErr) {
+            console.warn("Ingredients fetch restricted or failed:", iErr.message);
           }
           
           // Check if current user has already voted
@@ -78,7 +92,7 @@ const RecipeDetail = () => {
             if (newViews % 100 === 0 && data.publisher_id && awardPoints) {
               await awardPoints(data.publisher_id, REPUTATION_POINTS.POPULARITY_BONUS);
             }
-          } catch (vErr) {
+          } catch {
             console.warn("View tracking restricted for guests");
           }
 
@@ -107,7 +121,34 @@ const RecipeDetail = () => {
     };
 
     if (id) fetchRecipe();
-  }, [id, user]);
+  }, [id, user, awardPoints]);
+
+  const analyzeRecipe = () => {
+    let missingIngredients = [];
+    if (!recipe || !recipe.ingredients) return [];
+    
+    recipe.ingredients.forEach(reqIng => {
+      // Find in pantry by ingredientId if available, else by name match
+      const pantryItem = pantry.find(p => 
+        (p.ingredientId && p.ingredientId === reqIng.ingredient_id) || 
+        (p.name === reqIng.name_en || p.nameBg === reqIng.name_bg)
+      );
+      
+      const requiredAmount = parseFloat(reqIng.amount) || 0;
+      const scaledAmount = requiredAmount * currentServings;
+      const pantryAmount = pantryItem ? (parseFloat(pantryItem.quantity) || 0) : 0;
+      
+      if (pantryAmount < scaledAmount) {
+        missingIngredients.push({
+          ...reqIng,
+          name: isBg ? reqIng.name_bg : reqIng.name_en,
+          quantityToBuy: Math.max(0, scaledAmount - pantryAmount)
+        });
+      }
+    });
+
+    return missingIngredients;
+  };
 
   const handleVote = async (score) => {
     if (!user) {
@@ -192,10 +233,17 @@ const RecipeDetail = () => {
   );
 
   const title = isBg ? recipe.title_bg : recipe.title_en;
-  const description = isBg ? recipe.description_bg : recipe.description_en;
   const difficulty = isBg ? (recipe.difficulty === 'easy' ? 'Лесно' : recipe.difficulty === 'hard' ? 'Трудно' : 'Средно') : recipe.difficulty;
   const prepTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
   const placeholderImg = "/images/recipe-placeholder.png";
+  const missing = analyzeRecipe();
+  const isReady = isPantryActive ? missing.length === 0 : true;
+
+  const allImages = [];
+  if (recipe.images?.main) allImages.push(recipe.images.main);
+  if (recipe.images?.extra1) allImages.push(recipe.images.extra1);
+  if (recipe.images?.extra2) allImages.push(recipe.images.extra2);
+  if (allImages.length === 0) allImages.push(placeholderImg);
 
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col bg-background-dark overflow-x-hidden pb-24">
@@ -225,8 +273,48 @@ const RecipeDetail = () => {
 
       {/* Hero Section */}
       <div className="relative w-full aspect-[4/5] overflow-hidden">
-        <div className="absolute inset-0 bg-center bg-no-repeat bg-cover transition-transform duration-700 hover:scale-105" style={{backgroundImage: `url("${recipe.images?.main || placeholderImg}")`}}></div>
+        <div 
+          className="absolute inset-0 bg-center bg-no-repeat bg-cover transition-all duration-500 ease-in-out" 
+          style={{backgroundImage: `url("${allImages[activeImageIndex]}")`}}
+        ></div>
         <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-transparent"></div>
+
+        {/* Floating Gallery Thumbnails */}
+        {allImages.length > 1 && (
+          <div className="absolute right-4 top-1/3 -translate-y-1/2 z-20 flex flex-col gap-2 bg-background-dark/60 p-2 rounded-2xl border border-primary/20 backdrop-blur-md shadow-2xl">
+            {allImages.map((imgUrl, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveImageIndex(idx)}
+                className={`w-12 h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                  activeImageIndex === idx 
+                    ? 'border-primary scale-[1.05] shadow-lg shadow-primary/20' 
+                    : 'border-transparent opacity-60 hover:opacity-100'
+                }`}
+              >
+                <img src={imgUrl} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Left/Right Navigation Chevrons */}
+        {allImages.length > 1 && (
+          <>
+            <button
+              onClick={() => setActiveImageIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1))}
+              className="absolute left-4 top-1/3 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full bg-background-dark/50 border border-primary/20 text-primary hover:bg-background-dark/80 hover:text-white transition-all cursor-pointer shadow-md"
+            >
+              <span className="material-symbols-outlined select-none">chevron_left</span>
+            </button>
+            <button
+              onClick={() => setActiveImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1))}
+              className="absolute right-20 top-1/3 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full bg-background-dark/50 border border-primary/20 text-primary hover:bg-background-dark/80 hover:text-white transition-all cursor-pointer shadow-md"
+            >
+              <span className="material-symbols-outlined select-none">chevron_right</span>
+            </button>
+          </>
+        )}
         
         {parentRecipe && (
           <div className="absolute top-4 left-4 right-4 z-10">
@@ -393,30 +481,72 @@ const RecipeDetail = () => {
           </h3>
           <span className="material-symbols-outlined text-primary text-3xl">shopping_bag</span>
         </div>
+
+        {!isReady && isPantryActive && (
+          <div className="mb-6 p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 flex items-center gap-3">
+            <span className="material-symbols-outlined text-rose-500 text-2xl">warning</span>
+            <div>
+              <p className="text-slate-200 text-sm font-bold">
+                {isBg ? `Липсват ${missing.length} продукта` : `Missing ${missing.length} ingredients`}
+              </p>
+              <p className="text-slate-400 text-xs mt-0.5">
+                {isBg ? 'Някои продукти липсват или не са в достатъчно количество в килера ви.' : 'Some items are missing or not in sufficient quantity in your pantry.'}
+              </p>
+            </div>
+          </div>
+        )}
+
         <ul className="space-y-4">
           {recipe.ingredients?.map((ing, idx) => {
             const unit = units[ing.unit_id];
             const unitName = isBg ? (unit?.name_bg || ing.unit_id) : (unit?.name_en || ing.unit_id);
+            const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id);
+            const ingName = isBg 
+              ? (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id) 
+              : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id);
+
+            const isIngMissing = isPantryActive && missing.some(m => 
+              m.ingredient_id === ing.ingredient_id || 
+              (m.name_en === ingName || m.name_bg === ingName)
+            );
+
             return (
               <li key={idx} className="flex justify-between items-center border-b border-primary/10 pb-3">
                 <span className="text-slate-200 font-medium">
-                  {isBg ? (ing.ingredient_bg || ing.name_bg) : (ing.ingredient_en || ing.name_en)}
+                  {ingName}
                   {((isBg && ing.notes_bg) || (!isBg && ing.notes_en)) && (
                     <span className="text-primary/70 text-xs italic ml-2">({isBg ? ing.notes_bg : ing.notes_en})</span>
                   )}
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-primary">{(ing.amount * currentServings).toFixed(1).replace('.0', '')} {unitName}</span>
-                  <span className="material-symbols-outlined text-emerald-500/50 size-6 text-2xl drop-shadow-md">check_circle</span>
+                  {isPantryActive ? (
+                    isIngMissing ? (
+                      <span className="material-symbols-outlined text-rose-500/70 size-6 text-xl drop-shadow-md" title={isBg ? 'Липсва в килера' : 'Missing in pantry'}>remove_circle</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-emerald-500 size-6 text-xl drop-shadow-md" title={isBg ? 'Налично в килера' : 'Available in pantry'}>check_circle</span>
+                    )
+                  ) : (
+                    <span className="material-symbols-outlined text-primary/30 size-6 text-xl drop-shadow-md">check_circle</span>
+                  )}
                 </div>
               </li>
             );
           })}
         </ul>
-        <button className="w-full mt-6 flex items-center justify-center gap-2 bg-primary/10 border border-primary/50 text-primary py-3 rounded-xl font-bold uppercase tracking-widest hover:bg-primary/20 transition-colors">
-          <span className="material-symbols-outlined">add_shopping_cart</span>
-          {isBg ? 'Добави липсващите в списъка' : 'Add missing to list'}
-        </button>
+
+        {!isReady && isPantryActive && (
+          <button 
+            onClick={() => {
+              generateShoppingList(missing);
+              alert(isBg ? 'Липсващите съставки бяха добавени в списъка за пазаруване!' : 'Missing ingredients were added to your shopping list!');
+            }}
+            className="w-full mt-6 flex items-center justify-center gap-2 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/40 text-primary py-3 rounded-xl font-bold uppercase tracking-widest hover:from-primary hover:to-[#b8860b] hover:text-background-dark transition-all shadow-md active:scale-95 cursor-pointer"
+          >
+            <span className="material-symbols-outlined">add_shopping_cart</span>
+            {isBg ? 'Добави липсващите в списъка' : 'Add missing to list'}
+          </button>
+        )}
       </div>
 
       <div className="p-6 bg-surface-dark/50 border-t border-primary/10 mt-2">
@@ -485,6 +615,68 @@ const RecipeDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Inspiration & Video Section */}
+      {(recipe.video_url || recipe.original_author || recipe.source_link) && (
+        <div className="mx-6 my-4 p-4 rounded-2xl bg-surface-dark/80 border border-primary/20 flex flex-col gap-3 shadow-md">
+          <div className="flex items-center gap-2 border-b border-primary/10 pb-2">
+            <span className="material-symbols-outlined text-primary text-[18px]">emoji_objects</span>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {isBg ? 'Източник на вдъхновение' : 'Source of Inspiration'}
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            {recipe.video_url && (
+              <a 
+                href={recipe.video_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-2.5 rounded-xl bg-background-dark/50 border border-primary/10 hover:border-primary/30 hover:bg-primary/5 transition-all group"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-rose-500 text-xl group-hover:scale-110 transition-transform">play_circle</span>
+                  <div className="flex flex-col">
+                    <span className="text-slate-200 text-xs font-bold group-hover:text-primary transition-colors">
+                      {isBg ? 'Гледай видео рецептата' : 'Watch Video Recipe'}
+                    </span>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-primary/40 group-hover:text-primary text-[16px] transition-colors">open_in_new</span>
+              </a>
+            )}
+
+            {(recipe.original_author || recipe.source_link) && (
+              <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-background-dark/30 border border-primary/5">
+                {recipe.original_author && (
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-slate-500 text-[16px]">person</span>
+                    <p className="text-slate-200 text-xs">
+                      <span className="text-slate-400 mr-1">{isBg ? 'Оригинален автор:' : 'Original Author:'}</span>
+                      <span className="font-bold">{recipe.original_author}</span>
+                    </p>
+                  </div>
+                )}
+                {recipe.source_link && (
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-slate-500 text-[16px]">link</span>
+                    <a 
+                      href={recipe.source_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:text-primary-light text-xs font-bold flex items-center gap-1 transition-colors group"
+                    >
+                      <span>{isBg ? 'Към оригиналния сайт' : 'To Original Website'}</span>
+                      <span className="material-symbols-outlined text-xs group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
 
       {/* Action Button */}
       <div className="p-6 pb-8">

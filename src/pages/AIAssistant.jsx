@@ -94,7 +94,7 @@ const AIAssistant = () => {
               return (
                 <div key={recipe.id} className="bg-surface-dark rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:shadow-primary/20 flex h-32 group cursor-pointer transition-all hover:-translate-y-1">
                   <div className="w-[35%] h-full relative overflow-hidden">
-                    <img src={recipe.imageUrl} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <img src={recipe.imageUrl || recipe.images?.main || "/images/recipe-placeholder.png"} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent to-surface-dark"></div>
                   </div>
                   <div className="w-[65%] p-4 flex flex-col justify-center">

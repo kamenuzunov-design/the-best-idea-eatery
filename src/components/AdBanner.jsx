@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, limit, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, onSnapshot, limit, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useTranslation } from 'react-i18next';
 
-const AdBanner = ({ position = 'default' }) => {
+const AdBanner = () => {
   const [currentAd, setCurrentAd] = useState(null);
   const { i18n } = useTranslation();
   const isBg = i18n.language === 'bg';
@@ -40,7 +40,7 @@ const AdBanner = ({ position = 'default' }) => {
             updateDoc(doc(db, 'ads', selected.id), {
               viewsCount: increment(1)
             });
-          } catch (vErr) {
+          } catch {
             console.warn("Ad view tracking restricted");
           }
         } else {
@@ -62,7 +62,7 @@ const AdBanner = ({ position = 'default' }) => {
       await updateDoc(doc(db, 'ads', currentAd.id), {
         clicksCount: increment(1)
       });
-    } catch (cErr) {
+    } catch {
       console.warn("Ad click tracking restricted");
     }
     if (currentAd.linkUrl) {

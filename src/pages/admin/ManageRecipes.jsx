@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -147,6 +147,16 @@ const ManageRecipes = () => {
   const updateIngredientRow = (id, field, value) => {
     setRecipeIngredients(prev => prev.map(ing => ing.id === id ? { ...ing, [field]: value } : ing));
   };
+  const moveIngredientRow = (index, direction) => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === recipeIngredients.length - 1) return;
+    
+    const newIngredients = [...recipeIngredients];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const [movedItem] = newIngredients.splice(index, 1);
+    newIngredients.splice(targetIndex, 0, movedItem);
+    setRecipeIngredients(newIngredients);
+  };
 
   // --- Dynamic Steps ---
   const addStepRow = () => {
@@ -266,13 +276,18 @@ const ManageRecipes = () => {
           extra1: e1Url,
           extra2: e2Url
         },
-        ingredients: recipeIngredients.map(i => ({
-          ingredient_id: i.ingredient_id,
-          amount: (parseFloat(i.amount) || 0) / (parseInt(servings) || 1),
-          unit_id: i.unit_id,
-          notes_bg: i.notes_bg || i.notes || '',
-          notes_en: i.notes_en || i.notes || ''
-        })).filter(i => i.ingredient_id && i.amount && i.unit_id),
+        ingredients: recipeIngredients.map(i => {
+          const dbIng = ingredientsList.find(dbI => dbI.id === i.ingredient_id);
+          return {
+            ingredient_id: i.ingredient_id,
+            ingredient_bg: dbIng?.name_bg || '',
+            ingredient_en: dbIng?.name_en || '',
+            amount: (parseFloat(i.amount) || 0) / (parseInt(servings) || 1),
+            unit_id: i.unit_id,
+            notes_bg: i.notes_bg || i.notes || '',
+            notes_en: i.notes_en || i.notes || ''
+          };
+        }).filter(i => i.ingredient_id && i.amount && i.unit_id),
         steps: recipeSteps.map(s => ({
           instruction_bg: s.instruction_bg,
           instruction_en: s.instruction_en,
@@ -284,6 +299,12 @@ const ManageRecipes = () => {
       if (editingId) {
         // Archive before update
         await archiveVersion('recipes', editingId, user.uid, user.email, 'UPDATE');
+        
+        if (user.role === ROLES.USER) {
+          recipeData.is_active = false;
+          recipeData.status = 'pending';
+        }
+        
         await updateDoc(doc(db, 'recipes', editingId), recipeData);
         await logActivity(user.uid, user.email, 'edit_recipe', `Edited recipe: ${titleEn}`);
       } else {
@@ -294,7 +315,10 @@ const ManageRecipes = () => {
         recipeData.views_count = 0;
         recipeData.reviews_count = 0;
         recipeData.rating = 0;
-        recipeData.is_active = true;
+        
+        const isPowerUserOrMod = user.role === ROLES.OWNER || user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR;
+        recipeData.is_active = isPowerUserOrMod;
+        recipeData.status = isPowerUserOrMod ? 'approved' : 'pending';
         recipeData.is_deleted = false;
 
         await setDoc(doc(db, 'recipes', slug), recipeData);
@@ -444,8 +468,8 @@ const ManageRecipes = () => {
 
         let ingredients = [];
         let steps = [];
-        try { ingredients = JSON.parse(cols[idx('ingredients')] || '[]'); } catch { }
-        try { steps = JSON.parse(cols[idx('steps')] || '[]'); } catch { }
+        try { ingredients = JSON.parse(cols[idx('ingredients')] || '[]'); } catch (err) { console.warn('JSON parsing error:', err); }
+        try { steps = JSON.parse(cols[idx('steps')] || '[]'); } catch (err) { console.warn('JSON parsing error:', err); }
 
         const row = {
           slug, title_bg, title_en,
@@ -509,6 +533,32 @@ const ManageRecipes = () => {
     }
   };
 
+  const handleServingsChange = (newServingsVal) => {
+    const nextServings = parseInt(newServingsVal) || 1;
+    const prevServings = parseInt(servings) || 1;
+    
+    if (nextServings === prevServings) {
+      setServings(newServingsVal);
+      return;
+    }
+
+    setRecipeIngredients(prev => prev.map(ing => {
+      if (!ing.amount) return ing;
+      const numAmount = parseFloat(ing.amount);
+      if (isNaN(numAmount)) return ing;
+      
+      const scaledAmount = numAmount * (nextServings / prevServings);
+      const cleanAmount = Math.round(scaledAmount * 100) / 100;
+      
+      return {
+        ...ing,
+        amount: cleanAmount.toString()
+      };
+    }));
+
+    setServings(newServingsVal);
+  };
+
   const handleCancelEdit = () => {
     setEditingId(null);
     setTitleBg(''); setTitleEn(''); setSlug('');
@@ -516,7 +566,7 @@ const ManageRecipes = () => {
     setCuisineId('');
     setCategoryId('');
     setSubCategoryId('');
-    setPrepTime(''); setCookTime(''); setServings('');
+    setPrepTime(''); setCookTime(''); setServings('1');
     setDifficulty('medium');
     setVideoUrl(''); setOriginalAuthor(''); setSourceLink('');
     setMainImageUrl(''); setExtra1Url(''); setExtra2Url('');
@@ -527,6 +577,11 @@ const ManageRecipes = () => {
   };
 
   const handleToggleActive = async (targetId, targetName, currentActiveStatus) => {
+    const isPowerUser = user.role === ROLES.OWNER || user.role === ROLES.ADMIN;
+    if (!isPowerUser) {
+      alert(isBg ? 'Нямате права за промяна на статуса.' : 'You do not have permission to change status.');
+      return;
+    }
     const actionName = currentActiveStatus ? (isBg ? 'деактивирате' : 'deactivate') : (isBg ? 'активирате' : 'activate');
     if (!window.confirm(isBg ? `Сигурни ли сте, че искате да ${actionName} ${targetName}?` : `Are you sure you want to ${actionName} ${targetName}?`)) return;
 
@@ -541,6 +596,11 @@ const ManageRecipes = () => {
   };
 
   const handleDelete = async (targetId, targetName) => {
+    const isMod = user.role === ROLES.MODERATOR;
+    if (isMod) {
+      alert(isBg ? 'Модераторите не могат да трият рецепти.' : 'Moderators cannot delete recipes.');
+      return;
+    }
     if (!window.confirm(isBg ? `Сигурни ли сте, че искате да изтриете ${targetName}?` : `Are you sure you want to delete ${targetName}?`)) return;
     try {
       // Archive before delete
@@ -552,7 +612,36 @@ const ManageRecipes = () => {
     }
   };
 
+  const handlePhysicalDelete = async (targetId, targetName) => {
+    const isOwner = user.role === ROLES.OWNER;
+    if (!isOwner) {
+      alert(isBg ? 'Само собственикът може да изтрива рецепти физически.' : 'Only the owner can delete recipes permanently.');
+      return;
+    }
+    const message = isBg
+      ? `ВНИМАНИЕ! Сигурни ли сте, че искате ФИЗИЧЕСКИ и ЗАВИНАГИ да изтриете рецептата "${targetName}" от базата с данни? Това действие е необратимо!`
+      : `WARNING! Are you sure you want to PERMANENTLY and PHYSICALLY delete the recipe "${targetName}" from the database? This action is irreversible!`;
+
+    if (!window.confirm(message)) return;
+
+    try {
+      // Archive version before permanent physical delete
+      await archiveVersion('recipes', targetId, user.uid, user.email, 'PHYSICAL_DELETE');
+      await deleteDoc(doc(db, 'recipes', targetId));
+      await logActivity(user.uid, user.email, 'physical_delete_recipe', `Permanently deleted recipe: ${targetName}`);
+      alert(isBg ? 'Рецептата е изтрита физически от базата с данни.' : 'Recipe permanently deleted from the database.');
+    } catch (error) {
+      console.error("Error physically deleting recipe:", error);
+      alert(isBg ? 'Грешка при физическо изтриване.' : 'Error permanently deleting recipe.');
+    }
+  };
+
   const handleRestore = async (targetId, targetName) => {
+    const isPowerUser = user.role === ROLES.OWNER || user.role === ROLES.ADMIN;
+    if (!isPowerUser) {
+      alert(isBg ? 'Нямате права за възстановяване.' : 'You do not have permission to restore.');
+      return;
+    }
     const newAuthor = window.prompt(
       isBg ? `Възстановяване на "${targetName}". Въведете име на нов автор:` : `Restoring "${targetName}". Enter new author name:`, 
       isBg ? 'Неизвестен' : 'Unknown'
@@ -577,6 +666,8 @@ const ManageRecipes = () => {
   };
 
   const filteredRecipes = recipes.filter(r => {
+    if (user?.role === ROLES.USER && r.publisher_id !== user.uid) return false;
+
     const isDeleted = r.is_deleted === true;
     const isActive = r.is_active !== false && !isDeleted;
     const isDeactivated = r.is_active === false && !isDeleted;
@@ -595,12 +686,26 @@ const ManageRecipes = () => {
   });
 
   const renderManageButtons = (r, isActive, rName) => {
+    const isPowerUser = user.role === ROLES.OWNER || user.role === ROLES.ADMIN;
+    const isMod = user.role === ROLES.MODERATOR;
+
     if (statusFilter === 'deleted') {
-      return (
-        <button onClick={() => handleRestore(r.id, rName)} className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors">
-          {isBg ? 'Възстанови' : 'Restore'}
-        </button>
-      );
+      if (isPowerUser) {
+        const isOwner = user.role === ROLES.OWNER;
+        return (
+          <div className="flex gap-1">
+            <button onClick={() => handleRestore(r.id, rName)} className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors">
+              {isBg ? 'Възстанови' : 'Restore'}
+            </button>
+            {isOwner && (
+              <button onClick={() => handlePhysicalDelete(r.id, rName)} className="text-[10px] font-bold px-2 py-1 rounded bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors">
+                {isBg ? 'Изтрий завинаги' : 'Delete Permanently'}
+              </button>
+            )}
+          </div>
+        );
+      }
+      return null;
     }
     return (
       <div className="flex gap-1">
@@ -614,12 +719,16 @@ const ManageRecipes = () => {
         <button onClick={() => handleEditClick(r)} className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg">
           <span className="material-symbols-outlined text-[16px]">edit</span>
         </button>
-        <button onClick={() => handleToggleActive(r.id, rName, isActive)} className={`p-1.5 rounded-lg transition-colors ${isActive ? 'bg-background-dark/50 text-amber-500 hover:bg-amber-500/20' : 'bg-background-dark/50 text-emerald-500 hover:bg-emerald-500/20'}`}>
-          <span className="material-symbols-outlined text-[16px]">{isActive ? 'power_settings_new' : 'play_arrow'}</span>
-        </button>
-        <button onClick={() => handleDelete(r.id, rName)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg">
-          <span className="material-symbols-outlined text-[16px]">delete</span>
-        </button>
+        {isPowerUser && (
+          <button onClick={() => handleToggleActive(r.id, rName, isActive)} className={`p-1.5 rounded-lg transition-colors ${isActive ? 'bg-background-dark/50 text-amber-500 hover:bg-amber-500/20' : 'bg-background-dark/50 text-emerald-500 hover:bg-emerald-500/20'}`}>
+            <span className="material-symbols-outlined text-[16px]">{isActive ? 'power_settings_new' : 'play_arrow'}</span>
+          </button>
+        )}
+        {!isMod && (
+          <button onClick={() => handleDelete(r.id, rName)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg">
+            <span className="material-symbols-outlined text-[16px]">delete</span>
+          </button>
+        )}
       </div>
     );
   };
@@ -681,7 +790,9 @@ const ManageRecipes = () => {
         <div className="flex gap-2 text-xs font-bold overflow-x-auto hide-scrollbar pb-1">
           <button onClick={() => setStatusFilter('active')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'active' ? 'bg-primary text-background-dark border-primary' : 'bg-surface-dark text-slate-400 border-primary/30 hover:bg-primary/10'}`}>{isBg ? 'Активни' : 'Active'}</button>
           <button onClick={() => setStatusFilter('deactivated')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deactivated' ? 'bg-amber-500 text-background-dark border-amber-500' : 'bg-surface-dark text-slate-400 border-amber-500/30 hover:bg-amber-500/10'}`}>{isBg ? 'Деактивирани' : 'Deactivated'}</button>
-          <button onClick={() => setStatusFilter('deleted')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deleted' ? 'bg-rose-500 text-white border-rose-500' : 'bg-surface-dark text-slate-400 border-rose-500/30 hover:bg-rose-500/10'}`}>{isBg ? 'Изтрити' : 'Deleted'}</button>
+          {user?.role !== ROLES.USER && (
+            <button onClick={() => setStatusFilter('deleted')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deleted' ? 'bg-rose-500 text-white border-rose-500' : 'bg-surface-dark text-slate-400 border-rose-500/30 hover:bg-rose-500/10'}`}>{isBg ? 'Изтрити' : 'Deleted'}</button>
+          )}
         </div>
       </div>
 
@@ -872,7 +983,7 @@ const ManageRecipes = () => {
                     <label className="text-[9px] text-primary uppercase font-bold mb-1">{isBg ? 'Данни за брой порции' : 'Data for servings'}</label>
                     <select 
                       value={servings} 
-                      onChange={(e) => setServings(e.target.value)} 
+                      onChange={(e) => handleServingsChange(e.target.value)} 
                       className="bg-surface-dark border border-primary/20 rounded px-2 py-1 text-slate-100 text-xs outline-none w-20 text-center"
                     >
                       {[1,2,3,4,5,6,7,8,10,12].map(n => <option key={n} value={n}>{n}</option>)}
@@ -965,22 +1076,47 @@ const ManageRecipes = () => {
                       </button>
                     </div>
 
-                    {/* Bilingual Notes Row */}
-                    <div className="ml-6 grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        value={ing.notes_bg}
-                        onChange={(e) => updateIngredientRow(ing.id, 'notes_bg', e.target.value)}
-                        placeholder={isBg ? "Бележка (BG) (напр. 'нарязан')" : "Note (BG) (e.g. 'chopped')"}
-                        className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px]"
-                      />
-                      <input
-                        type="text"
-                        value={ing.notes_en}
-                        onChange={(e) => updateIngredientRow(ing.id, 'notes_en', e.target.value)}
-                        placeholder={isBg ? "Note (EN) (e.g. 'chopped')" : "Note (EN) (e.g. 'chopped')"}
-                        className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px]"
-                      />
+                    {/* Bilingual Notes Row with stacked Move controls */}
+                    <div className="flex gap-2 items-center">
+                      {/* Move Up/Down Stacked */}
+                      <div className="flex flex-col items-center shrink-0 w-4 -space-y-1.5">
+                        <button
+                          type="button"
+                          onClick={() => moveIngredientRow(idx, 'up')}
+                          disabled={idx === 0}
+                          className="text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:cursor-not-allowed h-3.5 flex items-center justify-center"
+                          title={isBg ? 'Премести нагоре' : 'Move Up'}
+                        >
+                          <span className="material-symbols-outlined text-[20px] select-none">arrow_drop_up</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveIngredientRow(idx, 'down')}
+                          disabled={idx === recipeIngredients.length - 1}
+                          className="text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:cursor-not-allowed h-3.5 flex items-center justify-center"
+                          title={isBg ? 'Премести надолу' : 'Move Down'}
+                        >
+                          <span className="material-symbols-outlined text-[20px] select-none">arrow_drop_down</span>
+                        </button>
+                      </div>
+
+                      {/* Notes Inputs */}
+                      <div className="grid grid-cols-2 gap-2 flex-grow">
+                        <input
+                          type="text"
+                          value={ing.notes_bg}
+                          onChange={(e) => updateIngredientRow(ing.id, 'notes_bg', e.target.value)}
+                          placeholder={isBg ? "Бележка (BG) (напр. 'нарязан')" : "Note (BG) (e.g. 'chopped')"}
+                          className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px]"
+                        />
+                        <input
+                          type="text"
+                          value={ing.notes_en}
+                          onChange={(e) => updateIngredientRow(ing.id, 'notes_en', e.target.value)}
+                          placeholder={isBg ? "Note (EN) (e.g. 'chopped')" : "Note (EN) (e.g. 'chopped')"}
+                          className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px]"
+                        />
+                      </div>
                     </div>
                   </div>
                 );
