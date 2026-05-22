@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, query, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
-import AdBanner from '../components/AdBanner';
+import { calculateEstimatedPrice } from '../lib/priceUtils';
+import { getCuisineById } from '../data/cuisines';
+import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
 
 const getPluralCategoryName = (id, lang) => {
@@ -50,6 +52,7 @@ const Home = () => {
   const [activeTab, setActiveTab] = useState('smart'); // 'smart' | 'newest' | 'top' | 'popular'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showTop10, setShowTop10] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const [ingredientsList, setIngredientsList] = useState([]);
 
@@ -82,6 +85,8 @@ const Home = () => {
   useEffect(() => {
     const unsubIng = onSnapshot(query(collection(db, 'ingredients')), (snapshot) => {
       setIngredientsList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => {
+      console.warn("Could not load ingredients:", err.message);
     });
     return () => unsubIng();
   }, []);
@@ -156,7 +161,7 @@ const Home = () => {
         setLoading(false);
       },
       (err) => {
-        console.warn("Home recipes fetch error:", err.message);
+        console.warn("Could not load recipes:", err.message);
         setFetchError(err.message);
         setLoading(false);
       }
@@ -188,9 +193,54 @@ const Home = () => {
     );
     return () => unsubFeatured();
   }, []);
+  const featuredCuisineObj = featuredRecipe?.cuisine_id ? getCuisineById(featuredRecipe.cuisine_id) : null;
+  const featuredCuisineName = featuredCuisineObj ? (isBg ? featuredCuisineObj.name.bg : featuredCuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
+  const featuredTags = featuredRecipe ? getRecipeTags(featuredRecipe, ingredientsList) : [];
+
+  const top10Ingredients = useMemo(() => {
+    if (!showTop10 || !realRecipes.length || !ingredientsList.length) return [];
+    
+    const usageCount = {};
+    realRecipes.forEach(recipe => {
+      if (recipe.ingredients) {
+        const uniqueIds = new Set();
+        recipe.ingredients.forEach(ing => {
+          if (ing.ingredient_id) uniqueIds.add(ing.ingredient_id);
+        });
+        uniqueIds.forEach(id => {
+          if (!usageCount[id]) usageCount[id] = 0;
+          usageCount[id]++;
+        });
+      }
+    });
+
+    // 1. Map to DB ingredients and filter out invalid ones
+    const allCounted = Object.keys(usageCount).map(id => {
+      const dbIng = ingredientsList.find(i => i.id === id);
+      return {
+        ...dbIng,
+        id,
+        count: usageCount[id]
+      };
+    }).filter(i => i.name_bg || i.name_en);
+
+    // 2. Filter out basic staples
+    const filtered = allCounted.filter(i => {
+      const mainGroup = i.classification?.main_group || '';
+      const name = (i.name_bg || '').toLowerCase();
+      
+      const isSpiceOrFat = mainGroup === 'Подправки' || mainGroup === 'Мазнини';
+      const isBasicStaple = name.includes('вода') || name.includes('сол') || name.includes('захар') || name.includes('брашно') || name.includes('оцет');
+      
+      return !(isSpiceOrFat || isBasicStaple);
+    });
+
+    // 3. Sort by count and take top 12
+    return filtered.sort((a, b) => b.count - a.count).slice(0, 12);
+  }, [showTop10, realRecipes, ingredientsList]);
 
   return (
-    <div className="flex-1 pb-32">
+    <div className="flex-1 pb-4">
       {/* Featured Section (Dynamic Accent) */}
       <section className="p-4">
         {featuredRecipe ? (
@@ -212,6 +262,16 @@ const Home = () => {
                 <h2 className="text-white text-3xl font-extrabold leading-tight drop-shadow-lg">
                   {isBg ? featuredRecipe.title_bg : featuredRecipe.title_en}
                 </h2>
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <span className="px-2 py-1 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[10px] font-bold uppercase tracking-tighter shadow-md">
+                    {featuredCuisineName}
+                  </span>
+                  {featuredTags.map(tag => (
+                    <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md">
+                      {translateTag(tag, isBg)}
+                    </span>
+                  ))}
+                </div>
                  <div className="flex flex-wrap items-center gap-3 mt-2">
                   <div className="flex items-center gap-1 text-primary">
                     <span className="material-symbols-outlined text-sm fill-[1]">star</span>
@@ -221,16 +281,16 @@ const Home = () => {
                     <span className="material-symbols-outlined text-sm">visibility</span>
                     <span className="text-xs font-bold">{featuredRecipe.views_count || 0}</span>
                   </div>
+                  {calculateEstimatedPrice(featuredRecipe, ingredientsList) && (
+                    <div className="flex items-center gap-1 text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded text-[10px] font-bold" title={isBg ? 'Ориентировъчна цена за порция' : 'Estimated price per serving'}>
+                      <span className="material-symbols-outlined text-[13px]">payments</span>
+                      <span>~{calculateEstimatedPrice(featuredRecipe, ingredientsList)} {isBg ? 'Евро/порция' : 'EUR/serving'}</span>
+                    </div>
+                  )}
                   {featuredRecipe.video_url && (
                     <div className="flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded text-[10px] font-bold">
                       <span className="material-symbols-outlined text-[13px]">play_circle</span>
                       <span>{isBg ? 'Видео' : 'Video'}</span>
-                    </div>
-                  )}
-                  {featuredRecipe.source_link && (
-                    <div className="flex items-center gap-1 text-primary bg-primary/10 px-2 py-0.5 rounded text-[10px] font-bold">
-                      <span className="material-symbols-outlined text-[13px]">public</span>
-                      <span>{isBg ? 'Сайт' : 'Site'}</span>
                     </div>
                   )}
                 </div>
@@ -284,8 +344,6 @@ const Home = () => {
           ))}
         </div>
       </section>
-
-      <AdBanner />
 
       <section className="px-4 mt-8">
         <div className="flex items-center justify-between mb-6">
@@ -358,15 +416,29 @@ const Home = () => {
             const difficulty = isBg ? (recipe.difficulty === 'easy' ? 'Лесно' : recipe.difficulty === 'hard' ? 'Трудно' : 'Средно') : (recipe.difficulty || 'medium');
             const imageUrl = recipe.images?.main || "/images/recipe-placeholder.png";
 
+            const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
+            const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
+            const tags = getRecipeTags(recipe, ingredientsList);
+
             return (
               <div key={recipe.id} className="bg-surface-dark/90 backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:border-primary/50 transition-colors flex flex-col group cursor-pointer" onClick={() => navigate(`/recipe/${recipe.id}`)}>
-                <div className="flex h-36">
+                <div className="flex h-auto min-h-[10rem]">
                   <div className="w-[35%] overflow-hidden relative">
                     <img className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" alt={title} src={imageUrl}/>
                   </div>
                   <div className="w-[65%] p-4 flex flex-col justify-between relative">
                     <div>
                       <h4 className="text-slate-100 font-bold text-lg leading-tight line-clamp-1">{title}</h4>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[9px] font-bold uppercase tracking-tighter shadow-md">
+                          {cuisineName}
+                        </span>
+                        {tags.map(tag => (
+                          <span key={tag} className="px-1.5 py-0.5 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[9px] font-bold uppercase tracking-tighter shadow-md">
+                            {translateTag(tag, isBg)}
+                          </span>
+                        ))}
+                      </div>
                       <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1.5 font-medium flex-wrap">
                         <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded"><span className="material-symbols-outlined text-[13px] text-primary">schedule</span> {prepTime}m</span>
                         <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded"><span className="material-symbols-outlined text-[13px] text-primary">local_fire_department</span> {difficulty}</span>
@@ -380,16 +452,16 @@ const Home = () => {
                           <span className="material-symbols-outlined text-[13px]">visibility</span> 
                           {recipe.views_count || 0}
                         </span>
+                        {calculateEstimatedPrice(recipe, ingredientsList) && (
+                          <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded" title={isBg ? 'Ориентировъчна цена за порция' : 'Estimated price per serving'}>
+                            <span className="material-symbols-outlined text-[13px]">payments</span>
+                            <span>~{calculateEstimatedPrice(recipe, ingredientsList)} {isBg ? 'Евро/порция' : 'EUR/serving'}</span>
+                          </span>
+                        )}
                         {recipe.video_url && (
                           <span className="flex items-center gap-1 bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded" title={isBg ? 'Има видео рецепта' : 'Has Video Recipe'}>
                             <span className="material-symbols-outlined text-[13px]">play_circle</span>
                             <span>{isBg ? 'Видео' : 'Video'}</span>
-                          </span>
-                        )}
-                        {recipe.source_link && (
-                          <span className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded" title={isBg ? 'Външен източник / сайт' : 'External Source / Website'}>
-                            <span className="material-symbols-outlined text-[13px]">public</span>
-                            <span>{isBg ? 'Сайт' : 'Site'}</span>
                           </span>
                         )}
                       </div>
@@ -406,6 +478,37 @@ const Home = () => {
             );
           })}
         </div>
+
+        {realRecipes.length > 0 && (
+          <div className="mt-8 px-2">
+            <button 
+              onClick={() => setShowTop10(!showTop10)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-dark border border-primary/20 text-primary font-bold hover:bg-primary/10 transition-colors shadow-md"
+            >
+              <span className="material-symbols-outlined">{showTop10 ? 'expand_less' : 'workspace_premium'}</span>
+              {isBg ? 'Най-използвани 12 продукта' : 'Top 12 Most Used Ingredients'}
+            </button>
+
+            {showTop10 && (
+              <div className="mt-4 grid grid-cols-3 gap-3 pb-4">
+                {top10Ingredients.map((ing, idx) => (
+                  <div key={ing.id} className="w-full bg-surface-dark/80 rounded-2xl p-2.5 border border-primary/10 flex flex-col items-center justify-center text-center shadow-lg relative">
+                    <div className="absolute -top-0.5 -left-0.5 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-[#b8860b] text-background-dark font-black text-[10px] flex items-center justify-center shadow-md border border-background-dark">
+                      {idx + 1}
+                    </div>
+                    <span className="material-symbols-outlined text-3xl text-primary/50 mb-2">{ing.icon || 'restaurant'}</span>
+                    <span className="text-slate-100 text-[11px] font-bold line-clamp-2 leading-tight h-8 flex items-center">
+                      {isBg ? (ing.name_bg || ing.name_en) : ing.name_en}
+                    </span>
+                    <span className="text-primary text-[10px] mt-1 font-bold bg-primary/10 px-2 py-0.5 rounded-full">
+                      {ing.count} {isBg ? 'рецепти' : 'recipes'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="px-4 mt-10">

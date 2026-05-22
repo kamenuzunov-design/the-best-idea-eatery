@@ -4,10 +4,10 @@ import { db } from './firebase';
 export const logActivity = async (userId, userEmail, action, details) => {
   try {
     await addDoc(collection(db, 'activity_logs'), {
-      userId,
-      userEmail,
-      action,
-      details,
+      userId: userId || 'unknown',
+      userEmail: userEmail || 'unknown',
+      action: action || 'unknown',
+      details: details || '',
       timestamp: new Date().toISOString()
     });
   } catch (error) {

@@ -36,7 +36,9 @@ import GourmetEvents from './pages/GourmetEvents';
 import OrderHistory from './pages/OrderHistory';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import AdvertiseInfo from './pages/AdvertiseInfo';
 import GDPRConsent from './components/GDPRConsent';
+import AdBanner from './components/AdBanner';
 import { useAuth } from './context/AuthContext';
 import { ROLES } from './constants/roles';
 
@@ -49,7 +51,7 @@ function App() {
 
   return (
     <Router>
-      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl border-x border-primary/10">
+      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl border-x border-primary/10 pb-24">
         <GDPRConsent />
         <Header />
         
@@ -59,6 +61,7 @@ function App() {
           
           {/* Public Routes (Accessible by GUEST) */}
           <Route path="/" element={<Home />} />
+          <Route path="/advertise" element={<AdvertiseInfo />} />
           <Route path="/ai-assistant" element={<AIAssistant />} />
           <Route path="/recipe/:id" element={<RecipeDetail />} />
           <Route path="/recipe/:id/customize" element={<RecipeCustomization />} />
@@ -182,6 +185,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
 
+        <AdBanner />
         <Navigation />
       </div>
     </Router>

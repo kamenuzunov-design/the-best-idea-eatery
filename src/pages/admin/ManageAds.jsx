@@ -9,15 +9,18 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
+  getDoc,
+  setDoc,
   serverTimestamp,
   orderBy
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { logActivity } from '../../lib/activityLogger';
 
 const ManageAds = () => {
-  const { isAdmin, isOwner } = useAuth();
+  const { isAdmin, isOwner, user } = useAuth();
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isBg = i18n.language === 'bg';
@@ -26,6 +29,11 @@ const ManageAds = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAd, setEditingAd] = useState(null);
+
+  // Settings Modal State
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsData, setSettingsData] = useState({ content_bg: '', content_en: '' });
+  const [loadingSettings, setLoadingSettings] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -94,6 +102,7 @@ const ManageAds = () => {
         isActive: true,
         createdAt: serverTimestamp()
       });
+      await logActivity(user.uid, user.auth?.email || 'N/A', 'CREATE_CAMPAIGN', `Създадена рекламна кампания: ${name}`);
     }
   };
 
@@ -107,6 +116,7 @@ const ManageAds = () => {
 
       if (editingAd) {
         await updateDoc(doc(db, 'ads', editingAd.id), data);
+        await logActivity(user.uid, user.auth?.email || 'N/A', 'UPDATE_AD', `Редактирана реклама: ${formData.title_bg}`);
       } else {
         await addDoc(collection(db, 'ads'), {
           ...data,
@@ -114,6 +124,7 @@ const ManageAds = () => {
           viewsCount: 0,
           clicksCount: 0
         });
+        await logActivity(user.uid, user.auth?.email || 'N/A', 'CREATE_AD', `Създадена реклама: ${formData.title_bg}`);
       }
       setIsModalOpen(false);
       setEditingAd(null);
@@ -163,7 +174,50 @@ const ManageAds = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Delete this ad?")) {
       await deleteDoc(doc(db, 'ads', id));
+      await logActivity(user.uid, user.auth?.email || 'N/A', 'DELETE_AD', `Изтрита реклама ID: ${id}`);
     }
+  };
+
+  const handleOpenSettings = async () => {
+    setIsSettingsModalOpen(true);
+    setLoadingSettings(true);
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'advertising_page'));
+      if (snap.exists()) {
+        setSettingsData({
+          content_bg: snap.data().content_bg || '',
+          content_en: snap.data().content_en || ''
+        });
+      } else {
+        setSettingsData({ content_bg: '', content_en: '' });
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    try {
+      await setDoc(doc(db, 'settings', 'advertising_page'), {
+        ...settingsData,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      await logActivity(user.uid, user.auth?.email || 'N/A', 'UPDATE_AD_SETTINGS', `Обновени правила за реклама`);
+      setIsSettingsModalOpen(false);
+      alert(isBg ? "Правилата са запазени успешно!" : "Rules saved successfully!");
+    } catch(err) {
+      console.error(err);
+      alert("Error saving rules");
+    }
+  };
+
+  const copyAdLink = () => {
+    const url = window.location.origin + '/advertise';
+    navigator.clipboard.writeText(url);
+    alert(isBg ? "Линкът е копиран! Можете да го поставите в полето 'Линк за препращане'." : "Link copied! Paste it in the 'Link URL' field.");
   };
 
   return (
@@ -174,6 +228,13 @@ const ManageAds = () => {
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{isBg ? 'Управление на кампании и реклами' : 'Ad Management & Campaigns'}</p>
         </div>
         <div className="flex gap-2">
+          <button 
+            onClick={handleOpenSettings}
+            className="bg-surface-dark border border-primary/30 text-primary px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-[10px] font-black uppercase"
+          >
+            <span className="material-symbols-outlined text-sm">gavel</span>
+            {isBg ? 'Правила за Реклама' : 'Ad Rules'}
+          </button>
           <button 
             onClick={handleCreateCampaign}
             className="bg-surface-dark border border-primary/30 text-primary px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-xs font-bold uppercase"
@@ -316,11 +377,11 @@ const ManageAds = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Начална Дата</label>
-                  <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
+                  <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary [color-scheme:dark]" />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Крайна Дата</label>
-                  <input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
+                  <input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary [color-scheme:dark]" />
                 </div>
               </div>
 
@@ -337,6 +398,64 @@ const ManageAds = () => {
 
               <button disabled={uploading} type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest">
                 Запази Рекламата
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/95 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-surface-dark w-full max-w-2xl rounded-[2.5rem] border border-primary/30 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-primary/20 flex justify-between items-center bg-gradient-to-r from-primary/5 to-transparent">
+              <h2 className="text-primary font-black uppercase tracking-tighter text-xl">
+                {isBg ? 'Правила за Реклама' : 'Advertising Rules'}
+              </h2>
+              <button onClick={() => setIsSettingsModalOpen(false)} className="text-slate-400 hover:text-white">
+                <span className="material-symbols-outlined text-3xl">close</span>
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveSettings} className="p-6 overflow-y-auto space-y-5 no-scrollbar">
+              <div className="bg-primary/10 border border-primary/30 p-4 rounded-2xl flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-primary uppercase tracking-widest">{isBg ? 'Линк към страницата' : 'Page URL'}</span>
+                  <button type="button" onClick={copyAdLink} className="text-xs bg-primary text-background-dark px-3 py-1 rounded-full font-bold uppercase hover:scale-105 transition-all">
+                    {isBg ? 'Копирай' : 'Copy'}
+                  </button>
+                </div>
+                <div className="text-sm text-slate-300 font-mono break-all bg-background-dark p-2 rounded-lg border border-primary/20">
+                  {window.location.origin}/advertise
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Съдържание (Български)</label>
+                <textarea 
+                  required 
+                  rows={8}
+                  value={settingsData.content_bg} 
+                  onChange={e => setSettingsData({...settingsData, content_bg: e.target.value})} 
+                  className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
+                  placeholder="Въведете текст или HTML тук..."
+                />
+              </div>
+              
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Съдържание (English)</label>
+                <textarea 
+                  required 
+                  rows={8}
+                  value={settingsData.content_en} 
+                  onChange={e => setSettingsData({...settingsData, content_en: e.target.value})} 
+                  className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
+                  placeholder="Enter text or HTML here..."
+                />
+              </div>
+
+              <button disabled={loadingSettings} type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest">
+                {isBg ? 'Запази Промените' : 'Save Changes'}
               </button>
             </form>
           </div>

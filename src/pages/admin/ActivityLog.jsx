@@ -60,7 +60,7 @@ const ActivityLog = () => {
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
-    logActivity(user.uid, user.email, 'export_logs', `Exported ${exportLogs.length} activity logs to JSON`);
+    logActivity(user.uid, user.auth?.email || user.email, 'export_logs', `Exported ${exportLogs.length} activity logs to JSON`);
   };
 
   const handleClearLogs = async () => {
@@ -80,7 +80,7 @@ const ActivityLog = () => {
       
       await batch.commit();
       
-      await logActivity(user.uid, user.email, 'clear_logs', 'Cleared all previous activity logs');
+      await logActivity(user.uid, user.auth?.email || user.email, 'clear_logs', 'Cleared all previous activity logs');
     } catch (error) {
       console.error("Error clearing logs:", error);
       alert(isBg ? 'Грешка при изчистване на дневника.' : 'Error clearing logs.');
@@ -107,7 +107,7 @@ const ActivityLog = () => {
       
       await batch.commit();
       
-      await logActivity(user.uid, user.email, 'clear_filtered_logs', `Cleared activity logs for action: ${filterKey}`);
+      await logActivity(user.uid, user.auth?.email || user.email, 'clear_filtered_logs', `Cleared activity logs for action: ${filterKey}`);
       setFilterKey(null); // Reset filter
     } catch (error) {
       console.error("Error deleting filtered logs:", error);

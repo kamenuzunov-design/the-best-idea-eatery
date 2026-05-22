@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, onSnapshot, limit, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 
 const AdBanner = () => {
   const [currentAd, setCurrentAd] = useState(null);
   const { i18n } = useTranslation();
+  const { user } = useAuth();
   const isBg = i18n.language === 'bg';
+  const role = user?.role || 'guest';
+  const trackedAds = useRef(new Set());
 
   useEffect(() => {
     const now = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -34,15 +38,6 @@ const AdBanner = () => {
           // Pick one (could be random or highest priority)
           const selected = activeAds[0];
           setCurrentAd(selected);
-          
-          // Track view (ignore if restricted)
-          try {
-            updateDoc(doc(db, 'ads', selected.id), {
-              viewsCount: increment(1)
-            });
-          } catch {
-            console.warn("Ad view tracking restricted");
-          }
         } else {
           setCurrentAd(null);
         }
@@ -55,6 +50,17 @@ const AdBanner = () => {
 
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (currentAd && !trackedAds.current.has(currentAd.id)) {
+      trackedAds.current.add(currentAd.id);
+      updateDoc(doc(db, 'ads', currentAd.id), {
+        viewsCount: increment(1)
+      }).catch(() => {
+        // Silent catch for missing permissions
+      });
+    }
+  }, [currentAd]);
 
   const handleAdClick = async () => {
     if (!currentAd) return;
@@ -71,6 +77,7 @@ const AdBanner = () => {
   };
 
   if (!currentAd) return null;
+  if (role !== 'guest' && role !== 'user') return null;
 
   return (
     <div 

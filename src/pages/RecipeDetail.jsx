@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { doc, getDoc, updateDoc, arrayUnion, increment, collection, query, where, getDocs } from 'firebase/firestore';
+import { calculateEstimatedPrice } from '../lib/priceUtils';
+import { getCuisineById } from '../data/cuisines';
+import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
@@ -201,20 +204,31 @@ const RecipeDetail = () => {
     }
   };
 
-  const handleDeleteRecipe = async () => {
-    if (!window.confirm(isBg ? 'Сигурни ли сте, че искате да изтриете тази рецепта?' : 'Are you sure you want to delete this recipe?')) return;
-    
-    try {
-      await updateDoc(doc(db, 'recipes', id), {
-        is_deleted: true,
-        is_public_variation: false,
-        deleted_at: new Date().toISOString()
-      });
-      alert(isBg ? 'Рецептата е изтрита успешно.' : 'Recipe deleted successfully.');
-      navigate('/');
-    } catch (err) {
-      console.error("Error deleting recipe:", err);
-      alert(isBg ? 'Грешка при изтриване.' : 'Error deleting.');
+  const handleShareRecipe = async () => {
+    const url = window.location.href;
+    const shareTitle = isBg ? recipe?.title_bg : recipe?.title_en;
+    const shareText = isBg ? 'Виж тази страхотна рецепта в The Best Idea Eatery!' : 'Check out this awesome recipe at The Best Idea Eatery!';
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: url,
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error("Error sharing:", err);
+        }
+      }
+    } else {
+      // Fallback to copy to clipboard
+      try {
+        await navigator.clipboard.writeText(url);
+        alert(isBg ? 'Линкът е копиран в клипборда!' : 'Link copied to clipboard!');
+      } catch (err) {
+        console.error("Failed to copy:", err);
+      }
     }
   };
 
@@ -239,6 +253,11 @@ const RecipeDetail = () => {
   const missing = analyzeRecipe();
   const isReady = isPantryActive ? missing.length === 0 : true;
 
+  const cuisineObj = recipe?.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
+  const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
+  
+  const tags = getRecipeTags(recipe, ingredientsList);
+
   const allImages = [];
   if (recipe.images?.main) allImages.push(recipe.images.main);
   if (recipe.images?.extra1) allImages.push(recipe.images.extra1);
@@ -255,17 +274,14 @@ const RecipeDetail = () => {
         <h2 className="text-primary text-sm font-extrabold tracking-widest uppercase flex-1 text-center">
           {title}
         </h2>
-        <div className="flex gap-2">
-          {user && recipe.publisher_id === user.uid && (
-            <button 
-              onClick={handleDeleteRecipe}
-              className="flex size-10 items-center justify-center rounded-full bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors"
-              title={isBg ? 'Изтрий' : 'Delete'}
-            >
-              <span className="material-symbols-outlined">delete</span>
-            </button>
+        <div className="flex gap-2 items-center">
+          {calculateEstimatedPrice(recipe, ingredientsList) && (
+            <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 h-8 rounded text-[10px] font-bold" title={isBg ? 'Ориентировъчна цена за порция' : 'Estimated price per serving'}>
+              <span className="material-symbols-outlined text-[13px]">payments</span>
+              <span>~{calculateEstimatedPrice(recipe, ingredientsList)} {isBg ? 'Евро/порция' : 'EUR/serving'}</span>
+            </span>
           )}
-          <button className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+          <button onClick={handleShareRecipe} className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title={isBg ? 'Сподели' : 'Share'}>
             <span className="material-symbols-outlined">share</span>
           </button>
         </div>
@@ -330,10 +346,15 @@ const RecipeDetail = () => {
 
         <div className="absolute bottom-0 left-0 p-6 w-full">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="px-2 py-1 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[10px] font-bold uppercase tracking-tighter shadow-md">
-                {recipe.cuisine_id || 'Global Selection'}
+                {cuisineName}
               </span>
+              {tags.map(tag => (
+                <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md">
+                  {translateTag(tag, isBg)}
+                </span>
+              ))}
             </div>
             
             {/* Interactive Rating UI */}
