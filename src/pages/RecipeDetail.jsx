@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { doc, getDoc, updateDoc, arrayUnion, increment, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment, collection, query, where, getDocs } from 'firebase/firestore';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getCuisineById } from '../data/cuisines';
-import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
+import { translateTag } from '../lib/recipeMetaUtils';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
@@ -31,6 +31,7 @@ const RecipeDetail = () => {
   const [ingredientsList, setIngredientsList] = useState([]);
   const [currentServings, setCurrentServings] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -79,6 +80,25 @@ const RecipeDetail = () => {
             } catch (aErr) {
               console.warn("Author data restricted:", aErr.message);
             }
+          }
+
+          // Check if recipe is saved by user
+          if (user && data.saved_recipes) {
+            // Wait, data.saved_recipes is wrong. The saved_recipes array is on the USER document.
+            // Let's check the user document.
+          }
+          if (user && user.uid && user.role !== 'guest') {
+             try {
+               const uSnap = await getDoc(doc(db, 'users', user.uid));
+               if (uSnap.exists()) {
+                 const uData = uSnap.data();
+                 if (uData.saved_recipes && uData.saved_recipes.includes(docSnap.id)) {
+                   setIsSaved(true);
+                 }
+               }
+             } catch {
+               console.warn("Could not fetch user saved_recipes");
+             }
           }
 
           // Initial servings logic
@@ -232,6 +252,25 @@ const RecipeDetail = () => {
     }
   };
 
+  const handleToggleSave = async () => {
+    if (isGuest) {
+      alert(isBg ? 'Моля, влезте в профила си, за да запазвате рецепти.' : 'Please log in to save recipes.');
+      return;
+    }
+    const userRef = doc(db, 'users', user.uid);
+    try {
+      if (isSaved) {
+        await updateDoc(userRef, { saved_recipes: arrayRemove(id) });
+        setIsSaved(false);
+      } else {
+        await updateDoc(userRef, { saved_recipes: arrayUnion(id) });
+        setIsSaved(true);
+      }
+    } catch (error) {
+      console.error("Error saving recipe:", error);
+    }
+  };
+
   if (loading) return (
     <div className="flex h-screen w-full items-center justify-center bg-background-dark text-primary">
       <span className="material-symbols-outlined animate-spin text-4xl">refresh</span>
@@ -256,7 +295,7 @@ const RecipeDetail = () => {
   const cuisineObj = recipe?.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
   const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
   
-  const tags = getRecipeTags(recipe, ingredientsList);
+  const tags = recipe.tags || [];
 
   const allImages = [];
   if (recipe.images?.main) allImages.push(recipe.images.main);
@@ -293,7 +332,7 @@ const RecipeDetail = () => {
           className="absolute inset-0 bg-center bg-no-repeat bg-cover transition-all duration-500 ease-in-out" 
           style={{backgroundImage: `url("${allImages[activeImageIndex]}")`}}
         ></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/90 to-background-dark/20"></div>
 
         {/* Floating Gallery Thumbnails */}
         {allImages.length > 1 && (
@@ -344,14 +383,14 @@ const RecipeDetail = () => {
           </div>
         )}
 
-        <div className="absolute bottom-0 left-0 p-6 w-full">
+        <div className="absolute bottom-0 left-0 p-6 w-full z-10">
           <div className="flex items-center justify-between mb-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2 py-1 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[10px] font-bold uppercase tracking-tighter shadow-md">
                 {cuisineName}
               </span>
               {tags.map(tag => (
-                <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md">
+                <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md backdrop-blur-sm">
                   {translateTag(tag, isBg)}
                 </span>
               ))}
@@ -359,7 +398,7 @@ const RecipeDetail = () => {
             
             {/* Interactive Rating UI */}
             <div className="flex flex-col items-end gap-1">
-              <div className="flex gap-1">
+              <div className="flex gap-1 drop-shadow-md">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
@@ -368,7 +407,7 @@ const RecipeDetail = () => {
                     className={`material-symbols-outlined text-[20px] transition-all ${
                       (userVote >= star || (!userVote && recipe.rating >= star)) 
                         ? 'text-amber-500 fill-1' 
-                        : 'text-slate-400'
+                        : 'text-slate-300'
                     } ${(user && !userVote && !isVoting) ? 'hover:scale-125 cursor-pointer hover:text-amber-400' : 'cursor-default'}`}
                     style={{ fontVariationSettings: (userVote >= star || (!userVote && recipe.rating >= star)) ? "'FILL' 1" : "'FILL' 0" }}
                   >
@@ -376,15 +415,19 @@ const RecipeDetail = () => {
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest drop-shadow-md">
                 {recipe.rating || 0} / 5 ({recipe.votes_count || 0} {isBg ? 'гласа' : 'votes'})
               </p>
             </div>
           </div>
-          <h1 className="text-slate-100 text-4xl font-extrabold leading-tight drop-shadow-lg">
-            {isBg ? recipe.title_bg : recipe.title_en} <br/>
-            <span className="text-primary/90 font-light italic text-2xl tracking-wide">{isBg ? recipe.title_en : recipe.title_bg}</span>
+          <h1 className="text-white text-4xl font-extrabold leading-tight drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
+            {isBg ? recipe.title_bg : recipe.title_en}
           </h1>
+          {((isBg && recipe.description_bg) || (!isBg && recipe.description_en)) && (
+            <p className="text-slate-100 text-sm mt-4 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-medium max-w-3xl">
+              {isBg ? recipe.description_bg : recipe.description_en}
+            </p>
+          )}
         </div>
       </div>
 
@@ -412,6 +455,13 @@ const RecipeDetail = () => {
             <span className="text-xs font-bold uppercase tracking-widest">{isBg ? 'Винено' : 'Wine'}</span>
           </button>
         )}
+        <button 
+          onClick={handleToggleSave} 
+          className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl transition-all shadow-md ${isSaved ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30' : 'bg-surface-dark border-slate-500/30 text-slate-400 hover:bg-slate-800'}`}
+        >
+          <span className={`material-symbols-outlined text-[20px] ${isSaved ? 'font-black' : ''}`}>bookmark</span>
+          <span className="text-xs font-bold uppercase tracking-widest">{isSaved ? (isBg ? 'Запазена' : 'Saved') : (isBg ? 'Запази' : 'Save')}</span>
+        </button>
       </div>
 
       {/* Community Variations */}
@@ -582,7 +632,7 @@ const RecipeDetail = () => {
               <div className="absolute left-[9px] top-0 size-5 rounded-full bg-primary border-4 border-background-dark shadow-[0_0_10px_rgba(212,175,53,0.5)]"></div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-primary font-extrabold text-xs uppercase tracking-widest">
-                  Step {idx + 1} / Стъпка {idx + 1}
+                  {isBg ? 'Стъпка' : 'Step'} {idx + 1}
                 </p>
                 {step.timer_minutes && (
                   <div className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
@@ -593,9 +643,6 @@ const RecipeDetail = () => {
               </div>
               <p className="text-slate-200 text-base leading-relaxed font-medium mb-1">
                 {isBg ? step.instruction_bg : step.instruction_en}
-              </p>
-              <p className="text-slate-400 text-sm italic">
-                {isBg ? step.instruction_en : step.instruction_bg}
               </p>
             </div>
           ))}

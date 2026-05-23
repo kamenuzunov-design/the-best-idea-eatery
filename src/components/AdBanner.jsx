@@ -3,11 +3,13 @@ import { collection, query, onSnapshot, limit, doc, updateDoc, increment } from 
 import { db } from '../lib/firebase';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const AdBanner = () => {
   const [currentAd, setCurrentAd] = useState(null);
   const { i18n } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isBg = i18n.language === 'bg';
   const role = user?.role || 'guest';
   const trackedAds = useRef(new Set());
@@ -71,8 +73,20 @@ const AdBanner = () => {
     } catch {
       console.warn("Ad click tracking restricted");
     }
+    
     if (currentAd.linkUrl) {
-      window.open(currentAd.linkUrl, '_blank');
+      if (currentAd.isLocalLink) {
+        try {
+          // In case the user pasted the full https://... link, we extract only the path for React Router
+          const urlObj = new URL(currentAd.linkUrl);
+          navigate(urlObj.pathname + urlObj.search + urlObj.hash);
+        } catch {
+          // If it's already a relative link like '/advertise'
+          navigate(currentAd.linkUrl);
+        }
+      } else {
+        window.open(currentAd.linkUrl, '_blank');
+      }
     }
   };
 

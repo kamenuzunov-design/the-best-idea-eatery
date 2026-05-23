@@ -44,6 +44,7 @@ const ManageAds = () => {
     type: 'image', // image, video, html
     contentUrl: '',
     linkUrl: '',
+    isLocalLink: false,
     startDate: '',
     endDate: '',
     priority: 1,
@@ -144,6 +145,7 @@ const ManageAds = () => {
       type: 'image',
       contentUrl: '',
       linkUrl: '',
+      isLocalLink: false,
       startDate: '',
       endDate: '',
       priority: 1,
@@ -162,6 +164,7 @@ const ManageAds = () => {
       type: ad.type || 'image',
       contentUrl: ad.contentUrl || '',
       linkUrl: ad.linkUrl || '',
+      isLocalLink: ad.isLocalLink || false,
       startDate: ad.startDate || '',
       endDate: ad.endDate || '',
       priority: ad.priority || 1,
@@ -175,6 +178,21 @@ const ManageAds = () => {
     if (window.confirm("Delete this ad?")) {
       await deleteDoc(doc(db, 'ads', id));
       await logActivity(user.uid, user.auth?.email || 'N/A', 'DELETE_AD', `Изтрита реклама ID: ${id}`);
+    }
+  };
+
+  const handleResetStats = async (id, title) => {
+    if (window.confirm(isBg ? "Сигурни ли сте, че искате да нулирате статистиката (показвания и кликове) за тази реклама?" : "Are you sure you want to reset stats for this ad?")) {
+      try {
+        await updateDoc(doc(db, 'ads', id), {
+          viewsCount: 0,
+          clicksCount: 0
+        });
+        await logActivity(user.uid, user.auth?.email || 'N/A', 'RESET_AD_STATS', `Нулирана статистика за реклама: ${title}`);
+      } catch (err) {
+        console.error(err);
+        alert("Error resetting stats");
+      }
     }
   };
 
@@ -296,9 +314,12 @@ const ManageAds = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">visibility</span> {ad.viewsCount}</span>
-                  <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">touch_app</span> {ad.clicksCount}</span>
+                  <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">visibility</span> {ad.viewsCount || 0}</span>
+                  <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">touch_app</span> {ad.clicksCount || 0}</span>
                   <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">calendar_month</span> {ad.startDate}</span>
+                  <button onClick={() => handleResetStats(ad.id, ad.title_bg)} className="flex items-center gap-1 text-rose-500/70 hover:text-rose-500 transition-colors ml-auto" title={isBg ? 'Нулирай статистиката' : 'Reset stats'}>
+                    <span className="material-symbols-outlined text-xs">restart_alt</span> {isBg ? 'Нулирай' : 'Reset'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -372,6 +393,17 @@ const ManageAds = () => {
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Линк за препращане</label>
                 <input value={formData.linkUrl} onChange={e => setFormData({...formData, linkUrl: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder="https://..." />
+                
+                <div className="flex items-center justify-between p-3 mt-1 bg-primary/5 rounded-xl border border-primary/10">
+                  <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Локален адрес (в същия таб)</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setFormData({...formData, isLocalLink: !formData.isLocalLink})}
+                    className={`w-10 h-5 rounded-full relative transition-all ${formData.isLocalLink ? 'bg-primary' : 'bg-slate-700'}`}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${formData.isLocalLink ? 'right-0.5' : 'left-0.5'}`} />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

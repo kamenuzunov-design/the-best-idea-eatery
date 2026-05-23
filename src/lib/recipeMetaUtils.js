@@ -2,10 +2,10 @@ export const getRecipeTags = (recipe, ingredientsList) => {
   if (!recipe || !recipe.ingredients || !recipe.ingredients.length || !ingredientsList?.length) return [];
 
   // Tags that require ALL ingredients to have them
-  const allRequiredTags = ['веган', 'вегетарианска', 'кето', 'пескатерианска', 'безглутеново'];
+  const allRequiredTags = ['vegan', 'vegetarian', 'keto', 'pescatarian', 'gluten-free'];
   
   // Tags that require AT LEAST ONE ingredient to have them
-  const someRequiredTags = ['суперхрана', 'високопротеинова'];
+  const someRequiredTags = ['superfood', 'high-protein'];
 
   const recipeTags = new Set();
   const dbIngredients = recipe.ingredients.map(reqIng => 
@@ -31,15 +31,16 @@ export const getRecipeTags = (recipe, ingredientsList) => {
 
 export const translateTag = (tag, isBg) => {
   const map = {
-    'веган': { bg: 'Веган', en: 'Vegan' },
-    'вегетарианска': { bg: 'Вегетарианско', en: 'Vegetarian' },
-    'кето': { bg: 'Кето', en: 'Keto' },
-    'пескатерианска': { bg: 'Пескатерианско', en: 'Pescatarian' },
-    'безглутеново': { bg: 'Без глутен', en: 'Gluten-Free' },
-    'суперхрана': { bg: 'Суперхрана', en: 'Superfood' },
-    'високопротеинова': { bg: 'Високопротеиново', en: 'High-Protein' }
+    'vegan': { bg: 'Веган', en: 'Vegan' },
+    'vegetarian': { bg: 'Вегетарианско', en: 'Vegetarian' },
+    'keto': { bg: 'Кето', en: 'Keto' },
+    'pescatarian': { bg: 'Пескатерианско', en: 'Pescatarian' },
+    'gluten-free': { bg: 'Без глутен', en: 'Gluten-Free' },
+    'superfood': { bg: 'Суперхрана', en: 'Superfood' },
+    'high-protein': { bg: 'Високопротеиново', en: 'High-Protein' }
   };
   
   if (map[tag]) return isBg ? map[tag].bg : map[tag].en;
-  return tag;
+  // Fallback translation if not found in map (just capitalize)
+  return tag.charAt(0).toUpperCase() + tag.slice(1);
 };

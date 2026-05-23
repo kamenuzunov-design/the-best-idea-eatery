@@ -6,7 +6,7 @@ import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getCuisineById } from '../data/cuisines';
-import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
+import { translateTag } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
 
 const getPluralCategoryName = (id, lang) => {
@@ -49,7 +49,7 @@ const Home = () => {
   const [realRecipes, setRealRecipes] = useState([]);
   const [featuredRecipe, setFeaturedRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('smart'); // 'smart' | 'newest' | 'top' | 'popular'
+  const [activeTab, setActiveTab] = useState('newest'); // 'smart' | 'newest' | 'top' | 'popular'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showTop10, setShowTop10] = useState(false);
@@ -145,7 +145,13 @@ const Home = () => {
 
         // 3. Apply sorting based on tab
         if (activeTab === 'newest') {
-          filtered.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+          const getTime = (val) => {
+            if (!val) return 0;
+            if (val.seconds) return val.seconds * 1000;
+            if (typeof val.toDate === 'function') return val.toDate().getTime();
+            return new Date(val).getTime() || 0;
+          };
+          filtered.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
         } else if (activeTab === 'top') {
           filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         } else if (activeTab === 'popular') {
@@ -195,7 +201,7 @@ const Home = () => {
   }, []);
   const featuredCuisineObj = featuredRecipe?.cuisine_id ? getCuisineById(featuredRecipe.cuisine_id) : null;
   const featuredCuisineName = featuredCuisineObj ? (isBg ? featuredCuisineObj.name.bg : featuredCuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
-  const featuredTags = featuredRecipe ? getRecipeTags(featuredRecipe, ingredientsList) : [];
+  const featuredTags = featuredRecipe?.tags || [];
 
   const top10Ingredients = useMemo(() => {
     if (!showTop10 || !realRecipes.length || !ingredientsList.length) return [];
@@ -325,8 +331,8 @@ const Home = () => {
       <section className="px-4 mt-2">
         <div className="grid grid-cols-2 gap-2">
           {[
-            { id: 'smart', bg: 'Смарт', en: 'Smart' },
             { id: 'newest', bg: 'Най-нови', en: 'Newest' },
+            { id: 'smart', bg: 'Смарт', en: 'Smart' },
             { id: 'top', bg: 'Топ оценени', en: 'Top Rated' },
             { id: 'popular', bg: 'Най-гледани', en: 'Most Viewed' }
           ].map(tab => (
@@ -418,7 +424,7 @@ const Home = () => {
 
             const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
             const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
-            const tags = getRecipeTags(recipe, ingredientsList);
+            const tags = recipe.tags || [];
 
             return (
               <div key={recipe.id} className="bg-surface-dark/90 backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:border-primary/50 transition-colors flex flex-col group cursor-pointer" onClick={() => navigate(`/recipe/${recipe.id}`)}>

@@ -13,6 +13,7 @@ import { CUISINES } from '../../data/cuisines';
 import { ROLES } from '../../constants/roles';
 import { getRootCategories, getSubCategories } from '../../data/recipe_categories';
 import { REPUTATION_POINTS } from '../../lib/reputationUtils';
+import { getRecipeTags } from '../../lib/recipeMetaUtils';
 
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
@@ -296,6 +297,8 @@ const ManageRecipes = () => {
         updatedAt: new Date().toISOString()
       };
 
+      recipeData.tags = getRecipeTags(recipeData, ingredientsList);
+
       if (editingId) {
         // Archive before update
         await archiveVersion('recipes', editingId, user.uid, user.email, 'UPDATE');
@@ -519,7 +522,7 @@ const ManageRecipes = () => {
       for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
         const batch = writeBatch(db);
         rows.slice(offset, offset + BATCH_SIZE).forEach(row => {
-          batch.set(doc(db, 'recipes', row.slug), { ...row, updatedAt: now, createdAt: now }, { merge: true });
+          batch.set(doc(db, 'recipes', row.slug), { ...row, tags: getRecipeTags(row, ingredientsList), updatedAt: now, createdAt: now }, { merge: true });
         });
         await batch.commit();
       }
@@ -531,6 +534,29 @@ const ManageRecipes = () => {
       setCsvStatus('error');
       setTimeout(() => setCsvStatus(''), 4000);
     }
+  };
+
+  const handleRecalculateTags = async () => {
+    if (!window.confirm(isBg ? 'Сигурни ли сте, че искате да преизчислите таговете на ВСИЧКИ рецепти? Това може да отнеме известно време.' : 'Are you sure you want to recalculate tags for ALL recipes?')) return;
+    setLoading(true);
+    try {
+      const BATCH_SIZE = 400;
+      let count = 0;
+      for (let offset = 0; offset < recipes.length; offset += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        recipes.slice(offset, offset + BATCH_SIZE).forEach(r => {
+          const newTags = getRecipeTags(r, ingredientsList);
+          batch.update(doc(db, 'recipes', r.id), { tags: newTags });
+          count++;
+        });
+        await batch.commit();
+      }
+      alert(isBg ? `Успешно обновени ${count} рецепти!` : `Successfully updated ${count} recipes!`);
+    } catch (err) {
+      console.error(err);
+      alert('Error updating tags: ' + err.message);
+    }
+    setLoading(false);
   };
 
   const handleServingsChange = (newServingsVal) => {
@@ -749,6 +775,14 @@ const ManageRecipes = () => {
           <div className="flex items-center gap-2">
             {isPowerUser && (
               <>
+                <button
+                  onClick={handleRecalculateTags}
+                  title={isBg ? 'Преизчисли Тагове' : 'Recalculate Tags'}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-[11px] font-bold border border-amber-500/20"
+                >
+                  <span className="material-symbols-outlined text-[16px]">label</span>
+                  {isBg ? 'Тагове' : 'Tags'}
+                </button>
                 <button
                   onClick={handleExportCSV}
                   title={isBg ? 'Експорт CSV' : 'Export CSV'}
