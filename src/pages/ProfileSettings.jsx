@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { logActivity } from '../lib/activityLogger';
 
 const ProfileSettings = () => {
   const { user, logout, isGuest, isAdmin, isOwner, isModerator, isUser, resendVerificationEmail } = useAuth();
@@ -169,8 +170,8 @@ const ProfileSettings = () => {
         <div className="mt-5 text-center">
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.profile?.nickname || user.name || 'Потребител'}</h1>
           <p className="text-primary/80 font-bold text-xs uppercase tracking-widest mt-1">
-            {user.reputation?.label && !isGuest ? `${user.reputation.label} • ` : ''}
-            {isAdmin ? (isBg ? 'Администратор' : 'Administrator') : isOwner ? (isBg ? 'Собственик' : 'Owner') : isGuest ? (isBg ? 'Гост' : 'Guest') : (isBg ? 'Потребител' : 'Registered User')}
+            {user.reputation && !isGuest ? `${isBg ? (user.reputation.label || 'Новак') : (user.reputation.label_en || 'Novice')} • ` : ''}
+            {isAdmin ? (isBg ? 'Администратор' : 'Administrator') : isOwner ? (isBg ? 'Собственик' : 'Owner') : isModerator ? (isBg ? 'Модератор' : 'Moderator') : isGuest ? (isBg ? 'Гост' : 'Guest') : (isBg ? 'Потребител' : 'Registered User')}
           </p>
           {user.email && <p className="text-slate-400 text-sm mt-1">{user.email}</p>}
           {!user.isVerified && !isGuest && (
@@ -237,6 +238,33 @@ const ProfileSettings = () => {
           </div>
         )}
       </section>
+
+      {user.invited_role && (
+        <section className="mt-4 px-4">
+          <button 
+            onClick={async () => {
+              try {
+                await updateDoc(doc(db, 'users', user.uid), {
+                  'status.level': user.invited_role,
+                  invited_role: null
+                });
+                await logActivity(user.uid, user.email, 'accept_role_invite', `Accepted invite for role: ${user.invited_role}`);
+                alert(i18n.language === 'bg' ? 'Поканата е приета успешно! Моля, презаредете страницата.' : 'Invitation accepted successfully! Please refresh.');
+                window.location.reload();
+              } catch(e) {
+                console.error(e);
+                alert(i18n.language === 'bg' ? 'Възникна грешка.' : 'An error occurred.');
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 border border-[#b8860b]/40 text-[#b8860b] bg-[#b8860b]/10 py-3 rounded-2xl hover:bg-[#b8860b]/20 active:scale-95 transition-all font-extrabold shadow-[0_0_15px_rgba(184,134,11,0.2)]"
+          >
+            <span className="material-symbols-outlined">workspace_premium</span>
+            {i18n.language === 'bg' 
+              ? (user.invited_role === 'moderator' ? 'Кандидатствай за Модератор' : 'Кандидатствай за Администратор')
+              : (user.invited_role === 'moderator' ? 'Accept Moderator Invite' : 'Accept Admin Invite')}
+          </button>
+        </section>
+      )}
 
       {!isGuest && (
         <section className="mt-6 px-4">

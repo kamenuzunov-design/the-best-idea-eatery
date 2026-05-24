@@ -150,7 +150,8 @@ export const AuthProvider = ({ children }) => {
             profile: userData.profile,
             reputation: userData.reputation,
             preferences: userData.preferences,
-            status: userData.status
+            status: userData.status,
+            invited_role: userData.invited_role || null
           });
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -281,7 +282,8 @@ export const AuthProvider = ({ children }) => {
           profile: updatedData.profile,
           reputation: updatedData.reputation,
           preferences: updatedData.preferences,
-          status: updatedData.status
+          status: updatedData.status,
+          invited_role: updatedData.invited_role || null
         }));
       }
     } catch (error) {

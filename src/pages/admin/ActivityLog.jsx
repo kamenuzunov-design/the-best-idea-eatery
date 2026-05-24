@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { collection, query, orderBy, onSnapshot, writeBatch, getDocs, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -22,7 +22,10 @@ const ActivityLog = () => {
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterKey, setFilterKey] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterKey = searchParams.get('action');
+  const filterEmail = searchParams.get('email');
+  
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
   useEffect(() => {
@@ -108,7 +111,8 @@ const ActivityLog = () => {
       await batch.commit();
       
       await logActivity(user.uid, user.auth?.email || user.email, 'clear_filtered_logs', `Cleared activity logs for action: ${filterKey}`);
-      setFilterKey(null); // Reset filter
+      searchParams.delete('action');
+      setSearchParams(searchParams);
     } catch (error) {
       console.error("Error deleting filtered logs:", error);
       alert(isBg ? 'Грешка при изтриване на филтрираните записи.' : 'Error deleting filtered logs.');
@@ -122,7 +126,12 @@ const ActivityLog = () => {
     return date.toLocaleString(isBg ? 'bg-BG' : 'en-US');
   };
 
-  const displayedLogs = filterKey ? logs.filter(log => log.action === filterKey) : logs;
+  const displayedLogs = logs.filter(log => {
+    let match = true;
+    if (filterKey && log.action !== filterKey) match = false;
+    if (filterEmail && log.userEmail !== filterEmail) match = false;
+    return match;
+  });
 
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
@@ -164,13 +173,13 @@ const ActivityLog = () => {
           <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-primary/10 border border-primary/30 rounded-xl p-3">
             <div className="flex items-center gap-2 text-sm text-primary">
               <button 
-                onClick={() => setFilterKey(null)}
+                onClick={() => { searchParams.delete('action'); searchParams.delete('email'); setSearchParams(searchParams); }}
                 className="flex items-center justify-center p-1 rounded hover:bg-primary/20 hover:text-rose-500 transition-colors"
                 title={isBg ? 'Изчисти филтъра' : 'Clear Filter'}
               >
                 <span className="material-symbols-outlined text-[18px]">filter_alt_off</span>
               </button>
-              <span>{isBg ? 'Група действие:' : 'Action group:'} <strong className="font-mono bg-background-dark px-2 py-1 rounded ml-1">{filterKey}</strong></span>
+              <span>{isBg ? 'Филтър:' : 'Filter:'} <strong className="font-mono bg-background-dark px-2 py-1 rounded ml-1">{filterKey || filterEmail}</strong></span>
               <span className="text-xs ml-2 opacity-70">({displayedLogs.length} {isBg ? 'записа' : 'logs'})</span>
             </div>
             <div className="flex gap-2 items-center">
@@ -187,6 +196,31 @@ const ActivityLog = () => {
                 title={isBg ? 'Изтрий групата' : 'Delete Group'}
               >
                 <span className="material-symbols-outlined text-[18px]">delete</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {filterEmail && !filterKey && (
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-primary/10 border border-primary/30 rounded-xl p-3">
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <button 
+                onClick={() => { searchParams.delete('email'); setSearchParams(searchParams); }}
+                className="flex items-center justify-center p-1 rounded hover:bg-primary/20 hover:text-rose-500 transition-colors"
+                title={isBg ? 'Изчисти филтъра' : 'Clear Filter'}
+              >
+                <span className="material-symbols-outlined text-[18px]">filter_alt_off</span>
+              </button>
+              <span>{isBg ? 'Потребител:' : 'User:'} <strong className="font-mono bg-background-dark px-2 py-1 rounded ml-1">{filterEmail}</strong></span>
+              <span className="text-xs ml-2 opacity-70">({displayedLogs.length} {isBg ? 'записа' : 'logs'})</span>
+            </div>
+            <div className="flex gap-2 items-center">
+              <button 
+                onClick={() => handleExport(displayedLogs)}
+                className="text-primary hover:bg-primary/20 bg-background-dark/50 p-2 rounded flex items-center transition-colors"
+                title={isBg ? 'Свали групата' : 'Export Group'}
+              >
+                <span className="material-symbols-outlined text-[18px]">download</span>
               </button>
             </div>
           </div>
@@ -212,7 +246,7 @@ const ActivityLog = () => {
                 <div key={log.id} className="bg-surface-dark/50 border border-primary/10 rounded-xl p-4 shadow-sm group hover:border-primary/30 transition-colors">
                   <div className="flex justify-between items-start mb-2">
                     <button 
-                      onClick={() => setFilterKey(log.action)}
+                      onClick={() => { searchParams.set('action', log.action); setSearchParams(searchParams); }}
                       title={isBg ? 'Филтрирай по това действие' : 'Filter by this action'}
                       className="text-xs font-bold text-primary/80 uppercase bg-primary/10 hover:bg-primary/20 hover:text-primary transition-colors px-2 py-0.5 rounded cursor-pointer"
                     >
@@ -223,7 +257,12 @@ const ActivityLog = () => {
                   <p className="text-sm text-slate-200 mb-1">{log.details}</p>
                   <p className="text-xs text-slate-500 font-mono flex items-center gap-1">
                     <span className="material-symbols-outlined text-[14px]">person</span>
-                    {log.userEmail}
+                    <button 
+                      onClick={() => { searchParams.set('email', log.userEmail); setSearchParams(searchParams); }}
+                      className="hover:text-primary transition-colors hover:underline"
+                    >
+                      {log.userEmail}
+                    </button>
                   </p>
                 </div>
               ))}
@@ -246,13 +285,20 @@ const ActivityLog = () => {
                         <td className="px-4 py-1.5 whitespace-nowrap text-[11px] text-slate-500">{formatDate(log.timestamp)}</td>
                         <td className="px-4 py-1.5 whitespace-nowrap">
                           <button 
-                            onClick={() => setFilterKey(log.action)}
+                            onClick={() => { searchParams.set('action', log.action); setSearchParams(searchParams); }}
                             className="text-xs font-bold text-primary/80 uppercase hover:text-primary transition-colors"
                           >
                             {log.action}
                           </button>
                         </td>
-                        <td className="px-4 py-1.5 whitespace-nowrap font-mono text-xs">{log.userEmail}</td>
+                        <td className="px-4 py-1.5 whitespace-nowrap font-mono text-xs">
+                          <button 
+                            onClick={() => { searchParams.set('email', log.userEmail); setSearchParams(searchParams); }}
+                            className="hover:text-primary transition-colors hover:underline"
+                          >
+                            {log.userEmail}
+                          </button>
+                        </td>
                         <td className="px-4 py-1.5">{log.details}</td>
                       </tr>
                     ))}

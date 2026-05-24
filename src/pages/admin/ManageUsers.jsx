@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, getDocs, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -50,6 +50,27 @@ const ManageUsers = () => {
   });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = React.useRef(null);
+
+  const [userRecipesCount, setUserRecipesCount] = useState({ published: 0, edited: 0 });
+
+  useEffect(() => {
+    if (editingUser) {
+      const fetchCounts = async () => {
+        try {
+          const qAdd = query(collection(db, 'activity_logs'), where('userId', '==', editingUser.id), where('action', '==', 'add_recipe'));
+          const snapAdd = await getDocs(qAdd);
+          const qEdit = query(collection(db, 'activity_logs'), where('userId', '==', editingUser.id), where('action', '==', 'edit_recipe'));
+          const snapEdit = await getDocs(qEdit);
+          setUserRecipesCount({ published: snapAdd.size, edited: snapEdit.size });
+        } catch(e) {
+          console.error(e);
+        }
+      };
+      fetchCounts();
+    } else {
+      setUserRecipesCount({ published: 0, edited: 0 });
+    }
+  }, [editingUser]);
 
   useEffect(() => {
     console.log("Fetching users...");
@@ -163,6 +184,13 @@ const ManageUsers = () => {
       bioBg: u.profile?.bio_bg || u.profile?.bio || '', // Fallback to old bio field if exists
       bioEn: u.profile?.bio_en || '',
       avatar: u.profile?.avatar || '',
+      location: {
+        cityBg: u.profile?.location?.city_bg || '',
+        cityEn: u.profile?.location?.city_en || '',
+        countryBg: u.profile?.location?.country_bg || '',
+        countryEn: u.profile?.location?.country_en || '',
+        showLocation: u.profile?.location?.show_location ?? true
+      },
       preferences: {
         diet: u.preferences?.diet || [],
         exclusions: u.preferences?.exclusions || [],
@@ -220,6 +248,11 @@ const ManageUsers = () => {
         'profile.bio_bg': profileForm.bioBg,
         'profile.bio_en': profileForm.bioEn,
         'profile.avatar': profileForm.avatar,
+        'profile.location.city_bg': profileForm.location.cityBg,
+        'profile.location.city_en': profileForm.location.cityEn,
+        'profile.location.country_bg': profileForm.location.countryBg,
+        'profile.location.country_en': profileForm.location.countryEn,
+        'profile.location.show_location': profileForm.location.showLocation,
         'preferences': profileForm.preferences,
         'name': profileForm.nickname // keep legacy field synced
       });
@@ -521,7 +554,7 @@ const ManageUsers = () => {
       {/* Profile Modal */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh]">
+          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[80vh] mb-12">
             <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
               <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">manage_accounts</span>
@@ -641,10 +674,88 @@ const ManageUsers = () => {
                         </div>
                       </div>
 
-                      <div>
+                      {/* Location Section */}
+                      <div className="pt-2 border-t border-primary/20">
+                        <h4 className="text-sm font-bold text-primary flex items-center gap-2 mb-3">
+                          <span className="material-symbols-outlined text-[18px]">location_on</span>
+                          {isBg ? 'Местоположение' : 'Location'}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Град (BG)' : 'City (BG)'}</label>
+                            <input 
+                              type="text" 
+                              disabled={!canEdit}
+                              value={profileForm.location.cityBg} 
+                              onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, cityBg: e.target.value}})}
+                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Град (EN)' : 'City (EN)'}</label>
+                            <input 
+                              type="text" 
+                              disabled={!canEdit}
+                              value={profileForm.location.cityEn} 
+                              onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, cityEn: e.target.value}})}
+                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Държава (BG)' : 'Country (BG)'}</label>
+                            <input 
+                              type="text" 
+                              disabled={!canEdit}
+                              value={profileForm.location.countryBg} 
+                              onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, countryBg: e.target.value}})}
+                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Държава (EN)' : 'Country (EN)'}</label>
+                            <input 
+                              type="text" 
+                              disabled={!canEdit}
+                              value={profileForm.location.countryEn} 
+                              onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, countryEn: e.target.value}})}
+                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <input
+                             type="checkbox"
+                             id="showLocationAdmin"
+                             disabled={!canEdit}
+                             checked={profileForm.location.showLocation}
+                             onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, showLocation: e.target.checked}})}
+                             className="accent-primary w-4 h-4"
+                           />
+                           <label htmlFor="showLocationAdmin" className="text-xs text-slate-300 select-none">
+                             {isBg ? 'Показвай местоположението в профила' : 'Show location on profile'}
+                           </label>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-primary/20">
                         <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{isBg ? 'Имейл (Само за четене)' : 'Email (Read-only)'}</label>
-                        <div className="w-full bg-background-dark/30 border border-primary/10 rounded-xl p-2 text-slate-500 text-xs font-mono">
-                          {editingUser.auth?.email || editingUser.email || 'N/A'}
+                        <div className="w-full bg-background-dark/30 border border-primary/10 rounded-xl p-2 text-slate-500 text-xs font-mono flex items-center justify-between">
+                          <span>{editingUser.auth?.email || editingUser.email || 'N/A'}</span>
+                          {(editingUser.auth?.email || editingUser.email) && (
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const email = editingUser.auth?.email || editingUser.email;
+                                navigate(`/admin/activity-log?email=${encodeURIComponent(email)}`);
+                              }}
+                              className="text-primary hover:text-[#b8860b] transition-colors flex items-center gap-1"
+                              title={isBg ? 'Виж дневника на събития за този потребител' : 'View activity log for this user'}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">history</span>
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -737,14 +848,66 @@ const ManageUsers = () => {
                 <div className="pt-4 border-t border-primary/10 grid grid-cols-2 gap-4">
                    <div>
                       <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{isBg ? 'Репутация' : 'Reputation'}</label>
-                      <p className="text-primary text-xs font-bold">{editingUser.reputation?.score || 0} pts ({editingUser.reputation?.label || 'Novice'})</p>
+                      <p className="text-primary text-xs font-bold">{editingUser.reputation?.score || 0} pts ({isBg ? (editingUser.reputation?.label || 'Новак') : (editingUser.reputation?.label_en || 'Novice')})</p>
                    </div>
                    <div>
                       <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{isBg ? 'Член от' : 'Member since'}</label>
                       <p className="text-slate-400 text-[10px]">{editingUser.status?.created_at ? new Date(editingUser.status.created_at).toLocaleDateString(isBg ? 'bg-BG' : 'en-US') : 'N/A'}</p>
                    </div>
+                   <div>
+                      <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{isBg ? 'Въведени рецепти' : 'Added Recipes'}</label>
+                      <p className="text-slate-300 text-[10px] font-bold">{userRecipesCount.published}</p>
+                   </div>
+                   <div>
+                      <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{isBg ? 'Редактирани рецепти' : 'Edited Recipes'}</label>
+                      <p className="text-slate-300 text-[10px] font-bold">{userRecipesCount.edited}</p>
+                   </div>
                 </div>
               </form>
+
+              {/* Invite to Role */}
+              {user.role === ROLES.OWNER && (
+                (() => {
+                  const targetRole = editingUser.status?.level || ROLES.USER;
+                  if (targetRole === ROLES.USER || targetRole === ROLES.MODERATOR) {
+                    const isInvited = editingUser.invited_role;
+                    const nextRole = targetRole === ROLES.USER ? ROLES.MODERATOR : ROLES.ADMIN;
+                    const labelBg = targetRole === ROLES.USER ? 'Покани за Модератор' : 'Покани за Администратор';
+                    const labelEn = targetRole === ROLES.USER ? 'Invite for Moderator' : 'Invite for Admin';
+                    
+                    return (
+                      <div className="pt-4 mt-4 border-t border-primary/20 flex justify-center">
+                        <button 
+                          type="button"
+                          disabled={isInvited === nextRole}
+                          onClick={async () => {
+                            try {
+                              await updateDoc(doc(db, 'users', editingUser.id), {
+                                invited_role: nextRole
+                              });
+                              // update local state so the button disabled state re-renders
+                              editingUser.invited_role = nextRole;
+                              alert(isBg ? 'Поканата е изпратена успешно.' : 'Invitation sent successfully.');
+                              logActivity(user.uid, user.email, 'invite_role', `Invited ${editingUser.auth?.email || editingUser.email || editingUser.id} to ${nextRole}`);
+                            } catch(e) {
+                              console.error(e);
+                              alert('Error sending invite');
+                            }
+                          }}
+                          className="w-full flex items-center justify-center gap-2 bg-[#b8860b]/10 border border-[#b8860b]/30 text-[#b8860b] py-2 rounded-xl text-xs font-bold hover:bg-[#b8860b]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(184,134,11,0.1)]"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">mail</span>
+                          {isInvited === nextRole 
+                            ? (isBg ? 'Поканата е изпратена' : 'Invitation sent')
+                            : (isBg ? labelBg : labelEn)}
+                        </button>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
+
             </div>
 
             <div className="p-4 border-t border-primary/20 bg-background-dark flex justify-end gap-3">

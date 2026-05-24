@@ -334,7 +334,13 @@ const ManageRecipes = () => {
       handleCancelEdit();
     } catch (error) {
       console.error("Error saving recipe:", error);
-      alert(isBg ? 'Грешка при запазване: ' + error.message : 'Error saving: ' + error.message);
+      let errorMsg = error.message;
+      if (errorMsg.toLowerCase().includes('missing or insufficient permissions')) {
+        errorMsg = isBg 
+          ? 'Нямате достатъчно права за тази операция (Проверете Firestore Rules).' 
+          : 'You do not have sufficient permissions for this operation (Check Firestore Rules).';
+      }
+      alert(isBg ? 'Грешка при запазване: ' + errorMsg : 'Error saving: ' + errorMsg);
     }
   };
 
@@ -695,6 +701,19 @@ const ManageRecipes = () => {
     if (user?.role === ROLES.USER && r.publisher_id !== user.uid) return false;
 
     const isDeleted = r.is_deleted === true;
+    
+    // Regular users see all their non-deleted recipes (both active and pending)
+    if (user?.role === ROLES.USER) {
+      if (isDeleted) return false;
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        if (!(r.title_bg?.toLowerCase() || '').includes(term) && !(r.title_en?.toLowerCase() || '').includes(term)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     const isActive = r.is_active !== false && !isDeleted;
     const isDeactivated = r.is_active === false && !isDeleted;
     
@@ -821,13 +840,13 @@ const ManageRecipes = () => {
           </div>
         </div>
 
-        <div className="flex gap-2 text-xs font-bold overflow-x-auto hide-scrollbar pb-1">
-          <button onClick={() => setStatusFilter('active')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'active' ? 'bg-primary text-background-dark border-primary' : 'bg-surface-dark text-slate-400 border-primary/30 hover:bg-primary/10'}`}>{isBg ? 'Активни' : 'Active'}</button>
-          <button onClick={() => setStatusFilter('deactivated')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deactivated' ? 'bg-amber-500 text-background-dark border-amber-500' : 'bg-surface-dark text-slate-400 border-amber-500/30 hover:bg-amber-500/10'}`}>{isBg ? 'Деактивирани' : 'Deactivated'}</button>
-          {user?.role !== ROLES.USER && (
+        {user?.role !== ROLES.USER && (
+          <div className="flex gap-2 text-xs font-bold overflow-x-auto hide-scrollbar pb-1">
+            <button onClick={() => setStatusFilter('active')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'active' ? 'bg-primary text-background-dark border-primary' : 'bg-surface-dark text-slate-400 border-primary/30 hover:bg-primary/10'}`}>{isBg ? 'Активни' : 'Active'}</button>
+            <button onClick={() => setStatusFilter('deactivated')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deactivated' ? 'bg-amber-500 text-background-dark border-amber-500' : 'bg-surface-dark text-slate-400 border-amber-500/30 hover:bg-amber-500/10'}`}>{isBg ? 'Деактивирани' : 'Deactivated'}</button>
             <button onClick={() => setStatusFilter('deleted')} className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deleted' ? 'bg-rose-500 text-white border-rose-500' : 'bg-surface-dark text-slate-400 border-rose-500/30 hover:bg-rose-500/10'}`}>{isBg ? 'Изтрити' : 'Deleted'}</button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="p-4 overflow-y-auto">
@@ -1243,7 +1262,7 @@ const ManageRecipes = () => {
                     <div className="h-24 w-full relative">
                       <img src={r.images?.main || placeholderImg} alt={rName} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-background-dark to-transparent"></div>
-                      {!isActive && !isDeleted && <div className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-background-dark text-[10px] font-bold rounded-full">INACTIVE</div>}
+                      {!isActive && !isDeleted && <div className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-background-dark text-[10px] font-bold rounded-full">{user?.role === ROLES.USER ? (isBg ? 'В ИЗЧАКВАНЕ' : 'PENDING') : 'INACTIVE'}</div>}
                     </div>
                     <div className="p-3 flex justify-between items-center -mt-6 relative z-10">
                       <div className="flex-1 min-w-0 pr-2">
