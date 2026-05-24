@@ -49,7 +49,8 @@ const ManageAds = () => {
     endDate: '',
     priority: 1,
     isActive: true,
-    campaignId: ''
+    campaignId: '',
+    targetKeywords: ''
   });
 
   const [uploading, setUploading] = useState(false);
@@ -110,8 +111,14 @@ const ManageAds = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      let keywordsArr = [];
+      if (formData.type === 'native' && formData.targetKeywords) {
+        keywordsArr = formData.targetKeywords.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      }
+
       const data = {
         ...formData,
+        targetKeywords: keywordsArr, // save as array
         updatedAt: serverTimestamp()
       };
 
@@ -150,7 +157,8 @@ const ManageAds = () => {
       endDate: '',
       priority: 1,
       isActive: true,
-      campaignId: ''
+      campaignId: '',
+      targetKeywords: ''
     });
   };
 
@@ -169,7 +177,8 @@ const ManageAds = () => {
       endDate: ad.endDate || '',
       priority: ad.priority || 1,
       isActive: ad.isActive ?? true,
-      campaignId: ad.campaignId || ''
+      campaignId: ad.campaignId || '',
+      targetKeywords: Array.isArray(ad.targetKeywords) ? ad.targetKeywords.join(', ') : (ad.targetKeywords || '')
     });
     setIsModalOpen(true);
   };
@@ -240,31 +249,32 @@ const ManageAds = () => {
 
   return (
     <div className="flex-1 bg-background-dark pb-24">
-      <header className="p-6 bg-surface-dark border-b border-primary/20 flex justify-between items-center sticky top-0 z-20">
+      <header className="p-6 bg-surface-dark border-b border-primary/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-20">
         <div>
           <h1 className="text-xl font-black text-primary uppercase tracking-tighter">Управление на Реклами</h1>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{isBg ? 'Управление на кампании и реклами' : 'Ad Management & Campaigns'}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <button 
             onClick={handleOpenSettings}
-            className="bg-surface-dark border border-primary/30 text-primary px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-[10px] font-black uppercase"
+            className="flex-1 md:flex-none bg-surface-dark border border-primary/30 text-primary px-4 py-3 md:py-0 md:h-12 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-[10px] sm:text-xs font-black uppercase"
           >
             <span className="material-symbols-outlined text-sm">gavel</span>
             {isBg ? 'Правила за Реклама' : 'Ad Rules'}
           </button>
           <button 
             onClick={handleCreateCampaign}
-            className="bg-surface-dark border border-primary/30 text-primary px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-xs font-bold uppercase"
+            className="flex-1 md:flex-none bg-surface-dark border border-primary/30 text-primary px-4 py-3 md:py-0 md:h-12 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-[10px] sm:text-xs font-bold uppercase"
           >
             <span className="material-symbols-outlined text-sm">folder</span>
             {isBg ? 'Кампания' : 'Campaign'}
           </button>
           <button 
             onClick={() => { resetForm(); setEditingAd(null); setIsModalOpen(true); }}
-            className="bg-primary text-background-dark size-12 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+            className="w-full md:w-auto bg-primary text-background-dark px-4 py-3 md:py-0 md:h-12 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all text-[10px] sm:text-xs font-black uppercase"
           >
             <span className="material-symbols-outlined font-black">add</span>
+            <span>{isBg ? 'Нова Реклама' : 'New Ad'}</span>
           </button>
         </div>
       </header>
@@ -283,7 +293,7 @@ const ManageAds = () => {
           ads.map(ad => (
             <div key={ad.id} className="bg-surface-dark/80 rounded-2xl border border-primary/10 overflow-hidden shadow-xl flex flex-col">
               <div className="h-40 bg-background-dark relative group">
-                {ad.type === 'image' ? (
+                {ad.type === 'image' || ad.type === 'native' ? (
                   <img src={ad.contentUrl} className="w-full h-full object-cover opacity-60" alt="Ad" />
                 ) : ad.type === 'video' ? (
                   <div className="w-full h-full flex items-center justify-center bg-slate-900">
@@ -368,14 +378,27 @@ const ManageAds = () => {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Тип Реклама</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['image', 'video', 'html'].map(t => (
+                <div className="grid grid-cols-4 gap-2">
+                  {['image', 'video', 'html', 'native'].map(t => (
                     <button key={t} type="button" onClick={() => setFormData({...formData, type: t})} className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.type === t ? 'bg-primary text-background-dark' : 'bg-background-dark text-slate-500 border border-primary/10'}`}>
                       {t}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {formData.type === 'native' && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Ключови думи (Съставки)</label>
+                  <input 
+                    value={formData.targetKeywords} 
+                    onChange={e => setFormData({...formData, targetKeywords: e.target.value})} 
+                    className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
+                    placeholder="напр. зехтин, домат, olive oil" 
+                  />
+                  <p className="text-[9px] text-slate-500 px-1">Рекламата ще се показва само в рецепти, съдържащи поне една от тези съставки. Разделете със запетая.</p>
+                </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Медия / HTML код</label>

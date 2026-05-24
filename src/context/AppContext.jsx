@@ -1,43 +1,66 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from './AuthContext';
 import { mockRecipes } from '../data/mockRecipes';
 
 const AppContext = createContext();
 
-// Mock Data moved to src/data/mockRecipes.js
-
 export const AppProvider = ({ children }) => {
-  const [pantry, setPantry] = useState([
-    {
-      id: 'p1',
-      ingredientId: 'i1',
-      name: 'Wagyu Ribeye',
-      nameBg: 'Стек Вагю',
-      category: 'Proteins',
-      categoryBg: 'Протеини',
-      quantity: 1.2,
-      unit: 'kg',
-      expirationDate: '2026-05-15T12:00:00.000Z', // 2 days from baseline
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBhZljcxKLWpJQPXH1Kmbr0ATAm0M4ZofD6DppF6jCoSNSfieCTyi_41E38xje8gMuvNkgHQnUWWLhWtdMrtS7BC_qM1g1j9NbZpwQ_KyeNKiI68hXXIvxWTjZOYLG-V5KG3J4n1nV2im1DmosFCpkjbRSKG3594itTIl6WEZBQV5p3A3N0rmBDpha86ljBdJPyBGH3oIvewlQXtef1Mt9AWM7s5KjA-HjVTwFvf4ALG7SifmNR9xZKMLXvkkW84fdbb9OoOIe6PbU'
-    },
-    {
-      id: 'p2',
-      ingredientId: 'i2',
-      name: 'White Truffles',
-      nameBg: 'Бели трюфели',
-      category: 'Specialty',
-      categoryBg: 'Специални',
-      quantity: 45,
-      unit: 'g',
-      expirationDate: '2026-05-23T12:00:00.000Z', // 10 days
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAocbB6zvSzggnsrJyiqU46UJY-joO_PGOKH1gaeXGAw85D70m_DQUEGOyDv0k9uzUgeMgG5H-VZ5T6MZBHuiWvYSI_xeFeJuOC-PYMYzF6jqu2Ut4AoSt59upZ8a6dARNWEc-PASuLDj7Dy6mgh-cxZIDex3Xa_Gn1oaKahMAqXjt5hcLZ94FnwZr3OEZ4vvDH5HhdBx3Ge-QG20bsza-3TzksXxTSWwW7bta0lUgZ2Eo7wpDhGJJLQPmtqcfW1MBUCHrPcgNx5M8'
-    }
-  ]);
-
+  const { user } = useAuth();
+  const [pantry, setPantry] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
 
-  const addPantryItem = (item) => {
-    setPantry(prev => [...prev, { ...item, id: `p${Date.now()}` }]);
+  // Sync pantry from Firestore
+  useEffect(() => {
+    if (!user || user.role === 'guest') {
+      setPantry([]);
+      return;
+    }
+
+    const pantryRef = collection(db, 'users', user.uid, 'pantry');
+    const unsubscribe = onSnapshot(pantryRef, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPantry(items);
+    }, (error) => {
+      console.error("Error fetching pantry:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const addPantryItem = async (item) => {
+    if (!user || user.role === 'guest') return;
+    try {
+      const pantryRef = collection(db, 'users', user.uid, 'pantry');
+      await addDoc(pantryRef, {
+        ...item,
+        addedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error("Error adding pantry item:", err);
+    }
+  };
+
+  const updatePantryItem = async (id, data) => {
+    if (!user || user.role === 'guest') return;
+    try {
+      const itemRef = doc(db, 'users', user.uid, 'pantry', id);
+      await updateDoc(itemRef, data);
+    } catch (err) {
+      console.error("Error updating pantry item:", err);
+    }
+  };
+
+  const removePantryItem = async (id) => {
+    if (!user || user.role === 'guest') return;
+    try {
+      const itemRef = doc(db, 'users', user.uid, 'pantry', id);
+      await deleteDoc(itemRef);
+    } catch (err) {
+      console.error("Error deleting pantry item:", err);
+    }
   };
 
   const generateShoppingList = (missingItems) => {
@@ -49,6 +72,8 @@ export const AppProvider = ({ children }) => {
     <AppContext.Provider value={{
       pantry,
       addPantryItem,
+      updatePantryItem,
+      removePantryItem,
       recipes: mockRecipes,
       shoppingList,
       generateShoppingList

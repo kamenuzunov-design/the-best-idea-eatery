@@ -32,6 +32,11 @@ const RecipeDetail = () => {
   const [currentServings, setCurrentServings] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
+  
+  // Native Ads State
+  const [nativeAds, setNativeAds] = useState([]);
+  const [matchedAd, setMatchedAd] = useState(null);
+  const [matchedIngredientIdx, setMatchedIngredientIdx] = useState(-1);
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -135,6 +140,19 @@ const RecipeDetail = () => {
               setParentRecipe({ id: parentSnap.id, ...parentSnap.data() });
             }
           }
+
+          // Fetch native ads
+          try {
+            const adsQuery = query(
+              collection(db, 'ads'),
+              where('type', '==', 'native'),
+              where('isActive', '==', true)
+            );
+            const adsSnap = await getDocs(adsQuery);
+            setNativeAds(adsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          } catch (aErr) {
+            console.warn("Ads fetch failed:", aErr.message);
+          }
         }
       } catch (err) {
         console.error("Error fetching recipe:", err);
@@ -145,6 +163,62 @@ const RecipeDetail = () => {
 
     if (id) fetchRecipe();
   }, [id, user, awardPoints]);
+
+  // Match Native Ads to Ingredients
+  useEffect(() => {
+    if (recipe?.ingredients && nativeAds.length > 0 && !matchedAd) {
+      let foundAd = null;
+      let foundIdx = -1;
+
+      for (let i = 0; i < recipe.ingredients.length; i++) {
+        const ing = recipe.ingredients[i];
+        const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
+        const ingNameBg = (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id || '').toLowerCase();
+        const ingNameEn = (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id || '').toLowerCase();
+
+        for (const ad of nativeAds) {
+          if (ad.targetKeywords && Array.isArray(ad.targetKeywords)) {
+            const matches = ad.targetKeywords.some(kw => 
+              ingNameBg.includes(kw) || ingNameEn.includes(kw)
+            );
+            if (matches) {
+              foundAd = ad;
+              foundIdx = i;
+              break;
+            }
+          }
+        }
+        if (foundAd) break;
+      }
+
+      if (foundAd) {
+        setMatchedAd(foundAd);
+        setMatchedIngredientIdx(foundIdx);
+        try {
+          updateDoc(doc(db, 'ads', foundAd.id), {
+            viewsCount: increment(1)
+          });
+        } catch (e) {
+          console.warn("Failed to log ad view");
+        }
+      }
+    }
+  }, [recipe, nativeAds, ingredientsList, matchedAd]);
+
+  const handleAdClick = (ad) => {
+    try {
+      updateDoc(doc(db, 'ads', ad.id), {
+        clicksCount: increment(1)
+      });
+    } catch (e) {}
+    if (ad.linkUrl) {
+      if (ad.isLocalLink) {
+        navigate(ad.linkUrl.replace(window.location.origin, ''));
+      } else {
+        window.open(ad.linkUrl, '_blank');
+      }
+    }
+  };
 
   const analyzeRecipe = () => {
     let missingIngredients = [];
@@ -582,8 +656,9 @@ const RecipeDetail = () => {
             );
 
             return (
-              <li key={idx} className="flex justify-between items-center border-b border-primary/10 pb-3">
-                <span className="text-slate-200 font-medium">
+              <React.Fragment key={idx}>
+                <li className="flex justify-between items-center border-b border-primary/10 pb-3 mt-3">
+                  <span className="text-slate-200 font-medium">
                   {ingName}
                   {((isBg && ing.notes_bg) || (!isBg && ing.notes_en)) && (
                     <span className="text-primary/70 text-xs italic ml-2">({isBg ? ing.notes_bg : ing.notes_en})</span>
@@ -602,9 +677,37 @@ const RecipeDetail = () => {
                   )}
                 </div>
               </li>
-            );
-          })}
-        </ul>
+              {matchedAd && matchedIngredientIdx === idx && (
+                <li className="mt-2 mb-3 bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-xl p-3 flex flex-col gap-2 shadow-sm cursor-pointer hover:bg-primary/10 transition-colors group" onClick={() => handleAdClick(matchedAd)}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-primary/70 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                      {isBg ? 'Спонсорирано' : 'Sponsored'}
+                    </span>
+                    <span className="material-symbols-outlined text-[14px] text-primary/50 group-hover:text-primary transition-colors">open_in_new</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {matchedAd.contentUrl && (
+                      <div className="size-12 rounded-lg overflow-hidden shrink-0 border border-primary/20 shadow-md">
+                        <img src={matchedAd.contentUrl} alt="Ad" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="flex flex-col flex-1">
+                      <h4 className="text-slate-100 font-bold text-sm leading-tight group-hover:text-primary transition-colors">{isBg ? matchedAd.title_bg : matchedAd.title_en}</h4>
+                      {((isBg && matchedAd.description_bg) || (!isBg && matchedAd.description_en)) && (
+                        <p className="text-slate-400 text-xs mt-0.5 line-clamp-2 leading-snug">
+                          {isBg ? matchedAd.description_bg : matchedAd.description_en}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </ul>
+
+
 
         {!isReady && isPantryActive && (
           <button 
