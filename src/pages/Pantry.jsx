@@ -308,10 +308,10 @@ const Pantry = () => {
       </div>
 
       {/* Floating Add Button */}
-      <div className="fixed bottom-24 right-6 flex flex-col gap-3 z-40">
+      <div className="fixed bottom-24 left-0 right-0 max-w-md mx-auto z-40 flex justify-end px-6 pointer-events-none">
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-br from-primary to-[#b8860b] size-14 rounded-full flex items-center justify-center text-background-dark shadow-[0_5px_20px_rgba(212,175,53,0.5)] border border-white/20 hover:scale-110 active:scale-95 transition-all duration-300"
+          className="bg-gradient-to-br from-primary to-[#b8860b] size-14 rounded-full flex items-center justify-center text-background-dark shadow-[0_5px_20px_rgba(212,175,53,0.5)] border border-white/20 hover:scale-110 active:scale-95 transition-all duration-300 pointer-events-auto"
         >
           <span className="material-symbols-outlined text-3xl font-bold">add</span>
         </button>

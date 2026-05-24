@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isPowerUser() {
+      // Check if user role is admin or owner
+      let role = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status.level;
+      return role == 'admin' || role == 'owner';
+    }
+
+    // 1. User Profiles: Only the specific user can upload their own avatar, but everyone can read them
+    match /profiles/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuth() && request.auth.uid == userId;
+    }
+
+    // 2. Avatars (Admin managed): Only Admins/Owners can write, everyone can read
+    match /avatars/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuth() && isPowerUser();
+    }
+
+    // 3. Recipes: Anyone authenticated can upload images for recipes, everyone can read
+    match /recipes/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+
+    // 4. Ads: Only Admins/Owners can upload ads, everyone can read
+    match /ads/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuth() && isPowerUser();
+    }
+
+    // 5. Backups: Highly sensitive data, only Admins/Owners can read and write
+    match /backups/{allPaths=**} {
+      allow read, write: if isAuth() && isPowerUser();
+    }
+
+    // Fallback rule: deny all access to any other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
