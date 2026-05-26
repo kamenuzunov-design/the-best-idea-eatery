@@ -29,6 +29,7 @@ import CookingProgress from './pages/CookingProgress';
 import IngredientScanner from './pages/IngredientScanner';
 import AIIngredientsSearch from './pages/AIIngredientsSearch';
 import WeeklyMenuPlanner from './pages/WeeklyMenuPlanner';
+import DietaryProfileEdit from './pages/DietaryProfileEdit';
 import SeasonalMenu from './pages/SeasonalMenu';
 import CuisinesExplorer from './pages/CuisinesExplorer';
 import GourmetCommunity from './pages/GourmetCommunity';
@@ -79,6 +80,11 @@ function App() {
           <Route path="/pantry" element={
             <ProtectedRoute allowedRoles={requiresLogin}>
               <Pantry />
+            </ProtectedRoute>
+          } />
+          <Route path="/pantry/diet" element={
+            <ProtectedRoute allowedRoles={requiresLogin}>
+              <DietaryProfileEdit />
             </ProtectedRoute>
           } />
           

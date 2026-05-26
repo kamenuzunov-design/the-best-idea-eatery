@@ -11,16 +11,22 @@ const AIAssistant = () => {
     const sortedPantry = [...pantry].sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate));
     const expiringSoon = sortedPantry.slice(0, 2); 
 
+    const checkMatch = (ing, p) => {
+      const pId = p.ingredientId || p.ingredient_id || p.id;
+      const rId = ing.ingredient_id || ing.id;
+      return pId && rId && pId === rId;
+    };
+
     const suggestions = recipes.filter(recipe => {
-      return recipe.ingredients.some(ing => 
-        expiringSoon.some(p => p.name === ing.name || p.nameBg === ing.nameBg)
+      return recipe.ingredients?.some(ing => 
+        expiringSoon.some(p => checkMatch(ing, p))
       );
     });
 
     if (suggestions.length === 0) {
       const fallback = recipes.filter(recipe => {
-        return recipe.ingredients.some(ing => 
-          pantry.some(p => p.name === ing.name || p.nameBg === ing.nameBg)
+        return recipe.ingredients?.some(ing => 
+          pantry.some(p => checkMatch(ing, p))
         );
       });
       setSuggestedRecipes(fallback);

@@ -68,7 +68,10 @@ const ManageUsers = () => {
       };
       fetchCounts();
     } else {
-      setUserRecipesCount({ published: 0, edited: 0 });
+      const timer = setTimeout(() => {
+        setUserRecipesCount({ published: 0, edited: 0 });
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [editingUser]);
 

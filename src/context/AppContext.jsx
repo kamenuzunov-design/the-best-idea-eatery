@@ -15,8 +15,10 @@ export const AppProvider = ({ children }) => {
   // Sync pantry from Firestore
   useEffect(() => {
     if (!user || user.role === 'guest') {
-      setPantry([]);
-      return;
+      const timer = setTimeout(() => {
+        setPantry([]);
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     const pantryRef = collection(db, 'users', user.uid, 'pantry');
@@ -76,6 +78,7 @@ export const AppProvider = ({ children }) => {
       removePantryItem,
       recipes: mockRecipes,
       shoppingList,
+      setShoppingList,
       generateShoppingList
     }}>
       {children}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const getGroupIcon = (val) => {
@@ -25,17 +25,13 @@ const getGroupIcon = (val) => {
 
 const Pantry = () => {
   const { pantry, addPantryItem, updatePantryItem, removePantryItem } = useAppContext();
-  const { user } = useAuth();
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const isBg = i18n.language === 'bg';
-
-  const [diet, setDiet] = useState(user?.preferences?.diet || []);
-  const [allergies, setAllergies] = useState(user?.preferences?.allergies || []);
-  const [exclusions, setExclusions] = useState(user?.preferences?.exclusions || []);
-  const [isSavingPref, setIsSavingPref] = useState(false);
 
   const [ingredientsDB, setIngredientsDB] = useState([]);
   const [measurementsDB, setMeasurementsDB] = useState([]);
+  const [ingredientGroupsDB, setIngredientGroupsDB] = useState([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,8 +39,11 @@ const Pantry = () => {
   const [selectedIngredient, setSelectedIngredient] = useState(null);
   const [newItem, setNewItem] = useState({ quantity: '', unit: 'g', expirationDate: '' });
 
-  const [editingItemId, setEditingItemId] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editQuantity, setEditQuantity] = useState('');
+  const [editUnit, setEditUnit] = useState('');
+  const [editExpirationDate, setEditExpirationDate] = useState('');
 
   // Fetch reference data
   useEffect(() => {
@@ -54,43 +53,14 @@ const Pantry = () => {
         setIngredientsDB(iSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         const mSnap = await getDocs(collection(db, 'measurements'));
         setMeasurementsDB(mSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const gSnap = await getDocs(collection(db, 'ingredient_groups'));
+        setIngredientGroupsDB(gSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
         console.error(err);
       }
     };
     fetchRefs();
   }, []);
-
-  // Update User Preferences
-  const handleSavePreferences = async () => {
-    if (!user || user.role === 'guest') return;
-    setIsSavingPref(true);
-    try {
-      await updateDoc(doc(db, 'users', user.uid), {
-        'preferences.diet': diet,
-        'preferences.allergies': allergies,
-        'preferences.exclusions': exclusions
-      });
-      alert(isBg ? 'Диетичният профил е запазен!' : 'Dietary profile saved!');
-    } catch (err) {
-      console.error(err);
-      alert('Error saving preferences');
-    } finally {
-      setIsSavingPref(false);
-    }
-  };
-
-  const handleAddTag = (list, setter) => {
-    const val = prompt(isBg ? 'Въведете на АНГЛИЙСКИ (напр. vegan, gluten-free, peanuts):' : 'Enter tag in ENGLISH (e.g. vegan, peanuts):');
-    if (val && val.trim()) {
-      const lower = val.trim().toLowerCase();
-      if (!list.includes(lower)) setter([...list, lower]);
-    }
-  };
-
-  const handleRemoveTag = (list, setter, tagToRemove) => {
-    setter(list.filter(t => t !== tagToRemove));
-  };
 
   const handleSearchChange = (e) => {
     const q = e.target.value;
@@ -112,6 +82,26 @@ const Pantry = () => {
     setSelectedIngredient(ing);
     setSearchQuery(isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg));
     setFilteredIngredients([]);
+    
+    // Calculate default expiration date (currentDate + average_shelf_life_days)
+    const days = ing.meta?.average_shelf_life_days || 7;
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() + days);
+    const dateString = defaultDate.toISOString().split('T')[0];
+    
+    // Determine default unit from units_mapping if available
+    let defaultUnit = 'g';
+    if (ing.units_mapping && ing.units_mapping.length > 0) {
+      defaultUnit = ing.units_mapping[0].unit_id;
+    } else if (measurementsDB.length > 0) {
+      defaultUnit = measurementsDB[0].unit_id || measurementsDB[0].id;
+    }
+    
+    setNewItem(prev => ({
+      ...prev,
+      unit: defaultUnit,
+      expirationDate: dateString
+    }));
   };
 
   const handleAddItem = (e) => {
@@ -134,12 +124,24 @@ const Pantry = () => {
     setShowAddModal(false);
   };
 
-  const handleUpdateQuantity = (item) => {
-    if (editQuantity) {
-      updatePantryItem(item.id, { quantity: Number(editQuantity) });
-    }
-    setEditingItemId(null);
-    setEditQuantity('');
+  const handleEditClick = (item) => {
+    setEditingItem(item);
+    setEditQuantity(item.quantity);
+    setEditUnit(item.unit);
+    setEditExpirationDate(item.expirationDate || '');
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    updatePantryItem(editingItem.id, {
+      quantity: Number(editQuantity),
+      unit: editUnit,
+      expirationDate: editExpirationDate
+    });
+    setEditingItem(null);
+    setShowEditModal(false);
   };
 
   const getDaysUntilExpiration = (dateString) => {
@@ -147,73 +149,57 @@ const Pantry = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  const getGroupName = (val) => {
+    if (!val) return '-';
+    let group = ingredientGroupsDB.find(g => g.id === val || g.name?.bg === val);
+    return group ? (isBg ? group.name?.bg : group.name?.en) : val;
+  };
+
+  const getUnitName = (unitId) => {
+    if (!unitId) return '';
+    const found = measurementsDB.find(m => (m.unit_id === unitId || m.id === unitId));
+    if (found) {
+      return isBg ? (found.name_bg || found.name || unitId) : (found.name_en || found.name || unitId);
+    }
+    return unitId;
+  };
+
+  const getEditUnitsOptions = () => {
+    if (!editingItem) return ['g', 'kg', 'ml', 'pcs'];
+    const ing = ingredientsDB.find(i => i.id === editingItem.ingredientId);
+    const mappedUnits = ing?.units_mapping?.map(u => u.unit_id) || [];
+    const allUnits = Array.from(new Set([
+      ...mappedUnits,
+      ...(measurementsDB.map(m => m.unit_id || m.id))
+    ])).filter(Boolean);
+    return allUnits.length > 0 ? allUnits : ['g', 'kg', 'ml', 'pcs'];
+  };
+
   return (
     <div className="flex-1 pb-32 relative flex flex-col min-h-screen bg-background-dark">
-      {/* Dietary Profile Section */}
-      <div className="px-4 py-4 bg-surface-dark border-b border-primary/20">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-black text-slate-100 flex items-center gap-2 uppercase tracking-tighter">
-            <span className="material-symbols-outlined text-primary">health_and_safety</span>
-            {isBg ? 'Моят Диетичен Профил' : 'My Dietary Profile'}
-          </h2>
-          <button 
-            onClick={handleSavePreferences} 
-            disabled={isSavingPref}
-            className="text-xs bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg font-bold uppercase hover:bg-primary/30 transition-all active:scale-95"
-          >
-            {isSavingPref ? '...' : (isBg ? 'Запази' : 'Save')}
-          </button>
-        </div>
-        
-        <div className="space-y-3">
-          {/* Diets */}
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{isBg ? 'Диети' : 'Diets'}</span>
-              <button onClick={() => handleAddTag(diet, setDiet)} className="text-primary hover:text-white transition-colors"><span className="material-symbols-outlined text-[14px]">add_circle</span></button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {diet.length === 0 && <span className="text-xs text-slate-500 italic">{isBg ? 'Няма' : 'None'}</span>}
-              {diet.map(d => (
-                <span key={d} className="px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter flex items-center gap-1">
-                  {d} <span onClick={() => handleRemoveTag(diet, setDiet, d)} className="material-symbols-outlined text-[12px] cursor-pointer hover:text-rose-400">close</span>
-                </span>
-              ))}
-            </div>
+      {/* Dietary Profile Button */}
+      <div className="px-4 py-4 bg-surface-dark border-b border-primary/20 flex justify-between items-center shadow-md">
+        <div className="flex items-center gap-2.5">
+          <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <span className="material-symbols-outlined">health_and_safety</span>
           </div>
-          
-          {/* Allergies */}
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{isBg ? 'Алергии' : 'Allergies'}</span>
-              <button onClick={() => handleAddTag(allergies, setAllergies)} className="text-primary hover:text-white transition-colors"><span className="material-symbols-outlined text-[14px]">add_circle</span></button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {allergies.length === 0 && <span className="text-xs text-slate-500 italic">{isBg ? 'Няма' : 'None'}</span>}
-              {allergies.map(a => (
-                <span key={a} className="px-2 py-0.5 rounded border border-rose-500/30 bg-rose-500/10 text-rose-400 text-[10px] font-bold uppercase tracking-tighter flex items-center gap-1">
-                  {a} <span onClick={() => handleRemoveTag(allergies, setAllergies, a)} className="material-symbols-outlined text-[12px] cursor-pointer hover:text-white">close</span>
-                </span>
-              ))}
-            </div>
-          </div>
-          
-          {/* Exclusions */}
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{isBg ? 'Изключени храни' : 'Exclusions'}</span>
-              <button onClick={() => handleAddTag(exclusions, setExclusions)} className="text-primary hover:text-white transition-colors"><span className="material-symbols-outlined text-[14px]">add_circle</span></button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {exclusions.length === 0 && <span className="text-xs text-slate-500 italic">{isBg ? 'Няма' : 'None'}</span>}
-              {exclusions.map(ex => (
-                <span key={ex} className="px-2 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-tighter flex items-center gap-1">
-                  {ex} <span onClick={() => handleRemoveTag(exclusions, setExclusions, ex)} className="material-symbols-outlined text-[12px] cursor-pointer hover:text-rose-400">close</span>
-                </span>
-              ))}
-            </div>
+            <h3 className="text-sm font-black text-slate-100 uppercase tracking-wide">
+              {isBg ? 'Моят Диетичен Профил' : 'My Dietary Profile'}
+            </h3>
+            <p className="text-[10px] text-slate-400 font-medium uppercase">
+              {isBg ? 'Диети, алергии и изключени храни' : 'Diets, allergies & exclusions'}
+            </p>
           </div>
         </div>
+        <button 
+          type="button"
+          onClick={() => navigate('/pantry/diet')}
+          className="text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all active:scale-95 px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm"
+        >
+          <span className="material-symbols-outlined text-sm">edit</span>
+          {isBg ? 'Редактирай' : 'Edit'}
+        </button>
       </div>
 
       <div className="px-4 py-4 flex justify-between items-end border-b border-primary/10">
@@ -226,85 +212,107 @@ const Pantry = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 px-4 py-6">
-        {pantry.length === 0 && (
+      <div className="px-4 py-6 space-y-6">
+        {pantry.length === 0 ? (
           <div className="text-center py-10 opacity-50">
             <span className="material-symbols-outlined text-6xl text-primary mb-2">kitchen</span>
             <p className="text-slate-200">{isBg ? 'Килерът е празен.' : 'Pantry is empty.'}</p>
           </div>
-        )}
-        
-        {pantry.map(item => {
-          const daysLeft = getDaysUntilExpiration(item.expirationDate);
-          const isExpiringSoon = daysLeft <= 3 && daysLeft >= 0;
-          const isExpired = daysLeft < 0;
-          const name = isBg ? item.nameBg : item.nameEn;
-          const isEditing = editingItemId === item.id;
-          
-          return (
-            <div key={item.id} className="bg-surface-dark/80 backdrop-blur-xl border border-primary/15 rounded-2xl p-4 flex gap-4 items-center shadow-lg hover:shadow-primary/10 hover:border-primary/30 transition-all group">
-              <div className="relative size-16 rounded-xl shrink-0 flex items-center justify-center bg-background-dark/50 border border-primary/10 text-primary">
-                {item.imageUrl && !item.imageUrl.includes('placeholder') ? (
-                   <img alt={name} className="w-full h-full object-cover rounded-xl" src={item.imageUrl} />
-                ) : (
-                   <span className="material-symbols-outlined text-3xl">{getGroupIcon(item.category)}</span>
-                )}
+        ) : (() => {
+          // Grouping logic
+          const grouped = {};
+          pantry.forEach(item => {
+            const groupVal = item.category || 'other';
+            if (!grouped[groupVal]) grouped[groupVal] = [];
+            grouped[groupVal].push(item);
+          });
+
+          // Sort groups (localized)
+          const sortedGroupKeys = Object.keys(grouped).sort((a, b) => {
+            if (a === 'other') return 1;
+            if (b === 'other') return -1;
+            return getGroupName(a).localeCompare(getGroupName(b));
+          });
+
+          return sortedGroupKeys.map(groupKey => (
+            <div key={groupKey} className="space-y-3">
+              <div className="flex items-center gap-3 px-2">
+                <span className="h-[1px] flex-1 bg-primary/20"></span>
+                <div className="flex items-center gap-2 text-primary">
+                  <span className="material-symbols-outlined text-[24px]">
+                    {groupKey === 'other' ? 'inventory_2' : getGroupIcon(groupKey)}
+                  </span>
+                  <h3 className="text-sm font-black uppercase tracking-[0.2em]">
+                    {groupKey === 'other' ? (isBg ? 'ДРУГИ' : 'OTHERS') : getGroupName(groupKey).toUpperCase()}
+                  </h3>
+                </div>
+                <span className="h-[1px] flex-1 bg-primary/20"></span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-2">
-                  <div className="truncate">
-                    <h4 className="text-slate-100 font-bold text-base truncate">{name}</h4>
-                  </div>
-                  
-                  {isEditing ? (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <input 
-                        type="number" step="0.01" 
-                        value={editQuantity} 
-                        onChange={e => setEditQuantity(e.target.value)} 
-                        className="w-16 bg-background-dark border border-primary text-slate-100 text-xs px-1 py-1 rounded text-center" 
-                        autoFocus
-                      />
-                      <span className="text-xs text-primary/70">{item.unit}</span>
-                      <button onClick={() => handleUpdateQuantity(item)} className="ml-1 text-emerald-400 hover:text-emerald-300">
-                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                      </button>
-                      <button onClick={() => setEditingItemId(null)} className="text-slate-400 hover:text-white">
-                        <span className="material-symbols-outlined text-[18px]">cancel</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-primary text-base font-extrabold bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">
-                        {item.quantity} <span className="text-[10px] font-medium text-primary/70 uppercase">{item.unit}</span>
-                      </span>
-                      <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditingItemId(item.id); setEditQuantity(item.quantity); }} className="text-slate-400 hover:text-blue-400" title="Edit Quantity">
-                          <span className="material-symbols-outlined text-[14px]">edit</span>
+
+              <div className="grid grid-cols-1 gap-3">
+                {grouped[groupKey].map(item => {
+                  const daysLeft = getDaysUntilExpiration(item.expirationDate);
+                  const isExpiringSoon = daysLeft <= 3 && daysLeft >= 0;
+                  const isExpired = daysLeft < 0;
+                  const name = isBg ? item.nameBg : item.nameEn;
+
+                  return (
+                    <div key={item.id} className="bg-surface-dark/50 border border-primary/10 hover:border-primary/30 rounded-xl p-3 flex justify-between items-center group/card transition-all duration-300">
+                      <div className="flex gap-3 items-center w-full overflow-hidden pr-2">
+                        <div className="size-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary relative">
+                          {item.imageUrl && !item.imageUrl.includes('placeholder') ? (
+                            <img alt={name} className="w-full h-full object-cover rounded-full" src={item.imageUrl} />
+                          ) : (
+                            <span className="material-symbols-outlined text-[20px]">{getGroupIcon(item.category)}</span>
+                          )}
+                          {isExpired && <div className="absolute -top-1 -right-1 size-3 bg-rose-500 rounded-full border-2 border-background-dark"></div>}
+                          {!isExpired && isExpiringSoon && <div className="absolute -top-1 -right-1 size-3 bg-amber-500 rounded-full border-2 border-background-dark"></div>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 
+                            onClick={() => handleEditClick(item)} 
+                            className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors text-sm"
+                          >
+                            {name}
+                          </h4>
+                          <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 mt-1 items-center">
+                            <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 font-extrabold uppercase">
+                              {item.quantity} <span className="text-[9px] font-medium text-primary/70">{getUnitName(item.unit)}</span>
+                            </span>
+                            <span className={`font-bold flex items-center gap-1 uppercase tracking-widest text-[9px] ${isExpired ? 'text-rose-500' : isExpiringSoon ? 'text-amber-500' : 'text-emerald-400'}`}>
+                              <span className="material-symbols-outlined text-[12px]">event</span>
+                              {isExpired ? (isBg ? 'С ИЗТЕКЪЛ СРОК' : 'EXPIRED') : t('pantry.in_days', { count: daysLeft })}
+                            </span>
+                          </div>
+                          {/* Mini Expiration Progress Line */}
+                          <div className="mt-2 h-1 w-full bg-background-dark/50 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                            <div className={`h-full rounded-full transition-all duration-1000 ${isExpired ? 'bg-rose-500 w-full' : isExpiringSoon ? 'bg-amber-500 w-1/4' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 w-3/4'}`}></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity duration-200">
+                        <button 
+                          onClick={() => handleEditClick(item)} 
+                          className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg" 
+                          title={isBg ? 'Редактирай' : 'Edit'}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">edit</span>
                         </button>
-                        <button onClick={() => { if(window.confirm(isBg ? 'Изтриване?' : 'Delete?')) removePantryItem(item.id); }} className="text-slate-400 hover:text-rose-500" title="Delete Item">
-                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                        <button 
+                          onClick={() => { if(window.confirm(isBg ? 'Изтриване?' : 'Delete?')) removePantryItem(item.id); }} 
+                          className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg" 
+                          title={isBg ? 'Изтрий' : 'Delete'}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">delete</span>
                         </button>
                       </div>
                     </div>
-                  )}
-                </div>
-                
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[14px] text-slate-500">event</span>
-                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isExpired ? 'text-rose-600' : isExpiringSoon ? 'text-amber-500' : 'text-emerald-400'}`}>
-                      {isExpired ? (isBg ? 'С ИЗТЕКЪЛ СРОК' : 'EXPIRED') : t('pantry.in_days', { count: daysLeft })}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-24 bg-background-dark rounded-full overflow-hidden border border-white/5 shadow-inner">
-                    <div className={`h-full rounded-full transition-all duration-1000 ${isExpired ? 'bg-rose-600 w-full' : isExpiringSoon ? 'bg-amber-500 w-[20%]' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 w-[80%]'}`}></div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
-          );
-        })}
+          ));
+        })()}
       </div>
 
       {/* Floating Add Button */}
@@ -321,10 +329,10 @@ const Pantry = () => {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm p-6 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative">
-            <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-background-dark rounded-full p-1 border border-primary/20">
+            <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-background-dark/50 rounded-full p-1 border border-primary/20">
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
-            <h3 className="text-xl font-extrabold text-slate-100 mb-6 flex items-center gap-2 uppercase tracking-tighter">
+            <h3 className="text-base font-extrabold text-slate-100 mb-6 flex items-center gap-2 uppercase tracking-tighter">
               <span className="material-symbols-outlined text-primary">add_circle</span>
               {isBg ? 'Добави в Килера' : 'Add to Pantry'}
             </h3>
@@ -373,7 +381,7 @@ const Pantry = () => {
               )}
 
               <div className="flex gap-3">
-                <div className="flex-1">
+                <div className="w-1/3">
                   <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{t('pantry.quantity')} *</label>
                   <input 
                     type="number" 
@@ -384,7 +392,7 @@ const Pantry = () => {
                     required 
                   />
                 </div>
-                <div className="w-24">
+                <div className="w-2/3">
                   <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{t('pantry.unit')}</label>
                   <select 
                     value={newItem.unit}
@@ -392,7 +400,9 @@ const Pantry = () => {
                     className="w-full bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 focus:ring-primary focus:border-primary shadow-inner font-bold"
                   >
                     {measurementsDB.length > 0 ? measurementsDB.map(m => (
-                      <option key={m.unit_id || m.id} value={m.unit_id || m.id}>{m.unit_id || m.id}</option>
+                      <option key={m.unit_id || m.id} value={m.unit_id || m.id}>
+                        {isBg ? (m.name_bg || m.name || m.unit_id || m.id) : (m.name_en || m.name || m.unit_id || m.id)}
+                      </option>
                     )) : (
                       <>
                         <option value="g">g</option>
@@ -411,7 +421,8 @@ const Pantry = () => {
                   type="date" 
                   value={newItem.expirationDate}
                   onChange={e => setNewItem({...newItem, expirationDate: e.target.value})}
-                  className="w-full bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 focus:ring-primary focus:border-primary shadow-inner color-scheme-dark font-bold" 
+                  className="w-full bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 focus:ring-primary focus:border-primary shadow-inner font-bold" 
+                  style={{ colorScheme: 'dark' }}
                   required 
                 />
               </div>
@@ -424,6 +435,86 @@ const Pantry = () => {
                 >
                   <span className="material-symbols-outlined text-[20px]">inventory_2</span>
                   {t('pantry.save')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-surface-dark border border-blue-500/30 rounded-3xl w-full max-w-sm p-6 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative bg-blue-500/5">
+            <button 
+              onClick={() => { setShowEditModal(false); setEditingItem(null); }} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-white bg-background-dark/50 rounded-full p-1 border border-blue-500/20"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+            <h3 className="text-base font-extrabold text-slate-100 mb-6 flex items-center gap-2 uppercase tracking-tighter">
+              <span className="material-symbols-outlined text-blue-400">edit_note</span>
+              {isBg ? 'Редактиране на продукт' : 'Edit Pantry Product'}
+            </h3>
+            
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{isBg ? 'Продукт' : 'Product'}</label>
+                <input 
+                  type="text" 
+                  value={isBg ? (editingItem.nameBg || editingItem.nameEn) : (editingItem.nameEn || editingItem.nameBg)}
+                  disabled
+                  className="w-full bg-background-dark/50 border border-white/10 rounded-xl p-3 text-slate-400 shadow-inner font-bold cursor-not-allowed opacity-60" 
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <div className="w-1/3">
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{t('pantry.quantity')} *</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    value={editQuantity}
+                    onChange={e => setEditQuantity(e.target.value)}
+                    className="w-full bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 focus:ring-primary focus:border-primary shadow-inner text-center font-bold" 
+                    required 
+                  />
+                </div>
+                <div className="w-2/3">
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{t('pantry.unit')}</label>
+                  <select 
+                    value={editUnit}
+                    onChange={e => setEditUnit(e.target.value)}
+                    className="w-full bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 focus:ring-primary focus:border-primary shadow-inner font-bold"
+                  >
+                    {getEditUnitsOptions().map(u => (
+                      <option key={u} value={u}>
+                        {getUnitName(u)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{t('pantry.expiration')} *</label>
+                <input 
+                  type="date" 
+                  value={editExpirationDate}
+                  onChange={e => setEditExpirationDate(e.target.value)}
+                  className="w-full bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 focus:ring-primary focus:border-primary shadow-inner font-bold" 
+                  style={{ colorScheme: 'dark' }}
+                  required 
+                />
+              </div>
+              
+              <div className="pt-6">
+                <button 
+                  type="submit"
+                  className="w-full py-4 rounded-xl font-black shadow-lg uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:scale-[1.02] active:scale-95 border border-cyan-500/30"
+                >
+                  <span className="material-symbols-outlined text-[20px]">save</span>
+                  {isBg ? 'Запази промените' : 'Save Changes'}
                 </button>
               </div>
             </form>

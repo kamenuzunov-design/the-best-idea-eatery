@@ -192,13 +192,17 @@ const RecipeDetail = () => {
       }
 
       if (foundAd) {
-        setMatchedAd(foundAd);
-        setMatchedIngredientIdx(foundIdx);
+        const adToSet = foundAd;
+        const idxToSet = foundIdx;
+        setTimeout(() => {
+          setMatchedAd(adToSet);
+          setMatchedIngredientIdx(idxToSet);
+        }, 0);
         try {
           updateDoc(doc(db, 'ads', foundAd.id), {
             viewsCount: increment(1)
           });
-        } catch (e) {
+        } catch {
           console.warn("Failed to log ad view");
         }
       }
@@ -210,7 +214,9 @@ const RecipeDetail = () => {
       updateDoc(doc(db, 'ads', ad.id), {
         clicksCount: increment(1)
       });
-    } catch (e) {}
+    } catch {
+      console.warn("Failed to log ad click");
+    }
     if (ad.linkUrl) {
       if (ad.isLocalLink) {
         navigate(ad.linkUrl.replace(window.location.origin, ''));
@@ -220,26 +226,72 @@ const RecipeDetail = () => {
     }
   };
 
+  const convertToGrams = (amount, unitId) => {
+    if (!unitId) return amount;
+    const unit = units[unitId];
+    if (!unit) return amount;
+    
+    const toG = unit.conversions?.metric?.to_g_average || unit.base_weight_grams;
+    if (toG !== undefined && toG !== null && toG > 0) {
+      return amount * toG;
+    }
+    
+    const toMl = unit.conversions?.metric?.to_ml;
+    if (toMl !== undefined && toMl !== null && toMl > 0) {
+      return amount * toMl;
+    }
+    
+    return amount;
+  };
+
+  const convertFromGrams = (amountInGrams, unitId) => {
+    if (!unitId) return amountInGrams;
+    const unit = units[unitId];
+    if (!unit) return amountInGrams;
+    
+    const toG = unit.conversions?.metric?.to_g_average || unit.base_weight_grams;
+    if (toG && toG > 0) {
+      return amountInGrams / toG;
+    }
+    
+    const toMl = unit.conversions?.metric?.to_ml;
+    if (toMl && toMl > 0) {
+      return amountInGrams / toMl;
+    }
+    
+    return amountInGrams;
+  };
+
   const analyzeRecipe = () => {
     let missingIngredients = [];
     if (!recipe || !recipe.ingredients) return [];
     
     recipe.ingredients.forEach(reqIng => {
-      // Find in pantry by ingredientId if available, else by name match
-      const pantryItem = pantry.find(p => 
-        (p.ingredientId && p.ingredientId === reqIng.ingredient_id) || 
-        (p.name === reqIng.name_en || p.nameBg === reqIng.name_bg)
-      );
+      // Find in pantry by ID matching
+      const pantryItem = pantry.find(p => {
+        const pId = p.ingredientId || p.ingredient_id || p.id;
+        const rId = reqIng.ingredient_id || reqIng.id;
+        return pId && rId && pId === rId;
+      });
       
       const requiredAmount = parseFloat(reqIng.amount) || 0;
       const scaledAmount = requiredAmount * currentServings;
-      const pantryAmount = pantryItem ? (parseFloat(pantryItem.quantity) || 0) : 0;
       
-      if (pantryAmount < scaledAmount) {
+      const scaledAmountInGrams = convertToGrams(scaledAmount, reqIng.unit_id || reqIng.unit);
+      
+      const pantryAmount = pantryItem ? (parseFloat(pantryItem.quantity) || 0) : 0;
+      const pantryAmountInGrams = pantryItem ? convertToGrams(pantryAmount, pantryItem.unit || pantryItem.unit_id) : 0;
+      
+      if (pantryAmountInGrams < scaledAmountInGrams) {
+        const missingInGrams = scaledAmountInGrams - pantryAmountInGrams;
+        const missingInRecipeUnit = convertFromGrams(missingInGrams, reqIng.unit_id || reqIng.unit);
+        
         missingIngredients.push({
           ...reqIng,
-          name: isBg ? reqIng.name_bg : reqIng.name_en,
-          quantityToBuy: Math.max(0, scaledAmount - pantryAmount)
+          name: isBg 
+            ? (reqIng.ingredient_bg || reqIng.name_bg || reqIng.ingredient_id) 
+            : (reqIng.ingredient_en || reqIng.name_en || reqIng.ingredient_id),
+          quantityToBuy: Math.max(0, missingInRecipeUnit)
         });
       }
     });
@@ -651,8 +703,7 @@ const RecipeDetail = () => {
               : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id);
 
             const isIngMissing = isPantryActive && missing.some(m => 
-              m.ingredient_id === ing.ingredient_id || 
-              (m.name_en === ingName || m.name_bg === ingName)
+              (m.ingredient_id || m.id) === (ing.ingredient_id || ing.id)
             );
 
             return (
