@@ -282,8 +282,17 @@ const ManageUsers = () => {
     [ROLES.USER]: isBg ? 'П' : 'U'
   };
 
+  // Filter by rank/visibility (e.g. Moderator sees only same and lower rank)
+  const visibleUsers = usersList.filter(u => {
+    if (user?.role === ROLES.MODERATOR) {
+      const uRole = u.status?.level || u.role || ROLES.USER;
+      if (uRole === ROLES.OWNER || uRole === ROLES.ADMIN) return false;
+    }
+    return true;
+  });
+
   // Derived filtered data
-  const filteredUsers = usersList.filter(u => {
+  const filteredUsers = visibleUsers.filter(u => {
     const isDeleted = u.status?.is_deleted === true;
     const isActive = u.status?.is_active !== false && !isDeleted;
     const isDeactivated = u.status?.is_active === false && !isDeleted;
@@ -381,7 +390,9 @@ const ManageUsers = () => {
             </button>
             <div>
               <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Потребители' : 'Manage Users'}</h1>
-              <p className="text-xs font-medium text-primary/70">{usersList.length} {isBg ? 'регистрирани общо' : 'registered total'}</p>
+              <p className="text-xs font-medium text-primary/70">
+                {visibleUsers.length} {isBg ? (user?.role === ROLES.MODERATOR ? 'достъпни общо' : 'регистрирани общо') : (user?.role === ROLES.MODERATOR ? 'accessible total' : 'registered total')}
+              </p>
             </div>
           </div>
           <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">

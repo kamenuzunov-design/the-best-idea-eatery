@@ -63,7 +63,7 @@ const ActivityLog = () => {
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
-    logActivity(user.uid, user.auth?.email || user.email, 'export_logs', `Exported ${exportLogs.length} activity logs to JSON`);
+    logActivity(user.uid, user.email || 'N/A', 'export_logs', `Exported ${exportLogs.length} activity logs to JSON`);
   };
 
   const handleClearLogs = async () => {
@@ -83,7 +83,7 @@ const ActivityLog = () => {
       
       await batch.commit();
       
-      await logActivity(user.uid, user.auth?.email || user.email, 'clear_logs', 'Cleared all previous activity logs');
+      await logActivity(user.uid, user.email || 'N/A', 'clear_logs', 'Cleared all previous activity logs');
     } catch (error) {
       console.error("Error clearing logs:", error);
       alert(isBg ? 'Грешка при изчистване на дневника.' : 'Error clearing logs.');
@@ -110,7 +110,7 @@ const ActivityLog = () => {
       
       await batch.commit();
       
-      await logActivity(user.uid, user.auth?.email || user.email, 'clear_filtered_logs', `Cleared activity logs for action: ${filterKey}`);
+      await logActivity(user.uid, user.email || 'N/A', 'clear_filtered_logs', `Cleared activity logs for action: ${filterKey}`);
       searchParams.delete('action');
       setSearchParams(searchParams);
     } catch (error) {

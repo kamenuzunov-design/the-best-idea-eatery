@@ -37,7 +37,7 @@ git diff --cached --quiet
 if %errorlevel% neq 0 (
     echo Създаване на нов commit...
     git commit -m "Auto-update: %date% %time%"
-    echo Качване в GitHub (!BRANCH!)...
+    echo Качване в GitHub за клон !BRANCH!...
     git push origin !BRANCH!
 ) else (
     echo Няма нови промени за commit в GitHub.
@@ -48,7 +48,7 @@ echo.
 echo --- 3. Качване в Интернет (Firebase) ---
 set /p DEPLOY="Искате ли да качите сайта в Интернет сега? (y/n): "
 if /i "%DEPLOY%"=="y" (
-    call npx firebase deploy --only hosting
+    call npx firebase deploy
     if %errorlevel% neq 0 (
         echo ❌ ГРЕШКА при качването във Firebase!
     ) else (

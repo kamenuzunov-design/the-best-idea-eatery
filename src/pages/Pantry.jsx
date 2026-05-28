@@ -157,6 +157,13 @@ const Pantry = () => {
 
   const getUnitName = (unitId) => {
     if (!unitId) return '';
+    const norm = String(unitId).toLowerCase().trim();
+    if (norm === 'g') return isBg ? 'гр.' : 'g';
+    if (norm === 'kg') return isBg ? 'кг.' : 'kg';
+    if (norm === 'ml') return isBg ? 'мл.' : 'ml';
+    if (norm === 'l') return isBg ? 'л.' : 'l';
+    if (norm === 'pcs') return isBg ? 'бр.' : 'pcs';
+
     const found = measurementsDB.find(m => (m.unit_id === unitId || m.id === unitId));
     if (found) {
       return isBg ? (found.name_bg || found.name || unitId) : (found.name_en || found.name || unitId);

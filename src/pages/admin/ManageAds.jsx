@@ -104,7 +104,7 @@ const ManageAds = () => {
         isActive: true,
         createdAt: serverTimestamp()
       });
-      await logActivity(user.uid, user.auth?.email || 'N/A', 'CREATE_CAMPAIGN', `Създадена рекламна кампания: ${name}`);
+      await logActivity(user.uid, user.email || 'N/A', 'CREATE_CAMPAIGN', `Създадена рекламна кампания: ${name}`);
     }
   };
 
@@ -124,7 +124,7 @@ const ManageAds = () => {
 
       if (editingAd) {
         await updateDoc(doc(db, 'ads', editingAd.id), data);
-        await logActivity(user.uid, user.auth?.email || 'N/A', 'UPDATE_AD', `Редактирана реклама: ${formData.title_bg}`);
+        await logActivity(user.uid, user.email || 'N/A', 'UPDATE_AD', `Редактирана реклама: ${formData.title_bg}`);
       } else {
         await addDoc(collection(db, 'ads'), {
           ...data,
@@ -132,7 +132,7 @@ const ManageAds = () => {
           viewsCount: 0,
           clicksCount: 0
         });
-        await logActivity(user.uid, user.auth?.email || 'N/A', 'CREATE_AD', `Създадена реклама: ${formData.title_bg}`);
+        await logActivity(user.uid, user.email || 'N/A', 'CREATE_AD', `Създадена реклама: ${formData.title_bg}`);
       }
       setIsModalOpen(false);
       setEditingAd(null);
@@ -186,7 +186,7 @@ const ManageAds = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Delete this ad?")) {
       await deleteDoc(doc(db, 'ads', id));
-      await logActivity(user.uid, user.auth?.email || 'N/A', 'DELETE_AD', `Изтрита реклама ID: ${id}`);
+      await logActivity(user.uid, user.email || 'N/A', 'DELETE_AD', `Изтрита реклама ID: ${id}`);
     }
   };
 
@@ -197,7 +197,7 @@ const ManageAds = () => {
           viewsCount: 0,
           clicksCount: 0
         });
-        await logActivity(user.uid, user.auth?.email || 'N/A', 'RESET_AD_STATS', `Нулирана статистика за реклама: ${title}`);
+        await logActivity(user.uid, user.email || 'N/A', 'RESET_AD_STATS', `Нулирана статистика за реклама: ${title}`);
       } catch (err) {
         console.error(err);
         alert("Error resetting stats");
@@ -232,7 +232,7 @@ const ManageAds = () => {
         ...settingsData,
         updatedAt: serverTimestamp()
       }, { merge: true });
-      await logActivity(user.uid, user.auth?.email || 'N/A', 'UPDATE_AD_SETTINGS', `Обновени правила за реклама`);
+      await logActivity(user.uid, user.email || 'N/A', 'UPDATE_AD_SETTINGS', `Обновени правила за реклама`);
       setIsSettingsModalOpen(false);
       alert(isBg ? "Правилата са запазени успешно!" : "Rules saved successfully!");
     } catch(err) {

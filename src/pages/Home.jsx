@@ -6,7 +6,7 @@ import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getCuisineById } from '../data/cuisines';
-import { translateTag } from '../lib/recipeMetaUtils';
+import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
 
 const getPluralCategoryName = (id, lang) => {
@@ -260,7 +260,8 @@ const Home = () => {
   }, []);
   const featuredCuisineObj = featuredRecipe?.cuisine_id ? getCuisineById(featuredRecipe.cuisine_id) : null;
   const featuredCuisineName = featuredCuisineObj ? (isBg ? featuredCuisineObj.name.bg : featuredCuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
-  const featuredTags = featuredRecipe?.tags || [];
+  const calculatedFeaturedTags = getRecipeTags(featuredRecipe, ingredientsList);
+  const featuredTags = calculatedFeaturedTags.length > 0 ? calculatedFeaturedTags : (featuredRecipe?.tags || []);
 
   const top10Ingredients = useMemo(() => {
     if (!showTop10 || !realRecipes.length || !ingredientsList.length) return [];
@@ -483,7 +484,8 @@ const Home = () => {
 
             const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
             const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
-            const tags = recipe.tags || [];
+            const calculatedTags = getRecipeTags(recipe, ingredientsList);
+            const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
 
             return (
               <div key={recipe.id} className="bg-surface-dark/90 backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:border-primary/50 transition-colors flex flex-col group cursor-pointer" onClick={() => navigate(`/recipe/${recipe.id}`)}>

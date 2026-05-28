@@ -8,21 +8,26 @@ export const getRecipeTags = (recipe, ingredientsList) => {
   const someRequiredTags = ['superfood', 'high-protein'];
 
   const recipeTags = new Set();
-  const dbIngredients = recipe.ingredients.map(reqIng => 
-    ingredientsList.find(i => i.id === reqIng.ingredient_id)
-  ).filter(Boolean);
+  const dbIngredients = recipe.ingredients.map(reqIng => {
+    const ingId = reqIng.ingredient_id || reqIng.ingredientId || reqIng.id;
+    return ingredientsList.find(i => i.id === ingId);
+  }).filter(Boolean);
 
   if (dbIngredients.length === 0) return [];
 
   // Check "ALL" tags
   allRequiredTags.forEach(tag => {
-    const hasTagAll = dbIngredients.every(ing => ing.meta?.tags?.includes(tag));
+    const hasTagAll = dbIngredients.every(ing => 
+      ing.meta?.tags?.map(t => t.toLowerCase()).includes(tag.toLowerCase())
+    );
     if (hasTagAll) recipeTags.add(tag);
   });
 
   // Check "SOME" tags
   someRequiredTags.forEach(tag => {
-    const hasTagSome = dbIngredients.some(ing => ing.meta?.tags?.includes(tag));
+    const hasTagSome = dbIngredients.some(ing => 
+      ing.meta?.tags?.map(t => t.toLowerCase()).includes(tag.toLowerCase())
+    );
     if (hasTagSome) recipeTags.add(tag);
   });
 

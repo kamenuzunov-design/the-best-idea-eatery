@@ -10,7 +10,64 @@ const AppContext = createContext();
 export const AppProvider = ({ children }) => {
   const { user } = useAuth();
   const [pantry, setPantry] = useState([]);
-  const [shoppingList, setShoppingList] = useState([]);
+  const [shoppingList, setShoppingListState] = useState([]);
+
+  // Sync shopping list from Firestore (or localStorage for guests)
+  useEffect(() => {
+    if (!user || user.role === 'guest') {
+      const timer = setTimeout(() => {
+        try {
+          const local = localStorage.getItem('shopping_list');
+          setShoppingListState(local ? JSON.parse(local) : []);
+        } catch (err) {
+          console.warn("Failed to load shopping list from localStorage:", err);
+          setShoppingListState([]);
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setShoppingListState(data.shopping_list || []);
+      } else {
+        setShoppingListState([]);
+      }
+    }, (error) => {
+      console.error("Error fetching shopping list from Firestore:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const setShoppingList = async (newListOrFn) => {
+    let newList;
+    if (typeof newListOrFn === 'function') {
+      newList = newListOrFn(shoppingList);
+    } else {
+      newList = newListOrFn;
+    }
+
+    if (!user || user.role === 'guest') {
+      setShoppingListState(newList);
+      try {
+        localStorage.setItem('shopping_list', JSON.stringify(newList));
+      } catch (err) {
+        console.warn("Failed to save shopping list to localStorage:", err);
+      }
+    } else {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          shopping_list: newList
+        });
+      } catch (err) {
+        console.error("Error saving shopping list to Firestore:", err);
+      }
+    }
+  };
 
   // Sync pantry from Firestore
   useEffect(() => {

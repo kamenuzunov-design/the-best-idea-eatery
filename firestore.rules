@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper to check if user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper to check if user document is current user
+    function isOwnerOfDoc(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // Helper to check if user has a specific role
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status.level;
+    }
+
+    function isAdminOrOwner() {
+      let role = getUserRole();
+      return role == 'admin' || role == 'owner';
+    }
+
+    function isModerator() {
+      return getUserRole() == 'moderator';
+    }
+
+    // 1. Users collection
+    match /users/{userId} {
+      allow read: if isAuth(); // Everyone registered can view users (e.g. for moderators, invite system, etc.)
+      allow write: if isOwnerOfDoc(userId) || isAdminOrOwner();
+
+      // Subcollection pantry
+      match /pantry/{pantryId} {
+        allow read, write: if isOwnerOfDoc(userId) || isAdminOrOwner();
+      }
+    }
+
+    // 2. Recipes collection
+    match /recipes/{recipeId} {
+      allow read: if true; // Publicly readable
+      allow create, update: if isAuth(); // Logged-in users can write their own or new recipes
+      allow delete: if isAdminOrOwner(); // Only admin/owner can physically delete
+    }
+
+    // 3. Ingredients collection
+    match /ingredients/{ingredientId} {
+      allow read: if true; // Publicly readable
+      allow write: if isAuth() && (isAdminOrOwner() || isModerator()); // Admin, Owner, Moderator can manage
+    }
+
+    // 4. Measurements collection
+    match /measurements/{measurementId} {
+      allow read: if true; // Publicly readable
+      allow write: if isAuth() && isAdminOrOwner();
+    }
+
+    // 5. Ingredient groups collection
+    match /ingredient_groups/{groupId} {
+      allow read: if true; // Publicly readable
+      allow write: if isAuth() && isAdminOrOwner();
+    }
+
+    // 6. Activity logs collection
+    match /activity_logs/{logId} {
+      allow read: if isAuth() && isAdminOrOwner(); // Only admin/owner can read logs
+      allow create: if isAuth(); // Logged-in users/processes can write logs
+      allow update, delete: if isAuth() && isAdminOrOwner();
+    }
+
+    // 7. System history (snapshots)
+    match /system_history/{historyId} {
+      allow read, write: if isAuth() && isAdminOrOwner();
+    }
+
+    // 8. System backups
+    match /system_backups/{backupId} {
+      allow read, write: if isAuth() && isAdminOrOwner();
+    }
+
+    // 9. Ads collection
+    match /ads/{adId} {
+      allow read: if true;
+      allow write: if isAuth() && isAdminOrOwner();
+    }
+
+    // 10. Settings collection
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAuth() && isAdminOrOwner();
+    }
+  }
+}

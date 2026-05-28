@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment, collection, query, where, getDocs } from 'firebase/firestore';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getCuisineById } from '../data/cuisines';
-import { translateTag } from '../lib/recipeMetaUtils';
+import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
@@ -15,7 +15,7 @@ const RecipeDetail = () => {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const { user, isGuest, isAdmin, isOwner, awardPoints } = useAuth();
-  const { pantry, generateShoppingList } = useAppContext();
+  const { pantry, shoppingList, setShoppingList } = useAppContext();
   const isPantryActive = !isGuest && (user?.preferences?.pantry_active !== false);
   const isPowerUser = isAdmin || isOwner;
   const isBg = i18n.language === 'bg';
@@ -37,6 +37,11 @@ const RecipeDetail = () => {
   const [nativeAds, setNativeAds] = useState([]);
   const [matchedAd, setMatchedAd] = useState(null);
   const [matchedIngredientIdx, setMatchedIngredientIdx] = useState(-1);
+
+  // Shopping List Repetitions State
+  const [showRepeatModal, setShowRepeatModal] = useState(false);
+  const [repeatingItems, setRepeatingItems] = useState([]);
+  const [newItemsToAdd, setNewItemsToAdd] = useState([]);
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -286,12 +291,55 @@ const RecipeDetail = () => {
         const missingInGrams = scaledAmountInGrams - pantryAmountInGrams;
         const missingInRecipeUnit = convertFromGrams(missingInGrams, reqIng.unit_id || reqIng.unit);
         
+        const dbIng = ingredientsList.find(i => i.id === reqIng.ingredient_id);
+        const nameBg = reqIng.ingredient_bg || reqIng.name_bg || dbIng?.name_bg || reqIng.ingredient_id;
+        const nameEn = reqIng.ingredient_en || reqIng.name_en || dbIng?.name_en || reqIng.ingredient_id;
+        
+        const origUnit = reqIng.unit_id || reqIng.unit;
+        const unitObj = units[origUnit];
+        
+        let finalUnit = origUnit;
+        let finalQty = Math.max(0, missingInRecipeUnit);
+        
+        if (dbIng) {
+          const isLiquidIng = dbIng.meta?.is_liquid === true;
+          const hasWeightOrVolumeConversion = origUnit === 'g' || origUnit === 'kg' || origUnit === 'ml' || origUnit === 'l' ||
+            (unitObj && (
+              (unitObj.conversions?.metric?.to_g_average !== undefined && unitObj.conversions?.metric?.to_g_average !== null && unitObj.conversions?.metric?.to_g_average > 0) ||
+              (unitObj.base_weight_grams !== undefined && unitObj.base_weight_grams !== null && unitObj.base_weight_grams > 0) ||
+              (unitObj.conversions?.metric?.to_ml !== undefined && unitObj.conversions?.metric?.to_ml !== null && unitObj.conversions?.metric?.to_ml > 0)
+            ));
+          
+          if (hasWeightOrVolumeConversion) {
+            if (isLiquidIng) {
+              finalUnit = 'ml';
+              finalQty = Number(missingInGrams.toFixed(2));
+            } else {
+              finalUnit = 'g';
+              finalQty = Number(missingInGrams.toFixed(2));
+            }
+          }
+        } else if (unitObj) {
+          const toMl = unitObj.conversions?.metric?.to_ml;
+          const toG = unitObj.conversions?.metric?.to_g_average || unitObj.base_weight_grams;
+          
+          if (origUnit === 'ml' || origUnit === 'l' || (toMl !== undefined && toMl !== null && toMl > 0)) {
+            finalUnit = 'ml';
+            finalQty = Number(missingInGrams.toFixed(2));
+          } else if (origUnit === 'g' || origUnit === 'kg' || (toG !== undefined && toG !== null && toG > 0)) {
+            finalUnit = 'g';
+            finalQty = Number(missingInGrams.toFixed(2));
+          }
+        }
+        
         missingIngredients.push({
           ...reqIng,
-          name: isBg 
-            ? (reqIng.ingredient_bg || reqIng.name_bg || reqIng.ingredient_id) 
-            : (reqIng.ingredient_en || reqIng.name_en || reqIng.ingredient_id),
-          quantityToBuy: Math.max(0, missingInRecipeUnit)
+          nameBg,
+          nameEn,
+          name: isBg ? nameBg : nameEn,
+          quantityToBuy: finalQty,
+          unit_id: finalUnit,
+          unit: finalUnit
         });
       }
     });
@@ -397,6 +445,132 @@ const RecipeDetail = () => {
     }
   };
 
+  const getUnitLabel = (unitId) => {
+    const unitObj = units[unitId];
+    if (unitObj) {
+      return isBg ? (unitObj.name_bg || unitObj.name || unitId) : (unitObj.name_en || unitObj.name || unitId);
+    }
+    return unitId;
+  };
+
+  const handleAddMissingToShoppingList = () => {
+    const repeats = [];
+    const news = [];
+    
+    missing.forEach(missingItem => {
+      const existing = (shoppingList || []).find(item => {
+        const existingId = item.ingredient_id || item.id;
+        const missingId = missingItem.ingredient_id || missingItem.id;
+        return existingId && missingId && existingId === missingId;
+      });
+      
+      if (existing) {
+        repeats.push({
+          missingItem,
+          existingItem: existing,
+          checked: true
+        });
+      } else {
+        news.push(missingItem);
+      }
+    });
+    
+    if (repeats.length > 0) {
+      setRepeatingItems(repeats);
+      setNewItemsToAdd(news);
+      setShowRepeatModal(true);
+    } else {
+      const updatedList = [...(shoppingList || []), ...missing];
+      setShoppingList(updatedList);
+      alert(isBg 
+        ? 'Липсващите съставки бяха добавени в списъка за пазаруване!' 
+        : 'Missing ingredients were added to your shopping list!');
+    }
+  };
+
+  const toggleRepeatItem = (idx) => {
+    setRepeatingItems(prev => prev.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item));
+  };
+
+  const getMetricBaseValue = (qty, unit) => {
+    if (unit === 'kg') return { val: qty * 1000, type: 'weight' };
+    if (unit === 'g') return { val: qty, type: 'weight' };
+    if (unit === 'l') return { val: qty * 1000, type: 'volume' };
+    if (unit === 'ml') return { val: qty, type: 'volume' };
+    return { val: qty, type: 'other' };
+  };
+
+  const formatMetricItem = (qty, unit) => {
+    if (unit === 'g' || unit === 'kg') {
+      const baseG = unit === 'kg' ? qty * 1000 : qty;
+      if (baseG > 500) {
+        return { qty: Number((baseG / 1000).toFixed(2)), unit: 'kg' };
+      }
+      return { qty: Number(baseG.toFixed(0)), unit: 'g' };
+    }
+    if (unit === 'ml' || unit === 'l') {
+      const baseMl = unit === 'l' ? qty * 1000 : qty;
+      if (baseMl > 500) {
+        return { qty: Number((baseMl / 1000).toFixed(2)), unit: 'l' };
+      }
+      return { qty: Number(baseMl.toFixed(0)), unit: 'ml' };
+    }
+    return { qty, unit };
+  };
+
+  const handleConfirmAddRepeats = () => {
+    let updatedList = [...(shoppingList || [])];
+    
+    repeatingItems.forEach(item => {
+      if (item.checked) {
+        updatedList = updatedList.map(existing => {
+          const existingId = existing.ingredient_id || existing.id;
+          const itemId = item.existingItem.ingredient_id || item.existingItem.id;
+          
+          if (existingId && itemId && existingId === itemId) {
+            const currentQty = existing.quantityToBuy !== undefined ? existing.quantityToBuy : (existing.amount || 0);
+            const addedQty = item.missingItem.quantityToBuy !== undefined ? item.missingItem.quantityToBuy : (item.missingItem.amount || 0);
+            
+            const existingUnit = existing.unit || existing.unit_id || 'g';
+            const addedUnit = item.missingItem.unit || item.missingItem.unit_id || 'g';
+            
+            const existingBase = getMetricBaseValue(currentQty, existingUnit);
+            const addedBase = getMetricBaseValue(addedQty, addedUnit);
+            
+            let finalQty = currentQty + addedQty;
+            let finalUnit = existingUnit;
+            
+            if (existingBase.type === 'weight' && addedBase.type === 'weight') {
+              finalQty = existingBase.val + addedBase.val;
+              finalUnit = 'g';
+            } else if (existingBase.type === 'volume' && addedBase.type === 'volume') {
+              finalQty = existingBase.val + addedBase.val;
+              finalUnit = 'ml';
+            }
+            
+            const updatedItem = { ...existing };
+            if (updatedItem.quantityToBuy !== undefined) {
+              updatedItem.quantityToBuy = finalQty;
+            } else {
+              updatedItem.amount = finalQty;
+            }
+            updatedItem.unit = finalUnit;
+            updatedItem.unit_id = finalUnit;
+            return updatedItem;
+          }
+          return existing;
+        });
+      }
+    });
+    
+    updatedList = [...updatedList, ...newItemsToAdd];
+    setShoppingList(updatedList);
+    setShowRepeatModal(false);
+    alert(isBg 
+      ? 'Липсващите съставки бяха успешно добавени/актуализирани в списъка за пазаруване!' 
+      : 'Missing ingredients were successfully added/updated in your shopping list!');
+  };
+
   if (loading) return (
     <div className="flex h-screen w-full items-center justify-center bg-background-dark text-primary">
       <span className="material-symbols-outlined animate-spin text-4xl">refresh</span>
@@ -421,7 +595,8 @@ const RecipeDetail = () => {
   const cuisineObj = recipe?.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
   const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
   
-  const tags = recipe.tags || [];
+  const calculatedTags = getRecipeTags(recipe, ingredientsList);
+  const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
 
   const allImages = [];
   if (recipe.images?.main) allImages.push(recipe.images.main);
@@ -458,7 +633,8 @@ const RecipeDetail = () => {
           className="absolute inset-0 bg-center bg-no-repeat bg-cover transition-all duration-500 ease-in-out" 
           style={{backgroundImage: `url("${allImages[activeImageIndex]}")`}}
         ></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/90 to-background-dark/20"></div>
+        {/* Shading area of bottom 30% */}
+        <div className="absolute bottom-0 inset-x-0 h-[30%] bg-gradient-to-t from-background-dark to-transparent"></div>
 
         {/* Floating Gallery Thumbnails */}
         {allImages.length > 1 && (
@@ -508,53 +684,56 @@ const RecipeDetail = () => {
             </button>
           </div>
         )}
+      </div>
 
-        <div className="absolute bottom-0 left-0 p-6 w-full z-10">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2 py-1 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[10px] font-bold uppercase tracking-tighter shadow-md">
-                {cuisineName}
+      {/* Recipe Header Info (Outside/Below Photo) */}
+      <div className="px-6 pt-6 pb-2 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-2 py-1 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[10px] font-bold uppercase tracking-tighter shadow-md">
+              {cuisineName}
+            </span>
+            {tags.map(tag => (
+              <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md">
+                {translateTag(tag, isBg)}
               </span>
-              {tags.map(tag => (
-                <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md backdrop-blur-sm">
-                  {translateTag(tag, isBg)}
-                </span>
+            ))}
+          </div>
+          
+          {/* Interactive Rating UI */}
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  disabled={!!userVote || !user || isVoting}
+                  onClick={() => handleVote(star)}
+                  className={`material-symbols-outlined text-[20px] transition-all ${
+                    (userVote >= star || (!userVote && recipe.rating >= star)) 
+                      ? 'text-amber-500 fill-1' 
+                      : 'text-slate-500'
+                  } ${(user && !userVote && !isVoting) ? 'hover:scale-125 cursor-pointer hover:text-amber-400' : 'cursor-default'}`}
+                  style={{ fontVariationSettings: (userVote >= star || (!userVote && recipe.rating >= star)) ? "'FILL' 1" : "'FILL' 0" }}
+                >
+                  star
+                </button>
               ))}
             </div>
-            
-            {/* Interactive Rating UI */}
-            <div className="flex flex-col items-end gap-1">
-              <div className="flex gap-1 drop-shadow-md">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    disabled={!!userVote || !user || isVoting}
-                    onClick={() => handleVote(star)}
-                    className={`material-symbols-outlined text-[20px] transition-all ${
-                      (userVote >= star || (!userVote && recipe.rating >= star)) 
-                        ? 'text-amber-500 fill-1' 
-                        : 'text-slate-300'
-                    } ${(user && !userVote && !isVoting) ? 'hover:scale-125 cursor-pointer hover:text-amber-400' : 'cursor-default'}`}
-                    style={{ fontVariationSettings: (userVote >= star || (!userVote && recipe.rating >= star)) ? "'FILL' 1" : "'FILL' 0" }}
-                  >
-                    star
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest drop-shadow-md">
-                {recipe.rating || 0} / 5 ({recipe.votes_count || 0} {isBg ? 'гласа' : 'votes'})
-              </p>
-            </div>
-          </div>
-          <h1 className="text-white text-4xl font-extrabold leading-tight drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
-            {isBg ? recipe.title_bg : recipe.title_en}
-          </h1>
-          {((isBg && recipe.description_bg) || (!isBg && recipe.description_en)) && (
-            <p className="text-slate-100 text-sm mt-4 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-medium max-w-3xl">
-              {isBg ? recipe.description_bg : recipe.description_en}
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              {recipe.rating || 0} / 5 ({recipe.votes_count || 0} {isBg ? 'гласа' : 'votes'})
             </p>
-          )}
+          </div>
         </div>
+
+        <h1 className="text-white text-3xl font-extrabold leading-tight">
+          {isBg ? recipe.title_bg : recipe.title_en}
+        </h1>
+
+        {((isBg && recipe.description_bg) || (!isBg && recipe.description_en)) && (
+          <p className="text-slate-300 text-sm leading-relaxed font-medium max-w-3xl">
+            {isBg ? recipe.description_bg : recipe.description_en}
+          </p>
+        )}
       </div>
 
       {/* Action Bar (My Version / Wine Pairing) */}
@@ -762,10 +941,7 @@ const RecipeDetail = () => {
 
         {!isReady && isPantryActive && (
           <button 
-            onClick={() => {
-              generateShoppingList(missing);
-              alert(isBg ? 'Липсващите съставки бяха добавени в списъка за пазаруване!' : 'Missing ingredients were added to your shopping list!');
-            }}
+            onClick={handleAddMissingToShoppingList}
             className="w-full mt-6 flex items-center justify-center gap-2 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/40 text-primary py-3 rounded-xl font-bold uppercase tracking-widest hover:from-primary hover:to-[#b8860b] hover:text-background-dark transition-all shadow-md active:scale-95 cursor-pointer"
           >
             <span className="material-symbols-outlined">add_shopping_cart</span>
@@ -912,6 +1088,118 @@ const RecipeDetail = () => {
           {isBg ? 'ЗАПОЧНИ ГОТВЕНЕ' : 'START COOKING'}
         </button>
       </div>
+
+      {/* Repeating Products Confirmation Modal */}
+      {showRepeatModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
+          <div className="bg-surface-dark border border-primary/20 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 border-b border-primary/10 pb-3 mb-4">
+              <span className="material-symbols-outlined text-amber-500 text-3xl">shopping_cart_checkout</span>
+              <div>
+                <h3 className="text-slate-100 font-extrabold text-base leading-tight">
+                  {isBg ? 'Повтарящи се продукти' : 'Repeating Products'}
+                </h3>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">
+                  {isBg ? 'Открити в списъка за пазаруване' : 'Detected in your shopping list'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 mb-4 leading-relaxed font-medium">
+              {isBg 
+                ? 'Някои продукти вече присъстват в списъка за пазаруване. Изберете кои от тях желаете да добавите допълнително към количеството:'
+                : 'Some products are already in your shopping list. Select which ones you want to add additionally to the quantity:'}
+            </p>
+
+            <div className="space-y-3 max-h-60 overflow-y-auto mb-6 pr-1 divide-y divide-primary/5">
+              {repeatingItems.map((item, idx) => {
+                const name = isBg 
+                  ? (item.missingItem.ingredient_bg || item.missingItem.name_bg || item.missingItem.name || item.missingItem.ingredient_id)
+                  : (item.missingItem.ingredient_en || item.missingItem.name_en || item.missingItem.name || item.missingItem.ingredient_id);
+                  
+                const existingQty = item.existingItem.quantityToBuy !== undefined ? item.existingItem.quantityToBuy : (item.existingItem.amount || 0);
+                const addedQty = item.missingItem.quantityToBuy !== undefined ? item.missingItem.quantityToBuy : (item.missingItem.amount || 0);
+                
+                const existingUnit = item.existingItem.unit || item.existingItem.unit_id || 'g';
+                const addedUnit = item.missingItem.unit || item.missingItem.unit_id || 'g';
+                
+                const existingBase = getMetricBaseValue(existingQty, existingUnit);
+                const addedBase = getMetricBaseValue(addedQty, addedUnit);
+                
+                let formattedExisting = formatMetricItem(existingQty, existingUnit);
+                let formattedAdded = formatMetricItem(addedQty, addedUnit);
+                
+                let displayTotalQty = existingQty + addedQty;
+                let displayTotalUnit = existingUnit;
+                
+                if (existingBase.type === 'weight' && addedBase.type === 'weight') {
+                  const sumInG = existingBase.val + addedBase.val;
+                  const formatted = formatMetricItem(sumInG, 'g');
+                  displayTotalQty = formatted.qty;
+                  displayTotalUnit = formatted.unit;
+                } else if (existingBase.type === 'volume' && addedBase.type === 'volume') {
+                  const sumInMl = existingBase.val + addedBase.val;
+                  const formatted = formatMetricItem(sumInMl, 'ml');
+                  displayTotalQty = formatted.qty;
+                  displayTotalUnit = formatted.unit;
+                } else {
+                  const formatted = formatMetricItem(displayTotalQty, displayTotalUnit);
+                  displayTotalQty = formatted.qty;
+                  displayTotalUnit = formatted.unit;
+                }
+                
+                const existingLabel = getUnitLabel(formattedExisting.unit);
+                const addedLabel = getUnitLabel(formattedAdded.unit);
+                const totalLabel = getUnitLabel(displayTotalUnit);
+
+                return (
+                  <div key={idx} className="flex items-start gap-3 pt-3 first:pt-0">
+                    <button 
+                      type="button"
+                      onClick={() => toggleRepeatItem(idx)}
+                      className={`size-5 rounded border transition-all flex items-center justify-center cursor-pointer shrink-0 mt-0.5 ${item.checked ? 'bg-primary/20 border-primary text-primary' : 'border-primary/40 hover:border-primary'}`}
+                    >
+                      {item.checked && (
+                        <span className="material-symbols-outlined text-sm font-black">check</span>
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-200 text-xs font-bold truncate">{name}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {isBg 
+                          ? `В списъка: ${formattedExisting.qty} ${existingLabel} + Добавяне: ${formattedAdded.qty} ${addedLabel}`
+                          : `In list: ${formattedExisting.qty} ${existingLabel} + Add: ${formattedAdded.qty} ${addedLabel}`}
+                      </p>
+                      {item.checked && (
+                        <p className="text-[9px] text-primary font-semibold uppercase mt-0.5">
+                          {isBg ? `Ново общо количество: ${displayTotalQty} ${totalLabel}` : `New total quantity: ${displayTotalQty} ${totalLabel}`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={handleConfirmAddRepeats}
+                className="flex-1 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold py-3 rounded-xl hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow-md"
+              >
+                <span className="material-symbols-outlined text-sm">add_shopping_cart</span>
+                {isBg ? 'Добави' : 'Add'}
+              </button>
+              <button 
+                onClick={() => setShowRepeatModal(false)}
+                className="flex-1 bg-surface-dark border border-primary/20 text-slate-400 hover:text-slate-200 font-bold py-3 rounded-xl transition-colors text-xs uppercase tracking-wider flex items-center justify-center gap-1"
+              >
+                <span className="material-symbols-outlined text-sm">cancel</span>
+                {isBg ? 'Отказ' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
