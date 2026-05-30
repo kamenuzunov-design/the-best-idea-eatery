@@ -6,7 +6,7 @@ import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getCuisineById } from '../data/cuisines';
-import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
+import { translateTag, getRecipeTags, normalizeMainGroup } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
 
 const getPluralCategoryName = (id, lang) => {
@@ -153,15 +153,18 @@ const Home = () => {
   useEffect(() => {
     // We will fetch a general batch of recipes and sort/filter them client-side.
     // This avoids the need for manual composite indexes in Firebase for now.
-    const q = query(collection(db, 'recipes'), limit(100)); 
-
+    const q = query(collection(db, 'recipes')); 
 
     const unsub = onSnapshot(q, 
       (snapshot) => {
         let all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        // 1. Filter out deleted and variations
-        let filtered = all.filter(r => r.is_deleted !== true && !r.parent_recipe_id);
+        // 1. Filter out deleted and private variations. Include active public variations.
+        let filtered = all.filter(r => 
+          r.is_deleted !== true && 
+          (!r.parent_recipe_id || r.is_public_variation === true) &&
+          r.is_active !== false
+        );
 
         // 2. Apply search filter
         if (searchQuery) {
@@ -203,7 +206,7 @@ const Home = () => {
         }
 
         // 3. Apply sorting based on tab
-        if (activeTab === 'newest') {
+        if (activeTab === 'newest' || activeTab === 'all') {
           const getTime = (val) => {
             if (!val) return 0;
             if (val.seconds) return val.seconds * 1000;
@@ -215,13 +218,18 @@ const Home = () => {
           filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         } else if (activeTab === 'popular') {
           filtered.sort((a, b) => (b.views_count || 0) - (a.views_count || 0));
-        } else if (activeTab === 'smart') {
-          // Priority for "ready to cook" based on pantry
-          filtered = filtered.map(r => ({ ...r, missingCount: analyzeRecipe(r).length }));
-          filtered.sort((a, b) => a.missingCount - b.missingCount);
         }
 
-        setRealRecipes(filtered.slice(0, 10));
+        // If searching or filtering by category, show all matching results.
+        // If active tab is 'all', show up to 150 recipes.
+        // Otherwise, limit to top 10.
+        if (searchQuery || selectedCategory) {
+          setRealRecipes(filtered);
+        } else if (activeTab === 'all') {
+          setRealRecipes(filtered.slice(0, 150));
+        } else {
+          setRealRecipes(filtered.slice(0, 10));
+        }
         setFetchError(null);
         setLoading(false);
       },
@@ -295,7 +303,8 @@ const Home = () => {
       const mainGroup = i.classification?.main_group || '';
       const name = (i.name_bg || '').toLowerCase();
       
-      const isSpiceOrFat = mainGroup === 'Подправки' || mainGroup === 'Мазнини';
+      const normGroup = normalizeMainGroup(mainGroup);
+      const isSpiceOrFat = normGroup === 'spices' || normGroup === 'fats';
       const isBasicStaple = name.includes('вода') || name.includes('сол') || name.includes('захар') || name.includes('брашно') || name.includes('оцет');
       
       return !(isSpiceOrFat || isBasicStaple);
@@ -392,9 +401,9 @@ const Home = () => {
         <div className="grid grid-cols-2 gap-2">
           {[
             { id: 'newest', bg: 'Най-нови', en: 'Newest' },
-            { id: 'smart', bg: 'Смарт', en: 'Smart' },
-            { id: 'top', bg: 'Топ оценени', en: 'Top Rated' },
-            { id: 'popular', bg: 'Най-гледани', en: 'Most Viewed' }
+            { id: 'top', bg: 'Най-оценявани', en: 'Top Rated' },
+            { id: 'popular', bg: 'Най-гледани', en: 'Most Viewed' },
+            { id: 'all', bg: 'Всички', en: 'All' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -414,9 +423,10 @@ const Home = () => {
       <section className="px-4 mt-8">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-slate-100 text-2xl font-bold tracking-tight">
-            {activeTab === 'smart' ? t('home.smart_recipes') : 
+            {activeTab === 'all' ? (isBg ? 'Всички рецепти' : 'All Recipes') : 
              activeTab === 'newest' ? (isBg ? 'Най-нови' : 'Newest Recipes') :
-             activeTab === 'top' ? (isBg ? 'Топ оценени' : 'Top Rated') : (isBg ? 'Най-гледани' : 'Most Viewed')}
+             activeTab === 'top' ? (isBg ? 'Най-оценявани' : 'Top Rated') : 
+             (isBg ? 'Най-гледани' : 'Most Viewed')}
             {selectedCategory && ` • ${getPluralCategoryName(selectedCategory, isBg ? 'bg' : 'en')}`}
           </h3>
         </div>

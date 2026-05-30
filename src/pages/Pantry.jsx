@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { useTranslation } from 'react-i18next';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { normalizeMainGroup } from '../lib/recipeMetaUtils';
 
 const getGroupIcon = (val) => {
   const v = String(val || '').toLowerCase();
@@ -171,15 +172,41 @@ const Pantry = () => {
     return unitId;
   };
 
+  const getAddUnitsOptions = () => {
+    if (!selectedIngredient) {
+      return measurementsDB.length > 0
+        ? measurementsDB.map(m => m.unit_id || m.id)
+        : ['g', 'kg', 'ml', 'pcs'];
+    }
+    let units = [];
+    if (selectedIngredient.units_mapping && selectedIngredient.units_mapping.length > 0) {
+      units = selectedIngredient.units_mapping.map(u => u.unit_id);
+    } else {
+      units = measurementsDB.length > 0
+        ? measurementsDB.map(m => m.unit_id || m.id)
+        : ['g', 'kg', 'ml', 'pcs'];
+    }
+    if (newItem.unit && !units.includes(newItem.unit)) {
+      units = [newItem.unit, ...units];
+    }
+    return units;
+  };
+
   const getEditUnitsOptions = () => {
     if (!editingItem) return ['g', 'kg', 'ml', 'pcs'];
     const ing = ingredientsDB.find(i => i.id === editingItem.ingredientId);
-    const mappedUnits = ing?.units_mapping?.map(u => u.unit_id) || [];
-    const allUnits = Array.from(new Set([
-      ...mappedUnits,
-      ...(measurementsDB.map(m => m.unit_id || m.id))
-    ])).filter(Boolean);
-    return allUnits.length > 0 ? allUnits : ['g', 'kg', 'ml', 'pcs'];
+    let units = [];
+    if (ing?.units_mapping?.length > 0) {
+      units = ing.units_mapping.map(u => u.unit_id);
+    } else {
+      units = measurementsDB.length > 0
+        ? measurementsDB.map(m => m.unit_id || m.id)
+        : ['g', 'kg', 'ml', 'pcs'];
+    }
+    if (editingItem.unit && !units.includes(editingItem.unit)) {
+      units = [editingItem.unit, ...units];
+    }
+    return units;
   };
 
   return (
@@ -210,9 +237,19 @@ const Pantry = () => {
       </div>
 
       <div className="px-4 py-4 flex justify-between items-end border-b border-primary/10">
-        <div>
-          <h3 className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-1">{t('pantry.subtitle')}</h3>
-          <h2 className="text-2xl font-extrabold text-slate-100">{t('pantry.title')}</h2>
+        <div className="flex items-end gap-3.5">
+          <div>
+            <h3 className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-1">{t('pantry.subtitle')}</h3>
+            <h2 className="text-2xl font-extrabold text-slate-100 leading-none">{t('pantry.title')}</h2>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)]"
+          >
+            <span className="material-symbols-outlined text-[16px] font-black">add</span>
+            {isBg ? 'Добави' : 'Add'}
+          </button>
         </div>
         <div className="text-xs text-slate-400 font-bold bg-surface-dark border border-primary/20 px-3 py-1 rounded-full shadow-inner">
           {pantry.length} {isBg ? 'продукта' : 'items'}
@@ -229,7 +266,7 @@ const Pantry = () => {
           // Grouping logic
           const grouped = {};
           pantry.forEach(item => {
-            const groupVal = item.category || 'other';
+            const groupVal = normalizeMainGroup(item.category || 'other');
             if (!grouped[groupVal]) grouped[groupVal] = [];
             grouped[groupVal].push(item);
           });
@@ -406,18 +443,11 @@ const Pantry = () => {
                     onChange={e => setNewItem({...newItem, unit: e.target.value})}
                     className="w-full bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 focus:ring-primary focus:border-primary shadow-inner font-bold"
                   >
-                    {measurementsDB.length > 0 ? measurementsDB.map(m => (
-                      <option key={m.unit_id || m.id} value={m.unit_id || m.id}>
-                        {isBg ? (m.name_bg || m.name || m.unit_id || m.id) : (m.name_en || m.name || m.unit_id || m.id)}
+                    {getAddUnitsOptions().map(u => (
+                      <option key={u} value={u}>
+                        {getUnitName(u)}
                       </option>
-                    )) : (
-                      <>
-                        <option value="g">g</option>
-                        <option value="kg">kg</option>
-                        <option value="ml">ml</option>
-                        <option value="pcs">pcs</option>
-                      </>
-                    )}
+                    ))}
                   </select>
                 </div>
               </div>

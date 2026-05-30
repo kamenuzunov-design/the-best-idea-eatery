@@ -785,15 +785,24 @@ const RecipeDetail = () => {
                 onClick={() => navigate(`/recipe/${v.id}`)}
                 className="flex items-center justify-between p-3 rounded-xl bg-surface-dark border border-primary/20 hover:border-primary/50 transition-all group"
               >
-                <div className="flex flex-col text-left">
-                  <span className="text-slate-200 text-sm font-bold group-hover:text-primary transition-colors">
-                    {isBg ? v.title_bg : v.title_en}
-                  </span>
-                  <span className="text-[10px] text-slate-500 uppercase font-medium">
-                    {isBg ? 'От: ' : 'By: '} {v.publisher_name || 'Chef'}
-                  </span>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="size-10 rounded-lg overflow-hidden shrink-0 bg-background-dark border border-primary/20">
+                    <img 
+                      src={v.images?.main || recipe.images?.main || "/images/recipe-placeholder.png"} 
+                      alt={isBg ? v.title_bg : v.title_en} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-col text-left min-w-0">
+                    <span className="text-slate-200 text-sm font-bold group-hover:text-primary transition-colors truncate">
+                      {isBg ? v.title_bg : v.title_en}
+                    </span>
+                    <span className="text-[10px] text-slate-500 uppercase font-medium">
+                      {isBg ? 'От: ' : 'By: '} {v.publisher_name || 'Chef'}
+                    </span>
+                  </div>
                 </div>
-                <span className="material-symbols-outlined text-primary/40 group-hover:text-primary transition-colors">chevron_right</span>
+                <span className="material-symbols-outlined text-primary/40 group-hover:text-primary transition-colors ml-2 shrink-0">chevron_right</span>
               </button>
             ))}
           </div>

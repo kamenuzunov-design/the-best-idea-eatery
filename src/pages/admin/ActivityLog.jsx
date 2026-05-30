@@ -126,6 +126,11 @@ const ActivityLog = () => {
     return date.toLocaleString(isBg ? 'bg-BG' : 'en-US');
   };
 
+  const safeStr = (val) => {
+    if (val === null || val === undefined) return '';
+    return typeof val === 'object' ? JSON.stringify(val) : String(val);
+  };
+
   const displayedLogs = logs.filter(log => {
     let match = true;
     if (filterKey && log.action !== filterKey) match = false;
@@ -246,22 +251,22 @@ const ActivityLog = () => {
                 <div key={log.id} className="bg-surface-dark/50 border border-primary/10 rounded-xl p-4 shadow-sm group hover:border-primary/30 transition-colors">
                   <div className="flex justify-between items-start mb-2">
                     <button 
-                      onClick={() => { searchParams.set('action', log.action); setSearchParams(searchParams); }}
+                      onClick={() => { searchParams.set('action', safeStr(log.action)); setSearchParams(searchParams); }}
                       title={isBg ? 'Филтрирай по това действие' : 'Filter by this action'}
                       className="text-xs font-bold text-primary/80 uppercase bg-primary/10 hover:bg-primary/20 hover:text-primary transition-colors px-2 py-0.5 rounded cursor-pointer"
                     >
-                      {log.action}
+                      {safeStr(log.action)}
                     </button>
                     <span className="text-[10px] text-slate-500">{formatDate(log.timestamp)}</span>
                   </div>
-                  <p className="text-sm text-slate-200 mb-1">{log.details}</p>
+                  <p className="text-sm text-slate-200 mb-1">{safeStr(log.details)}</p>
                   <p className="text-xs text-slate-500 font-mono flex items-center gap-1">
                     <span className="material-symbols-outlined text-[14px]">person</span>
                     <button 
-                      onClick={() => { searchParams.set('email', log.userEmail); setSearchParams(searchParams); }}
+                      onClick={() => { searchParams.set('email', safeStr(log.userEmail)); setSearchParams(searchParams); }}
                       className="hover:text-primary transition-colors hover:underline"
                     >
-                      {log.userEmail}
+                      {safeStr(log.userEmail)}
                     </button>
                   </p>
                 </div>
@@ -285,21 +290,21 @@ const ActivityLog = () => {
                         <td className="px-4 py-1.5 whitespace-nowrap text-[11px] text-slate-500">{formatDate(log.timestamp)}</td>
                         <td className="px-4 py-1.5 whitespace-nowrap">
                           <button 
-                            onClick={() => { searchParams.set('action', log.action); setSearchParams(searchParams); }}
+                            onClick={() => { searchParams.set('action', safeStr(log.action)); setSearchParams(searchParams); }}
                             className="text-xs font-bold text-primary/80 uppercase hover:text-primary transition-colors"
                           >
-                            {log.action}
+                            {safeStr(log.action)}
                           </button>
                         </td>
                         <td className="px-4 py-1.5 whitespace-nowrap font-mono text-xs">
                           <button 
-                            onClick={() => { searchParams.set('email', log.userEmail); setSearchParams(searchParams); }}
+                            onClick={() => { searchParams.set('email', safeStr(log.userEmail)); setSearchParams(searchParams); }}
                             className="hover:text-primary transition-colors hover:underline"
                           >
-                            {log.userEmail}
+                            {safeStr(log.userEmail)}
                           </button>
                         </td>
-                        <td className="px-4 py-1.5">{log.details}</td>
+                        <td className="px-4 py-1.5">{safeStr(log.details)}</td>
                       </tr>
                     ))}
                   </tbody>

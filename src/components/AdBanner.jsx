@@ -28,6 +28,7 @@ const AdBanner = () => {
         const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         const activeAds = all.filter(ad => {
           if (!ad.isActive) return false;
+          if (ad.type === 'native') return false; // Exclude native (contextual recipe) ads from the global banner pool
           const start = ad.startDate || '0000-00-00';
           const end = ad.endDate || '9999-99-99';
           return now >= start && now <= end;

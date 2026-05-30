@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { 
   collection, 
   getDocs, 
@@ -26,6 +27,7 @@ import { logActivity } from '../../lib/activityLogger';
 const BackupRecovery = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isBg = i18n.language === 'bg';
   
   const [loading, setLoading] = useState(false);
@@ -50,12 +52,37 @@ const BackupRecovery = () => {
     'ingredients',
     'measurements',
     'users',
-    'activity_log',
+    'activity_logs',
     'ingredient_groups',
-    'recipe_versions',
     'system_history',
-    'user_pantry'
+    'ads',
+    'settings'
   ];
+
+  const fetchFullBackupData = async (updateStatusCallback) => {
+    const fullBackup = {};
+    for (const collName of COLLECTIONS) {
+      if (updateStatusCallback) {
+        updateStatusCallback(isBg ? `Извличане на ${collName}...` : `Fetching ${collName}...`);
+      }
+      const snapshot = await getDocs(collection(db, collName));
+      const docs = [];
+      for (const d of snapshot.docs) {
+        const docData = { id: d.id, ...d.data() };
+        if (collName === 'users') {
+          try {
+            const pantrySnapshot = await getDocs(collection(db, 'users', d.id, 'pantry'));
+            docData._pantry = pantrySnapshot.docs.map(pd => ({ id: pd.id, ...pd.data() }));
+          } catch (err) {
+            console.error(`Error fetching pantry for user ${d.id}:`, err);
+          }
+        }
+        docs.push(docData);
+      }
+      fullBackup[collName] = docs;
+    }
+    return fullBackup;
+  };
 
   const handleExport = async () => {
     if (!window.confirm(isBg ? 'Сигурни ли сте, че искате да експортирате цялата база данни?' : 'Are you sure you want to export the full database?')) return;
@@ -64,13 +91,7 @@ const BackupRecovery = () => {
     setStatus(isBg ? 'Подготовка на данните...' : 'Preparing data...');
     
     try {
-      const fullBackup = {};
-      
-      for (const collName of COLLECTIONS) {
-        setStatus(isBg ? `Извличане на ${collName}...` : `Fetching ${collName}...`);
-        const snapshot = await getDocs(collection(db, collName));
-        fullBackup[collName] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
+      const fullBackup = await fetchFullBackupData(setStatus);
       
       const blob = new Blob([JSON.stringify(fullBackup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -83,7 +104,7 @@ const BackupRecovery = () => {
       link.click();
       document.body.removeChild(link);
       
-      await logActivity('backup_export', { date });
+      await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'backup_export', `Exported database on ${date}`);
       setStatus(isBg ? 'Експортът завърши успешно!' : 'Export completed successfully!');
     } catch (error) {
       console.error("Export error:", error);
@@ -129,7 +150,6 @@ const BackupRecovery = () => {
   };
 
   const performRestore = async (data, sourceName) => {
-    // Basic validation
     const keys = Object.keys(data);
     if (!keys.includes('recipes') || !keys.includes('ingredients')) {
       throw new Error("Invalid backup format");
@@ -137,31 +157,53 @@ const BackupRecovery = () => {
 
     setStatus(isBg ? 'Започване на възстановяването...' : 'Starting restoration...');
     
-    let totalDocs = 0;
+    const operations = [];
+    
     for (const collName of keys) {
       if (!COLLECTIONS.includes(collName)) continue;
       
       const docsToRestore = data[collName];
-      setStatus(isBg ? `Възстановяване на ${collName} (${docsToRestore.length} документа)...` : `Restoring ${collName} (${docsToRestore.length} docs)...`);
       
-      // Use batching for efficiency (Firestore limits batch to 500)
-      for (let i = 0; i < docsToRestore.length; i += 500) {
-        const batch = writeBatch(db);
-        const chunk = docsToRestore.slice(i, i + 500);
+      docsToRestore.forEach(docData => {
+        const { id, _pantry, ...cleanData } = docData;
         
-        chunk.forEach(docData => {
-          const { id, ...cleanData } = docData;
-          const docRef = doc(db, collName, id);
-          batch.set(docRef, cleanData);
+        operations.push({
+          ref: doc(db, collName, id),
+          data: cleanData
         });
         
-        await batch.commit();
-      }
-      totalDocs += docsToRestore.length;
+        if (collName === 'users' && Array.isArray(_pantry)) {
+          _pantry.forEach(pantryItem => {
+            const { id: pantryItemId, ...cleanPantryData } = pantryItem;
+            operations.push({
+              ref: doc(db, 'users', id, 'pantry', pantryItemId),
+              data: cleanPantryData
+            });
+          });
+        }
+      });
     }
 
-    await logActivity('backup_restore', { source: sourceName, totalDocs });
-    setStatus(isBg ? `Успешно възстановени ${totalDocs} документа!` : `Successfully restored ${totalDocs} documents!`);
+    setStatus(isBg ? `Изпълнение на възстановяването (${operations.length} операции)...` : `Executing restoration (${operations.length} operations)...`);
+
+    const BATCH_SIZE = 400;
+    for (let i = 0; i < operations.length; i += BATCH_SIZE) {
+      const batch = writeBatch(db);
+      const chunk = operations.slice(i, i + BATCH_SIZE);
+      
+      chunk.forEach(op => {
+        batch.set(op.ref, op.data);
+      });
+      
+      await batch.commit();
+      setStatus(isBg 
+        ? `Възстановени ${Math.min(i + BATCH_SIZE, operations.length)} от ${operations.length} записа...`
+        : `Restored ${Math.min(i + BATCH_SIZE, operations.length)} of ${operations.length} records...`
+      );
+    }
+
+    await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'backup_restore', `Restored database from ${sourceName} (${operations.length} docs)`);
+    setStatus(isBg ? `Успешно възстановени ${operations.length} записа!` : `Successfully restored ${operations.length} records!`);
   };
 
   const handleCloudBackup = async () => {
@@ -171,11 +213,7 @@ const BackupRecovery = () => {
     setStatus(isBg ? 'Подготовка на данните...' : 'Preparing data...');
     
     try {
-      const fullBackup = {};
-      for (const collName of COLLECTIONS) {
-        const snapshot = await getDocs(collection(db, collName));
-        fullBackup[collName] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
+      const fullBackup = await fetchFullBackupData(setStatus);
       
       const date = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `cloud_backup_${date}.json`;
@@ -186,7 +224,6 @@ const BackupRecovery = () => {
       await uploadBytes(storageRef, blob);
       const downloadURL = await getDownloadURL(storageRef);
       
-      // Save metadata
       await addDoc(collection(db, 'system_backups'), {
         name: filename,
         timestamp: serverTimestamp(),
@@ -195,13 +232,12 @@ const BackupRecovery = () => {
         url: downloadURL
       });
 
-      // Cleanup: Keep only 5
       if (cloudBackups.length >= 5) {
         const oldest = cloudBackups[cloudBackups.length - 1];
         await handleDeleteCloudBackup(oldest, true);
       }
 
-      await logActivity('cloud_backup_create', { filename });
+      await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'cloud_backup_create', `Created cloud backup: ${filename}`);
       setStatus(isBg ? 'Облачният архив е създаден успешно!' : 'Cloud backup created successfully!');
     } catch (error) {
       console.error("Cloud backup error:", error);
@@ -237,7 +273,7 @@ const BackupRecovery = () => {
       await deleteObject(storageRef);
       await deleteDoc(doc(db, 'system_backups', backup.id));
       if (!isAuto) {
-        await logActivity('cloud_backup_delete', { filename: backup.name });
+        await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'cloud_backup_delete', `Deleted cloud backup: ${backup.name}`);
         setStatus(isBg ? 'Архивът е изтрит.' : 'Backup deleted.');
       }
     } catch (error) {

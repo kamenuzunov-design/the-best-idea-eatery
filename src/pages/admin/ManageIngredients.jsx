@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { archiveVersion } from '../../lib/archiveUtils';
 import { CUISINES } from '../../data/cuisines';
+import { normalizeMainGroup } from '../../lib/recipeMetaUtils';
 
 const ManageIngredients = () => {
   const { i18n } = useTranslation();
@@ -775,7 +776,7 @@ const ManageIngredients = () => {
             // Grouping logic
             const grouped = {};
             filteredIngredients.forEach(ing => {
-              const groupVal = ing.classification?.main_group || 'other';
+              const groupVal = normalizeMainGroup(ing.classification?.main_group || 'other');
               if (!grouped[groupVal]) grouped[groupVal] = [];
               grouped[groupVal].push(ing);
             });

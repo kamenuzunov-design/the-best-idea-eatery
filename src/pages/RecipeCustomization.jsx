@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { logActivity } from '../lib/activityLogger';
 import { REPUTATION_POINTS } from '../lib/reputationUtils';
 import { ROLES } from '../constants/roles';
+import { normalizeMainGroup, getMainGroupLabel } from '../lib/recipeMetaUtils';
 
 const RecipeCustomization = () => {
   const { id } = useParams();
@@ -106,9 +107,11 @@ const RecipeCustomization = () => {
   const groupedIngredients = useMemo(() => {
     const groups = {};
     masterIngredients.forEach(ing => {
-      const groupName = ing.classification?.main_group || (isBg ? 'Други' : 'Other');
-      if (!groups[groupName]) groups[groupName] = [];
-      groups[groupName].push(ing);
+      const rawGroup = ing.classification?.main_group || '';
+      const groupKey = normalizeMainGroup(rawGroup);
+      const groupLabel = getMainGroupLabel(groupKey, isBg);
+      if (!groups[groupLabel]) groups[groupLabel] = [];
+      groups[groupLabel].push(ing);
     });
     return Object.keys(groups).sort().reduce((acc, key) => {
       acc[key] = groups[key].sort((a, b) => 
@@ -180,6 +183,9 @@ const RecipeCustomization = () => {
         timer_minutes: s.timer_minutes ? parseInt(s.timer_minutes) : null
       })).filter(s => s.instruction_bg || s.instruction_en);
 
+      const isPowerUserOrMod = user.role === ROLES.OWNER || user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR;
+      const shouldNeedModeration = isPublic && !isPowerUserOrMod;
+
       const newRecipeData = {
         ...originalRecipe,
         title_bg: titleBg,
@@ -191,7 +197,8 @@ const RecipeCustomization = () => {
         publisher_name: userNickname,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        is_active: true,
+        is_active: !shouldNeedModeration,
+        status: shouldNeedModeration ? 'pending' : 'approved',
         is_deleted: false,
         ingredients: normalizedIngredientsToSave,
         steps: normalizedStepsToSave,
