@@ -244,19 +244,34 @@ const Home = () => {
   }, [activeTab, searchQuery, selectedCategory, pantry, ingredientsList, analyzeRecipe]); // Re-run when tab, search, category, pantry, ingredientsList or analyzeRecipe changes
 
   useEffect(() => {
-    // Fetch a featured recipe - just get 20 and pick the best client-side to avoid index
+    // Fetch a featured recipe pool (up to 100) to select from
     const qFeatured = query(
       collection(db, 'recipes'), 
-      limit(20)
+      limit(100)
     );
     const unsubFeatured = onSnapshot(qFeatured, 
       (snapshot) => {
         if (!snapshot.empty) {
           const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           const valid = all.filter(r => r.is_deleted !== true);
-          valid.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          
           if (valid.length > 0) {
-            setFeaturedRecipe(valid[0]);
+            // Sort by id to ensure stable ordering across all devices
+            valid.sort((a, b) => a.id.localeCompare(b.id));
+            
+            // Get today's date in YYYY-MM-DD format
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            // Generate stable hash from the date string
+            let hash = 0;
+            for (let i = 0; i < dateStr.length; i++) {
+              hash = dateStr.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            
+            // Pick a recipe based on the hash
+            const index = Math.abs(hash) % valid.length;
+            setFeaturedRecipe(valid[index]);
           }
         }
       },
@@ -593,7 +608,7 @@ const Home = () => {
           <div className="relative z-10">
             <h4 className="text-primary font-extrabold text-xl mb-2">{t('home.what_to_cook')}</h4>
             <p className="text-slate-300 text-sm mb-6 font-medium">{t('home.find_based_on_ingredients')}</p>
-            <Link to="/ai-search" className="inline-block bg-gradient-to-r from-primary to-[#b8860b] text-background-dark px-6 py-3 rounded-xl text-sm font-bold shadow-[0_5px_20px_rgba(212,175,53,0.4)] hover:shadow-[0_8px_25px_rgba(212,175,53,0.5)] hover:-translate-y-1 transition-all active:translate-y-0">
+            <Link to="/ai-assistant" className="inline-block bg-gradient-to-r from-primary to-[#b8860b] text-background-dark px-6 py-3 rounded-xl text-sm font-bold shadow-[0_5px_20px_rgba(212,175,53,0.4)] hover:shadow-[0_8px_25px_rgba(212,175,53,0.5)] hover:-translate-y-1 transition-all active:translate-y-0">
               {t('home.try_ai')}
             </Link>
           </div>

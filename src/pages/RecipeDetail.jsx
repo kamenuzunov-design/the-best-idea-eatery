@@ -1100,7 +1100,7 @@ const RecipeDetail = () => {
 
       {/* Repeating Products Confirmation Modal */}
       {showRepeatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
+        <div className="fixed inset-0 max-w-md mx-auto w-full z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm">
           <div className="bg-surface-dark border border-primary/20 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3 border-b border-primary/10 pb-3 mb-4">
               <span className="material-symbols-outlined text-amber-500 text-3xl">shopping_cart_checkout</span>

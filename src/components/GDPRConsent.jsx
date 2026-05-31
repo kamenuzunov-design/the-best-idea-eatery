@@ -56,7 +56,7 @@ const GDPRConsent = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center p-4 sm:items-center bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="fixed inset-0 max-w-md mx-auto w-full z-[9999] flex items-end justify-center p-4 sm:items-center bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="w-full max-w-md bg-surface-dark border border-primary/20 rounded-2xl shadow-2xl p-6 space-y-6 animate-in slide-in-from-bottom-10 duration-500">
         <div className="flex items-center gap-3">
           <div className="size-12 bg-primary/10 rounded-full flex items-center justify-center text-primary">

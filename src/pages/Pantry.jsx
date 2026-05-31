@@ -237,19 +237,30 @@ const Pantry = () => {
       </div>
 
       <div className="px-4 py-4 flex justify-between items-end border-b border-primary/10">
-        <div className="flex items-end gap-3.5">
+        <div className="flex items-end gap-3 flex-wrap">
           <div>
             <h3 className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-1">{t('pantry.subtitle')}</h3>
             <h2 className="text-2xl font-extrabold text-slate-100 leading-none">{t('pantry.title')}</h2>
           </div>
-          <button 
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)]"
-          >
-            <span className="material-symbols-outlined text-[16px] font-black">add</span>
-            {isBg ? 'Добави' : 'Add'}
-          </button>
+          <div className="flex gap-2">
+            <button 
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px] font-black">add</span>
+              {isBg ? 'Добави' : 'Add'}
+            </button>
+            <button 
+              type="button"
+              onClick={() => navigate('/ai-assistant')}
+              className="text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-primary to-[#b8860b] text-background-dark hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
+              title="Chef AI Assistant"
+            >
+              <span className="material-symbols-outlined text-[16px] font-black">auto_awesome</span>
+              {isBg ? 'Chef AI' : 'Chef AI'}
+            </button>
+          </div>
         </div>
         <div className="text-xs text-slate-400 font-bold bg-surface-dark border border-primary/20 px-3 py-1 rounded-full shadow-inner">
           {pantry.length} {isBg ? 'продукта' : 'items'}
@@ -371,7 +382,7 @@ const Pantry = () => {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 max-w-md mx-auto w-full z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm p-6 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative">
             <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-background-dark/50 rounded-full p-1 border border-primary/20">
               <span className="material-symbols-outlined text-[18px]">close</span>
@@ -481,7 +492,7 @@ const Pantry = () => {
 
       {/* Edit Modal */}
       {showEditModal && editingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 max-w-md mx-auto w-full z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="bg-surface-dark border border-blue-500/30 rounded-3xl w-full max-w-sm p-6 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative bg-blue-500/5">
             <button 
               onClick={() => { setShowEditModal(false); setEditingItem(null); }} 
