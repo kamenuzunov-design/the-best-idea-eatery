@@ -28,6 +28,32 @@ const SavedRecipes = () => {
   const [customQty, setCustomQty] = useState('1');
   const [customUnit, setCustomUnit] = useState('pcs');
 
+  // E-Grocer platform integration state
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedStore, setSelectedStore] = useState('ebag');
+  const [selectedItemsForOrder, setSelectedItemsForOrder] = useState(new Set());
+
+  const handleOpenOrderModal = () => {
+    const initialSelected = new Set();
+    shoppingList.forEach((_, index) => {
+      if (!checkedItems.has(index)) {
+        initialSelected.add(index);
+      }
+    });
+    setSelectedItemsForOrder(initialSelected);
+    setShowOrderModal(true);
+  };
+
+  const toggleSelectedItemForOrder = (idx) => {
+    const next = new Set(selectedItemsForOrder);
+    if (next.has(idx)) {
+      next.delete(idx);
+    } else {
+      next.add(idx);
+    }
+    setSelectedItemsForOrder(next);
+  };
+
   useEffect(() => {
     // Fetch ingredients for price calculation
     getDocs(collection(db, 'ingredients'))
@@ -297,6 +323,23 @@ const SavedRecipes = () => {
     setCustomUnit('pcs');
   };
 
+  const fallbackCopyText = (text) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      alert(t('saved.copy_success'));
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+      alert(isBg ? 'Грешка при копирането.' : 'Failed to copy.');
+    }
+    document.body.removeChild(textArea);
+  };
+
   return (
     <div className="flex-1 pb-32 px-4 py-8">
       <h2 className="text-3xl font-extrabold text-slate-100 mb-8 tracking-tight">{t('saved.title')}</h2>
@@ -311,13 +354,13 @@ const SavedRecipes = () => {
           {shoppingList.length > 0 && (
             <div>
               {!isEditing ? (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
                   <button 
                     onClick={handleClearShoppingList}
                     className="text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-sm">delete_sweep</span>
-                    {isBg ? 'Изтрий списъка' : 'Clear List'}
+                    {isBg ? 'Изтрий' : 'Clear'}
                   </button>
                   <button 
                     onClick={handleStartEdit}
@@ -325,6 +368,13 @@ const SavedRecipes = () => {
                   >
                     <span className="material-symbols-outlined text-sm">edit</span>
                     {isBg ? 'Редактирай' : 'Edit'}
+                  </button>
+                  <button 
+                    onClick={handleOpenOrderModal}
+                    className="text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold transition-all active:scale-95 px-3.5 py-1.5 rounded-xl flex items-center gap-1 shadow-md cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm font-black">shopping_bag</span>
+                    {t('saved.order_online')}
                   </button>
                 </div>
               ) : (
@@ -687,6 +737,194 @@ const SavedRecipes = () => {
           </div>
         )}
       </div>
+
+      {/* E-Grocer platform checkout modal */}
+      {showOrderModal && (
+        <div className="fixed inset-0 max-w-md mx-auto w-full z-[100] flex items-center justify-center p-4 bg-background-dark/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-surface-dark border border-primary/20 rounded-3xl p-6 shadow-2xl relative max-h-[85vh] flex flex-col overflow-hidden">
+            {/* Close button */}
+            <button
+              onClick={() => setShowOrderModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-primary transition-colors cursor-pointer flex items-center justify-center p-1"
+              title={t('saved.close')}
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+
+            {/* Header */}
+            <h3 className="text-slate-100 font-extrabold text-lg mb-1.5 flex items-center gap-2 pr-8">
+              <span className="material-symbols-outlined text-primary">local_shipping</span>
+              {t('saved.order_modal_title')}
+            </h3>
+            
+            <p className="text-[11px] text-slate-400 mb-4 leading-normal">
+              {t('saved.order_modal_desc')}
+            </p>
+
+            {/* Platform Select */}
+            <div className="mb-4">
+              <label className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 block px-1">
+                {t('saved.select_store')}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'ebag', name: 'eBag.bg', color: 'border-emerald-500/35 hover:border-emerald-500 text-emerald-400 bg-emerald-500/5' },
+                  { id: 'parkmart', name: 'Parkmart', color: 'border-amber-500/35 hover:border-amber-500 text-amber-500 bg-amber-500/5' },
+                  { id: 'supermag', name: 'Supermag', color: 'border-sky-500/35 hover:border-sky-500 text-sky-400 bg-sky-500/5' }
+                ].map(store => (
+                  <button
+                    key={store.id}
+                    onClick={() => setSelectedStore(store.id)}
+                    className={`py-2 px-1.5 rounded-xl border text-[10px] font-black text-center transition-all cursor-pointer ${
+                      selectedStore === store.id
+                        ? 'bg-primary text-background-dark border-primary shadow-sm shadow-primary/20'
+                        : `${store.color}`
+                    }`}
+                  >
+                    {store.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Scrollable Items List */}
+            <div className="flex-1 overflow-y-auto min-h-[150px] mb-4 space-y-2 border-y border-primary/10 py-3 pr-1">
+              {shoppingList.map((item, index) => {
+                const name = getItemName(item);
+                const isSelected = selectedItemsForOrder.has(index);
+                const rawQty = item.quantityToBuy !== undefined ? item.quantityToBuy : (item.amount || 0);
+                const rawUnit = item.unit || item.unit_id || 'g';
+                const { qty, unit } = formatMetricItem(rawQty, rawUnit);
+
+                // Build search URL
+                let searchUrl = '';
+                if (selectedStore === 'ebag') {
+                  searchUrl = `https://www.ebag.bg/search?q=${encodeURIComponent(name)}`;
+                } else if (selectedStore === 'parkmart') {
+                  searchUrl = `https://parkmart.bg/search?search=${encodeURIComponent(name)}`;
+                } else if (selectedStore === 'supermag') {
+                  searchUrl = `https://www.supermag.bg/search?q=${encodeURIComponent(name)}`;
+                }
+
+                return (
+                  <div 
+                    key={index}
+                    className={`flex items-center justify-between gap-3 p-2 bg-background-dark/35 border rounded-xl hover:bg-background-dark/60 transition-colors ${
+                      isSelected ? 'border-primary/15' : 'border-primary/5 opacity-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button 
+                        onClick={() => toggleSelectedItemForOrder(index)}
+                        className={`size-5 rounded border transition-all flex items-center justify-center cursor-pointer shrink-0 ${
+                          isSelected 
+                            ? 'bg-primary/20 border-primary text-primary' 
+                            : 'border-primary/30 hover:border-primary'
+                        }`}
+                        title={isSelected ? (isBg ? 'Премахни от поръчката' : 'Remove from order') : (isBg ? 'Добави към поръчката' : 'Add to order')}
+                      >
+                        {isSelected && (
+                          <span className="material-symbols-outlined text-[13px] font-black">check</span>
+                        )}
+                      </button>
+                      <div className="min-w-0">
+                        <p className={`text-slate-200 text-xs font-bold truncate ${!isSelected ? 'line-through opacity-50 text-slate-400' : ''}`}>
+                          {name}
+                        </p>
+                        <p className="text-[10px] text-primary font-medium">
+                          {qty} {getUnitName(unit)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isSelected && (
+                      <a
+                        href={searchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/25 hover:bg-primary hover:text-background-dark font-extrabold text-[10px] flex items-center gap-1 active:scale-95 transition-all shadow-sm shrink-0"
+                        title={`${t('saved.search_store', { store: selectedStore === 'ebag' ? 'eBag' : selectedStore === 'parkmart' ? 'Parkmart' : 'Supermag' })}`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">search</span>
+                        {isBg ? 'Търси' : 'Search'}
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    const listText = shoppingList
+                      .map((item, index) => {
+                        const name = getItemName(item);
+                        if (!selectedItemsForOrder.has(index)) return null;
+                        const qty = item.quantityToBuy !== undefined ? item.quantityToBuy : (item.amount || 0);
+                        const unit = item.unit || item.unit_id || 'g';
+                        const formatted = formatMetricItem(qty, unit);
+                        return `${name} - ${formatted.qty} ${getUnitName(formatted.unit)}`;
+                      })
+                      .filter(Boolean)
+                      .join('\n');
+                    
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText(listText)
+                        .then(() => alert(t('saved.copy_success')))
+                        .catch(err => {
+                          console.warn("Clipboard write failed, using fallback:", err);
+                          fallbackCopyText(listText);
+                        });
+                    } else {
+                      fallbackCopyText(listText);
+                    }
+                  }}
+                  className="py-2.5 rounded-xl bg-surface-dark border border-primary/20 hover:border-primary/45 text-primary text-[10px] font-bold uppercase transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">copy_all</span>
+                  {t('saved.copy_full_list')}
+                </button>
+                <button
+                  onClick={() => {
+                    const namesOnly = shoppingList
+                      .map((item, index) => {
+                        if (!selectedItemsForOrder.has(index)) return null;
+                        return getItemName(item);
+                      })
+                      .filter(Boolean)
+                      .join('\n');
+                    
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText(namesOnly)
+                        .then(() => alert(t('saved.copy_success')))
+                        .catch(err => {
+                          console.warn("Clipboard write failed, using fallback:", err);
+                          fallbackCopyText(namesOnly);
+                        });
+                    } else {
+                      fallbackCopyText(namesOnly);
+                    }
+                  }}
+                  className="py-2.5 rounded-xl bg-surface-dark border border-primary/20 hover:border-primary/45 text-primary text-[10px] font-bold uppercase transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">content_copy</span>
+                  {t('saved.copy_names_only')}
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowOrderModal(false)}
+                className="w-full py-2.5 bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center shadow-lg active:scale-95 transition-all cursor-pointer"
+              >
+                {t('saved.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -9,7 +9,7 @@
 
 ### Двата режима на работа на Chef AI
 Нашият кулинарен асистент поддържа два паралелни режима на работа:
-1. **Интерактивен чат (Gemini API режим):** Чрез свързване с модела **Gemini 1.5 Flash**. Позволява свободен разговор, задаване на въпроси за рецепти, съвети за готвене и заместители.
+1. **Интерактивен чат (Gemini API режим):** Чрез свързване с модела **Gemini 3.5 Flash**. Позволява свободен разговор, задаване на въпроси за рецепти, съвети за готвене и заместители.
 2. **Локален офлайн режим (Gourmet Rule Engine):** Автоматичен интелигентен fallback алгоритъм, който се активира, ако нямате въведен API ключ или ако ключът ви е ограничен. Той анализира вашите налични продукти в килера, изключения и диети и ви предлага рецепти локално.
 
 ---
@@ -40,7 +40,7 @@
 ### Често задавани въпроси (FAQ)
 
 #### Безплатен ли е наистина?
-**Да!** Google предоставя напълно безплатен достъп за лична употреба с лимит до **15 заявки на минута** за модела Gemini 1.5 Flash. Няма скрити такси, нито изискване за въвеждане на кредитна или дебитна карта.
+**Да!** Google предоставя напълно безплатен достъп за лична употреба с лимит до **15 заявки на минута** за модела Gemini 3.5 Flash. Няма скрити такси, нито изискване за въвеждане на кредитна или дебитна карта.
 
 #### Сигурни ли са личните ми данни?
 **Напълно.** Вашият API ключ се запазва локално и единствено на вашето устройство в уеб браузъра (чрез `localStorage`). Приложението не изпраща ключа към наши сървъри. Комуникацията с изкуствения интелект се извършва директно от вашия браузър към защитените сървъри на Google.
@@ -58,7 +58,7 @@
 
 ### Two Modes of Operation for Chef AI
 Our culinary assistant supports two modes:
-1. **Interactive Chat (Gemini API mode):** Powered by **Gemini 1.5 Flash**. Allows you to converse freely, ask for custom recipes, cooking tips, and ingredient substitutions.
+1. **Interactive Chat (Gemini API mode):** Powered by **Gemini 3.5 Flash**. Allows you to converse freely, ask for custom recipes, cooking tips, and ingredient substitutions.
 2. **Local Offline Mode (Gourmet Rule Engine):** An automatic smart fallback engine that activates if no key is supplied or if your key is invalid. It scans your pantry, exclusions, and allergies, suggesting recipes locally.
 
 ---
@@ -88,7 +88,7 @@ Our culinary assistant supports two modes:
 ### Frequently Asked Questions (FAQ)
 
 #### Is it really free?
-**Yes!** Google AI Studio provides a free tier for personal use, allowing up to **15 requests per minute** on Gemini 1.5 Flash. There are no fees or billing card requirements.
+**Yes!** Google AI Studio provides a free tier for personal use, allowing up to **15 requests per minute** on Gemini 3.5 Flash. There are no fees or billing card requirements.
 
 #### Is my key secure?
 **Yes, completely.** Your key is stored locally in your browser's `localStorage` only. It is never transmitted to our servers. Requests are signed directly from your browser to Google's API endpoints.

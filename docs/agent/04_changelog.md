@@ -3,6 +3,30 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-06-17] - Интеграция с онлайн магазини, корекция на отметките и URL адресите, детайлни грешки за Gemini API
+### Добавено (Added)
+- **Интеграция с онлайн магазини (E-Grocer Platforms) ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx) и [i18n.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/i18n.js))**:
+  - Реализирахме бутон "Поръчай онлайн" със златист градиент и икона `shopping_bag` в Списъка за пазаруване.
+  - Изградихме премиум стъклен модален прозорец "Поръчай продукти онлайн" с избор на верига за хранителни стоки (eBag.bg, Parkmart.bg, Supermag.bg).
+  - Имплементирахме автоматично търсене на всеки избран продукт в съответния магазин в нов таб.
+  - Добавихме функции за копиране на целия избран списък с количества или само имената за бърза обработка.
+  - Създадохме локално състояние `selectedItemsForOrder` за модала за правилна селекция на продуктите за поръчка (отметнатите се търсят/копират, неотметнатите са бледи и изключени).
+
+### Променено (Changed)
+- **Миграция към поддържан модел (`gemini-3.5-flash`) ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx), [gemini_guide.md](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/gemini_guide.md))**:
+  - Преминахме от спрения от поддръжка модел `gemini-1.5-flash` към новия и активен към юни 2026 г. модел **`gemini-3.5-flash`** в API заявките и актуализирахме придружаващата документация и често задаваните въпроси (FAQ).
+- **Детайлно прихващане на грешки в Chef AI ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+  - Обновихме `sendToGemini` и `handleLocalFallbackResponse` да разпознават и показват детайлните грешки от Google Gemini API (напр. грешен ключ, неактивна услуга) или мрежови грешки (като CORS блокаж или липса на интернет връзка). Това улеснява диагностицирането на проблеми с ключа от страна на потребителя.
+
+### Поправено (Fixed)
+- **Корекция на линковете за търсене в супермаркетите ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx))**:
+  - **eBag.bg**: Премахнахме езиковия префикс от URL (`/search?q=...`), тъй като причиняваше 404 Unexpected Application Error при зареждане на метаданните в SPA на eBag.
+  - **Parkmart.bg**: Върнахме адреса към основния домен (`parkmart.bg`), тъй като поддомейнът `sofia.parkmart.bg` не съществува в DNS и хвърляше NXDOMAIN грешка.
+  - **Supermag.bg**: Променихме адреса към новия SEO формат на сайта (`/search?q=...`), тъй като старият маршрут с `index.php` връщаше `File not found` поради миграция на платформата.
+- **Изчистване на API ключ в състоянието ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+  - Фиксирахме пропуск в `handleSaveApiKey`, при който въведеният API ключ се записваше изчистен от празни пространства в `localStorage`, но не и в състоянието (React state). Сега промените се отразяват мигновено и в state-а при запис.
+  - Премахнахме неизползвана променлива в `catch` блока на `AIAssistant.jsx`, с което решихме грешка от ESLint статичния анализ.
+
 ## [2026-05-31] - Автоматична ротация на Акцент на деня, Реален AI Асистент и Интерактивно Ръководство
 ### Добавено (Added)
 - **Реален AI Асистент ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:

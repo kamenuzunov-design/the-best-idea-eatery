@@ -242,7 +242,7 @@ const AIAssistant = () => {
   };
 
   // Gourmet Rule Engine Fallback (Offline Mode)
-  const handleLocalFallbackResponse = (userQuery) => {
+  const handleLocalFallbackResponse = (userQuery, errorDetails = null) => {
     const queryLower = userQuery.toLowerCase();
     let text = '';
     let matchedRecipes = [];
@@ -294,11 +294,27 @@ const AIAssistant = () => {
           `* **Gluten**: Substitute wheat flour with gluten-free flour blends (rice, almond, or tapioca starch).`;
     } else {
       // Default greeting or random match
-      text = isBg
-        ? `Здравейте! Изпълнявам се в **локален кулинарен режим (Local Offline)** поради липса на [връзка с Gemini API](action:help). Въпреки това анализирах вашия диетичен профил и съставки.\n\n` +
-          `Въз основа на вашия килер, ви препоръчвам да опитате тези рецепти:`
-        : `Hello! I am running in **Local Offline Mode** because the [Gemini API connection](action:help) is unavailable. However, I have scanned your ingredients and dietary filters.\n\n` +
-          `Based on your pantry, I recommend trying these recipes:`;
+      if (errorDetails) {
+        let displayError = errorDetails;
+        if (errorDetails.includes('Failed to fetch')) {
+          displayError = isBg 
+            ? 'Мрежова грешка (Failed to fetch). Вероятно е налице CORS блокаж от браузъра или липса на интернет връзка.' 
+            : 'Network request failed (Failed to fetch). Likely caused by browser CORS block or no internet connection.';
+        }
+        text = isBg
+          ? `Изпълнявам се в **локален кулинарен режим (Local Offline)**, тъй като възникна проблем при връзката с Gemini API.\n\n` +
+            `⚠️ **Детайли за грешката:** \`${displayError}\`\n\n` +
+            `Въпреки това анализирах вашия диетичен профил и съставки. Въз основа на вашия килер, ви препоръчвам да опитате тези рецепти:`
+          : `I am running in **Local Offline Mode** because the Gemini API connection failed.\n\n` +
+            `⚠️ **Error Details:** \`${displayError}\`\n\n` +
+            `However, I have scanned your ingredients and dietary filters. Based on your pantry, I recommend trying these recipes:`;
+      } else {
+        text = isBg
+          ? `Здравейте! Изпълнявам се в **локален кулинарен режим (Local Offline)** поради липса на [връзка с Gemini API](action:help). Въпреки това анализирах вашия диетичен профил и съставки.\n\n` +
+            `Въз основа на вашия килер, ви препоръчвам да опитате тези рецепти:`
+          : `Hello! I am running in **Local Offline Mode** because the [Gemini API connection](action:help) is unavailable. However, I have scanned your ingredients and dietary filters.\n\n` +
+            `Based on your pantry, I recommend trying these recipes:`;
+      }
       
       matchedRecipes = filtered.filter(recipe => recipe.matchedCount > 0);
     }
@@ -338,7 +354,7 @@ Rules:
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -357,16 +373,25 @@ Rules:
         }
       );
 
-      if (response.status === 403 || response.status === 400) {
-        console.warn("Gemini API key forbidden or invalid. Falling back to local gourmet rule engine.");
-        return handleLocalFallbackResponse(userMessage);
+      if (!response.ok) {
+        let errMessage = `HTTP ${response.status} ${response.statusText || ''}`;
+        try {
+          const errData = await response.json();
+          if (errData.error?.message) {
+            errMessage = `${errMessage}: ${errData.error.message}`;
+          }
+        } catch {
+          // Response not JSON
+        }
+        console.warn("Gemini API error. Falling back to local gourmet rule engine. Error:", errMessage);
+        return handleLocalFallbackResponse(userMessage, errMessage.trim());
       }
 
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (!text) {
-        return handleLocalFallbackResponse(userMessage);
+        return handleLocalFallbackResponse(userMessage, "No response text candidate returned from Gemini API");
       }
 
       const recommended = detectRecommendedRecipes(text);
@@ -374,7 +399,7 @@ Rules:
 
     } catch (err) {
       console.error("Gemini API request failed:", err);
-      return handleLocalFallbackResponse(userMessage);
+      return handleLocalFallbackResponse(userMessage, err.message || String(err));
     }
   };
 
@@ -414,7 +439,9 @@ Rules:
   // Settings Save API Key
   const handleSaveApiKey = (e) => {
     e.preventDefault();
-    localStorage.setItem('gemini_api_key', customApiKey.trim());
+    const trimmedKey = customApiKey.trim();
+    localStorage.setItem('gemini_api_key', trimmedKey);
+    setCustomApiKey(trimmedKey);
     setShowSettings(false);
     alert(isBg ? 'API ключът е записан успешно!' : 'API Key saved successfully!');
   };
@@ -915,8 +942,8 @@ Rules:
                 </summary>
                 <div className="p-3 pt-0 border-t border-primary/5 text-[11px] text-slate-300 leading-relaxed">
                   {isBg 
-                    ? 'Да! Google предоставя щедър безплатен лимит от 15 заявки на минута за модела Gemini 1.5 Flash за персонална употреба. Не се изисква кредитна/дебитна карта или плащане.'
-                    : 'Yes! Google provides a generous free tier of 15 queries per minute for Gemini 1.5 Flash for personal use. No credit card or billing configuration is required.'}
+                    ? 'Да! Google предоставя щедър безплатен лимит от 15 заявки на минута за модела Gemini 3.5 Flash за персонална употреба. Не се изисква кредитна/дебитна карта или плащане.'
+                    : 'Yes! Google provides a generous free tier of 15 queries per minute for Gemini 3.5 Flash for personal use. No credit card or billing configuration is required.'}
                 </div>
               </details>
 
