@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { ROLES } from '../constants/roles';
@@ -12,6 +12,18 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const isBg = i18n.language === 'bg';
   const { user } = useAuth();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const qRecipes = query(collection(db, 'recipes'), where('status', '==', 'pending'));
+    const unsubRecipes = onSnapshot(qRecipes, (snapshot) => {
+      setPendingCount(snapshot.docs.length);
+    }, (err) => {
+      console.warn("Could not fetch pending items count:", err.message);
+    });
+
+    return () => unsubRecipes();
+  }, []);
 
   const handleClaimOwnership = async () => {
     const isTargetEmail = user.email === 'kamen.uzunov@gmai.com' || user.email === 'kamen.uzunov@gmail.com';
@@ -58,7 +70,7 @@ const AdminDashboard = () => {
         {/* Moderation */}
         <Link to="/admin/moderation" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.1)] hover:shadow-[0_0_30px_rgba(244,63,94,0.2)] transition-all cursor-pointer group relative overflow-hidden flex items-center gap-4">
           <div className="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-md">
-            {isBg ? 'Чакащи' : 'Pending'}
+            {isBg ? `Чакащи - ${pendingCount} бр.` : `Pending - ${pendingCount} pcs`}
           </div>
           <div className="size-12 rounded-xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0">
             <span className="material-symbols-outlined text-2xl font-bold">gavel</span>

@@ -295,34 +295,6 @@ const BackupRecovery = () => {
       </div>
 
       <div className="p-6 flex flex-col gap-8 overflow-y-auto">
-        {/* Export Section */}
-        <section className="bg-surface-dark/50 p-6 rounded-3xl border border-primary/10 shadow-inner">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="size-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-lg">
-              <span className="material-symbols-outlined text-2xl">download</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-100">{isBg ? 'Локален Експорт' : 'Local Export'}</h2>
-              <p className="text-xs text-slate-400">{isBg ? 'Свалете цялата база данни на вашия компютър' : 'Download the entire database to your computer'}</p>
-            </div>
-          </div>
-          
-          <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-            {isBg 
-              ? 'Това ще създаде JSON файл, съдържащ всички рецепти, продукти, потребители и дневници. Препоръчително е да го правите поне веднъж седмично.' 
-              : 'This will create a JSON file containing all recipes, ingredients, users, and logs. It is recommended to do this at least once a week.'}
-          </p>
-
-          <button 
-            onClick={handleExport}
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-amber-600 to-amber-800 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-3"
-          >
-            <span className="material-symbols-outlined">save_alt</span>
-            {isBg ? 'Експортирай в JSON' : 'Export to JSON'}
-          </button>
-        </section>
-
         {/* Cloud Backups Section */}
         <section className="bg-surface-dark/50 p-6 rounded-3xl border border-primary/10 shadow-inner">
           <div className="flex items-center gap-4 mb-6">
@@ -336,7 +308,7 @@ const BackupRecovery = () => {
             <button 
               onClick={handleCloudBackup}
               disabled={loading || cloudLoading}
-              className="p-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all active:scale-95 disabled:opacity-50"
+              className="p-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
               title={isBg ? 'Създай нов облачен архив' : 'Create new cloud backup'}
             >
               <span className="material-symbols-outlined">add_task</span>
@@ -363,7 +335,7 @@ const BackupRecovery = () => {
                     <button 
                       onClick={() => handleRestoreFromCloud(backup)}
                       disabled={loading || cloudLoading}
-                      className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                      className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"
                       title={isBg ? 'Възстанови от този архив' : 'Restore from this backup'}
                     >
                       <span className="material-symbols-outlined text-xl">settings_backup_restore</span>
@@ -371,7 +343,7 @@ const BackupRecovery = () => {
                     <button 
                       onClick={() => handleDeleteCloudBackup(backup)}
                       disabled={loading || cloudLoading}
-                      className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                      className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                       title={isBg ? 'Изтрий архива' : 'Delete backup'}
                     >
                       <span className="material-symbols-outlined text-xl">delete</span>
@@ -386,6 +358,34 @@ const BackupRecovery = () => {
           </div>
         </section>
 
+        {/* Local Export Section */}
+        <section className="bg-surface-dark/50 p-6 rounded-3xl border border-primary/10 shadow-inner">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="size-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-lg">
+              <span className="material-symbols-outlined text-2xl">download</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-100">{isBg ? 'Локален Експорт' : 'Local Export'}</h2>
+              <p className="text-xs text-slate-400">{isBg ? 'Свалете цялата база данни на вашия компютър' : 'Download the entire database to your computer'}</p>
+            </div>
+          </div>
+          
+          <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+            {isBg 
+              ? 'Това ще създаде JSON файл, съдържащ всички рецепти, продукти, потребители и дневници. Препоръчително е да го правите поне веднъж седмично.' 
+              : 'This will create a JSON file containing all recipes, ingredients, users, and logs. It is recommended to do this at least once a week.'}
+          </p>
+
+          <button 
+            onClick={handleExport}
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-amber-600 to-amber-800 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer"
+          >
+            <span className="material-symbols-outlined">save_alt</span>
+            {isBg ? 'Експортирай в JSON' : 'Export to JSON'}
+          </button>
+        </section>
+
         {/* Restore Section */}
         <section className="bg-surface-dark/50 p-6 rounded-3xl border border-rose-500/10 shadow-inner">
           <div className="flex items-center gap-4 mb-4">
@@ -393,7 +393,7 @@ const BackupRecovery = () => {
               <span className="material-symbols-outlined text-2xl">upload</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-100">{isBg ? 'Възстановяване' : 'Recovery / Restore'}</h2>
+              <h2 className="text-lg font-bold text-slate-100">{isBg ? 'Възстановяване от локален файл' : 'Restore from Local File'}</h2>
               <p className="text-xs text-rose-400/80 font-bold uppercase tracking-tighter">{isBg ? 'ВНИМАНИЕ: Опасна операция' : 'CAUTION: Dangerous Operation'}</p>
             </div>
           </div>
@@ -415,7 +415,7 @@ const BackupRecovery = () => {
             {restoreFile && !showConfirmRestore && (
               <button 
                 onClick={() => setShowConfirmRestore(true)}
-                className="w-full bg-rose-500/20 border border-rose-500/30 text-rose-500 font-bold py-4 rounded-2xl transition-all hover:bg-rose-500/30"
+                className="w-full bg-rose-500/20 border border-rose-500/30 text-rose-500 font-bold py-4 rounded-2xl transition-all hover:bg-rose-500/30 cursor-pointer"
               >
                 {isBg ? 'Подготви Възстановяване' : 'Prepare Restoration'}
               </button>
@@ -429,14 +429,14 @@ const BackupRecovery = () => {
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setShowConfirmRestore(false)}
-                    className="flex-1 bg-slate-800 text-white font-bold py-3 rounded-xl text-xs"
+                    className="flex-1 bg-slate-800 text-white font-bold py-3 rounded-xl text-xs cursor-pointer"
                   >
                     {isBg ? 'Отказ' : 'Cancel'}
                   </button>
                   <button 
                     onClick={handleRestore}
                     disabled={loading}
-                    className="flex-[2] bg-rose-600 text-white font-bold py-3 rounded-xl text-xs shadow-lg"
+                    className="flex-[2] bg-rose-600 text-white font-bold py-3 rounded-xl text-xs shadow-lg cursor-pointer"
                   >
                     {isBg ? 'ДА, ВЪЗСТАНОВИ СЕГА' : 'YES, RESTORE NOW'}
                   </button>

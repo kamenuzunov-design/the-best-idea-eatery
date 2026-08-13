@@ -3,6 +3,46 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-08-13] - Превод на групи продукти и скриване на онлайн поръчки
+### Поправено (Fixed)
+- **Преводи и нормализация на кулинарни групи ([recipeMetaUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMetaUtils.js), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx))**:
+  - Коригирахме проблема, при който групите `DRINKS` ("Напитки"), `PASTA PRODUCTS` ("Макаронени изделия"), `PULSES-AND-STARCHES` ("Бобови и скорбялни") и `SWEETENERS` ("Подсладители") оставаха на английски при превключване на български език.
+  - Разширихме `normalizeMainGroup` и `getMainGroupLabel` да поддържат регистронезависимо сравнение, интервали/тирета/долни черти и разширени синоними за всички групи.
+  - Подобрихме търсенето на групи в [`ManageIngredients.jsx`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx) и [`Pantry.jsx`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx) да използва нечувствително към регистъра сравнение по ID, име на български/английски и резервен преводен речник.
+- **Рекламни Кампании, Ротация и Графици за Лимити ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx), [AdBanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/AdBanner.jsx), [firestore.rules](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/firestore.rules))**:
+  - Внедрихме пълен модул за управление на Рекламни Кампании с избор на 3 модела на ротация (Последователна Round-Robin, Случайна по приоритет и Таймер карусел с авто въртене на N секунди).
+  - Променихме подредбата на картичките в списъка с кампании да се подреждат последователно една под друга в една колона.
+  - Добавихме бутон "Нулирай" до полетата за Начална и Крайна дата в модалите за създаване/редактиране на Кампании и Реклами.
+  - Актуализирахме `firestore.rules` с правила за достъп до новата колекция `campaigns` и разрешихме отчитането на показвания и кликове.
+  - Премахнахме изискването за Firestore индекс при `orderBy` и направихме клиентско сортиране, гарантиращо мигновено отразяване и постоянно визуализиране на списъка с кампании (включително с картичка за празно състояние при 0 кампании).
+  - Добавихме защитено санитаризиране на полетата и безопасни `user?.uid` референции при запис.
+  - Добавихме следене на лимити за Показвания (Max Views) и Кликове (Max Clicks), където стойност `0 = безкрайно`. Когато лимитът бъде достигнат, рекламата/кампанията автоматично отстъпва място на следващата.
+- **Нов бърз въпрос и подредба в AI Асистента ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+  - Добавихме стилизиран главен бърз въпрос `"Предложи ми ястие с наличните продукти"`, който е разположен самостоятелно на първия ред (с икона `restaurant`), а останалите четири въпроса са организирани под него в решетка 2х2.
+- **Реорганизация и преименуване в Бекъп и Възстановяване ([BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx))**:
+  - Преместихме секцията "Локален Експорт" след "Облачни Архиви" и преди "Възстановяване".
+  - Преименувахме заглавието на секция "Възстановяване" на "Възстановяване от локален файл".
+- **Размяна на подредбата на езиците в секция "Стъпки" ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeCustomization.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeCustomization.jsx))**:
+  - При въвеждане и редактиране на рецепти променихме подредбата на полетата за описание на стъпка: първо се попълва описанието на английски език, а след него на български език.
+- **Бутон за запазване на рецепта в долния край ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+  - Свързахме долния бутон "ЗАПАЗИ РЕЦЕПТАТА" с функцията `handleToggleSave` и му добавихме динамично състояние и визуален стил (икона и текст) идентично с горния бутон.
+- **Филтриране и показване на рецепти по готвач/автор ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx))**:
+  - Направихме името, аватарa и бутона "Виж всички рецепти от този готвач" кликаеми в детайлите на рецептата.
+  - При клик потребителят се пренасочва към началната страница с активен филтър (`/?author=UID`), където се визуализират всички съществуващи рецепти на този готвач заедно със значка за премахване на филтъра.
+- **Визуализиране на публично местоположение и кратко представяне на готвача ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+  - Добавихме показване на град и държава (с икона `location_on`), както и чисто изписване на краткото представяне (био/текст) на автора в секцията за готвача в края на рецептата.
+- **Бутон за преглед и редакция в модерацията ([Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx))**:
+  - Добавихме син бутон "Редактирай" (Преглед / Редакция) към всяка чакаща заявка в панела за модерация.
+  - Натискането му отваря рецептата или продукта директно в пълен режим за преглед и редакция чрез URL параметъра `?edit=ID`.
+- **Динамичен брояч за чакаща модерация ([AdminDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AdminDashboard.jsx))**:
+  - Имплементирахме слушател в реално време (onSnapshot), който диначично показва точния брой чакащи за одобрение елементи върху червената бадж значка "Чакащи" (напр. `Чакащи - 0 бр.` или `Чакащи - 3 бр.`).
+- **Автоматично генериране на Slug ID за нови групи ([ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx))**:
+  - Имплементирахме автоматично генериране и почистване на Slug ID при създаване на нови групи за предотвратяване на сурови текстови ID-та с главни букви и интервали.
+
+### Премахнато (Removed)
+- **Онлайн поръчка на съставки ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx))**:
+  - Скрихме бутона "Поръчай онлайн" от Списъка за пазаруване по искане на възложителя.
+
 ## [2026-06-17] - Интеграция с онлайн магазини, корекция на отметките и URL адресите, детайлни грешки за Gemini API
 ### Добавено (Added)
 - **Интеграция с онлайн магазини (E-Grocer Platforms) ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx) и [i18n.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/i18n.js))**:

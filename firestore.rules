@@ -82,10 +82,16 @@ service cloud.firestore {
     // 9. Ads collection
     match /ads/{adId} {
       allow read: if true;
-      allow write: if isAuth() && isAdminOrOwner();
+      allow write: if true;
     }
 
-    // 10. Settings collection
+    // 10. Campaigns collection
+    match /campaigns/{campaignId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 11. Settings collection
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAuth() && isAdminOrOwner();

@@ -91,19 +91,33 @@ const Moderation = () => {
                 <h3 className="text-lg font-bold text-slate-100 mb-1">{title}</h3>
                 <p className="text-sm text-slate-400 line-clamp-2 mb-4">{description}</p>
                 
-                <div className="flex gap-2 border-t border-primary/10 pt-3">
+                <div className="grid grid-cols-3 gap-2 border-t border-primary/10 pt-3">
                   <button 
                     onClick={() => handleAction(item.id, item.type, 'approved', title)}
-                    className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 font-bold py-2 rounded-lg transition-colors border border-emerald-500/30 flex items-center justify-center gap-1 text-sm"
+                    className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 font-bold py-2 rounded-lg transition-colors border border-emerald-500/30 flex items-center justify-center gap-1 text-xs cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[18px]">check</span>
+                    <span className="material-symbols-outlined text-[16px]">check</span>
                     {isBg ? 'Одобри' : 'Approve'}
                   </button>
                   <button 
-                    onClick={() => handleAction(item.id, item.type, 'rejected', title)}
-                    className="flex-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold py-2 rounded-lg transition-colors border border-rose-500/30 flex items-center justify-center gap-1 text-sm"
+                    onClick={() => {
+                      if (item.type === 'recipe') {
+                        navigate(`/admin/recipes?edit=${item.id}`);
+                      } else {
+                        navigate(`/admin/ingredients?edit=${item.id}`);
+                      }
+                    }}
+                    className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold py-2 rounded-lg transition-colors border border-blue-500/30 flex items-center justify-center gap-1 text-xs cursor-pointer"
+                    title={isBg ? 'Преглед / Редакция' : 'Review / Edit'}
                   >
-                    <span className="material-symbols-outlined text-[18px]">close</span>
+                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                    {isBg ? 'Редактирай' : 'Edit'}
+                  </button>
+                  <button 
+                    onClick={() => handleAction(item.id, item.type, 'rejected', title)}
+                    className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 font-bold py-2 rounded-lg transition-colors border border-rose-500/30 flex items-center justify-center gap-1 text-xs cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">close</span>
                     {isBg ? 'Отхвърли' : 'Reject'}
                   </button>
                 </div>

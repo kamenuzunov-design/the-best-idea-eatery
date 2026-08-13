@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
@@ -18,6 +18,8 @@ import { getRecipeTags, normalizeMainGroup, getMainGroupLabel } from '../../lib/
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editIdFromUrl = searchParams.get('edit');
   const { user, isAdmin, isOwner, awardPoints } = useAuth();
   const isBg = i18n.language === 'bg';
   const isPowerUser = isAdmin || isOwner;
@@ -387,6 +389,18 @@ const ManageRecipes = () => {
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    if (editIdFromUrl && recipes.length > 0) {
+      const targetRecipe = recipes.find(r => r.id === editIdFromUrl || r.slug === editIdFromUrl);
+      if (targetRecipe) {
+        const timer = setTimeout(() => {
+          handleEditClick(targetRecipe);
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [editIdFromUrl, recipes]);
 
   // --- CSV Export ---
   const handleExportCSV = () => {
@@ -1220,16 +1234,16 @@ const ManageRecipes = () => {
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     <textarea 
-                      value={step.instruction_bg} 
-                      onChange={(e) => updateStepRow(step.id, 'instruction_bg', e.target.value)} 
-                      placeholder={isBg ? 'Описание на български...' : 'Description in Bulgarian...'} 
+                      value={step.instruction_en} 
+                      onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
+                      placeholder={isBg ? 'Description in English...' : 'Description in English...'} 
                       rows="2" 
                       className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
                     ></textarea>
                     <textarea 
-                      value={step.instruction_en} 
-                      onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
-                      placeholder={isBg ? 'Description in English...' : 'Description in English...'} 
+                      value={step.instruction_bg} 
+                      onChange={(e) => updateStepRow(step.id, 'instruction_bg', e.target.value)} 
+                      placeholder={isBg ? 'Описание на български...' : 'Description in Bulgarian...'} 
                       rows="2" 
                       className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
                     ></textarea>

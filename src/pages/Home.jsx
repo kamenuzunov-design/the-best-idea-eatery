@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, query, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -44,6 +44,9 @@ const Home = () => {
   const { t, i18n } = useTranslation();
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const authorFilter = searchParams.get('author');
+  const authorNameFilter = searchParams.get('authorName');
   const isBg = i18n.language === 'bg';
 
   const [realRecipes, setRealRecipes] = useState([]);
@@ -205,6 +208,14 @@ const Home = () => {
           filtered = filtered.filter(r => r.category_id === selectedCategory);
         }
 
+        // 2.6 Apply author filter
+        if (authorFilter) {
+          filtered = filtered.filter(r => 
+            r.publisher_id === authorFilter || 
+            (authorNameFilter && (r.publisher_name === authorNameFilter || r.original_author === authorNameFilter))
+          );
+        }
+
         // 3. Apply sorting based on tab
         if (activeTab === 'newest' || activeTab === 'all') {
           const getTime = (val) => {
@@ -223,7 +234,7 @@ const Home = () => {
         // If searching or filtering by category, show all matching results.
         // If active tab is 'all', show up to 150 recipes.
         // Otherwise, limit to top 10.
-        if (searchQuery || selectedCategory) {
+        if (searchQuery || selectedCategory || authorFilter) {
           setRealRecipes(filtered);
         } else if (activeTab === 'all') {
           setRealRecipes(filtered.slice(0, 150));
@@ -241,7 +252,7 @@ const Home = () => {
     );
 
     return () => unsub();
-  }, [activeTab, searchQuery, selectedCategory, pantry, ingredientsList, analyzeRecipe]); // Re-run when tab, search, category, pantry, ingredientsList or analyzeRecipe changes
+  }, [activeTab, searchQuery, selectedCategory, authorFilter, authorNameFilter, pantry, ingredientsList, analyzeRecipe]); // Re-run when tab, search, category, pantry, ingredientsList or analyzeRecipe changes
 
   useEffect(() => {
     // Fetch a featured recipe pool (up to 100) to select from
@@ -445,6 +456,30 @@ const Home = () => {
             {selectedCategory && ` • ${getPluralCategoryName(selectedCategory, isBg ? 'bg' : 'en')}`}
           </h3>
         </div>
+
+        {/* Author Filter Badge */}
+        {authorFilter && (
+          <div className="mb-4 p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between shadow-md animate-in fade-in duration-200">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="material-symbols-outlined text-primary shrink-0">person_search</span>
+              <p className="text-xs font-bold text-slate-100 truncate">
+                {isBg ? `Рецепти от готвач: ${authorNameFilter || 'Готвача'}` : `Recipes by chef: ${authorNameFilter || 'Chef'}`}
+              </p>
+            </div>
+            <button 
+              onClick={() => {
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('author');
+                newParams.delete('authorName');
+                setSearchParams(newParams);
+              }}
+              className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer shrink-0 ml-2 flex items-center justify-center rounded-lg hover:bg-primary/20"
+              title={isBg ? 'Премахни филтъра' : 'Clear filter'}
+            >
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+        )}
 
         {/* Category Quick Filters */}
         <div className="flex flex-wrap gap-2 mb-6">

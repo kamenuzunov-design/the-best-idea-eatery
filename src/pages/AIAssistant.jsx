@@ -617,22 +617,34 @@ Rules:
 
             {/* Input Bar & Suggestions chips */}
             <div className="p-4 bg-surface-dark border-t border-primary/20 space-y-3">
-              {/* Message Chips in a 2x2 grid layout */}
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  isBg ? "Какво изтича най-скоро?" : "What's expiring soon?",
-                  isBg ? "Веган идеи с наличностите" : "Vegan ideas from pantry",
-                  isBg ? "Кето рецепта" : "Keto recipe",
-                  isBg ? "Заместители на яйца" : "Egg substitutes"
-                ].map((chip, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleChipClick(chip)}
-                    className="px-3 py-2.5 rounded-xl bg-background-dark/80 text-primary border border-primary/25 hover:border-primary/60 text-[10px] font-bold text-center flex items-center justify-center leading-tight transition-colors cursor-pointer shadow-sm"
-                  >
-                    {chip}
-                  </button>
-                ))}
+              {/* Message Chips */}
+              <div className="flex flex-col gap-2">
+                {/* Featured main prompt on top row */}
+                <button
+                  onClick={() => handleChipClick(isBg ? "Предложи ми ястие с наличните продукти" : "Suggest a meal with my pantry items")}
+                  className="w-full px-3 py-2.5 rounded-xl bg-background-dark/80 text-primary border border-primary/30 hover:border-primary/60 text-[11px] font-bold text-center flex items-center justify-center gap-1.5 leading-tight transition-all cursor-pointer shadow-sm active:scale-[0.99]"
+                >
+                  <span className="material-symbols-outlined text-[15px]">restaurant</span>
+                  <span>{isBg ? "Предложи ми ястие с наличните продукти" : "Suggest a meal with my pantry items"}</span>
+                </button>
+
+                {/* Secondary prompts in 2x2 grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    isBg ? "Какво изтича най-скоро?" : "What's expiring soon?",
+                    isBg ? "Веган идеи с наличностите" : "Vegan ideas from pantry",
+                    isBg ? "Кето рецепти" : "Keto recipes",
+                    isBg ? "Заместители на съставки" : "Ingredient substitutes"
+                  ].map((chip, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleChipClick(chip)}
+                      className="px-3 py-2.5 rounded-xl bg-background-dark/80 text-primary border border-primary/25 hover:border-primary/60 text-[10px] font-bold text-center flex items-center justify-center leading-tight transition-colors cursor-pointer shadow-sm active:scale-95"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Text Input Row */}

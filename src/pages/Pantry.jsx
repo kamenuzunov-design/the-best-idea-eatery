@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { useTranslation } from 'react-i18next';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { normalizeMainGroup } from '../lib/recipeMetaUtils';
+import { normalizeMainGroup, getMainGroupLabel } from '../lib/recipeMetaUtils';
 
 const getGroupIcon = (val) => {
   const v = String(val || '').toLowerCase();
@@ -152,8 +152,17 @@ const Pantry = () => {
 
   const getGroupName = (val) => {
     if (!val) return '-';
-    let group = ingredientGroupsDB.find(g => g.id === val || g.name?.bg === val);
-    return group ? (isBg ? group.name?.bg : group.name?.en) : val;
+    const normVal = normalizeMainGroup(val);
+    let group = ingredientGroupsDB.find(g => {
+      if (!g) return false;
+      const gId = String(g.id || '').toLowerCase();
+      const gBg = String(g.name?.bg || '').toLowerCase();
+      const gEn = String(g.name?.en || '').toLowerCase();
+      return gId === String(val).toLowerCase() || gBg === String(val).toLowerCase() || gEn === String(val).toLowerCase() ||
+             normalizeMainGroup(gId) === normVal || normalizeMainGroup(gBg) === normVal || normalizeMainGroup(gEn) === normVal;
+    });
+    if (group) return isBg ? (group.name?.bg || group.name?.en) : (group.name?.en || group.name?.bg);
+    return getMainGroupLabel(val, isBg);
   };
 
   const getUnitName = (unitId) => {

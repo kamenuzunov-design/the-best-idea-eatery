@@ -426,6 +426,16 @@ const RecipeDetail = () => {
     }
   };
 
+  const handleViewAuthorRecipes = (publisherId, authorName) => {
+    const pId = publisherId || recipe?.publisher_id;
+    const name = authorName || authorData?.profile?.nickname || authorData?.name || recipe?.publisher_name || recipe?.original_author;
+    if (pId) {
+      navigate(`/?author=${pId}&authorName=${encodeURIComponent(name || '')}`);
+    } else if (name) {
+      navigate(`/?search=${encodeURIComponent(name)}`);
+    }
+  };
+
   const handleToggleSave = async () => {
     if (isGuest) {
       alert(isBg ? 'Моля, влезте в профила си, за да запазвате рецепти.' : 'Please log in to save recipes.');
@@ -989,39 +999,88 @@ const RecipeDetail = () => {
       </div>
 
       {/* Author Section */}
-      {authorData && (
-        <div className="mx-6 my-4 p-4 rounded-2xl bg-surface-dark/80 border border-primary/20 flex items-center gap-4">
-          <div className="size-12 rounded-full border-2 border-primary/30 overflow-hidden bg-background-dark">
-            {authorData.profile?.avatar ? (
-              <img src={authorData.profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-primary/30">
-                <span className="material-symbols-outlined text-2xl">person</span>
+      {authorData && (() => {
+        const loc = authorData.profile?.location;
+        const isLocationPublic = loc && loc.show_location !== false;
+        const authorCity = isBg 
+          ? (loc?.city_bg || loc?.city_en || loc?.city) 
+          : (loc?.city_en || loc?.city_bg || loc?.city);
+        const authorCountry = isBg 
+          ? (loc?.country_bg || loc?.country_en || loc?.country) 
+          : (loc?.country_en || loc?.country_bg || loc?.country);
+        const authorLocationStr = isLocationPublic ? [authorCity, authorCountry].filter(Boolean).join(', ') : '';
+
+        const authorBio = isBg 
+          ? (authorData.profile?.bio_bg || authorData.profile?.bio_en || authorData.profile?.bio) 
+          : (authorData.profile?.bio_en || authorData.profile?.bio_bg || authorData.profile?.bio);
+
+        return (
+          <div className="mx-6 my-4 p-4 rounded-2xl bg-surface-dark/80 border border-primary/20 flex flex-col gap-3 shadow-md">
+            <div className="flex items-center gap-4">
+              <div 
+                onClick={() => handleViewAuthorRecipes(recipe?.publisher_id, authorData.profile?.nickname || authorData.name)}
+                className="size-12 rounded-full border-2 border-primary/30 overflow-hidden bg-background-dark shrink-0 cursor-pointer hover:border-primary transition-all group/avatar"
+                title={isBg ? 'Виж всички рецепти от този готвач' : 'View all recipes by this chef'}
+              >
+                {authorData.profile?.avatar ? (
+                  <img src={authorData.profile.avatar} alt="Avatar" className="w-full h-full object-cover group-hover/avatar:scale-105 transition-transform" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-primary/30">
+                    <span className="material-symbols-outlined text-2xl">person</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">
+                  {isBg ? 'Готвач' : 'Chef'}
+                </p>
+                <h4 
+                  onClick={() => handleViewAuthorRecipes(recipe?.publisher_id, authorData.profile?.nickname || authorData.name)}
+                  className="text-slate-100 font-bold text-sm leading-tight truncate hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1 group/author"
+                  title={isBg ? 'Виж всички рецепти от този готвач' : 'View all recipes by this chef'}
+                >
+                  <span>{authorData.profile?.nickname || authorData.name || (isBg ? 'Анонимен' : 'Anonymous')}</span>
+                  <span className="material-symbols-outlined text-xs text-primary/60 group-hover/author:text-primary transition-colors">open_in_new</span>
+                </h4>
+                {authorLocationStr && (
+                  <div className="flex items-center gap-1 mt-0.5 text-xs text-slate-300 font-medium truncate">
+                    <span className="material-symbols-outlined text-[14px] text-primary shrink-0">location_on</span>
+                    <span className="truncate">{authorLocationStr}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="material-symbols-outlined text-[14px] text-amber-500 shrink-0">military_tech</span>
+                  <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest truncate">
+                    {isBg ? (authorData.reputation?.label || 'Новак') : (authorData.reputation?.label_en || 'Novice')}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">
+                  {isBg ? 'Репутация' : 'Reputation'}
+                </p>
+                <p className="text-primary font-black text-sm">{authorData.reputation?.score || 0}</p>
+              </div>
+            </div>
+
+            {authorBio && (
+              <div className="border-t border-primary/10 pt-2.5 mt-0.5">
+                <p className="text-xs text-slate-300 italic leading-relaxed font-normal">
+                  {authorBio}
+                </p>
               </div>
             )}
+
+            <button
+              onClick={() => handleViewAuthorRecipes(recipe?.publisher_id, authorData.profile?.nickname || authorData.name)}
+              className="w-full mt-1 py-2 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[16px]">menu_book</span>
+              <span>{isBg ? 'Виж всички рецепти от този готвач' : 'View all recipes by this chef'}</span>
+            </button>
           </div>
-          <div className="flex-1">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">
-              {isBg ? 'Готвач' : 'Chef'}
-            </p>
-            <h4 className="text-slate-100 font-bold text-sm leading-tight">
-              {authorData.profile?.nickname || authorData.name || (isBg ? 'Анонимен' : 'Anonymous')}
-            </h4>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="material-symbols-outlined text-[14px] text-amber-500">military_tech</span>
-              <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
-                {isBg ? (authorData.reputation?.label || 'Новак') : (authorData.reputation?.label_en || 'Novice')}
-              </span>
-            </div>
-          </div>
-          <div className="text-right">
-             <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">
-              {isBg ? 'Репутация' : 'Reputation'}
-            </p>
-            <p className="text-primary font-black text-sm">{authorData.reputation?.score || 0}</p>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Inspiration & Video Section */}
       {(recipe.video_url || recipe.original_author || recipe.source_link) && (
@@ -1087,12 +1146,23 @@ const RecipeDetail = () => {
 
       {/* Action Button */}
       <div className="p-6 pb-8">
-        <button className="w-full bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold py-4 rounded-2xl shadow-[0_10px_30px_rgba(212,175,53,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
-          <span className="material-symbols-outlined text-xl">bookmark</span>
-          {isBg ? 'ЗАПАЗИ РЕЦЕПТАТА' : 'SAVE TO MY RECIPES'}
+        <button 
+          onClick={handleToggleSave}
+          className={`w-full font-extrabold py-4 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            isSaved 
+              ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 shadow-[0_10px_30px_rgba(16,185,129,0.2)] hover:bg-emerald-500/30' 
+              : 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark shadow-[0_10px_30px_rgba(212,175,53,0.3)]'
+          }`}
+        >
+          <span className={`material-symbols-outlined text-xl ${isSaved ? 'font-black' : ''}`}>
+            {isSaved ? 'check_circle' : 'bookmark'}
+          </span>
+          {isSaved 
+            ? (isBg ? 'РЕЦЕПТАТА Е ЗАПАЗЕНА' : 'RECIPE IS SAVED') 
+            : (isBg ? 'ЗАПАЗИ РЕЦЕПТАТА' : 'SAVE TO MY RECIPES')}
         </button>
         
-        <button onClick={() => navigate(`/recipe/${id || '1'}/cooking`)} className="w-full mt-4 border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 font-extrabold py-4 rounded-2xl shadow-sm hover:bg-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+        <button onClick={() => navigate(`/recipe/${id || '1'}/cooking`)} className="w-full mt-4 border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 font-extrabold py-4 rounded-2xl shadow-sm hover:bg-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
           <span className="material-symbols-outlined text-xl">play_circle</span>
           {isBg ? 'ЗАПОЧНИ ГОТВЕНЕ' : 'START COOKING'}
         </button>

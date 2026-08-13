@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { archiveVersion } from '../../lib/archiveUtils';
 import { CUISINES } from '../../data/cuisines';
-import { normalizeMainGroup } from '../../lib/recipeMetaUtils';
+import { normalizeMainGroup, getMainGroupLabel } from '../../lib/recipeMetaUtils';
 
 const ManageIngredients = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editIdFromUrl = searchParams.get('edit');
   const { user, isAdmin, isOwner } = useAuth();
   const isBg = i18n.language === 'bg';
   const csvImportRef = useRef(null);
@@ -166,11 +168,25 @@ const ManageIngredients = () => {
     setNameEn(ing.name_en || '');
     setSlug(ing.slug || ing.id);
     const mg = ing.classification?.main_group || '';
-    const mainGroupObj = ingredientGroups.find(g => g.id === mg || g.name?.bg === mg || g.name?.en === mg);
+    const normMg = normalizeMainGroup(mg);
+    const mainGroupObj = ingredientGroups.find(g => {
+      const gId = String(g.id || '').toLowerCase();
+      const gBg = String(g.name?.bg || '').toLowerCase();
+      const gEn = String(g.name?.en || '').toLowerCase();
+      return gId === mg.toLowerCase() || gBg === mg.toLowerCase() || gEn === mg.toLowerCase() ||
+             normalizeMainGroup(gId) === normMg || normalizeMainGroup(gBg) === normMg || normalizeMainGroup(gEn) === normMg;
+    });
     setMainGroup(mainGroupObj ? mainGroupObj.id : mg);
 
     const sg = ing.classification?.sub_group || '';
-    const subGroupObj = ingredientGroups.find(g => g.id === sg || g.name?.bg === sg || g.name?.en === sg);
+    const normSg = normalizeMainGroup(sg);
+    const subGroupObj = ingredientGroups.find(g => {
+      const gId = String(g.id || '').toLowerCase();
+      const gBg = String(g.name?.bg || '').toLowerCase();
+      const gEn = String(g.name?.en || '').toLowerCase();
+      return gId === sg.toLowerCase() || gBg === sg.toLowerCase() || gEn === sg.toLowerCase() ||
+             normalizeMainGroup(gId) === normSg || normalizeMainGroup(gBg) === normSg || normalizeMainGroup(gEn) === normSg;
+    });
     setSubGroup(subGroupObj ? subGroupObj.id : sg);
 
     setCuisineOrigin(ing.classification?.cuisine_origin || '');
@@ -187,6 +203,19 @@ const ManageIngredients = () => {
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    if (editIdFromUrl && ingredients.length > 0) {
+      const targetIngredient = ingredients.find(i => i.id === editIdFromUrl || i.slug === editIdFromUrl);
+      if (targetIngredient) {
+        const timer = setTimeout(() => {
+          handleEditClick(targetIngredient);
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editIdFromUrl, ingredients]);
 
   const handleCancelEdit = () => {
     setEditingId(null);
@@ -249,14 +278,32 @@ const ManageIngredients = () => {
 
   const getGroupName = (val) => {
     if (!val) return '-';
-    let group = ingredientGroups.find(g => g.id === val || g.name?.bg === val);
-    return group ? (isBg ? group.name?.bg : group.name?.en) : val;
+    const normVal = normalizeMainGroup(val);
+    let group = ingredientGroups.find(g => {
+      if (!g) return false;
+      const gId = String(g.id || '').toLowerCase();
+      const gBg = String(g.name?.bg || '').toLowerCase();
+      const gEn = String(g.name?.en || '').toLowerCase();
+      return gId === String(val).toLowerCase() || gBg === String(val).toLowerCase() || gEn === String(val).toLowerCase() ||
+             normalizeMainGroup(gId) === normVal || normalizeMainGroup(gBg) === normVal || normalizeMainGroup(gEn) === normVal;
+    });
+    if (group) return isBg ? (group.name?.bg || group.name?.en) : (group.name?.en || group.name?.bg);
+    return getMainGroupLabel(val, isBg);
   };
 
   const getSubGroupName = (val) => {
     if (!val) return '-';
-    let group = ingredientGroups.find(g => g.id === val || g.name?.bg === val);
-    return group ? (isBg ? group.name?.bg : group.name?.en) : val;
+    const normVal = normalizeMainGroup(val);
+    let group = ingredientGroups.find(g => {
+      if (!g) return false;
+      const gId = String(g.id || '').toLowerCase();
+      const gBg = String(g.name?.bg || '').toLowerCase();
+      const gEn = String(g.name?.en || '').toLowerCase();
+      return gId === String(val).toLowerCase() || gBg === String(val).toLowerCase() || gEn === String(val).toLowerCase() ||
+             normalizeMainGroup(gId) === normVal || normalizeMainGroup(gBg) === normVal || normalizeMainGroup(gEn) === normVal;
+    });
+    if (group) return isBg ? (group.name?.bg || group.name?.en) : (group.name?.en || group.name?.bg);
+    return getMainGroupLabel(val, isBg);
   };
 
   const getGroupIcon = (val) => {

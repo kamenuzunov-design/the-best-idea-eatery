@@ -567,16 +567,16 @@ const RecipeCustomization = () => {
                     </div>
                     <div className="grid grid-cols-1 gap-2">
                       <textarea 
-                        value={step.instruction_bg || ''} 
-                        onChange={(e) => updateStepRow(step.id, 'instruction_bg', e.target.value)} 
-                        placeholder={isBg ? 'Описание на български...' : 'Description in Bulgarian...'} 
+                        value={step.instruction_en || ''} 
+                        onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
+                        placeholder={isBg ? 'Description in English...' : 'Description in English...'} 
                         rows="2" 
                         className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
                       ></textarea>
                       <textarea 
-                        value={step.instruction_en || ''} 
-                        onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
-                        placeholder={isBg ? 'Description in English...' : 'Description in English...'} 
+                        value={step.instruction_bg || ''} 
+                        onChange={(e) => updateStepRow(step.id, 'instruction_bg', e.target.value)} 
+                        placeholder={isBg ? 'Описание на български...' : 'Description in Bulgarian...'} 
                         rows="2" 
                         className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
                       ></textarea>

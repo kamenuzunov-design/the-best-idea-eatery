@@ -40,7 +40,8 @@ const ManageIngredientGroups = () => {
 
   const handleSaveGroup = async (e) => {
     e.preventDefault();
-    if (!groupId || !nameBg || !nameEn) return;
+    const cleanId = groupId.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)+/g, '');
+    if (!cleanId || !nameBg || !nameEn) return;
 
     try {
       const groupData = {
@@ -57,9 +58,9 @@ const ManageIngredientGroups = () => {
         await updateDoc(doc(db, 'ingredient_groups', editingId), groupData);
         await logActivity(user.uid, user.email, 'edit_ingredient_group', `Edited group: ${nameEn}`);
       } else {
-        groupData.id = groupId;
+        groupData.id = cleanId;
         groupData.createdAt = new Date().toISOString();
-        await setDoc(doc(db, 'ingredient_groups', groupId), groupData);
+        await setDoc(doc(db, 'ingredient_groups', cleanId), groupData);
         await logActivity(user.uid, user.email, 'add_ingredient_group', `Added group: ${nameEn}`);
       }
       
@@ -67,6 +68,14 @@ const ManageIngredientGroups = () => {
     } catch (error) {
       console.error("Error saving group:", error);
       alert(isBg ? 'Грешка при запазване.' : 'Error saving.');
+    }
+  };
+
+  const handleNameEnChange = (e) => {
+    const val = e.target.value;
+    setNameEn(val);
+    if (!editingId) {
+      setGroupId(val.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)+/g, ''));
     }
   };
 
@@ -144,7 +153,7 @@ const ManageIngredientGroups = () => {
             </div>
             <div>
               <label className="text-xs text-slate-400">{isBg ? 'Име (EN) *' : 'Name (EN) *'}</label>
-              <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Root vegetables" />
+              <input value={nameEn} onChange={handleNameEnChange} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Root vegetables" />
             </div>
             <div>
               <label className="text-xs text-slate-400">{isBg ? 'Име (BG) *' : 'Name (BG) *'}</label>

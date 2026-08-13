@@ -72,18 +72,21 @@ export const translateTag = (tag, isBg) => {
 
 export const normalizeMainGroup = (mg) => {
   if (!mg) return 'other';
-  const val = String(mg).toLowerCase().trim();
+  const val = String(mg).toLowerCase().trim().replace(/[\s-]+/g, '_');
   
   if (val === 'vegetables' || val === 'зеленчуци') return 'vegetables';
   if (val === 'fruits' || val === 'плодове') return 'fruits';
   if (val === 'meat' || val === 'месо') return 'meat';
-  if (val === 'seafood' || val === 'морски дарове') return 'seafood';
+  if (val === 'seafood' || val === 'морски_дарове') return 'seafood';
   if (val === 'dairy' || val === 'млечни') return 'dairy';
   if (val === 'grains' || val === 'зърнени') return 'grains';
   if (val === 'fats' || val === 'мазнини') return 'fats';
-  if (val === 'spices' || val === 'подправки' || val === 'подправки и сосове') return 'spices';
-  if (val === 'nuts_and_seeds' || val === 'ядки и семена') return 'nuts_and_seeds';
-  if (val === 'sweeteners' || val === 'подсладители') return 'sweeteners';
+  if (val === 'spices' || val === 'подправки' || val === 'подправки_и_сосове') return 'spices';
+  if (val === 'nuts_and_seeds' || val === 'ядки_и_семена') return 'nuts_and_seeds';
+  if (val === 'sweeteners' || val === 'sweetener' || val === 'подсладители') return 'sweeteners';
+  if (val === 'drinks' || val === 'drink' || val === 'напитки') return 'drinks';
+  if (val === 'pasta' || val === 'pasta_products' || val === 'макаронени' || val === 'макаронени_изделия') return 'pasta_products';
+  if (val === 'pulses' || val === 'pulses_and_starches' || val === 'бобови' || val === 'бобови_и_скорбялни') return 'pulses_and_starches';
   if (val === 'other' || val === 'други') return 'other';
   
   return val;
@@ -101,6 +104,9 @@ export const getMainGroupLabel = (groupKey, isBg) => {
     'spices': { bg: 'Подправки', en: 'Spices & Herbs' },
     'nuts_and_seeds': { bg: 'Ядки и семена', en: 'Nuts & Seeds' },
     'sweeteners': { bg: 'Подсладители', en: 'Sweeteners' },
+    'drinks': { bg: 'Напитки', en: 'Drinks' },
+    'pasta_products': { bg: 'Макаронени изделия', en: 'Pasta Products' },
+    'pulses_and_starches': { bg: 'Бобови и скорбялни', en: 'Pulses & Starches' },
     'other': { bg: 'Други', en: 'Other' }
   };
   

@@ -300,6 +300,30 @@
     "level": 1
   },
   {
+    "id": "sweeteners",
+    "name": { "bg": "Подсладители", "en": "Sweeteners" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "drinks",
+    "name": { "bg": "Напитки", "en": "Drinks" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "pasta_products",
+    "name": { "bg": "Макаронени изделия", "en": "Pasta Products" },
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "id": "pulses_and_starches",
+    "name": { "bg": "Бобови и скорбялни", "en": "Pulses & Starches" },
+    "parentId": null,
+    "level": 0
+  },
+  {
     "id": "other",
     "name": { "bg": "Други", "en": "Other" },
     "parentId": null,

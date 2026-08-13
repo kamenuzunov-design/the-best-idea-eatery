@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 
 const AdBanner = () => {
   const [currentAd, setCurrentAd] = useState(null);
+  const [activePool, setActivePool] = useState([]);
+  const [activeCampaign, setActiveCampaign] = useState(null);
   const { i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -14,75 +16,160 @@ const AdBanner = () => {
   const role = user?.role || 'guest';
   const trackedAds = useRef(new Set());
 
+  // 1. Listen for ads & campaigns in real-time
   useEffect(() => {
-    const now = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    // Fetch all ads (or top 20) and filter client-side to avoid index requirements
-    const q = query(
-      collection(db, 'ads'),
-      limit(20)
-    );
+    const qAds = query(collection(db, 'ads'), limit(50));
+    const qCampaigns = query(collection(db, 'campaigns'));
 
-    const unsub = onSnapshot(q, 
-      (snapshot) => {
-        const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        const activeAds = all.filter(ad => {
-          if (!ad.isActive) return false;
-          if (ad.type === 'native') return false; // Exclude native (contextual recipe) ads from the global banner pool
-          const start = ad.startDate || '0000-00-00';
-          const end = ad.endDate || '9999-99-99';
-          return now >= start && now <= end;
-        });
+    let allAds = [];
+    let allCampaigns = [];
 
-        // Client-side sort by priority
-        activeAds.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    const processActiveAds = () => {
+      const now = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-        if (activeAds.length > 0) {
-          // Pick one (could be random or highest priority)
-          const selected = activeAds[0];
-          setCurrentAd(selected);
-        } else {
-          setCurrentAd(null);
+      // Filter ads
+      const validAds = allAds.filter(ad => {
+        if (!ad.isActive) return false;
+        if (ad.type === 'native') return false; // Exclude native contextual ads
+
+        // Check ad date limits
+        const adStart = ad.startDate || '0000-00-00';
+        const adEnd = ad.endDate || '9999-99-99';
+        if (now < adStart || now > adEnd) return false;
+
+        // Check ad view/click limits (0 = infinite)
+        if (ad.maxViews > 0 && (ad.viewsCount || 0) >= ad.maxViews) return false;
+        if (ad.maxClicks > 0 && (ad.clicksCount || 0) >= ad.maxClicks) return false;
+
+        // If assigned to a campaign, validate the campaign
+        if (ad.campaignId) {
+          const campaign = allCampaigns.find(c => c.id === ad.campaignId);
+          if (!campaign || !campaign.isActive) return false;
+          const campStart = campaign.startDate || '0000-00-00';
+          const campEnd = campaign.endDate || '9999-99-99';
+          if (now < campStart || now > campEnd) return false;
+          if (campaign.maxViews > 0 && (campaign.viewsCount || 0) >= campaign.maxViews) return false;
+          if (campaign.maxClicks > 0 && (campaign.clicksCount || 0) >= campaign.maxClicks) return false;
         }
-      },
-      (err) => {
-        console.warn("Ad fetch error:", err.message);
-        setCurrentAd(null);
-      }
-    );
 
-    return () => unsub();
+        return true;
+      });
+
+      setActivePool(validAds);
+
+      if (validAds.length === 0) {
+        setCurrentAd(null);
+        setActiveCampaign(null);
+        return;
+      }
+
+      // Check if pool belongs to a campaign with specific rotation model
+      const firstCampId = validAds[0].campaignId;
+      const associatedCamp = firstCampId ? allCampaigns.find(c => c.id === firstCampId) : null;
+      setActiveCampaign(associatedCamp);
+
+      const rotationType = associatedCamp?.rotationType || 'sequential';
+
+      if (rotationType === 'weighted') {
+        // Weighted Random by Priority
+        const totalWeight = validAds.reduce((sum, a) => sum + Math.max(1, a.priority || 1), 0);
+        let rand = Math.random() * totalWeight;
+        let chosen = validAds[0];
+        for (const ad of validAds) {
+          const weight = Math.max(1, ad.priority || 1);
+          if (rand <= weight) {
+            chosen = ad;
+            break;
+          }
+          rand -= weight;
+        }
+        setCurrentAd(chosen);
+      } else {
+        // Sequential (Round-Robin)
+        const lastIndex = parseInt(sessionStorage.getItem('ad_rotation_index') || '-1', 10);
+        const nextIndex = (lastIndex + 1) % validAds.length;
+        sessionStorage.setItem('ad_rotation_index', nextIndex.toString());
+        setCurrentAd(validAds[nextIndex]);
+      }
+    };
+
+    const unsubAds = onSnapshot(qAds, (snapshot) => {
+      allAds = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      processActiveAds();
+    });
+
+    const unsubCampaigns = onSnapshot(qCampaigns, (snapshot) => {
+      allCampaigns = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      processActiveAds();
+    });
+
+    return () => {
+      unsubAds();
+      unsubCampaigns();
+    };
   }, []);
 
+  // 2. Handle Timer Carousel if active campaign specifies 'timer' rotation
+  useEffect(() => {
+    if (!activeCampaign || activeCampaign.rotationType !== 'timer' || activePool.length <= 1) {
+      return;
+    }
+
+    const intervalMs = Math.max(3, activeCampaign.timerIntervalSeconds || 10) * 1000;
+
+    const timer = setInterval(() => {
+      setCurrentAd(prev => {
+        if (!prev) return activePool[0];
+        const currentIndex = activePool.findIndex(a => a.id === prev.id);
+        const nextIndex = (currentIndex + 1) % activePool.length;
+        return activePool[nextIndex];
+      });
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [activeCampaign, activePool]);
+
+  // 3. Increment ViewsCount when an ad is displayed
   useEffect(() => {
     if (currentAd && !trackedAds.current.has(currentAd.id)) {
       trackedAds.current.add(currentAd.id);
+
+      // Increment ad view count
       updateDoc(doc(db, 'ads', currentAd.id), {
         viewsCount: increment(1)
-      }).catch(() => {
-        // Silent catch for missing permissions
-      });
+      }).catch(() => {});
+
+      // If ad belongs to a campaign, increment campaign view count
+      if (currentAd.campaignId) {
+        updateDoc(doc(db, 'campaigns', currentAd.campaignId), {
+          viewsCount: increment(1)
+        }).catch(() => {});
+      }
     }
   }, [currentAd]);
 
+  // 4. Handle click tracking
   const handleAdClick = async () => {
     if (!currentAd) return;
     try {
       await updateDoc(doc(db, 'ads', currentAd.id), {
         clicksCount: increment(1)
       });
+      if (currentAd.campaignId) {
+        await updateDoc(doc(db, 'campaigns', currentAd.campaignId), {
+          clicksCount: increment(1)
+        });
+      }
     } catch {
       console.warn("Ad click tracking restricted");
     }
-    
+
     if (currentAd.linkUrl) {
       if (currentAd.isLocalLink) {
         try {
-          // In case the user pasted the full https://... link, we extract only the path for React Router
           const urlObj = new URL(currentAd.linkUrl);
           navigate(urlObj.pathname + urlObj.search + urlObj.hash);
         } catch {
-          // If it's already a relative link like '/advertise'
           navigate(currentAd.linkUrl);
         }
       } else {
@@ -97,7 +184,7 @@ const AdBanner = () => {
   return (
     <div 
       onClick={handleAdClick}
-      className="mx-4 my-6 rounded-2xl overflow-hidden border border-primary/20 shadow-xl cursor-pointer group relative"
+      className="mx-4 my-6 rounded-2xl overflow-hidden border border-primary/20 shadow-xl cursor-pointer group relative transition-all duration-300"
     >
       {currentAd.type === 'image' ? (
         <div className="relative h-40">
@@ -117,8 +204,11 @@ const AdBanner = () => {
         </div>
       )}
       
-      <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-bold text-white/60 uppercase tracking-tighter border border-white/10">
-        AD
+      <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-bold text-white/60 uppercase tracking-tighter border border-white/10 flex items-center gap-1">
+        <span>AD</span>
+        {activeCampaign?.rotationType === 'timer' && (
+          <span className="size-1.5 rounded-full bg-primary animate-pulse" title="Timer rotation active"></span>
+        )}
       </div>
     </div>
   );
