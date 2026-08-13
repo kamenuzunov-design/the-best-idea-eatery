@@ -2,10 +2,22 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 17 Юни 2026 (Край на сесията)
+## Последна сесия: 13 Август 2026 (Край на сесията)
 
 ### Извършена работа:
-1. **Интеграция с онлайн магазини (E-Grocer Platforms - eBag.bg, Parkmart.bg, Supermag.bg)** ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx)):
+1. **Рекламни Кампании, Ротация и Графици за Лимити** ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx), [AdBanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/AdBanner.jsx), [firestore.rules](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/firestore.rules)):
+   - Изградихме пълен модул за управление на Рекламни Кампании с поддръжка на 3 типа ротация (Round-Robin, по приоритет и Таймер карусел с интервал N сек).
+   - Внедрихме следене на лимити за Показвания (Max Views) и Кликове (Max Clicks) с опция `0 = безкрайно`.
+   - Добавихме бутони за нулиране на начална/крайна дата в модалите.
+   - Организирахме картичките на кампаниите последователно една под друга в една колона.
+2. **Филтриране на рецепти по Готвач / Автор** ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx)):
+   - Кликването върху аватара, името или бутона "Виж всички рецепти от този готвач" пренасочва към началното табло с филтър `/?author=UID` за преглед на всички негови рецепти.
+3. **Размяна на подредбата на езиците в секция "Стъпки"** ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeCustomization.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeCustomization.jsx)):
+   - Разменихме полетата за стъпка: първо се попълва описанието на Английски език, а след него на Български език.
+4. **Подредба и нов бърз въпрос в AI Асистента** ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx)):
+   - Поставихме въпроса "Предложи ми ястие с наличните продукти" самостоятелно на първия ред с икона `restaurant`, а останалите четири въпроса под него в решетка 2х2.
+5. **Пренареждане в Бекъп и Възстановяване** ([BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx)):
+   - Преместихме "Локален Експорт" да бъде след "Облачни Архиви" и променихме заглавието на третата секция на "Възстановяване от локален файл".
    - Добавихме премиум стъклен модален прозорец за поръчка на липсващите продукти чрез външни магазини.
    - Имплементирахме локално състояние `selectedItemsForOrder` за филтриране и избор на продукти за поръчка (само избраните артикули се копират и търсят, деселектираните се зачеркват и скриват бутона "Търси").
    - Коригирахме всички URL адреси за търсене, за да избегнем 404 грешки, празни търсения или счупени пътища при пренасочвания.
