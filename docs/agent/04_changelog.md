@@ -3,6 +3,12 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-08-18] - Публикуване на приложението в Интернет (Firebase Hosting Deployment)
+### Добавено (Added)
+- **Успешно качване на живо в Интернет**:
+  - Приложението беше успешно компилирано (`pnpm run build`) и качено във Firebase Hosting.
+  - **Публичен URL адрес за достъп:** [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app)
+
 ## [2026-08-18] - Ограничаване на мобилното меню точно в рамката на приложението
 ### Коригирано (Fixed)
 - **Прецизно центриране на мобилното меню ([Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx))**:
