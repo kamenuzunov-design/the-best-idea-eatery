@@ -48,3 +48,25 @@ export const resizeImage = (file, maxSize = 800) => {
     reader.onerror = (err) => reject(err);
   });
 };
+
+export const getRecipeImageUrl = (recipe) => {
+  if (!recipe) return '/images/recipe-placeholder.png';
+
+  if (typeof recipe === 'string') return recipe;
+
+  // Real original uploaded recipe photos from Firestore
+  if (recipe.images?.main) return recipe.images.main;
+  if (recipe.images?.extra1) return recipe.images.extra1;
+  if (recipe.images?.extra2) return recipe.images.extra2;
+  if (recipe.image_url) return recipe.image_url;
+  if (recipe.imageUrl) return recipe.imageUrl;
+  if (recipe.image) return recipe.image;
+  if (recipe.cover_image) return recipe.cover_image;
+  if (Array.isArray(recipe.photos) && recipe.photos.length > 0 && recipe.photos[0]) return recipe.photos[0];
+  if (Array.isArray(recipe.images) && recipe.images.length > 0 && typeof recipe.images[0] === 'string') return recipe.images[0];
+  if (recipe.media?.image_url) return recipe.media.image_url;
+  if (recipe.media?.url) return recipe.media.url;
+
+  // Project default placeholder when no media was uploaded from "Add Recipe"
+  return '/images/recipe-placeholder.png';
+};

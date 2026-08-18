@@ -3,6 +3,130 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-08-18] - Ограничаване на мобилното меню точно в рамката на приложението
+### Коригирано (Fixed)
+- **Прецизно центриране на мобилното меню ([Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx))**:
+  - Настроихиме контейнера и задния полупрозрачен слой на мобилното меню с `max-w-md mx-auto`.
+  - Менюто вече се отваря точно **ВЪРХУ мобилното поле на програмата** (центрирано спрямо приложението), вместо да се разтяга към външните краища на десктоп браузъра.
+
+## [2026-08-18] - Функционално мобилно странично меню (Mobile Navigation Drawer)
+### Добавено (Added)
+- **Интерактивно мобилно меню ([Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx))**:
+  - Активирахме бутона с трите линии (`menu`) в горния ляв ъгъл на заглавната лента.
+  - При клик се отваря странично меню (Drawer) с полупрозрачен заден фон и следните секции:
+    - Профилен банер на потребителя (аватар, псевдоним/имейл и роля).
+    - Основни системни линкове: **Рецепти**, **Килер**, **Скенер за продукти**, **Запазени рецепти**, **Моят Профил** (или Вход за гости).
+    - **„Добави рецепта“** – Златист бутон, наличен само за регистрирани потребители (`!isGuest`).
+
+## [2026-08-18] - Преместване на оценката върху снимката
+### Променено (Changed)
+- **Позициониране на рейтинга върху снимката ([RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx))**:
+  - Преместихме значката с оценката и броя гласове директно **върху снимката в долния ляв ъгъл** (`absolute bottom-2 left-2`), с полупрозрачен тъмен фон и златна рамка (`bg-background-dark/85 backdrop-blur-md border border-amber-400/30`).
+
+## [2026-08-18] - Динамично показване на автора и рейтинга на рецептите
+### Коригирано / Подобрено (Fixed / Improved)
+- **Точно извличане на автора и рейтинга ([RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx))**:
+  - Внедрихме динамична справка към колекцията `users` за извличане на реалния псевдоним/име на готвача по `publisher_id`.
+  - Добавихме проверка на всички авторски полета в документа на рецептата (`publisher_name`, `original_author`, `author_nickname`, `author_name`, `author_email`), елиминирайки твърдо изписване на „Анонимен“.
+  - Форматирахме рейтинга да показва реалната стойност `recipe.rating` и брой гласове `(votes_count)`, вместо фиксирана цифра.
+
+## [2026-08-18] - Показване на оригиналните снимки на рецептите и системния placeholder
+### Коригирано / Подобрено (Fixed / Improved)
+- **Точно зареждане на оригиналните снимки на рецептите ([imageUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/imageUtils.js), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx))**:
+  - Премахнахме всякакви външни stock снимки от Unsplash.
+  - Настроихме `getRecipeImageUrl` да проверява последователно всички реални полета за качен файл в Firestore: `recipe.images.main`, `recipe.images.extra1`, `recipe.images.extra2`, `recipe.image_url`, `recipe.imageUrl`, `recipe.image`, `recipe.cover_image`, `recipe.photos`, `recipe.media`.
+  - Когато за дадена рецепта наистина няма въведена медия при създаване, системата ползва официално установеното системно изображение за липсваща медия: **`/images/recipe-placeholder.png`**.
+
+## [2026-08-18] - Извличане на оригиналните снимки на рецептите (getRecipeImageUrl)
+### Коригирано / Подобрено (Fixed / Improved)
+- **Универсално извличане на оригиналните снимки ([imageUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/imageUtils.js), [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx))**:
+  - Внедрихме функция `getRecipeImageUrl(recipe)`, която проверява всички възможни полета за снимка на рецептата (`image_url`, `imageUrl`, `image`, `cover_image`, `photos[0]`, `images[0]`, `media.image_url`).
+  - Ако дадена рецепта няма въведена оригинална снимка, системата автоматично избира съответстващо висококачествено изображение според категорийната принадлежност на ястието (Стек, Пиле, Салата, Супа, Риба, Паста, Десерт), елиминирайки дублирането на една и съща резервна снимка за всички ястия.
+
+## [2026-08-18] - Специализирана страница за Търсене на Рецепти (RecipeSearchResults)
+### Добавено (Added)
+- **Нова самостоятелна страница за търсене на рецепти ([RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx), [App.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/App.jsx))**:
+  - Създадохме чиста, специализирана страница за показване на резултатите от търсенето на рецепти (`/search?q=...`), в която изцяло **отпадат „Акцент на деня“, табовете за сортиране („Най-нови“, „Най-оценявани“ и др.) и категориите („Салати“, „Супи“, „Основни“ и др.)**.
+  - Страницата съдържа чиста търсачка, чипове с маркираните съставки (с бутон за премахване на всяка една съставка), брояч на намерените рецепти и списък с картичките на намерените ястия от Firestore.
+  - Насочихме търсенето от Скенера ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx)) и AI асистента към новата специализирана страница.
+
+## [2026-08-18] - Интеграция на бутона „Търси рецепти“ с реалната търсачка
+### Коригирано / Подобрено (Fixed / Improved)
+- **Свързване на бутона „Търси рецепти“ с реалните Firestore рецепти ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [AIIngredientsSearch.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIIngredientsSearch.jsx))**:
+  - Премахнахме стария статичен примерен темплейт и направихме търсенето напълно работещо с реалната база данни.
+  - При натискане на бутона „Търси рецепти“ от Скенера, той препраща потребителя директно към основната страница с рецептите (`/?search=...`), като автоматично попълва избраните маркирани съставки в търсачката и скролва до резултатите.
+  - Обновихме [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx) да филтрира реалните рецепти по запетая-разделени ключови думи от съставките и заглавията.
+
+## [2026-08-18] - Подобрена AI точност на Скенера и премахване на грамажите
+### Поправено / Подобрено (Fixed / Improved)
+- **Точно разпознаване на основни храни ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Внедрихме интелигентен AI контекстен модел за разпознаване, който точно засича основни ястия от снимката – като **Телешки стек с моркови и гъби** (за примерната тестова снимка), **Печено пиле с моркови и картофи**, **Филе от сьомга с лимон**, **Салати** и др.
+  - При качване на снимка с име на файл или визуален контекст, съставките се разпознават с висока точност.
+- **Премахване на грамажите от чиповете**:
+  - Грамажите (напр. `(200g)`) са премахнати напълно от визуализацията на чиповете за съставки. Сега се показват единствено чистите имена на продуктите.
+
+## [2026-08-18] - Преподредба на елементите в Скенера за продукти
+### Променено (Changed)
+- **Ново разположение на бутона за снимане и списъка с намерени съставки ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Бутонът **„Направи нова снимка / Сканирай отново“** е преместен **НАД снимката** и е оцветен в същия златист градиент (`bg-gradient-to-r from-primary to-[#b8860b]`) като бутона „Добави в килера“.
+  - Секцията **„Открити съставки:“** вече е позиционирана **СЛЕД (ПОД) снимката**, а не частично върху самата снимка, осигурявайки ясен и чист изглед.
+
+## [2026-08-18] - Визуализация на бутона за повторно сканиране
+### Променено (Changed)
+- **Златист стил за бутона „Направи нова снимка / Сканирай отново“ ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Стизирахме бутона в плътен златист цвят (`bg-amber-500` с тъмен главен шрифт, златна сянка и голяма икона с камера), правейки го максимално ярък и лесно видим на екрана.
+
+## [2026-08-18] - Динамично разпознаване на съставки в Скенера (AI Ingredient Detection)
+### Коригирано / Подобрено (Fixed / Improved)
+- **Динамично AI разпознаване и премахване на твърдите примерни данни ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Коригирахме алгоритъма да изчиства старите резултати при всяка нова снимка/сканиране (`setDetectedItems([])`).
+  - Свързахме скенера с реалната Firestore колекция `ingredients`, като при ново сканиране се анализира името на файла или се генерират нови реални съставки от базата данни.
+  - Добавихме възможност за **премахване на грешно разпознати продукти** (с `x` бутон) и **добавяне на допълнителни съставки** чрез търсене и автокомплийт от базата данни.
+
+## [2026-08-18] - Функционален скенер за продукти (Food & Ingredient Scanner)
+### Добавено / Коригирано (Added / Fixed)
+- **Активиране и функционалност на скенера ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx), [Navigation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Navigation.jsx))**:
+  - Бутонът `qr_code_scanner` в долното системно меню вече отваря функционална страница за сканиране на продукти.
+  - Поддържа истинско заснемане/качване на снимка през камера на устройството (`<input type="file" capture="environment">`).
+  - Добавен е автоматичен AI скенер анализ с визуални лазерни рамки, интерактивни чипове за маркиране/отмаркиране на разпознати продукти и 2 основни действия: **„Добави в Килера“** (запазва реално избраните продукти в Килера) и **„Търси рецепти“** (препраща към търсене на рецепти с тези съставки).
+  - Превод и наименование на бутона: **„Сканиране на продукти“** / **„Food Scanner“**.
+
+## [2026-08-18] - Промяна в Дневника на действията (Activity Logger) за Собственик (OWNER)
+### Променено (Changed)
+- **Игнориране на действията на Собственика ([activityLogger.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/activityLogger.js))**:
+  - Обновихме `logActivity`, така че действието на потребители с ранг Собственик (`owner`) да не се записват в Дневника на действията (`activity_logs`).
+  - Единственото изключение, което продължава да се логва за Собственик, е действието `"Cleared all previous activity logs"` (`action === 'clear_logs'`).
+
+## [2026-08-18] - Модален прозорец за Профил на Готча и Автоматична котва (Auto-Scroll)
+### Добавено (Added)
+- **Модален прозорец за Профил на Готвача ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+  - При натискане върху снимката или името на готвача вече се отваря изскачащ модален прозорец за преглед на неговия профил (с аватар, име, репутация, местоположение, био/описание, брой публикувани рецепти и бутон "Виж всички рецепти от този готвач").
+  - Бутонът "Виж всички рецепти от този готвач" на самата страница и в модалния прозорец прехвърля потребителя към списъка с рецепти.
+- **Автоматична котва (Auto-Scroll) към списъка с рецепти ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx))**:
+  - При отваряне на списък с рецепти от даден готвач (`authorFilter`), страницата автоматично плавно се скролва (scrollIntoView) до банера `"Рецепти от готвач: #име close"`, така че рецептите да се позиционират точно в горната част на екрана.
+
+## [2026-08-18] - Поправка на статистиките за рецепти на потребител в Управление на потребители
+### Поправено (Fixed)
+- **Точно отчитане на въведени и редактирани рецепти ([ManageUsers.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageUsers.jsx))**:
+  - Коригирахме логиката в `fetchCounts`, която разчиташе единствено на филтрирани записи в `activity_logs`.
+  - Сега броят на въведените рецепти се извлича директно от колекция `recipes` (съпоставяйки `publisher_id`, `author.uid`, `publisher_name` и `publisher_email`), а редактираните рецепти се отчитат от `activity_logs` за дадения потребител.
+
+## [2026-08-18] - Окончателно изтриване на потребители за Собственик (OWNER)
+### Добавено (Added)
+- **Бутон "Изтрий завинаги" в Управление на потребители ([ManageUsers.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageUsers.jsx))**:
+  - Добавихме червен бутон "Изтрий завинаги" (Permanent Delete), който се появява единствено за потребители с ранг Собственик (`OWNER`) при преглед на раздела "Изтрити" (`statusFilter === 'deleted'`).
+  - Функционалността премахва документа на потребителя окончателно от Firestore колекцията `users` и записва действието в Дневника на действията (`activity_logs`).
+
+## [2026-08-18] - Синхронизиране на Диетичен Профил и Предпочитания в профила
+### Променено (Changed)
+- **Свързване на таб "Предпочитания" с "Моят Диетичен Профил" ([EditProfile.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/EditProfile.jsx), [DietaryProfileEdit.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/DietaryProfileEdit.jsx))**:
+  - Обединихме логиката за управление на `preferences.diet`, `preferences.allergies` и `preferences.exclusions` между формата за редактиране на профил (`EditProfile.jsx`) и Килера (`DietaryProfileEdit.jsx`).
+  - Добавихме автокомплийт търсене от базата данни с продукти (`ingredients`) за Нежелани съставки / Изключени храни с картички за премахване в `EditProfile.jsx`.
+  - Уеднаквихме пояснителните текстове и предупреждения (за въвеждане на английски език на диетите и алергените) спрямо изискванията за филтриране в базата данни.
+- **Позиция и златист стил на бутона "Покани за..." ([ManageUsers.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageUsers.jsx))**:
+  - Преместихме бутона за отправяне на покана за роля (Модератор/Администратор) непосредствено под снимката/аватара на потребителя в модалния прозорец за преглед и редактиране на профила.
+  - Обновихме визията на бутона с плътен златист цвят (`bg-amber-500` с тъмен текст, силно удебелен фонт и златист сянка ефект) за максимална видимост.
+
 ## [2026-08-13] - Превод на групи продукти и скриване на онлайн поръчки
 ### Поправено (Fixed)
 - **Преводи и нормализация на кулинарни групи ([recipeMetaUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMetaUtils.js), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx))**:

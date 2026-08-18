@@ -28,6 +28,7 @@ import CookingMode from './pages/CookingMode';
 import CookingProgress from './pages/CookingProgress';
 import IngredientScanner from './pages/IngredientScanner';
 import AIIngredientsSearch from './pages/AIIngredientsSearch';
+import RecipeSearchResults from './pages/RecipeSearchResults';
 import WeeklyMenuPlanner from './pages/WeeklyMenuPlanner';
 import DietaryProfileEdit from './pages/DietaryProfileEdit';
 import SeasonalMenu from './pages/SeasonalMenu';
@@ -68,6 +69,7 @@ function App() {
           <Route path="/recipe/:id/customize" element={<RecipeCustomization />} />
           <Route path="/recipe/:id/wine" element={<WinePairing />} />
           <Route path="/recipe/:id/cooking" element={<CookingMode />} />
+          <Route path="/search" element={<RecipeSearchResults />} />
           <Route path="/ai-search" element={<AIIngredientsSearch />} />
           <Route path="/cuisines" element={<CuisinesExplorer />} />
           <Route path="/community" element={<GourmetCommunity />} />

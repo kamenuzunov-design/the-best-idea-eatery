@@ -29,7 +29,12 @@ const Navigation = () => {
         </NavLink>
 
         <div className="relative -top-8 px-2">
-          <NavLink to="/scanner" className="flex items-center justify-center bg-gradient-to-br from-primary to-[#b8860b] size-14 rounded-2xl rotate-45 shadow-lg shadow-primary/30 border-2 border-surface-dark hover:scale-105 hover:shadow-primary/50 transition-all duration-300">
+          <NavLink 
+            to="/scanner" 
+            title={t('nav.scanner') || (isGuest ? 'Сканиране на продукти' : 'Food & Ingredient Scanner')}
+            aria-label={t('nav.scanner') || 'Food & Ingredient Scanner'}
+            className="flex items-center justify-center bg-gradient-to-br from-primary to-[#b8860b] size-14 rounded-2xl rotate-45 shadow-lg shadow-primary/30 border-2 border-surface-dark hover:scale-105 hover:shadow-primary/50 transition-all duration-300"
+          >
             <span className="material-symbols-outlined text-background-dark -rotate-45 text-3xl font-bold">qr_code_scanner</span>
           </NavLink>
         </div>

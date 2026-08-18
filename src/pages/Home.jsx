@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, query, onSnapshot, limit } from 'firebase/firestore';
@@ -8,6 +8,7 @@ import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getCuisineById } from '../data/cuisines';
 import { translateTag, getRecipeTags, normalizeMainGroup } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
+import { getRecipeImageUrl } from '../lib/imageUtils';
 
 const getPluralCategoryName = (id, lang) => {
   const plurals = {
@@ -53,12 +54,38 @@ const Home = () => {
   const [featuredRecipe, setFeaturedRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('newest'); // 'smart' | 'newest' | 'top' | 'popular'
-  const [searchQuery, setSearchQuery] = useState('');
+  const initialQuery = searchParams.get('search') || searchParams.get('q') || '';
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showTop10, setShowTop10] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const [ingredientsList, setIngredientsList] = useState([]);
   const [measurementsList, setMeasurementsList] = useState([]);
+
+  const authorFilterRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    const qFromUrl = searchParams.get('search') || searchParams.get('q');
+    if (qFromUrl !== null && qFromUrl !== undefined) {
+      const timer = setTimeout(() => {
+        setSearchQuery(qFromUrl);
+        if (qFromUrl && searchInputRef.current) {
+          searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (authorFilter && authorFilterRef.current) {
+      const timer = setTimeout(() => {
+        authorFilterRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [authorFilter]);
 
   const convertToGrams = useCallback((amount, unitId) => {
     if (!unitId) return amount;
@@ -171,36 +198,33 @@ const Home = () => {
 
         // 2. Apply search filter
         if (searchQuery) {
-          const queryLower = searchQuery.toLowerCase();
-          filtered = filtered.filter(r => {
-            const titleBg = r.title_bg || '';
-            const titleEn = r.title_en || '';
-            if (titleBg.toLowerCase().includes(queryLower) || titleEn.toLowerCase().includes(queryLower)) {
-              return true;
-            }
+          const searchTerms = searchQuery.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+          if (searchTerms.length > 0) {
+            filtered = filtered.filter(r => {
+              const titleBg = (r.title_bg || '').toLowerCase();
+              const titleEn = (r.title_en || '').toLowerCase();
 
-            if (r.ingredients && Array.isArray(r.ingredients)) {
-              for (const ing of r.ingredients) {
-                // Check inline names
-                const ingBg = ing.ingredient_bg || ing.name_bg || '';
-                const ingEn = ing.ingredient_en || ing.name_en || '';
-                if (ingBg.toLowerCase().includes(queryLower) || ingEn.toLowerCase().includes(queryLower)) {
-                  return true;
-                }
+              return searchTerms.some(term => {
+                if (titleBg.includes(term) || titleEn.includes(term)) return true;
 
-                // Check master ingredientsList match by ID
-                const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
-                if (dbIng) {
-                  const dbNameBg = dbIng.name_bg || '';
-                  const dbNameEn = dbIng.name_en || '';
-                  if (dbNameBg.toLowerCase().includes(queryLower) || dbNameEn.toLowerCase().includes(queryLower)) {
-                    return true;
+                if (r.ingredients && Array.isArray(r.ingredients)) {
+                  for (const ing of r.ingredients) {
+                    const ingBg = (ing.ingredient_bg || ing.name_bg || '').toLowerCase();
+                    const ingEn = (ing.ingredient_en || ing.name_en || '').toLowerCase();
+                    if (ingBg.includes(term) || ingEn.includes(term)) return true;
+
+                    const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
+                    if (dbIng) {
+                      const dbNameBg = (dbIng.name_bg || '').toLowerCase();
+                      const dbNameEn = (dbIng.name_en || '').toLowerCase();
+                      if (dbNameBg.includes(term) || dbNameEn.includes(term)) return true;
+                    }
                   }
                 }
-              }
-            }
-            return false;
-          });
+                return false;
+              });
+            });
+          }
         }
 
         // 2.5 Apply category filter
@@ -404,7 +428,7 @@ const Home = () => {
       </section>
 
       {/* Search Header */}
-      <section className="px-4 py-2">
+      <section ref={searchInputRef} className="px-4 py-2 scroll-mt-4">
         <div className="relative group">
           <input 
             type="text"
@@ -459,7 +483,7 @@ const Home = () => {
 
         {/* Author Filter Badge */}
         {authorFilter && (
-          <div className="mb-4 p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between shadow-md animate-in fade-in duration-200">
+          <div ref={authorFilterRef} className="scroll-mt-4 mb-4 p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between shadow-md animate-in fade-in duration-200">
             <div className="flex items-center gap-2 min-w-0">
               <span className="material-symbols-outlined text-primary shrink-0">person_search</span>
               <p className="text-xs font-bold text-slate-100 truncate">
@@ -540,7 +564,7 @@ const Home = () => {
             const title = isBg ? recipe.title_bg : recipe.title_en;
             const prepTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
             const difficulty = isBg ? (recipe.difficulty === 'easy' ? 'Лесно' : recipe.difficulty === 'hard' ? 'Трудно' : 'Средно') : (recipe.difficulty || 'medium');
-            const imageUrl = recipe.images?.main || "/images/recipe-placeholder.png";
+            const imageUrl = getRecipeImageUrl(recipe);
 
             const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
             const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');

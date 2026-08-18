@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, doc, updateDoc, getDocs, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -54,25 +54,72 @@ const ManageUsers = () => {
   const [userRecipesCount, setUserRecipesCount] = useState({ published: 0, edited: 0 });
 
   useEffect(() => {
-    if (editingUser) {
-      const fetchCounts = async () => {
-        try {
-          const qAdd = query(collection(db, 'activity_logs'), where('userId', '==', editingUser.id), where('action', '==', 'add_recipe'));
-          const snapAdd = await getDocs(qAdd);
-          const qEdit = query(collection(db, 'activity_logs'), where('userId', '==', editingUser.id), where('action', '==', 'edit_recipe'));
-          const snapEdit = await getDocs(qEdit);
-          setUserRecipesCount({ published: snapAdd.size, edited: snapEdit.size });
-        } catch(e) {
-          console.error(e);
-        }
-      };
-      fetchCounts();
-    } else {
-      const timer = setTimeout(() => {
-        setUserRecipesCount({ published: 0, edited: 0 });
-      }, 0);
-      return () => clearTimeout(timer);
+    if (!editingUser) {
+      return;
     }
+
+    let isMounted = true;
+    const fetchCounts = async () => {
+      try {
+        const targetUid = editingUser.id || editingUser.uid;
+        const targetEmail = editingUser.auth?.email || editingUser.email || '';
+        const targetNickname = editingUser.profile?.nickname || editingUser.name || '';
+
+        // 1. Fetch all recipes from Firestore to count published recipes accurately
+        const recipesSnap = await getDocs(collection(db, 'recipes'));
+        const publishedCount = recipesSnap.docs.filter(docSnap => {
+          const r = docSnap.data();
+          if (r.is_deleted === true) return false;
+          
+          const matchesUid = Boolean(targetUid && (
+            r.publisher_id === targetUid || 
+            r.author?.uid === targetUid || 
+            r.created_by === targetUid
+          ));
+          const matchesEmail = Boolean(targetEmail && (
+            r.publisher_name === targetEmail || 
+            r.publisher_email === targetEmail
+          ));
+          const matchesNickname = Boolean(targetNickname && r.publisher_name === targetNickname);
+
+          return matchesUid || matchesEmail || matchesNickname;
+        }).length;
+
+        // 2. Fetch activity_logs to count edited and logged added recipes
+        const logsSnap = await getDocs(collection(db, 'activity_logs'));
+        let addLogCount = 0;
+        let editLogCount = 0;
+
+        logsSnap.docs.forEach(docSnap => {
+          const data = docSnap.data();
+          const matchesUser = Boolean(
+            (targetUid && data.userId === targetUid) ||
+            (targetEmail && data.userEmail === targetEmail)
+          );
+          if (!matchesUser) return;
+
+          if (data.action === 'edit_recipe' || data.action === 'update_recipe') {
+            editLogCount++;
+          } else if (data.action === 'add_recipe' || data.action === 'publish_recipe') {
+            addLogCount++;
+          }
+        });
+
+        const finalPublishedCount = Math.max(publishedCount, addLogCount);
+
+        if (isMounted) {
+          setUserRecipesCount({ published: finalPublishedCount, edited: editLogCount });
+        }
+      } catch(e) {
+        console.error("Error fetching user recipe counts:", e);
+      }
+    };
+
+    fetchCounts();
+
+    return () => {
+      isMounted = false;
+    };
   }, [editingUser]);
 
   useEffect(() => {
@@ -175,6 +222,33 @@ const ManageUsers = () => {
     } catch (error) {
       console.error("Error restoring user:", error);
       alert(isBg ? 'Възникна грешка при възстановяване.' : 'Error restoring user.');
+    }
+  };
+
+  const handlePermanentDeleteUser = async (targetUserId, targetUserEmail) => {
+    if (user.role !== ROLES.OWNER) {
+      alert(isBg ? 'Само собственикът има право да изтрива завинаги от базата данни.' : 'Only the owner has permission to permanently delete from the database.');
+      return;
+    }
+    if (targetUserId === user.uid) {
+      alert(isBg ? 'Не можете да изтриете собствения си акаунт.' : 'You cannot delete your own account.');
+      return;
+    }
+
+    if (!window.confirm(isBg 
+      ? `ВНИМАНИЕ: Сигурни ли сте, че искате ОКОНЧАТЕЛНО ДА ИЗТРИЕТЕ от базата данни потребителя ${targetUserEmail}? Данните за този потребител ще бъдат премахнати завинаги!` 
+      : `WARNING: Are you sure you want to PERMANENTLY DELETE user ${targetUserEmail} from the database? This action cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', targetUserId);
+      await deleteDoc(userRef);
+      await logActivity(user.uid, user.email, 'user_permanently_deleted', `Permanently deleted user document for ${targetUserEmail} (${targetUserId})`);
+      alert(isBg ? 'Потребителят е изтрит завинаги от базата данни.' : 'User permanently deleted from database.');
+    } catch (error) {
+      console.error("Error permanently deleting user:", error);
+      alert(isBg ? 'Възникна грешка при окончателното изтриване.' : 'Error permanently deleting user.');
     }
   };
 
@@ -341,7 +415,21 @@ const ManageUsers = () => {
   const renderDeleteBtn = (u, userEmail, userRole) => {
     if (isReadOnly) return null;
     if (userRole === ROLES.OWNER && user.role !== ROLES.OWNER) return null;
-    if (statusFilter === 'deleted') return null; // Already deleted
+    
+    if (statusFilter === 'deleted') {
+      if (user.role === ROLES.OWNER) {
+        return (
+          <button 
+            onClick={() => handlePermanentDeleteUser(u.id, userEmail)}
+            className="text-[10px] font-bold px-2 py-1 rounded bg-rose-600 text-white hover:bg-rose-700 transition-colors ml-1 shadow-sm"
+            title={isBg ? 'Изтрий завинаги от базата данни' : 'Permanently delete from database'}
+          >
+            {isBg ? 'Изтрий завинаги' : 'Delete Permanently'}
+          </button>
+        );
+      }
+      return null;
+    }
     
     return (
       <button 
@@ -618,6 +706,48 @@ const ManageUsers = () => {
                     onChange={handleImageUpload} 
                   />
                 </div>
+
+                {/* Invite to Role */}
+                {user.role === ROLES.OWNER && (
+                  (() => {
+                    const targetRole = editingUser.status?.level || ROLES.USER;
+                    if (targetRole === ROLES.USER || targetRole === ROLES.MODERATOR) {
+                      const isInvited = editingUser.invited_role;
+                      const nextRole = targetRole === ROLES.USER ? ROLES.MODERATOR : ROLES.ADMIN;
+                      const labelBg = targetRole === ROLES.USER ? 'Покани за Модератор' : 'Покани за Администратор';
+                      const labelEn = targetRole === ROLES.USER ? 'Invite for Moderator' : 'Invite for Admin';
+                      
+                      return (
+                        <div className="mt-3 w-full flex justify-center">
+                          <button 
+                            type="button"
+                            disabled={isInvited === nextRole}
+                            onClick={async () => {
+                              try {
+                                await updateDoc(doc(db, 'users', editingUser.id), {
+                                  invited_role: nextRole
+                                });
+                                editingUser.invited_role = nextRole;
+                                alert(isBg ? 'Поканата е изпратена успешно.' : 'Invitation sent successfully.');
+                                logActivity(user.uid, user.email, 'invite_role', `Invited ${editingUser.auth?.email || editingUser.email || editingUser.id} to ${nextRole}`);
+                              } catch(e) {
+                                console.error(e);
+                                alert('Error sending invite');
+                              }
+                            }}
+                            className="w-full flex items-center justify-center gap-2 bg-amber-500 text-background-dark py-2.5 rounded-xl text-xs font-extrabold shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:bg-amber-400 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-500 disabled:shadow-none"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">mail</span>
+                            {isInvited === nextRole 
+                              ? (isBg ? 'Поканата е изпратена' : 'Invitation sent')
+                              : (isBg ? labelBg : labelEn)}
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()
+                )}
               </div>
 
               <form id="profileForm" onSubmit={saveProfile} className="space-y-4">
@@ -879,48 +1009,6 @@ const ManageUsers = () => {
                 </div>
               </form>
 
-              {/* Invite to Role */}
-              {user.role === ROLES.OWNER && (
-                (() => {
-                  const targetRole = editingUser.status?.level || ROLES.USER;
-                  if (targetRole === ROLES.USER || targetRole === ROLES.MODERATOR) {
-                    const isInvited = editingUser.invited_role;
-                    const nextRole = targetRole === ROLES.USER ? ROLES.MODERATOR : ROLES.ADMIN;
-                    const labelBg = targetRole === ROLES.USER ? 'Покани за Модератор' : 'Покани за Администратор';
-                    const labelEn = targetRole === ROLES.USER ? 'Invite for Moderator' : 'Invite for Admin';
-                    
-                    return (
-                      <div className="pt-4 mt-4 border-t border-primary/20 flex justify-center">
-                        <button 
-                          type="button"
-                          disabled={isInvited === nextRole}
-                          onClick={async () => {
-                            try {
-                              await updateDoc(doc(db, 'users', editingUser.id), {
-                                invited_role: nextRole
-                              });
-                              // update local state so the button disabled state re-renders
-                              editingUser.invited_role = nextRole;
-                              alert(isBg ? 'Поканата е изпратена успешно.' : 'Invitation sent successfully.');
-                              logActivity(user.uid, user.email, 'invite_role', `Invited ${editingUser.auth?.email || editingUser.email || editingUser.id} to ${nextRole}`);
-                            } catch(e) {
-                              console.error(e);
-                              alert('Error sending invite');
-                            }
-                          }}
-                          className="w-full flex items-center justify-center gap-2 bg-[#b8860b]/10 border border-[#b8860b]/30 text-[#b8860b] py-2 rounded-xl text-xs font-bold hover:bg-[#b8860b]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(184,134,11,0.1)]"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">mail</span>
-                          {isInvited === nextRole 
-                            ? (isBg ? 'Поканата е изпратена' : 'Invitation sent')
-                            : (isBg ? labelBg : labelEn)}
-                        </button>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()
-              )}
 
             </div>
 

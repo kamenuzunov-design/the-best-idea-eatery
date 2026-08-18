@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { collection, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
 import { resizeImage } from '../lib/imageUtils';
 import { checkImageSafety } from '../lib/moderationUtils';
 import { ROLES } from '../constants/roles';
@@ -36,10 +37,59 @@ const EditProfile = () => {
   // Preferences State
   const [diet, setDiet] = useState(user?.preferences?.diet?.join(', ') || '');
   const [allergies, setAllergies] = useState(user?.preferences?.allergies?.join(', ') || '');
-  const [exclusions, setExclusions] = useState(user?.preferences?.exclusions?.join(', ') || '');
+  const [exclusions, setExclusions] = useState(
+    Array.isArray(user?.preferences?.exclusions) 
+      ? user.preferences.exclusions 
+      : (user?.preferences?.exclusions ? user.preferences.exclusions.split(',').map(s => s.trim()).filter(Boolean) : [])
+  );
   const [unitSystem, setUnitSystem] = useState(user?.preferences?.unit_system || 'metric');
   const [servings, setServings] = useState(user?.preferences?.servings_default || 2);
   const [pantryActive, setPantryActive] = useState(user?.preferences?.pantry_active ?? true);
+
+  // Master ingredients reference database for autocomplete exclusions
+  const [ingredientsDB, setIngredientsDB] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredIngredients, setFilteredIngredients] = useState([]);
+
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      try {
+        const iSnap = await getDocs(collection(db, 'ingredients'));
+        setIngredientsDB(iSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.warn("Could not load ingredients database:", err.message);
+      }
+    };
+    fetchIngredients();
+  }, []);
+
+  const handleSearchChange = (e) => {
+    const q = e.target.value;
+    setSearchQuery(q);
+    if (!q) {
+      setFilteredIngredients([]);
+      return;
+    }
+    const lowerQ = q.toLowerCase();
+    const matches = ingredientsDB.filter(ing => 
+      (ing.name_bg && ing.name_bg.toLowerCase().includes(lowerQ)) ||
+      (ing.name_en && ing.name_en.toLowerCase().includes(lowerQ))
+    ).filter(ing => ing.is_active !== false && ing.is_deleted !== true);
+    
+    setFilteredIngredients(matches.slice(0, 8));
+  };
+
+  const handleAddExclusion = (id) => {
+    if (!exclusions.includes(id)) {
+      setExclusions([...exclusions, id]);
+    }
+    setSearchQuery('');
+    setFilteredIngredients([]);
+  };
+
+  const handleRemoveExclusion = (id) => {
+    setExclusions(exclusions.filter(exId => exId !== id));
+  };
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -123,7 +173,7 @@ const EditProfile = () => {
         },
         'preferences.diet': toArray(diet),
         'preferences.allergies': toArray(allergies),
-        'preferences.exclusions': toArray(exclusions),
+        'preferences.exclusions': Array.isArray(exclusions) ? exclusions : toArray(exclusions),
          'preferences.unit_system': unitSystem,
         'preferences.servings_default': Number(servings) || 2,
         'preferences.pantry_active': pantryActive
@@ -388,43 +438,111 @@ const EditProfile = () => {
           {activeTab === 'preferences' && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               
+              {/* Diets */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest">
-                  {isBg ? 'Диетични предпочитания' : 'Dietary Preferences'}
+                <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-primary">eco</span>
+                  {isBg ? 'Хранителен Режим / Диети (Само на английски)' : 'Diets / Nutritional Regimes (English Only)'}
                 </label>
                 <input 
                   value={diet}
                   onChange={(e) => setDiet(e.target.value)}
                   className="w-full h-12 bg-surface-dark/50 backdrop-blur-md border border-primary/20 rounded-xl px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-slate-100 shadow-inner text-sm" 
-                  placeholder={isBg ? 'вегетарианец, кето, палео (разделени със запетая)' : 'vegetarian, keto, paleo (comma separated)'} 
+                  placeholder={isBg ? 'напр. vegan, vegetarian, keto, paleo, gluten-free' : 'e.g. vegan, vegetarian, keto, paleo, gluten-free'} 
                   type="text"
                 />
+                <p className="text-[10px] text-slate-500 px-1 italic">
+                  {isBg 
+                    ? 'Въведете режими, разделени със запетая. ВАЖНО: Използвайте САМО английски думи, тъй като филтрите на продуктите в базата данни работят с английски тагове.' 
+                    : 'Enter regimes separated by commas. IMPORTANT: Use English words only, as the product database filters rely on English tags.'}
+                </p>
               </div>
 
+              {/* Allergies */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest">
-                  {isBg ? 'Алергии / Непоносимости' : 'Allergies / Intolerances'}
+                <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-rose-400">warning</span>
+                  {isBg ? 'Алергии и Непоносимости (Само на английски)' : 'Allergies & Intolerances (English Only)'}
                 </label>
                 <input 
                   value={allergies}
                   onChange={(e) => setAllergies(e.target.value)}
                   className="w-full h-12 bg-surface-dark/50 backdrop-blur-md border border-rose-500/30 rounded-xl px-4 focus:ring-1 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all text-slate-100 shadow-inner text-sm" 
-                  placeholder={isBg ? 'лактоза, глутен, ядки (разделени със запетая)' : 'lactose, gluten, nuts (comma separated)'} 
+                  placeholder={isBg ? 'напр. nuts, peanuts, gluten, lactose, eggs, fish' : 'e.g. nuts, peanuts, gluten, lactose, eggs, fish'} 
                   type="text"
                 />
+                <p className="text-[10px] text-slate-500 px-1 italic">
+                  {isBg 
+                    ? 'Въведете алергени, разделени със запетая. ВАЖНО: Използвайте САМО английски думи, за да съвпадат точно с алергените на продуктите в базата.' 
+                    : 'Enter allergens separated by commas. IMPORTANT: Use English words only to match the allergens defined in the database.'}
+                </p>
               </div>
 
+              {/* Exclusions */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest">
-                  {isBg ? 'Нежелани съставки' : 'Disliked Ingredients'}
+                <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-amber-500">block</span>
+                  {isBg ? 'Изключени храни / Нежелани съставки' : 'Exclusions / Disliked Ingredients'}
                 </label>
-                <input 
-                  value={exclusions}
-                  onChange={(e) => setExclusions(e.target.value)}
-                  className="w-full h-12 bg-surface-dark/50 backdrop-blur-md border border-primary/20 rounded-xl px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-slate-100 shadow-inner text-sm" 
-                  placeholder={isBg ? 'кориандър, гъби (разделени със запетая)' : 'cilantro, mushrooms (comma separated)'} 
-                  type="text"
-                />
+                
+                {/* Exclusions Autocomplete Search */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="w-full h-12 bg-surface-dark/50 backdrop-blur-md border border-primary/20 rounded-xl px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-slate-100 shadow-inner text-sm"
+                    placeholder={isBg ? 'Потърсете и изберете продукт за изключване...' : 'Search and select product to exclude...'}
+                  />
+                  
+                  {filteredIngredients.length > 0 && (
+                    <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto bg-surface-dark border border-primary/20 rounded-xl shadow-xl divide-y divide-primary/10">
+                      {filteredIngredients.map(ing => {
+                        const name = isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg);
+                        return (
+                          <div
+                            key={ing.id}
+                            onClick={() => handleAddExclusion(ing.id)}
+                            className="px-4 py-3 text-slate-200 hover:bg-primary/10 hover:text-primary cursor-pointer text-sm transition-colors flex justify-between items-center"
+                          >
+                            <span>{name}</span>
+                            <span className="material-symbols-outlined text-xs">add</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Selected Exclusions List */}
+                <div className="space-y-2 mt-2">
+                  {exclusions.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic px-1">
+                      {isBg ? 'Няма изключени продукти' : 'No excluded products'}
+                    </p>
+                  ) : (
+                    exclusions.map(exId => {
+                      const ing = ingredientsDB.find(i => i.id === exId);
+                      const name = ing ? (isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg)) : exId;
+                      return (
+                        <div key={exId} className="flex justify-between items-center bg-surface-dark/30 border border-primary/10 rounded-xl p-3 hover:border-primary/30 transition-colors animate-in fade-in slide-in-from-top-1 duration-150">
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-amber-500 text-sm">block</span>
+                            <span className="text-slate-200 text-sm font-medium">{name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveExclusion(exId)}
+                            className="text-slate-400 hover:text-rose-500 transition-colors p-1"
+                            title={isBg ? 'Премахни' : 'Remove'}
+                          >
+                            <span className="material-symbols-outlined text-lg">close</span>
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
