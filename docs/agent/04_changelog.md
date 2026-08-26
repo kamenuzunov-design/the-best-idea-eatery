@@ -5,6 +5,8 @@
 
 ## [2026-08-26] - Автоматична котва и нулиране на скрола, и корекция на Нативни Реклами (Native Ads Rotation & Priority)
 ### Добавено / Коригирано (Added / Fixed)
+- **Деплой в Firebase Hosting (Live Production)**:
+  - Качена новата версия в Firebase Hosting: [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app).
 - **Подобрения в Режим "Започни Готвене" ([CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx))**:
   - Стъпките са поставени в една вертикална колона една под друга без хоризонтален слайдер.
   - Използва се автентичната снимка от съответната рецепта вместо произволни изображения.
