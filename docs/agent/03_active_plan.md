@@ -1,7 +1,54 @@
 # Активен План
 
 ## Текуща задача
-За днешната сесия всички поставени задачи са изпълнени и проектът се подготвя за качване (deployment) и изпращане в GitHub.
+Изпълнение на козметични подобрения за автоматично позициониране в началото на всяка отваряна страница (Котва "Най-добрата идея за хранене").
+
+## Изпълнени наскоро задачи (26 Август 2026)
+- **Подобрения в Режим "Започни Готвене" (Вертикален списък, Снимка и Гласово четене) ([CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx))**:
+  - Подредихме стъпките "твърдо" в една вертикална колона една след друга (премахнат хоризонталният слайдер).
+  - Свързахме стъпките с реалната снимка на рецептата (`getRecipeImageUrl(recipe)`), вместо произволни стокови снимки.
+  - Подобрихме гласовото четене (*Text-To-Speech*): предварително зареждане на гласовете (`onvoiceschanged`), изчистване на опашката и автоматичен избор на наличен глас (Български/Английски) за стабилно чуване през говорителите.
+- **Кръгъл бутон "+" в зона "Спомагателни продукти" ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Добавихме стилен кръгъл бутон `+` с градиентния цвят на бутоните в долния десен ъгъл на зона "Спомагателни продукти".
+  - При натискане отваря модалния прозорец за търсене и добавяне на нови съставки от базата данни.
+- **Търсене по Основен продукт и Твърдо 1-колонен Изглед на Резултатите ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx), [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx))**:
+  - Настроихме бутона *"Търси рецепти"* в скенера автоматично да стартира търсенето по избрания **Основен продукт** (Main Product).
+  - Направихме списъка с резултати от търсенето "твърдо" в 1 колона (`flex flex-col gap-4`) за всички екрани (и на телефон, и на компютър).
+  - Стриктно коригирахме филтрирането (`every`), така че да няма излишни / нерелевантни рецепти в намерените резултати.
+- **Групиране на Продуктите в Скенера (Основен и Спомагателни) ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Разделихме откритите съставки на две ясно обособени визуални групи с еднаква дебелина на контура (`border-2`): **"Основен продукт"** (с висок приоритет и златист акцент) и **"Спомагателни продукти"**.
+  - Имплементирахме йерархия на приоритетите при автоматичния подбор на основен продукт: 1. Меса/Риба ➔ 2. Сирена/Млечни/Яйца ➔ 3. Хляб/Печива/Тестени ➔ 4. Зеленчуци/Гъби.
+  - Добавихме възможност потребителят с 1 клик върху иконата `⭐` да посочи всеки друг спомагателен продукт като **"Основен продукт"**.
+- **Пояснителен Банер за Точността на AI Скенера ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Добавихме ясно забележим информационен банер (на Български и Английски език), уведомяващ потребителите, че скенерът използва автоматично AI визуално разпознаване и може да не открива 100% от продуктите с пълна точност.
+  - Указахме на потребителите, че могат лесно да премахват грешни съставки (чрез `×`) или да добавяте липсващи ръчно с бутона *"Добави съставка"*.
+  - Добавихме разпознаване за сандвич/хляб/сирене/домати/краставици в ключовите думи при анализирането на снимките.
+- **Пълна Локализация (BG / EN) във Формата за Реклама ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx))**:
+  - Преведохме и обвързахме динамично с `isBg` абсолютно всички текстове, етикети (labels), подсказки (placeholders), пояснения и бутони в модалния прозорец "Нова/Редактирай Реклама" и "Правила за Реклама" (Title BG/EN, Ad Type, Target Keywords, Media/HTML Code, Target Link URL, Local Route, Max Views/Clicks, Save Ad, Save Changes).
+- **3-редов Секционен Хедър в "Управление на Реклами" ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx))**:
+  - Направихме списъка с реклами "твърдо" в 1 колона (`flex flex-col gap-4`) за всички устройства.
+  - Структурирахме хедърите на двете зони на точно 3 реда: Ред 1 = Заглавие, Ред 2 = Лента за сортиране, Ред 3 = Бутон за действие ("+ Нова Реклама" / "+ Нова Кампания").
+  - Увеличихме дебелината на контура на 2px (`border-2 border-primary/50` и `border-2 border-amber-500/50`).
+- **Ренареждане и Визуално Разграничение в "Управление на Реклами" ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx))**:
+  - Разменихме местата на секциите: Първо се показва **"Списък с Реклами"**, а след нея **"Рекламни Кампании"**.
+  - Оформихме двете зони с ясно различаващ се визуален дизайн (Зона Реклами с чист тъмен фон и Emerald кант, Зона Кампании с пастелен акцент и Amber златист кант).
+  - Добавихме падащи менюта за сортиране за двете секции (по Приоритет 10➔1 / 1➔10, Дата, Име А-Я, Тип реклама, Активни първо, Брой реклами).
+  - Добавихме бързи бутони (`▲` / `▼`) за директно пренареждане на приоритета (1-10) върху всяка рекламна карта.
+- **Оформление на Хедъра в "Управление на Реклами" ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx))**:
+  - Добавихме стрелка за връщане назад към меню "Администрация" (`navigate('/admin')`).
+  - Променихме заглавието на един ред в същия цвят и стил като в меню "Потребители" (`text-xl font-bold text-slate-100`).
+  - Поставихме пояснението на следващия ред с нормален шрифт (`text-xs text-slate-400 font-normal`).
+  - Поставихме бутоните "Нова Кампания" и "Нова Реклама" на следващия ред с еднакъв цвят (`bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20`).
+  - Поставихме бутона "Правила за Реклама" на отделен нов ред под тях.
+- **Корекция и Ротация на Нативни Реклами (Native Ads Rotation & Priority)** ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx)):
+  - Сортирахме списъка с нативни реклами по Приоритет низходящо (Priority 10 > Priority 5), така че рекламата с най-висок приоритет винаги излиза с предимство.
+  - Въведохме `matchingKey` за изолиране на началното зареждане на рекламата, така че повторните рендерирания на React по време на зареждане да НЕ увеличават индекса в `sessionStorage` и да НЕ връщат презареждането винаги на една и съща реклама.
+  - Таймерът за ротация на всеки 10 секунди вече работи непрекъснато и плавно сменя рекламите една след друга.
+- **Автоматично позициониране и котва при отваряне на страници (`app-top-anchor`)** ([ScrollToTop.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/ScrollToTop.jsx), [Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx), [Navigation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Navigation.jsx), [App.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/App.jsx)):
+  - Маркирахме заглавния текст *"Най-добрата идея за хранене"* в [Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx) с котвено ID `app-top-anchor`.
+  - Създадохме компонент [ScrollToTop.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/ScrollToTop.jsx), който автоматично нулира скрола на прозореца (`window.scrollTo(0, 0)`) и закотвя изгледа в най-горната част при смяна на маршрутите от системното или мобилното меню, както и в меню администрация и формите за редактиране/създаване.
+  - Премахнахме фиксираната височина `h-screen` от административните страници ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx), [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx), [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx)) в полза на `min-h-screen`, осигурявайки плавно и естествено позициониране на целия екран.
+  - Запазихме специалните планирани котви на други места (напр. филтър по готвач и автокомплийт търсене в [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx)).
 
 ## Изпълнени наскоро задачи (18 Август 2026)
 - **Успешно качване на приложението на живо в Интернет (Firebase Hosting)**: Проектът беше компилиран и публикуван на адрес [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app).

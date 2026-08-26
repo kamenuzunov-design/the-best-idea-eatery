@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db, storage } from '../../lib/firebase';
 import { 
@@ -27,6 +27,64 @@ const ManageAds = () => {
   const [ads, setAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Sort state for Ads & Campaigns
+  const [adsSortBy, setAdsSortBy] = useState('priority-desc'); // 'priority-desc' | 'priority-asc' | 'date-desc' | 'date-asc' | 'title' | 'type'
+  const [campaignsSortBy, setCampaignsSortBy] = useState('name-asc'); // 'name-asc' | 'date-desc' | 'active-first' | 'ads-count'
+
+  // Computed sorted Ads
+  const sortedAds = useMemo(() => {
+    const list = [...ads];
+    switch (adsSortBy) {
+      case 'priority-desc':
+        return list.sort((a, b) => (b.priority || 1) - (a.priority || 1));
+      case 'priority-asc':
+        return list.sort((a, b) => (a.priority || 1) - (b.priority || 1));
+      case 'date-desc':
+        return list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      case 'date-asc':
+        return list.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+      case 'title':
+        return list.sort((a, b) => (a.title_bg || '').localeCompare(b.title_bg || ''));
+      case 'type':
+        return list.sort((a, b) => (a.type || '').localeCompare(b.type || ''));
+      default:
+        return list;
+    }
+  }, [ads, adsSortBy]);
+
+  // Computed sorted Campaigns
+  const sortedCampaigns = useMemo(() => {
+    const list = [...campaigns];
+    switch (campaignsSortBy) {
+      case 'name-asc':
+        return list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      case 'date-desc':
+        return list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      case 'active-first':
+        return list.sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0));
+      case 'ads-count':
+        return list.sort((a, b) => {
+          const countA = ads.filter(ad => ad.campaignId === a.id).length;
+          const countB = ads.filter(ad => ad.campaignId === b.id).length;
+          return countB - countA;
+        });
+      default:
+        return list;
+    }
+  }, [campaigns, campaignsSortBy, ads]);
+
+  // Quick Priority Adjustment for Ads
+  const handleAdjustPriority = async (ad, delta) => {
+    const currentP = Number(ad.priority) || 1;
+    const newP = Math.max(1, Math.min(10, currentP + delta));
+    if (newP === currentP) return;
+    try {
+      await updateDoc(doc(db, 'ads', ad.id), { priority: newP });
+    } catch (err) {
+      console.error("Failed to update priority", err);
+    }
+  };
   
   // Ad Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -378,60 +436,236 @@ const ManageAds = () => {
 
   return (
     <div className="flex-1 bg-background-dark pb-24 font-display">
-      <header className="p-6 bg-surface-dark border-b border-primary/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-20 shadow-md">
-        <div>
-          <h1 className="text-xl font-black text-primary uppercase tracking-tighter">Управление на Реклами</h1>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{isBg ? 'Управление на кампании, графици и реклами' : 'Ad Campaigns & Scheduling'}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+      <header className="p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 sticky top-0 z-20 shadow-md space-y-3">
+        {/* Row 1: Back Arrow + Title & Subtitle */}
+        <div className="flex items-center">
           <button 
-            onClick={handleOpenSettings}
-            className="flex-1 md:flex-none bg-surface-dark border border-primary/30 text-primary px-4 py-3 md:py-0 md:h-12 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-[10px] sm:text-xs font-black uppercase cursor-pointer"
+            onClick={() => navigate('/admin')} 
+            className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors cursor-pointer"
+            title={isBg ? 'Назад към Администрация' : 'Back to Admin'}
           >
-            <span className="material-symbols-outlined text-sm">gavel</span>
-            {isBg ? 'Правила за Реклама' : 'Ad Rules'}
+            <span className="material-symbols-outlined">arrow_back</span>
           </button>
+          <div>
+            <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Управление на Реклами' : 'Manage Ads'}</h1>
+            <p className="text-xs text-slate-400 font-normal mt-0.5">
+              {isBg ? 'Управление на кампании, графици и реклами' : 'Ad Campaigns & Scheduling'}
+            </p>
+          </div>
+        </div>
+
+        {/* Row 2: "Нова Кампания" & "Нова Реклама" buttons (same color) */}
+        <div className="flex items-center gap-2">
           <button 
             onClick={() => handleOpenCampaignModal()}
-            className="flex-1 md:flex-none bg-surface-dark border border-primary/30 text-primary px-4 py-3 md:py-0 md:h-12 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-[10px] sm:text-xs font-bold uppercase cursor-pointer"
+            className="flex-1 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold cursor-pointer"
           >
             <span className="material-symbols-outlined text-sm">folder</span>
-            {isBg ? 'Нова Кампания' : 'New Campaign'}
+            <span>{isBg ? 'Нова Кампания' : 'New Campaign'}</span>
           </button>
+
           <button 
             onClick={() => { resetForm(); setEditingAd(null); setIsModalOpen(true); }}
-            className="w-full md:w-auto bg-primary text-background-dark px-4 py-3 md:py-0 md:h-12 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all text-[10px] sm:text-xs font-black uppercase cursor-pointer"
+            className="flex-1 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold cursor-pointer"
           >
-            <span className="material-symbols-outlined font-black">add</span>
+            <span className="material-symbols-outlined text-sm">add</span>
             <span>{isBg ? 'Нова Реклама' : 'New Ad'}</span>
+          </button>
+        </div>
+
+        {/* Row 3: "Правила за Реклама" button */}
+        <div>
+          <button 
+            onClick={handleOpenSettings}
+            className="w-full bg-surface-dark border border-primary/20 text-slate-300 hover:text-primary hover:border-primary/40 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-xs font-bold cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-sm">gavel</span>
+            <span>{isBg ? 'Правила за Реклама' : 'Ad Rules'}</span>
           </button>
         </div>
       </header>
 
       <div className="p-4 space-y-6">
-        {/* Campaign List Section */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">folder_open</span>
-              <span>{isBg ? 'Рекламни Кампании' : 'Ad Campaigns'} ({campaigns.length})</span>
+        {/* SECTION 1: Ads List (Списък с Реклами) - FIRST */}
+        <section className="bg-surface-dark/80 rounded-3xl border-2 border-primary/50 p-5 shadow-2xl space-y-4">
+          {/* Header Row 1: Title */}
+          <div className="pb-2 border-b border-primary/20">
+            <h2 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-base">campaign</span>
+              <span>{isBg ? 'Списък с Реклами' : 'Ads List'} ({sortedAds.length})</span>
             </h2>
-            <button 
-              onClick={() => handleOpenCampaignModal()}
-              className="text-[10px] font-black text-primary hover:underline uppercase flex items-center gap-1 cursor-pointer"
+          </div>
+
+          {/* Header Row 2: Sort controls */}
+          <div className="flex items-center gap-1.5 bg-background-dark/80 px-3 py-2 rounded-xl border border-primary/30 w-full">
+            <span className="material-symbols-outlined text-xs text-primary">sort</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">{isBg ? 'Сортирай:' : 'Sort:'}</span>
+            <select 
+              value={adsSortBy} 
+              onChange={e => setAdsSortBy(e.target.value)} 
+              className="bg-transparent text-slate-200 text-xs font-bold outline-none cursor-pointer w-full"
             >
-              <span className="material-symbols-outlined text-xs">add</span>
-              {isBg ? 'Нова Кампания' : 'New Campaign'}
+              <option value="priority-desc" className="bg-surface-dark">{isBg ? '⭐ Приоритет (10 ➔ 1)' : '⭐ Priority (10 ➔ 1)'}</option>
+              <option value="priority-asc" className="bg-surface-dark">{isBg ? '⭐ Приоритет (1 ➔ 10)' : '⭐ Priority (1 ➔ 10)'}</option>
+              <option value="date-desc" className="bg-surface-dark">{isBg ? '📅 Най-нови първо' : '📅 Newest First'}</option>
+              <option value="date-asc" className="bg-surface-dark">{isBg ? '📅 Най-стари първо' : '📅 Oldest First'}</option>
+              <option value="title" className="bg-surface-dark">{isBg ? '🔤 По Име (А-Я)' : '🔤 By Title'}</option>
+              <option value="type" className="bg-surface-dark">{isBg ? '🏷️ По Тип' : '🏷️ By Type'}</option>
+            </select>
+          </div>
+
+          {/* Header Row 3: Action Button */}
+          <div>
+            <button 
+              onClick={() => { resetForm(); setEditingAd(null); setIsModalOpen(true); }}
+              className="w-full py-2.5 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">add</span>
+              <span>{isBg ? 'Нова Реклама' : 'New Ad'}</span>
             </button>
           </div>
 
-          {campaigns.length === 0 ? (
-            <div className="text-center py-8 bg-surface-dark/40 rounded-2xl border border-primary/10 flex flex-col items-center justify-center p-4">
-              <span className="material-symbols-outlined text-3xl text-slate-600 mb-1">folder_off</span>
+          {loading ? (
+            <div className="flex justify-center p-12 text-primary animate-spin">
+              <span className="material-symbols-outlined text-4xl">refresh</span>
+            </div>
+          ) : sortedAds.length === 0 ? (
+            <div className="text-center py-16 bg-background-dark/40 rounded-2xl border border-primary/10 flex flex-col items-center justify-center p-4">
+              <span className="material-symbols-outlined text-5xl text-slate-700 mb-2">campaign</span>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">{isBg ? 'Няма създадени реклами' : 'No ads created yet'}</p>
+            </div>
+          ) : (
+            /* Single Column Layout on all screens */
+            <div className="flex flex-col gap-4">
+              {sortedAds.map(ad => {
+                const assignedCampaign = campaigns.find(c => c.id === ad.campaignId);
+
+                return (
+                  <div key={ad.id} className="bg-surface-dark/90 rounded-2xl border border-primary/20 overflow-hidden shadow-xl flex flex-col hover:border-primary/40 transition-all">
+                    <div className="h-40 bg-background-dark relative group">
+                      {ad.type === 'image' || ad.type === 'native' ? (
+                        <img src={ad.contentUrl} className="w-full h-full object-cover opacity-75" alt="Ad" />
+                      ) : ad.type === 'video' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                          <span className="material-symbols-outlined text-4xl text-primary">videocam</span>
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-900 p-4 overflow-hidden italic text-[10px] text-slate-500">
+                          {ad.contentUrl}
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
+                        <span className="bg-background-dark/90 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-black uppercase text-primary border border-primary/30">
+                          {ad.type}
+                        </span>
+                        {assignedCampaign && (
+                          <span className="bg-amber-500/20 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-amber-400 border border-amber-500/30 truncate max-w-[200px]">
+                            📁 {assignedCampaign.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="absolute top-3 right-3 flex gap-1.5">
+                        <button onClick={() => handleEdit(ad)} className="size-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all cursor-pointer" title={isBg ? 'Редактирай' : 'Edit'}>
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                        </button>
+                        <button onClick={() => handleDelete(ad.id)} className="size-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer" title={isBg ? 'Изтрий' : 'Delete'}>
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-4 flex flex-col gap-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-bold text-slate-100 text-sm sm:text-base">{ad.title_bg}</h3>
+                          <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 mt-0.5">{ad.description_bg}</p>
+                        </div>
+                        <div className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0 ${ad.isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700 text-slate-400'}`}>
+                          {ad.isActive ? (isBg ? 'Активна' : 'Active') : (isBg ? 'Пауза' : 'Paused')}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-2 border-t border-primary/10">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1" title="Показвания / Лимит">
+                            <span className="material-symbols-outlined text-xs text-primary">visibility</span> 
+                            {ad.viewsCount || 0} / {ad.maxViews > 0 ? ad.maxViews : '∞'}
+                          </span>
+                          <span className="flex items-center gap-1" title="Кликове / Лимит">
+                            <span className="material-symbols-outlined text-xs text-amber-500">touch_app</span> 
+                            {ad.clicksCount || 0} / {ad.maxClicks > 0 ? ad.maxClicks : '∞'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 ml-auto">
+                          {/* Inline Priority Reordering Control */}
+                          <div className="flex items-center gap-1 bg-background-dark/80 px-2 py-0.5 rounded-lg border border-primary/20" title={isBg ? "Пренареждане на приоритет (1-10)" : "Reorder priority (1-10)"}>
+                            <span className="text-amber-400 text-[10px]">⭐ Пр: {ad.priority || 1}</span>
+                            <button onClick={() => handleAdjustPriority(ad, 1)} disabled={(ad.priority || 1) >= 10} className="text-slate-400 hover:text-emerald-400 disabled:opacity-30 cursor-pointer p-0.5" title={isBg ? "Увеличи приоритет" : "Increase priority"}>
+                              <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
+                            </button>
+                            <button onClick={() => handleAdjustPriority(ad, -1)} disabled={(ad.priority || 1) <= 1} className="text-slate-400 hover:text-rose-400 disabled:opacity-30 cursor-pointer p-0.5" title={isBg ? "Намали приоритет" : "Decrease priority"}>
+                              <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
+                            </button>
+                          </div>
+
+                          <button onClick={() => handleResetStats(ad.id, ad.title_bg)} className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title={isBg ? 'Нулирай статистиката' : 'Reset stats'}>
+                            <span className="material-symbols-outlined text-xs">restart_alt</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* SECTION 2: Campaign List Section - SECOND (Distinct Amber Theme & 2px Border) */}
+        <section className="bg-gradient-to-b from-amber-500/10 via-surface-dark/90 to-surface-dark rounded-3xl border-2 border-amber-500/50 p-5 shadow-2xl space-y-4">
+          {/* Header Row 1: Title */}
+          <div className="pb-2 border-b border-amber-500/20">
+            <h2 className="text-sm font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-base">folder_open</span>
+              <span>{isBg ? 'Рекламни Кампании' : 'Ad Campaigns'} ({sortedCampaigns.length})</span>
+            </h2>
+          </div>
+
+          {/* Header Row 2: Sort controls */}
+          <div className="flex items-center gap-1.5 bg-background-dark/80 px-3 py-2 rounded-xl border border-amber-500/30 w-full">
+            <span className="material-symbols-outlined text-xs text-amber-400">sort</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">{isBg ? 'Сортирай:' : 'Sort:'}</span>
+            <select 
+              value={campaignsSortBy} 
+              onChange={e => setCampaignsSortBy(e.target.value)} 
+              className="bg-transparent text-slate-200 text-xs font-bold outline-none cursor-pointer w-full"
+            >
+              <option value="name-asc" className="bg-surface-dark">{isBg ? '🔤 По Име (А-Я)' : '🔤 By Name (A-Z)'}</option>
+              <option value="date-desc" className="bg-surface-dark">{isBg ? '📅 Най-нови първо' : '📅 Newest First'}</option>
+              <option value="active-first" className="bg-surface-dark">{isBg ? '⚡ Активни първо' : '⚡ Active First'}</option>
+              <option value="ads-count" className="bg-surface-dark">{isBg ? '📊 Брой реклами' : '📊 Ad Count'}</option>
+            </select>
+          </div>
+
+          {/* Header Row 3: Action Button */}
+          <div>
+            <button 
+              onClick={() => handleOpenCampaignModal()}
+              className="w-full py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">add</span>
+              <span>{isBg ? 'Нова Кампания' : 'New Campaign'}</span>
+            </button>
+          </div>
+
+          {sortedCampaigns.length === 0 ? (
+            <div className="text-center py-12 bg-background-dark/40 rounded-2xl border border-amber-500/10 flex flex-col items-center justify-center p-4">
+              <span className="material-symbols-outlined text-4xl text-slate-600 mb-1">folder_off</span>
               <p className="text-slate-400 text-xs font-bold">{isBg ? 'Няма създадени кампании' : 'No campaigns created yet'}</p>
               <button 
                 onClick={() => handleOpenCampaignModal()}
-                className="mt-3 px-3.5 py-2 bg-primary/10 border border-primary/30 text-primary rounded-xl text-[10px] font-black uppercase hover:bg-primary/20 transition-all cursor-pointer flex items-center gap-1.5"
+                className="mt-3 px-3.5 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl text-[10px] font-black uppercase hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
                 <span>{isBg ? 'Създай Кампания' : 'Create Campaign'}</span>
@@ -439,7 +673,7 @@ const ManageAds = () => {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {campaigns.map(c => {
+              {sortedCampaigns.map(c => {
                 const assignedAdsCount = ads.filter(a => a.campaignId === c.id).length;
                 const viewsPct = c.maxViews > 0 ? Math.min(100, Math.round(((c.viewsCount || 0) / c.maxViews) * 100)) : null;
                 const clicksPct = c.maxClicks > 0 ? Math.min(100, Math.round(((c.clicksCount || 0) / c.maxClicks) * 100)) : null;
@@ -452,12 +686,17 @@ const ManageAds = () => {
                       : (isBg ? 'Последователна (Round-Robin)' : 'Sequential');
 
                 return (
-                  <div key={c.id} className="bg-surface-dark/90 rounded-2xl border border-primary/20 p-4 shadow-lg flex flex-col gap-3">
+                  <div key={c.id} className="bg-surface-dark/95 rounded-2xl border border-amber-500/20 p-4 shadow-lg flex flex-col gap-3 hover:border-amber-500/40 transition-all">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="font-bold text-slate-100 text-sm leading-snug">{c.name}</h3>
-                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                          {assignedAdsCount} {isBg ? 'реклами в кампанията' : 'ads assigned'} • {rotationLabel}
+                        <h3 className="font-bold text-slate-100 text-sm leading-snug flex items-center gap-2">
+                          <span>{c.name}</span>
+                          <span className="bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-amber-500/20">
+                            {assignedAdsCount} {isBg ? 'реклами' : 'ads'}
+                          </span>
+                        </h3>
+                        <p className="text-[10px] text-slate-400 font-medium mt-1">
+                          Модел на ротация: <strong className="text-slate-300">{rotationLabel}</strong>
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -469,7 +708,7 @@ const ManageAds = () => {
                         >
                           {c.isActive ? (isBg ? 'Активна' : 'Active') : (isBg ? 'Пауза' : 'Paused')}
                         </button>
-                        <button onClick={() => handleOpenCampaignModal(c)} className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer" title={isBg ? 'Редактирай кампанията' : 'Edit campaign'}>
+                        <button onClick={() => handleOpenCampaignModal(c)} className="p-1 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer" title={isBg ? 'Редактирай кампанията' : 'Edit campaign'}>
                           <span className="material-symbols-outlined text-base">edit</span>
                         </button>
                         <button onClick={() => handleDeleteCampaign(c.id, c.name)} className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer" title={isBg ? 'Изтрий кампанията' : 'Delete campaign'}>
@@ -479,7 +718,7 @@ const ManageAds = () => {
                     </div>
 
                     {/* Dates & Stats */}
-                    <div className="grid grid-cols-2 gap-2 text-[10px] bg-background-dark/50 p-2.5 rounded-xl border border-primary/10">
+                    <div className="grid grid-cols-2 gap-2 text-[10px] bg-background-dark/50 p-2.5 rounded-xl border border-amber-500/10">
                       <div>
                         <span className="text-slate-500 font-bold uppercase tracking-wider block">{isBg ? 'Показвания:' : 'Views:'}</span>
                         <span className="text-slate-200 font-bold">
@@ -504,7 +743,7 @@ const ManageAds = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-primary/10">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-amber-500/10">
                       <span>📅 {c.startDate || 'Начало'} — {c.endDate || 'Безкрай'}</span>
                       <button onClick={() => handleResetCampaignStats(c.id, c.name)} className="text-rose-400 hover:underline cursor-pointer flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-[12px]">restart_alt</span>
@@ -515,99 +754,6 @@ const ManageAds = () => {
                 );
               })}
             </div>
-          )}
-        </section>
-
-        {/* Ads List Section */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-black text-primary uppercase tracking-widest px-1 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">campaign</span>
-              <span>{isBg ? 'Списък с Реклами' : 'Ads List'} ({ads.length})</span>
-            </span>
-          </h2>
-
-          {loading ? (
-            <div className="flex justify-center p-12 text-primary animate-spin">
-              <span className="material-symbols-outlined text-4xl">refresh</span>
-            </div>
-          ) : ads.length === 0 ? (
-            <div className="text-center py-20 bg-surface-dark/30 rounded-3xl border border-primary/10">
-              <span className="material-symbols-outlined text-6xl text-slate-700 mb-4">campaign</span>
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Няма активни реклами</p>
-            </div>
-          ) : (
-            ads.map(ad => {
-              const assignedCampaign = campaigns.find(c => c.id === ad.campaignId);
-
-              return (
-                <div key={ad.id} className="bg-surface-dark/80 rounded-2xl border border-primary/10 overflow-hidden shadow-xl flex flex-col">
-                  <div className="h-40 bg-background-dark relative group">
-                    {ad.type === 'image' || ad.type === 'native' ? (
-                      <img src={ad.contentUrl} className="w-full h-full object-cover opacity-60" alt="Ad" />
-                    ) : ad.type === 'video' ? (
-                      <div className="w-full h-full flex items-center justify-center bg-slate-900">
-                        <span className="material-symbols-outlined text-4xl text-primary">videocam</span>
-                      </div>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-slate-900 p-4 overflow-hidden italic text-[10px] text-slate-500">
-                        {ad.contentUrl}
-                      </div>
-                    )}
-                    <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
-                      <span className="bg-background-dark/80 backdrop-blur-md px-2 py-1 rounded text-[10px] font-black uppercase text-primary border border-primary/30">
-                        {ad.type}
-                      </span>
-                      {assignedCampaign && (
-                        <span className="bg-amber-500/20 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold text-amber-400 border border-amber-500/30 truncate max-w-[150px]">
-                          📁 {assignedCampaign.name}
-                        </span>
-                      )}
-                    </div>
-                    <div className="absolute top-3 right-3 flex gap-2">
-                      <button onClick={() => handleEdit(ad)} className="size-8 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all cursor-pointer">
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                      </button>
-                      <button onClick={() => handleDelete(ad.id)} className="size-8 rounded-lg bg-rose-500/20 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer">
-                        <span className="material-symbols-outlined text-sm">delete</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-4 flex flex-col gap-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold text-slate-100">{ad.title_bg}</h3>
-                        <p className="text-[10px] text-slate-400">{ad.description_bg}</p>
-                      </div>
-                      <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase shrink-0 ${ad.isActive ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-700 text-slate-500'}`}>
-                        {ad.isActive ? 'Active' : 'Paused'}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-2 border-t border-primary/10">
-                      <span className="flex items-center gap-1" title="Показвания / Лимит">
-                        <span className="material-symbols-outlined text-xs text-primary">visibility</span> 
-                        {ad.viewsCount || 0} / {ad.maxViews > 0 ? ad.maxViews : '∞'}
-                      </span>
-                      <span className="flex items-center gap-1" title="Кликове / Лимит">
-                        <span className="material-symbols-outlined text-xs text-amber-500">touch_app</span> 
-                        {ad.clicksCount || 0} / {ad.maxClicks > 0 ? ad.maxClicks : '∞'}
-                      </span>
-                      <span className="flex items-center gap-1" title="Приоритет">
-                        ⭐ Пр: {ad.priority || 1}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">calendar_month</span> {ad.startDate || 'Начало'}
-                      </span>
-                      <button onClick={() => handleResetStats(ad.id, ad.title_bg)} className="flex items-center gap-1 text-rose-500/70 hover:text-rose-500 transition-colors ml-auto cursor-pointer" title={isBg ? 'Нулирай статистиката' : 'Reset stats'}>
-                        <span className="material-symbols-outlined text-xs">restart_alt</span> {isBg ? 'Нулирай' : 'Reset'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
           )}
         </section>
       </div>
@@ -762,12 +908,12 @@ const ManageAds = () => {
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 no-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Заглавие (BG)</label>
-                  <input required value={formData.title_bg} onChange={e => setFormData({...formData, title_bg: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Заглавие (BG)' : 'Title (BG)'}</label>
+                  <input required value={formData.title_bg} onChange={e => setFormData({...formData, title_bg: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder={isBg ? "Заглавие на български" : "Title in Bulgarian"} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Заглавие (EN)</label>
-                  <input required value={formData.title_en} onChange={e => setFormData({...formData, title_en: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Заглавие (EN)' : 'Title (EN)'}</label>
+                  <input required value={formData.title_en} onChange={e => setFormData({...formData, title_en: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder={isBg ? "Заглавие на английски" : "Title in English"} />
                 </div>
               </div>
 
@@ -786,7 +932,7 @@ const ManageAds = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Тип Реклама</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Тип Реклама' : 'Ad Type'}</label>
                 <div className="grid grid-cols-4 gap-2">
                   {['image', 'video', 'html', 'native'].map(t => (
                     <button key={t} type="button" onClick={() => setFormData({...formData, type: t})} className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${formData.type === t ? 'bg-primary text-background-dark' : 'bg-background-dark text-slate-500 border border-primary/10'}`}>
@@ -798,23 +944,30 @@ const ManageAds = () => {
 
               {formData.type === 'native' && (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Ключови думи (Съставки)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Ключови думи (Съставки)' : 'Target Keywords (Ingredients)'}</label>
                   <input 
                     value={formData.targetKeywords} 
                     onChange={e => setFormData({...formData, targetKeywords: e.target.value})} 
                     className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
-                    placeholder="напр. зехтин, домат, olive oil" 
+                    placeholder={isBg ? "напр. зехтин, домат, olive oil" : "e.g. olive oil, tomato"} 
                   />
-                  <p className="text-[9px] text-slate-500 px-1">Рекламата ще се показва само в рецепти, съдържащи поне една от тези съставки. Разделете със запетая.</p>
+                  <p className="text-[9px] text-slate-500 px-1">
+                    {isBg ? 'Рекламата ще се показва само в рецепти, съдържащи поне една от тези съставки. Разделете със запетая.' : 'The ad will only show in recipes containing at least one of these ingredients. Separate with commas.'}
+                  </p>
                 </div>
               )}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Медия / HTML код</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Медия / HTML код' : 'Media / HTML Code'}</label>
                 <div className="flex gap-2">
-                  <input value={formData.contentUrl} onChange={e => setFormData({...formData, contentUrl: e.target.value})} className="flex-1 bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder="URL или HTML код" />
+                  <input 
+                    value={formData.contentUrl} 
+                    onChange={e => setFormData({...formData, contentUrl: e.target.value})} 
+                    className="flex-1 bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
+                    placeholder={isBg ? "URL или HTML код" : "URL or HTML code"} 
+                  />
                   {formData.type !== 'html' && (
-                    <label className="bg-primary/10 border border-primary/30 p-3 rounded-xl cursor-pointer text-primary hover:bg-primary/20 transition-all">
+                    <label className="bg-primary/10 border border-primary/30 p-3 rounded-xl cursor-pointer text-primary hover:bg-primary/20 transition-all" title={isBg ? "Прикачи файл" : "Upload file"}>
                       <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
                       <span className="material-symbols-outlined">{uploading ? 'sync' : 'upload'}</span>
                     </label>
@@ -823,11 +976,11 @@ const ManageAds = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Линк за препращане</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Линк за препращане' : 'Target Link URL'}</label>
                 <input value={formData.linkUrl} onChange={e => setFormData({...formData, linkUrl: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder="https://..." />
                 
                 <div className="flex items-center justify-between p-3 mt-1 bg-primary/5 rounded-xl border border-primary/10">
-                  <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Локален адрес (в същия таб)</span>
+                  <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{isBg ? 'Локален адрес (в същия таб)' : 'Local Route (same tab)'}</span>
                   <button 
                     type="button" 
                     onClick={() => setFormData({...formData, isLocalLink: !formData.isLocalLink})}
@@ -877,22 +1030,22 @@ const ManageAds = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Приоритет (1-10)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Приоритет (1-10: 10=най-висок)' : 'Priority (1-10: 10=highest)'}</label>
                   <input type="number" min="1" max="10" value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Max Показвания</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Макс Показвания' : 'Max Views'}</label>
                   <input type="number" min="0" value={formData.maxViews} onChange={e => setFormData({...formData, maxViews: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Max Кликове</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Макс Кликове' : 'Max Clicks'}</label>
                   <input type="number" min="0" value={formData.maxClicks} onChange={e => setFormData({...formData, maxClicks: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
                 </div>
               </div>
-              <p className="text-[9px] text-slate-500 px-1">* 0 означава безкрайно (без лимит)</p>
+              <p className="text-[9px] text-slate-500 px-1">{isBg ? '* 0 означава безкрайно (без лимит)' : '* 0 means unlimited (no limit)'}</p>
 
               <div className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Активна веднага?</span>
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{isBg ? 'Активна веднага?' : 'Active Immediately?'}</span>
                 <button 
                   type="button" 
                   onClick={() => setFormData({...formData, isActive: !formData.isActive})}
@@ -903,7 +1056,7 @@ const ManageAds = () => {
               </div>
 
               <button disabled={uploading} type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer">
-                Запази Рекламата
+                {isBg ? 'Запази Рекламата' : 'Save Ad'}
               </button>
             </form>
           </div>
@@ -937,26 +1090,26 @@ const ManageAds = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Съдържание (Български)</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Съдържание (Български)' : 'Content (Bulgarian)'}</label>
                 <textarea 
                   required 
                   rows={8}
                   value={settingsData.content_bg} 
                   onChange={e => setSettingsData({...settingsData, content_bg: e.target.value})} 
                   className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                  placeholder="Въведете текст или HTML тук..."
+                  placeholder={isBg ? "Въведете текст или HTML тук..." : "Enter text or HTML here..."}
                 />
               </div>
               
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Съдържание (English)</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Съдържание (English)' : 'Content (English)'}</label>
                 <textarea 
                   required 
                   rows={8}
                   value={settingsData.content_en} 
                   onChange={e => setSettingsData({...settingsData, content_en: e.target.value})} 
                   className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                  placeholder="Enter text or HTML here..."
+                  placeholder={isBg ? "Въведете текст или HTML тук..." : "Enter text or HTML here..."}
                 />
               </div>
 

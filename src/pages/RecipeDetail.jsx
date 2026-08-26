@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getCuisineById } from '../data/cuisines';
 import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
@@ -33,10 +33,231 @@ const RecipeDetail = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   
-  // Native Ads State
+  // Native Ads & Campaign State
   const [nativeAds, setNativeAds] = useState([]);
-  const [matchedAd, setMatchedAd] = useState(null);
-  const [matchedIngredientIdx, setMatchedIngredientIdx] = useState(-1);
+  const [campaigns, setCampaigns] = useState([]);
+  const [currentAdId, setCurrentAdId] = useState(null);
+  const trackedNativeAds = useRef(new Set());
+
+  // 1. Real-time Listeners for Native Ads & Campaigns
+  useEffect(() => {
+    const qAds = query(collection(db, 'ads'), where('type', '==', 'native'), where('isActive', '==', true));
+    const qCampaigns = query(collection(db, 'campaigns'));
+
+    const unsubAds = onSnapshot(qAds, (snap) => {
+      setNativeAds(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.warn("Native ads listener error:", err.message));
+
+    const unsubCampaigns = onSnapshot(qCampaigns, (snap) => {
+      setCampaigns(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.warn("Campaigns listener error:", err.message));
+
+    return () => {
+      unsubAds();
+      unsubCampaigns();
+    };
+  }, []);
+
+  // 2. Compute Active & Valid Matching Native Ads (Sorted by Priority Descending)
+  const matchingList = useMemo(() => {
+    if (!recipe?.ingredients || nativeAds.length === 0) return [];
+
+    const now = new Date().toISOString().split('T')[0];
+
+    const validAds = nativeAds.filter(ad => {
+      if (!ad.isActive) return false;
+
+      const adStart = ad.startDate || '0000-00-00';
+      const adEnd = ad.endDate || '9999-99-99';
+      if (now < adStart || now > adEnd) return false;
+
+      if (ad.maxViews > 0 && (ad.viewsCount || 0) >= ad.maxViews) return false;
+      if (ad.maxClicks > 0 && (ad.clicksCount || 0) >= ad.maxClicks) return false;
+
+      if (ad.campaignId) {
+        const campaign = campaigns.find(c => c.id === ad.campaignId);
+        if (!campaign || !campaign.isActive) return false;
+        const campStart = campaign.startDate || '0000-00-00';
+        const campEnd = campaign.endDate || '9999-99-99';
+        if (now < campStart || now > campEnd) return false;
+        if (campaign.maxViews > 0 && (campaign.viewsCount || 0) >= campaign.maxViews) return false;
+        if (campaign.maxClicks > 0 && (campaign.clicksCount || 0) >= campaign.maxClicks) return false;
+      }
+
+      return true;
+    });
+
+    const matches = [];
+    validAds.forEach(ad => {
+      let matchedIdx = -1;
+      let isMatched = false;
+
+      let keywords = [];
+      if (Array.isArray(ad.targetKeywords)) {
+        keywords = ad.targetKeywords;
+      } else if (typeof ad.targetKeywords === 'string' && ad.targetKeywords.trim()) {
+        keywords = ad.targetKeywords.split(',').map(k => k.trim());
+      }
+
+      if (keywords.length > 0) {
+        for (let i = 0; i < recipe.ingredients.length; i++) {
+          const ing = recipe.ingredients[i];
+          const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
+          const ingNameBg = (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id || '').toLowerCase();
+          const ingNameEn = (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id || '').toLowerCase();
+
+          const hasMatch = keywords.some(kw => {
+            const cleanKw = kw.toLowerCase().trim();
+            return cleanKw && (ingNameBg.includes(cleanKw) || ingNameEn.includes(cleanKw));
+          });
+
+          if (hasMatch) {
+            matchedIdx = i;
+            isMatched = true;
+            break;
+          }
+        }
+      } else {
+        // Fallback for native ads without specific keywords
+        matchedIdx = 0;
+        isMatched = true;
+      }
+
+      if (isMatched) {
+        matches.push({
+          ad,
+          ingredientIdx: matchedIdx,
+          priority: Number(ad.priority) || 1
+        });
+      }
+    });
+
+    // Sort matching ads by Priority (higher number = higher priority: 10 > 9 > ... > 1)
+    matches.sort((a, b) => (b.priority || 1) - (a.priority || 1));
+
+    return matches;
+  }, [recipe, nativeAds, campaigns, ingredientsList]);
+
+  // Unique key of matching ad IDs to prevent re-initializing initial selection on non-ad re-renders
+  const matchingKey = useMemo(() => {
+    return matchingList.map(m => m.ad.id).join(',');
+  }, [matchingList]);
+
+  // 3. Handle Initial Ad Selection (runs ONCE when matching ad IDs change)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!matchingKey || matchingList.length === 0) {
+        setCurrentAdId(null);
+        return;
+      }
+
+      const firstCampId = matchingList[0]?.ad?.campaignId;
+      const associatedCamp = firstCampId ? campaigns.find(c => c.id === firstCampId) : null;
+      const rotationType = associatedCamp?.rotationType || 'sequential';
+
+      let initialAdId = matchingList[0].ad.id;
+
+      if (rotationType === 'weighted') {
+        const totalWeight = matchingList.reduce((sum, item) => sum + Math.max(1, item.priority), 0);
+        let rand = Math.random() * totalWeight;
+        for (const item of matchingList) {
+          const weight = Math.max(1, item.priority);
+          if (rand <= weight) {
+            initialAdId = item.ad.id;
+            break;
+          }
+          rand -= weight;
+        }
+      } else if (rotationType === 'sequential') {
+        const storageKey = `native_ad_rot_${recipe?.id || 'global'}`;
+        const lastIdx = parseInt(sessionStorage.getItem(storageKey) || '-1', 10);
+        const nextIdx = (lastIdx + 1) % matchingList.length;
+        sessionStorage.setItem(storageKey, nextIdx.toString());
+        initialAdId = matchingList[nextIdx].ad.id;
+      }
+
+      setCurrentAdId(initialAdId);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [matchingKey, recipe?.id, matchingList, campaigns]);
+
+  // 4. Handle 10-Second Timer Carousel Rotation
+  useEffect(() => {
+    if (!matchingKey || matchingList.length <= 1) return;
+
+    const firstCampId = matchingList[0]?.ad?.campaignId;
+    const associatedCamp = firstCampId ? campaigns.find(c => c.id === firstCampId) : null;
+    const timerInterval = Math.max(3, associatedCamp?.timerIntervalSeconds || 10) * 1000;
+
+    const timer = setInterval(() => {
+      setCurrentAdId(prevId => {
+        const curIdx = matchingList.findIndex(m => m.ad.id === prevId);
+        const nextIdx = (curIdx + 1) % matchingList.length;
+        const storageKey = `native_ad_rot_${recipe?.id || 'global'}`;
+        sessionStorage.setItem(storageKey, nextIdx.toString());
+        return matchingList[nextIdx].ad.id;
+      });
+    }, timerInterval);
+
+    return () => clearInterval(timer);
+  }, [matchingKey, matchingList, recipe?.id, campaigns]);
+
+  // Derived current matched ad & index
+  const currentMatchingItem = useMemo(() => {
+    if (!currentAdId || matchingList.length === 0) return null;
+    return matchingList.find(m => m.ad.id === currentAdId) || matchingList[0];
+  }, [currentAdId, matchingList]);
+
+  const matchedAd = currentMatchingItem?.ad || null;
+  const matchedIngredientIdx = currentMatchingItem?.ingredientIdx ?? -1;
+
+  // 5. Increment ViewsCount when an ad is displayed
+  useEffect(() => {
+    if (matchedAd && !trackedNativeAds.current.has(matchedAd.id)) {
+      trackedNativeAds.current.add(matchedAd.id);
+
+      updateDoc(doc(db, 'ads', matchedAd.id), {
+        viewsCount: increment(1)
+      }).catch(() => {});
+
+      if (matchedAd.campaignId) {
+        updateDoc(doc(db, 'campaigns', matchedAd.campaignId), {
+          viewsCount: increment(1)
+        }).catch(() => {});
+      }
+    }
+  }, [matchedAd]);
+
+  // 5. Handle Click Tracking for Native Ads
+  const handleAdClick = async (ad) => {
+    if (!ad) return;
+    try {
+      await updateDoc(doc(db, 'ads', ad.id), {
+        clicksCount: increment(1)
+      });
+      if (ad.campaignId) {
+        await updateDoc(doc(db, 'campaigns', ad.campaignId), {
+          clicksCount: increment(1)
+        });
+      }
+    } catch {
+      console.warn("Failed to log ad click");
+    }
+
+    if (ad.linkUrl) {
+      if (ad.isLocalLink) {
+        try {
+          const urlObj = new URL(ad.linkUrl);
+          navigate(urlObj.pathname + urlObj.search + urlObj.hash);
+        } catch {
+          navigate(ad.linkUrl.replace(window.location.origin, ''));
+        }
+      } else {
+        window.open(ad.linkUrl, '_blank');
+      }
+    }
+  };
 
   // Shopping List Repetitions State
   const [showRepeatModal, setShowRepeatModal] = useState(false);
@@ -167,19 +388,6 @@ const RecipeDetail = () => {
               setParentRecipe({ id: parentSnap.id, ...parentSnap.data() });
             }
           }
-
-          // Fetch native ads
-          try {
-            const adsQuery = query(
-              collection(db, 'ads'),
-              where('type', '==', 'native'),
-              where('isActive', '==', true)
-            );
-            const adsSnap = await getDocs(adsQuery);
-            setNativeAds(adsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-          } catch (aErr) {
-            console.warn("Ads fetch failed:", aErr.message);
-          }
         }
       } catch (err) {
         console.error("Error fetching recipe:", err);
@@ -191,67 +399,6 @@ const RecipeDetail = () => {
     if (id) fetchRecipe();
   }, [id, user, awardPoints]);
 
-  // Match Native Ads to Ingredients
-  useEffect(() => {
-    if (recipe?.ingredients && nativeAds.length > 0 && !matchedAd) {
-      let foundAd = null;
-      let foundIdx = -1;
-
-      for (let i = 0; i < recipe.ingredients.length; i++) {
-        const ing = recipe.ingredients[i];
-        const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
-        const ingNameBg = (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id || '').toLowerCase();
-        const ingNameEn = (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id || '').toLowerCase();
-
-        for (const ad of nativeAds) {
-          if (ad.targetKeywords && Array.isArray(ad.targetKeywords)) {
-            const matches = ad.targetKeywords.some(kw => 
-              ingNameBg.includes(kw) || ingNameEn.includes(kw)
-            );
-            if (matches) {
-              foundAd = ad;
-              foundIdx = i;
-              break;
-            }
-          }
-        }
-        if (foundAd) break;
-      }
-
-      if (foundAd) {
-        const adToSet = foundAd;
-        const idxToSet = foundIdx;
-        setTimeout(() => {
-          setMatchedAd(adToSet);
-          setMatchedIngredientIdx(idxToSet);
-        }, 0);
-        try {
-          updateDoc(doc(db, 'ads', foundAd.id), {
-            viewsCount: increment(1)
-          });
-        } catch {
-          console.warn("Failed to log ad view");
-        }
-      }
-    }
-  }, [recipe, nativeAds, ingredientsList, matchedAd]);
-
-  const handleAdClick = (ad) => {
-    try {
-      updateDoc(doc(db, 'ads', ad.id), {
-        clicksCount: increment(1)
-      });
-    } catch {
-      console.warn("Failed to log ad click");
-    }
-    if (ad.linkUrl) {
-      if (ad.isLocalLink) {
-        navigate(ad.linkUrl.replace(window.location.origin, ''));
-      } else {
-        window.open(ad.linkUrl, '_blank');
-      }
-    }
-  };
 
   const convertToGrams = (amount, unitId) => {
     if (!unitId) return amount;

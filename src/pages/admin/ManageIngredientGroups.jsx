@@ -117,7 +117,7 @@ const ManageIngredientGroups = () => {
   const parentGroups = groups.filter(g => g.level === 0);
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 h-screen">
+    <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
         <div className="flex items-center">
           <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">

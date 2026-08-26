@@ -549,7 +549,7 @@ const ManageIngredients = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 h-screen">
+    <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center">

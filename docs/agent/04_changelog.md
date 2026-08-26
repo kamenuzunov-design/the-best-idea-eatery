@@ -3,6 +3,31 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-08-26] - Автоматична котва и нулиране на скрола, и корекция на Нативни Реклами (Native Ads Rotation & Priority)
+### Добавено / Коригирано (Added / Fixed)
+- **Подобрения в Режим "Започни Готвене" ([CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx))**:
+  - Стъпките са поставени в една вертикална колона една под друга без хоризонтален слайдер.
+  - Използва се автентичната снимка от съответната рецепта вместо произволни изображения.
+  - Поправено и оптимизирано гласовото четене (SpeechSynthesis): автоматично прехващане на системните гласове, изчистване на буфера и избор на подходящ глас за гарантиран звук през говорителите.
+- **Кръгъл бутон "+" в зона "Спомагателни продукти" ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Добавен кръгъл акцентен бутон `+` в долния десен ъгъл на панела за спомагателни продукти.
+  - Бутонът задейства модала за търсене и добавяне на допълнителни съставки към сканирания списък.
+- **Търсене по Основен продукт и Твърдо 1-колонен Изглед на Резултатите ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx), [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx))**:
+  - Натискането на бутона *"Търси рецепти"* в скенера вече автоматично филтрира рецепти по избрания **Основен продукт**.
+  - Страницата с резултати от търсенето е преструктурирана "твърдо" в една колона (`flex flex-col gap-4`) за всички резолюции (компютър и мобилни).
+  - Строга прецизност на търсенето (`every`), елиминираща показването на излишни и нерелевантни рецепти.
+- **Обяснение и пояснение за Приоритета (1-10) ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx))**:
+  - Уточнихме логиката за приоритета: **Числото 10 е най-висок приоритет (най-голяма тежест и първо място), а 1 е най-нисък**.
+  - Добавихме етикет в формата за управление на рекламите: `Приоритет (1-10: 10=най-висок)`.
+- **Закотвяне към заглавието "Най-добрата идея за хранене" ([Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx))**:
+  - Добавихме `id="app-top-anchor"` върху заглавния блок с името на приложението в хедъра.
+- **Глобален компонент за нулиране на скрола ([ScrollToTop.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/ScrollToTop.jsx), [App.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/App.jsx))**:
+  - Реализирахме компонент `ScrollToTop`, който при всяка промяна на маршрута от системното или мобилното меню нулира скрола на прозореца (`window.scrollTo(0, 0)`) и показва най-горната част на отворената страница.
+- **Премахване на фиксираните вътрешни скролове в администрацията ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx), [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx), [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx))**:
+  - Заменихме `h-screen` с `min-h-screen` на административните изгледи, елиминирайки изолираните вътрешни скролбари и позволявайки на цялата страница да се позиционира плавно спрямо прозореца на браузъра.
+- **Запазване на специфичните котви**:
+  - Запазихме съществуващите котви (напр. за бързо скролиране до филтъра за готвач или търсачката в [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx)), така че те продължават да работят както е планирано.
+
 ## [2026-08-18] - Публикуване на приложението в Интернет (Firebase Hosting Deployment)
 ### Добавено (Added)
 - **Успешно качване на живо в Интернет**:

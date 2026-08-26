@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, getDocs } from 'firebase/firestore';
@@ -18,11 +18,91 @@ const IngredientScanner = () => {
   const [capturedImage, setCapturedImage] = useState(null);
   const [masterIngredients, setMasterIngredients] = useState([]);
   const [detectedItems, setDetectedItems] = useState([]);
+  const [manualMainId, setManualMainId] = useState(null);
   const [addingToPantry, setAddingToPantry] = useState(false);
   
   // Custom ingredient addition state
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearchModal, setShowSearchModal] = useState(false);
+
+  // Category Priority for Main Product selection:
+  // 1: Meat, Poultry, Fish, Seafood
+  // 2: Cheese, Dairy, Eggs
+  // 3: Bakery, Bread, Pasta, Rice, Potatoes
+  // 4: Vegetables, Mushrooms
+  // 5: Default / Spices / Oils
+  const getItemCategoryPriority = (name = '') => {
+    const n = name.toLowerCase();
+
+    if (
+      n.includes('месо') || n.includes('стек') || n.includes('пиле') || n.includes('телеш') ||
+      n.includes('говеж') || n.includes('свинс') || n.includes('риба') || n.includes('сьомга') ||
+      n.includes('филе') || n.includes('колбас') || n.includes('кайма') || n.includes('бекон') ||
+      n.includes('мясо') || n.includes('steak') || n.includes('chicken') || n.includes('beef') ||
+      n.includes('pork') || n.includes('fish') || n.includes('salmon') || n.includes('meat')
+    ) {
+      return 1;
+    }
+
+    if (
+      n.includes('сирене') || n.includes('кашкавал') || n.includes('моцарела') || n.includes('извара') ||
+      n.includes('мляко') || n.includes('сметана') || n.includes('яйц') ||
+      n.includes('cheese') || n.includes('mozzarella') || n.includes('milk') || n.includes('egg') || n.includes('cream')
+    ) {
+      return 2;
+    }
+
+    if (
+      n.includes('хляб') || n.includes('питка') || n.includes('паста') || n.includes('ориз') ||
+      n.includes('картоф') || n.includes('тесто') || n.includes('тост') ||
+      n.includes('bread') || n.includes('pasta') || n.includes('rice') || n.includes('potato') || n.includes('toast')
+    ) {
+      return 3;
+    }
+
+    if (
+      n.includes('домат') || n.includes('краставиц') || n.includes('гъби') || n.includes('морков') ||
+      n.includes('чушк') || n.includes('салат') || n.includes('лук') || n.includes('зеле') ||
+      n.includes('tomato') || n.includes('cucumber') || n.includes('mushroom') || n.includes('carrot') ||
+      n.includes('pepper') || n.includes('salad') || n.includes('onion')
+    ) {
+      return 4;
+    }
+
+    return 5;
+  };
+
+  const { mainItem, secondaryItems } = useMemo(() => {
+    if (!detectedItems || detectedItems.length === 0) {
+      return { mainItem: null, secondaryItems: [] };
+    }
+
+    let chosenMain = detectedItems.find(item => item.id === manualMainId);
+
+    if (!chosenMain) {
+      let bestItem = detectedItems[0];
+      let bestScore = getItemCategoryPriority(bestItem.name);
+
+      for (let i = 1; i < detectedItems.length; i++) {
+        const item = detectedItems[i];
+        const score = getItemCategoryPriority(item.name);
+        if (score < bestScore) {
+          bestScore = score;
+          bestItem = item;
+        }
+      }
+      chosenMain = bestItem;
+    }
+
+    const secondary = detectedItems.filter(item => item.id !== chosenMain.id);
+
+    return { mainItem: chosenMain, secondaryItems: secondary };
+  }, [detectedItems, manualMainId]);
+
+  const handleSetMainProduct = (id, e) => {
+    e.stopPropagation();
+    setManualMainId(id);
+  };
 
   // Load master ingredients collection from Firestore
   useEffect(() => {
@@ -51,10 +131,15 @@ const IngredientScanner = () => {
       const isSteak = lowerName.includes('steak') || lowerName.includes('beef') || lowerName.includes('телешко') || lowerName.includes('говеждо') || lowerName.includes('миньон') || lowerName.includes('meat');
       const isFish = lowerName.includes('fish') || lowerName.includes('salmon') || lowerName.includes('риба') || lowerName.includes('сьомга');
       const isSalad = lowerName.includes('salad') || lowerName.includes('салата') || lowerName.includes('tomato') || lowerName.includes('cucumber') || lowerName.includes('домати');
+      const isSandwich = lowerName.includes('sandwich') || lowerName.includes('сандвич') || lowerName.includes('bread') || lowerName.includes('хляб') || lowerName.includes('toast') || lowerName.includes('тост') || lowerName.includes('сирене') || lowerName.includes('cheese');
 
       let targetKeywords = [];
 
-      if (isChicken) {
+      if (isSandwich) {
+        targetKeywords = isBg 
+          ? ['Хляб', 'Сирене', 'Домати', 'Краставици', 'Масло']
+          : ['Bread', 'Cheese', 'Tomatoes', 'Cucumbers', 'Butter'];
+      } else if (isChicken) {
         targetKeywords = isBg 
           ? ['Пилешко месо', 'Моркови', 'Картофи', 'Чесън', 'Червен пипер', 'Масло']
           : ['Chicken Meat', 'Carrots', 'Potatoes', 'Garlic', 'Paprika', 'Butter'];
@@ -189,13 +274,19 @@ const IngredientScanner = () => {
   };
 
   const handleSearchRecipes = () => {
-    const selectedNames = detectedItems.filter(i => i.checked).map(i => i.name);
-    if (selectedNames.length === 0) {
-      alert(isBg ? 'Моля изберете поне една съставка.' : 'Please select at least one ingredient.');
-      return;
+    let searchTarget = '';
+    if (mainItem && mainItem.checked) {
+      searchTarget = mainItem.name;
+    } else {
+      const selected = detectedItems.filter(i => i.checked);
+      if (selected.length === 0) {
+        alert(isBg ? 'Моля изберете поне една съставка.' : 'Please select at least one ingredient.');
+        return;
+      }
+      searchTarget = selected[0].name;
     }
-    const queryStr = selectedNames.join(', ');
-    navigate(`/search?q=${encodeURIComponent(queryStr)}`);
+
+    navigate(`/search?q=${encodeURIComponent(searchTarget)}`);
   };
 
   const filteredMaster = masterIngredients.filter(ing => {
@@ -279,6 +370,21 @@ const IngredientScanner = () => {
         </div>
       </div>
 
+      {/* AI Accuracy Disclaimer Notice Banner */}
+      <div className="mx-4 my-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-2.5 text-slate-300 shadow-md">
+        <span className="material-symbols-outlined text-amber-400 text-lg shrink-0 mt-0.5">info</span>
+        <div className="text-[11px] leading-relaxed">
+          <span className="font-bold text-amber-400 block mb-0.5 uppercase tracking-wide">
+            {isBg ? 'Забележка относно точността на скенера:' : 'Scanner Accuracy Notice:'}
+          </span>
+          <span>
+            {isBg 
+              ? 'Скенерът използва автоматична AI система за визуален анализ и е възможно да не открива всички продукти с пълна точност. Можете да премахвате грешни съставки (чрез ×) или да добавяте липсващи ръчно чрез бутона "Добави съставка".'
+              : 'The scanner uses automated AI visual recognition and may not always detect products with 100% accuracy. You can remove incorrect ingredients (via ×) or add missing ones manually using the "Add ingredient" button.'}
+          </span>
+        </div>
+      </div>
+
       {/* 3. Detected Ingredients Section AFTER / BELOW the Photo */}
       <div className="p-4 flex-1 flex flex-col gap-3 bg-surface-dark/50">
         <div className="flex items-center justify-between px-1">
@@ -304,37 +410,116 @@ const IngredientScanner = () => {
               {isBg ? 'AI Анализ на съставките...' : 'AI Analyzing ingredients...'}
             </p>
           </div>
+        ) : detectedItems.length === 0 ? (
+          <div className="p-4 bg-surface-dark border border-primary/20 rounded-2xl text-center">
+            <p className="text-xs text-slate-400 italic">
+              {isBg ? 'Няма намерени съставки. Натиснете "Добави съставка" за ръчно въвеждане.' : 'No ingredients found. Press "Add ingredient" to add manually.'}
+            </p>
+          </div>
         ) : (
-          <div className="flex flex-wrap gap-2.5 p-3 bg-surface-dark border border-primary/20 rounded-2xl shadow-inner min-h-[100px] items-start">
-            {detectedItems.length > 0 ? (
-              detectedItems.map(item => (
-                <div
-                  key={item.id}
-                  onClick={() => toggleItem(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md ${
-                    item.checked
-                      ? 'bg-primary text-background-dark shadow-primary/30 scale-105 border border-amber-300'
-                      : 'bg-background-dark text-slate-400 border border-slate-700 line-through opacity-60'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[15px]">
-                    {item.checked ? 'check_box' : 'add_box'}
+          <div className="space-y-3.5">
+            {/* GROUP 1: Основен продукт (Main Product) */}
+            {mainItem && (
+              <div className="bg-surface-dark border-2 border-primary/40 rounded-2xl p-3.5 shadow-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm text-primary">star</span>
+                    {isBg ? 'Основен продукт' : 'Main Product'}
                   </span>
-                  <span>{item.name}</span>
-                  <button 
-                    onClick={(e) => handleRemoveItem(item.id, e)}
-                    className="ml-1 text-sm font-bold opacity-70 hover:opacity-100 hover:text-rose-500 transition-opacity"
-                    title={isBg ? 'Премахни' : 'Remove'}
-                  >
-                    ×
-                  </button>
+                  <span className="text-[9px] text-slate-400 italic">
+                    {isBg ? '(Автоматичен / Приоритетен)' : '(Priority Pick)'}
+                  </span>
                 </div>
-              ))
-            ) : (
-              <p className="text-xs text-slate-400 italic p-2 text-center w-full">
-                {isBg ? 'Няма намерени съставки. Натиснете "Добави съставка" за ръчно въвеждане.' : 'No ingredients found. Press "Add ingredient" to add manually.'}
-              </p>
+
+                <div className="flex flex-wrap gap-2">
+                  <div
+                    onClick={() => toggleItem(mainItem.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md ${
+                      mainItem.checked
+                        ? 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark shadow-primary/30 scale-[1.02] border border-amber-300'
+                        : 'bg-background-dark text-slate-400 border border-slate-700 line-through opacity-60'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      {mainItem.checked ? 'star' : 'add_box'}
+                    </span>
+                    <span className="text-sm">{mainItem.name}</span>
+                    <button 
+                      onClick={(e) => handleRemoveItem(mainItem.id, e)}
+                      className="ml-1 text-sm font-bold opacity-70 hover:opacity-100 hover:text-rose-500 transition-opacity p-0.5"
+                      title={isBg ? 'Премахни' : 'Remove'}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
+
+            {/* GROUP 2: Спомагателни продукти (Auxiliary / Secondary Products) */}
+            <div className="relative bg-surface-dark/80 border-2 border-primary/30 rounded-2xl p-3.5 shadow-md space-y-2 pb-10">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm text-slate-400">widgets</span>
+                  {isBg ? 'Спомагателни продукти' : 'Secondary Products'} ({secondaryItems.length})
+                </span>
+                <span className="text-[9px] text-slate-400 italic">
+                  {isBg ? 'Натиснете ⭐ за избор на основен' : 'Click ⭐ to set as main'}
+                </span>
+              </div>
+
+              {secondaryItems.length === 0 ? (
+                <p className="text-[11px] text-slate-500 italic py-1">
+                  {isBg ? 'Няма допълнителни спомагателни продукти.' : 'No secondary products.'}
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {secondaryItems.map(item => (
+                    <div
+                      key={item.id}
+                      onClick={() => toggleItem(item.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                        item.checked
+                          ? 'bg-background-dark text-slate-200 border border-primary/30 hover:border-primary/50'
+                          : 'bg-background-dark/40 text-slate-500 border border-slate-800 line-through opacity-50'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px] text-slate-400">
+                        {item.checked ? 'check_box' : 'add_box'}
+                      </span>
+                      <span>{item.name}</span>
+
+                      {/* Button to make this secondary item the main product */}
+                      <button
+                        onClick={(e) => handleSetMainProduct(item.id, e)}
+                        className="ml-1 text-slate-400 hover:text-amber-400 transition-colors p-0.5"
+                        title={isBg ? 'Избери като основен продукт' : 'Set as main product'}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">star</span>
+                      </button>
+
+                      <button 
+                        onClick={(e) => handleRemoveItem(item.id, e)}
+                        className="text-sm font-bold opacity-60 hover:opacity-100 hover:text-rose-500 transition-opacity p-0.5"
+                        title={isBg ? 'Премахни' : 'Remove'}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Round + Button at Bottom Right Corner */}
+              <button
+                type="button"
+                onClick={() => setShowSearchModal(true)}
+                className="absolute bottom-2.5 right-2.5 size-8 rounded-full bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer border border-amber-300/40"
+                title={isBg ? 'Добави съставка' : 'Add ingredient'}
+              >
+                <span className="material-symbols-outlined text-lg font-extrabold">add</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

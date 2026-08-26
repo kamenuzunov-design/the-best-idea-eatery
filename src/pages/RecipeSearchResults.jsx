@@ -84,6 +84,31 @@ const RecipeSearchResults = () => {
     return isBg ? 'Шеф Готвач' : 'Chef Cook';
   };
 
+  const getRecipeTotalTime = (recipe) => {
+    if (!recipe) return 0;
+    const prep = Number(recipe.prep_time || recipe.prep_time_minutes || 0);
+    const cook = Number(recipe.cook_time || recipe.cook_time_minutes || 0);
+    if (prep + cook > 0) return prep + cook;
+    if (recipe.cooking_time) return Number(recipe.cooking_time) || 0;
+    if (recipe.total_time) return Number(recipe.total_time) || 0;
+    if (recipe.time) return Number(recipe.time) || 0;
+    return 0;
+  };
+
+  const getRecipeRatingDisplay = (recipe) => {
+    if (!recipe) return '0';
+    const ratingVal = Number(recipe.rating);
+    if (!isNaN(ratingVal) && ratingVal > 0) {
+      return ratingVal.toFixed(1);
+    }
+    return '0';
+  };
+
+  const getRecipeVotesCount = (recipe) => {
+    if (!recipe) return 0;
+    return recipe.votes_count || recipe.reviews_count || (recipe.ratings ? recipe.ratings.length : 0) || 0;
+  };
+
   // Split comma-separated keywords
   const activeKeywords = searchTerm
     .split(',')
@@ -102,24 +127,27 @@ const RecipeSearchResults = () => {
     setSearchParams({ q: searchTerm });
   };
 
-  // Filter recipes according to activeKeywords
+  // Filter recipes according to activeKeywords (EVERY keyword must match to avoid excess/irrelevant results)
   const filteredRecipes = recipes.filter(r => {
     if (activeKeywords.length === 0) return true;
 
     const titleBg = (r.title_bg || '').toLowerCase();
     const titleEn = (r.title_en || '').toLowerCase();
     const descBg = (r.description_bg || '').toLowerCase();
+    const descEn = (r.description_en || '').toLowerCase();
 
-    return activeKeywords.some(kw => {
-      const term = kw.toLowerCase();
-      if (titleBg.includes(term) || titleEn.includes(term) || descBg.includes(term)) {
+    return activeKeywords.every(kw => {
+      const term = kw.toLowerCase().trim();
+      if (!term) return true;
+
+      if (titleBg.includes(term) || titleEn.includes(term) || descBg.includes(term) || descEn.includes(term)) {
         return true;
       }
 
       if (r.ingredients && Array.isArray(r.ingredients)) {
         for (const ing of r.ingredients) {
-          const ingBg = (ing.ingredient_bg || ing.name_bg || '').toLowerCase();
-          const ingEn = (ing.ingredient_en || ing.name_en || '').toLowerCase();
+          const ingBg = (ing.ingredient_bg || ing.name_bg || ing.name || '').toLowerCase();
+          const ingEn = (ing.ingredient_en || ing.name_en || ing.name || '').toLowerCase();
           if (ingBg.includes(term) || ingEn.includes(term)) return true;
 
           if (ingredientsList && Array.isArray(ingredientsList)) {
@@ -209,7 +237,7 @@ const RecipeSearchResults = () => {
           </span>
         </div>
 
-        {/* Recipe Cards List */}
+        {/* Recipe Cards List (Strictly 1 Column on All Screens) */}
         {loading ? (
           <div className="grid grid-cols-1 gap-4">
             {[1, 2, 3].map(i => (
@@ -217,7 +245,7 @@ const RecipeSearchResults = () => {
             ))}
           </div>
         ) : filteredRecipes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
             {filteredRecipes.map(recipe => (
               <div 
                 key={recipe.id}
@@ -233,19 +261,15 @@ const RecipeSearchResults = () => {
                   {/* Top Right Prep Time Badge */}
                   <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-background-dark/80 backdrop-blur-md border border-primary/30 text-primary text-[10px] font-extrabold shadow-md flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs">schedule</span>
-                    <span>{recipe.prep_time_minutes || recipe.prep_time || 30} {isBg ? 'мин' : 'min'}</span>
+                    <span>{getRecipeTotalTime(recipe)} {isBg ? 'мин' : 'min'}</span>
                   </div>
 
                   {/* Bottom Left Rating Badge ON PHOTO */}
                   <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full bg-background-dark/85 backdrop-blur-md border border-amber-400/30 text-amber-400 text-[10px] font-extrabold shadow-lg flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs fill-[1]">star</span>
-                    <span>
-                      {recipe.rating && Number(recipe.rating) > 0 
-                        ? Number(recipe.rating).toFixed(1) 
-                        : '5.0'}
-                    </span>
-                    {(recipe.votes_count || recipe.reviews_count) ? (
-                      <span className="text-[9px] text-slate-300 font-medium">({recipe.votes_count || recipe.reviews_count})</span>
+                    <span>{getRecipeRatingDisplay(recipe)}</span>
+                    {getRecipeVotesCount(recipe) > 0 ? (
+                      <span className="text-[9px] text-slate-300 font-medium">({getRecipeVotesCount(recipe)})</span>
                     ) : null}
                   </div>
                 </div>

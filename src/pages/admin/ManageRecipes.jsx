@@ -23,6 +23,7 @@ const ManageRecipes = () => {
   const { user, isAdmin, isOwner, awardPoints } = useAuth();
   const isBg = i18n.language === 'bg';
   const isPowerUser = isAdmin || isOwner;
+  const isModerator = user?.role === ROLES.MODERATOR;
 
   const csvImportRef = useRef(null);
   const [csvStatus, setCsvStatus] = useState(''); // '' | 'parsing' | 'saving' | 'done' | 'error'
@@ -814,63 +815,82 @@ const ManageRecipes = () => {
               </span>
             </div>
           </div>
-          <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500'}`}><span className="material-symbols-outlined text-[18px]">grid_view</span></button>
-            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500'}`}><span className="material-symbols-outlined text-[18px]">view_list</span></button>
+          <div className="flex items-center gap-2">
+            {isPowerUser && (
+              <button
+                onClick={handleRecalculateTags}
+                title={isBg ? 'Преизчисли Тагове' : 'Recalculate Tags'}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20"
+              >
+                <span className="material-symbols-outlined text-[18px]">label</span>
+                {isBg ? 'Тагове' : 'Tags'}
+              </button>
+            )}
+            {(isAdmin || isOwner) && (
+              <>
+                <button
+                  onClick={handleExportCSV}
+                  title={isBg ? 'Експорт CSV' : 'Export CSV'}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-xs font-bold border border-emerald-500/20"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  CSV
+                </button>
+                <button
+                  onClick={() => csvImportRef.current?.click()}
+                  title={isBg ? 'Импорт CSV' : 'Import CSV'}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-bold border ${
+                    csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                    csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                    csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                    'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
+                     csvStatus === 'done'    ? 'check_circle' :
+                     csvStatus === 'error'   ? 'error' : 'upload'}
+                  </span>
+                  {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
+                   csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
+                   csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
+                   csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : 'CSV'}
+                </button>
+                <input
+                  ref={csvImportRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={handleImportCSV}
+                />
+              </>
+            )}
+            <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
+              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
+                <span className="material-symbols-outlined text-[18px]">grid_view</span>
+              </button>
+              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
+                <span className="material-symbols-outlined text-[18px]">view_list</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Row 2: Tag recalculation and CSV operations */}
-        {isPowerUser && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleRecalculateTags}
-              title={isBg ? 'Преизчисли Тагове' : 'Recalculate Tags'}
-              className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-[11px] font-bold border border-amber-500/20"
-            >
-              <span className="material-symbols-outlined text-[16px]">label</span>
-              {isBg ? 'Тагове' : 'Tags'}
-            </button>
-            <button
-              onClick={handleExportCSV}
-              title={isBg ? 'Експорт CSV' : 'Export CSV'}
-              className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-[11px] font-bold border border-emerald-500/20"
-            >
-              <span className="material-symbols-outlined text-[16px]">download</span>
-              {isBg ? 'Експорт CSV' : 'Export CSV'}
-            </button>
-            <button
-              onClick={() => csvImportRef.current?.click()}
-              title={isBg ? 'Импорт CSV' : 'Import CSV'}
-              className={`flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors text-[11px] font-bold border ${
-                csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
-                 csvStatus === 'done'    ? 'check_circle' :
-                 csvStatus === 'error'   ? 'error' : 'upload'}
-              </span>
-              {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
-               csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
-               csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
-               csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : (isBg ? 'Импорт CSV' : 'Import CSV')}
-            </button>
-            <input ref={csvImportRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportCSV} />
-          </div>
-        )}
-
-        {/* Row 3: Active/Deactivated/Deleted Filters */}
-        {user?.role !== ROLES.USER && (
-          <div className="flex gap-2 text-xs font-bold overflow-x-auto hide-scrollbar pb-1">
-            <button onClick={() => setStatusFilter('active')} className={`flex-1 text-center py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'active' ? 'bg-primary text-background-dark border-primary' : 'bg-surface-dark text-slate-400 border-primary/30 hover:bg-primary/10'}`}>{isBg ? 'Активни' : 'Active'}</button>
-            <button onClick={() => setStatusFilter('deactivated')} className={`flex-1 text-center py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deactivated' ? 'bg-amber-500 text-background-dark border-amber-500' : 'bg-surface-dark text-slate-400 border-amber-500/30 hover:bg-amber-500/10'}`}>{isBg ? 'Деактивирани' : 'Deactivated'}</button>
-            <button onClick={() => setStatusFilter('deleted')} className={`flex-1 text-center py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deleted' ? 'bg-rose-500 text-white border-rose-500' : 'bg-surface-dark text-slate-400 border-rose-500/30 hover:bg-rose-500/10'}`}>{isBg ? 'Изтрити' : 'Deleted'}</button>
-          </div>
-        )}
+        {/* Global Filters & Status Badges */}
+        {(() => {
+          const pendingCount = recipes.filter(r => (r.status === 'pending' || r.is_active === false) && !r.is_deleted).length;
+          return (isAdmin || isOwner || isModerator) && (
+            <div className="flex gap-2 text-xs font-bold overflow-x-auto hide-scrollbar pb-1">
+              <button onClick={() => { setStatusFilter('all'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`flex-1 text-center py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'all' ? 'bg-primary text-background-dark border-primary' : 'bg-surface-dark text-slate-400 border-primary/30 hover:bg-primary/10'}`}>{isBg ? 'Всички' : 'All'}</button>
+              <button onClick={() => { setStatusFilter('pending'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`flex-1 text-center py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'pending' ? 'bg-amber-500 text-background-dark border-amber-500' : 'bg-surface-dark text-slate-400 border-amber-500/30 hover:bg-amber-500/10'}`}>
+                {isBg ? 'Чакащи' : 'Pending'} {pendingCount > 0 && `(${pendingCount})`}
+              </button>
+              <button onClick={() => { setStatusFilter('active'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`flex-1 text-center py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'active' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-surface-dark text-slate-400 border-emerald-500/30 hover:bg-emerald-500/10'}`}>{isBg ? 'Активни' : 'Active'}</button>
+              <button onClick={() => { setStatusFilter('deactivated'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`flex-1 text-center py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deactivated' ? 'bg-amber-500 text-background-dark border-amber-500' : 'bg-surface-dark text-slate-400 border-amber-500/30 hover:bg-amber-500/10'}`}>{isBg ? 'Деактивирани' : 'Deactivated'}</button>
+              <button onClick={() => { setStatusFilter('deleted'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`flex-1 text-center py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deleted' ? 'bg-rose-500 text-white border-rose-500' : 'bg-surface-dark text-slate-400 border-rose-500/30 hover:bg-rose-500/10'}`}>{isBg ? 'Изтрити' : 'Deleted'}</button>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="p-4 overflow-y-auto">

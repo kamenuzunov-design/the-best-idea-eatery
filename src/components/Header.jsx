@@ -16,7 +16,10 @@ const Header = () => {
     i18n.changeLanguage(newLang);
   };
 
-  const closeMenu = () => setIsMenuOpen(false);
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <>
@@ -30,7 +33,14 @@ const Header = () => {
           <span className="material-symbols-outlined text-2xl font-bold">menu</span>
         </button>
 
-        <div className="flex flex-col items-center flex-1 cursor-pointer" onClick={() => navigate('/')}>
+        <div 
+          id="app-top-anchor"
+          className="flex flex-col items-center flex-1 cursor-pointer" 
+          onClick={() => {
+            navigate('/');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        >
           <h1 className="text-primary text-xl font-bold leading-tight tracking-tight italic drop-shadow-md">
             {t('app.title')}
           </h1>
