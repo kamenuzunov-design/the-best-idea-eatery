@@ -10,6 +10,7 @@ import {
   deleteDoc, 
   doc, 
   getDoc,
+  getDocs,
   setDoc,
   serverTimestamp
 } from 'firebase/firestore';
@@ -130,6 +131,65 @@ const ManageAds = () => {
   });
 
   const [uploading, setUploading] = useState(false);
+
+  // Master Ingredients & Keyword Search Modal State for Native Ads
+  const [masterIngredients, setMasterIngredients] = useState([]);
+  const [isIngModalOpen, setIsIngModalOpen] = useState(false);
+  const [ingSearchTerm, setIngSearchTerm] = useState('');
+
+  // Fetch Master Ingredients from Firestore
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'ingredients'));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setMasterIngredients(list);
+      } catch (err) {
+        console.warn("Error fetching ingredients for ads:", err);
+      }
+    };
+    fetchIngredients();
+  }, []);
+
+  // Helper functions to manage target keywords list
+  const currentKeywordsList = useMemo(() => {
+    if (!formData.targetKeywords) return [];
+    if (Array.isArray(formData.targetKeywords)) {
+      return formData.targetKeywords.map(k => String(k).trim()).filter(Boolean);
+    }
+    return String(formData.targetKeywords).split(',').map(k => k.trim()).filter(Boolean);
+  }, [formData.targetKeywords]);
+
+  const handleAddKeywordString = (kwStr) => {
+    if (!kwStr || !kwStr.trim()) return;
+    const cleanKw = kwStr.trim();
+    const exists = currentKeywordsList.some(k => k.toLowerCase() === cleanKw.toLowerCase());
+    if (!exists) {
+      const updated = [...currentKeywordsList, cleanKw];
+      setFormData(prev => ({ ...prev, targetKeywords: updated.join(', ') }));
+    }
+  };
+
+  const handleAddKeywordFromIng = (ing) => {
+    const nameBg = ing.name_bg || ing.name_en || ing.id;
+    handleAddKeywordString(nameBg);
+  };
+
+  const handleRemoveKeyword = (kwToRemove) => {
+    const updated = currentKeywordsList.filter(k => k.toLowerCase() !== kwToRemove.toLowerCase());
+    setFormData(prev => ({ ...prev, targetKeywords: updated.join(', ') }));
+  };
+
+  const filteredMasterIngs = useMemo(() => {
+    if (!ingSearchTerm) return masterIngredients;
+    const term = ingSearchTerm.toLowerCase();
+    return masterIngredients.filter(ing => {
+      const bg = (ing.name_bg || '').toLowerCase();
+      const en = (ing.name_en || '').toLowerCase();
+      const idStr = (ing.id || '').toLowerCase();
+      return bg.includes(term) || en.includes(term) || idStr.includes(term);
+    });
+  }, [masterIngredients, ingSearchTerm]);
 
   useEffect(() => {
     if (!isAdmin && !isOwner) {
@@ -542,9 +602,13 @@ const ManageAds = () => {
 
                 return (
                   <div key={ad.id} className="bg-surface-dark/90 rounded-2xl border border-primary/20 overflow-hidden shadow-xl flex flex-col hover:border-primary/40 transition-all">
-                    <div className="h-40 bg-background-dark relative group">
+                    <div 
+                      onClick={() => handleEdit(ad)}
+                      className="h-40 bg-background-dark relative group cursor-pointer"
+                      title={isBg ? 'Редактирай рекламата' : 'Edit ad'}
+                    >
                       {ad.type === 'image' || ad.type === 'native' ? (
-                        <img src={ad.contentUrl} className="w-full h-full object-cover opacity-75" alt="Ad" />
+                        <img src={ad.contentUrl} className="w-full h-full object-cover opacity-75 group-hover:opacity-90 transition-opacity" alt="Ad" />
                       ) : ad.type === 'video' ? (
                         <div className="w-full h-full flex items-center justify-center bg-slate-900">
                           <span className="material-symbols-outlined text-4xl text-primary">videocam</span>
@@ -564,7 +628,7 @@ const ManageAds = () => {
                           </span>
                         )}
                       </div>
-                      <div className="absolute top-3 right-3 flex gap-1.5">
+                      <div onClick={(e) => e.stopPropagation()} className="absolute top-3 right-3 flex gap-1.5">
                         <button onClick={() => handleEdit(ad)} className="size-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all cursor-pointer" title={isBg ? 'Редактирай' : 'Edit'}>
                           <span className="material-symbols-outlined text-sm">edit</span>
                         </button>
@@ -577,8 +641,14 @@ const ManageAds = () => {
                     <div className="p-4 flex flex-col gap-2">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-bold text-slate-100 text-sm sm:text-base">{ad.title_bg}</h3>
-                          <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 mt-0.5">{ad.description_bg}</p>
+                          <h3 
+                            onClick={() => handleEdit(ad)}
+                            className="font-bold text-slate-100 text-sm sm:text-base cursor-pointer hover:text-primary transition-colors inline-block"
+                            title={isBg ? 'Редактирай рекламата' : 'Edit ad'}
+                          >
+                            {isBg ? ad.title_bg : ad.title_en}
+                          </h3>
+                          <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 mt-0.5">{isBg ? ad.description_bg : ad.description_en}</p>
                         </div>
                         <div className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0 ${ad.isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700 text-slate-400'}`}>
                           {ad.isActive ? (isBg ? 'Активна' : 'Active') : (isBg ? 'Пауза' : 'Paused')}
@@ -690,7 +760,13 @@ const ManageAds = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="font-bold text-slate-100 text-sm leading-snug flex items-center gap-2">
-                          <span>{c.name}</span>
+                          <span 
+                            onClick={() => handleOpenCampaignModal(c)}
+                            className="cursor-pointer hover:text-amber-400 transition-colors"
+                            title={isBg ? 'Редактирай кампанията' : 'Edit campaign'}
+                          >
+                            {c.name}
+                          </span>
                           <span className="bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-amber-500/20">
                             {assignedAdsCount} {isBg ? 'реклами' : 'ads'}
                           </span>
@@ -943,16 +1019,52 @@ const ManageAds = () => {
               </div>
 
               {formData.type === 'native' && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Ключови думи (Съставки)' : 'Target Keywords (Ingredients)'}</label>
-                  <input 
-                    value={formData.targetKeywords} 
-                    onChange={e => setFormData({...formData, targetKeywords: e.target.value})} 
-                    className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
-                    placeholder={isBg ? "напр. зехтин, домат, olive oil" : "e.g. olive oil, tomato"} 
-                  />
-                  <p className="text-[9px] text-slate-500 px-1">
-                    {isBg ? 'Рекламата ще се показва само в рецепти, съдържащи поне една от тези съставки. Разделете със запетая.' : 'The ad will only show in recipes containing at least one of these ingredients. Separate with commas.'}
+                <div className="flex flex-col gap-2 p-4 bg-background-dark/60 rounded-2xl border border-primary/20">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-primary text-base">restaurant</span>
+                      {isBg ? 'Ключови думи (Съставки)' : 'Target Keywords (Ingredients)'}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsIngModalOpen(true)}
+                      className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-sm">add_circle</span>
+                      <span>{isBg ? 'Добави съставка' : 'Add Ingredient'}</span>
+                    </button>
+                  </div>
+
+                  {/* Selected Keywords Badges */}
+                  <div className="flex flex-wrap gap-1.5 min-h-[38px] p-2.5 bg-background-dark rounded-xl border border-primary/10 items-center">
+                    {currentKeywordsList.length > 0 ? (
+                      currentKeywordsList.map((kw) => (
+                        <span 
+                          key={kw} 
+                          className="bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 shadow-sm"
+                        >
+                          <span>{kw}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveKeyword(kw)}
+                            className="text-amber-400/60 hover:text-rose-400 font-black cursor-pointer transition-colors"
+                            title={isBg ? 'Премахни' : 'Remove'}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] italic text-slate-500">
+                        {isBg ? 'Все още няма добавени съставки / ключови думи' : 'No ingredients / target keywords added yet'}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-[9px] text-slate-400 px-1">
+                    {isBg 
+                      ? 'Рекламата ще се показва само в рецепти, съдържащи поне една от тези съставки.' 
+                      : 'The ad will only show in recipes containing at least one of these target ingredients.'}
                   </p>
                 </div>
               )}
@@ -1117,6 +1229,86 @@ const ManageAds = () => {
                 {isBg ? 'Запази Промените' : 'Save Changes'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ingredient Search Modal for Native Ads Target Keywords */}
+      {isIngModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-background-dark/95 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">search</span>
+                {isBg ? 'Избор на съставка' : 'Select Ingredient'}
+              </h3>
+              <button type="button" onClick={() => setIsIngModalOpen(false)} className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer">
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-3.5 border-b border-primary/10 bg-background-dark/50">
+              <input
+                type="text"
+                placeholder={isBg ? "Търси съставка от базата данни..." : "Search ingredient from database..."}
+                value={ingSearchTerm}
+                onChange={(e) => setIngSearchTerm(e.target.value)}
+                className="w-full bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-primary"
+                autoFocus
+              />
+            </div>
+
+            <div className="p-3.5 overflow-y-auto space-y-1.5 flex-1 custom-scrollbar">
+              {filteredMasterIngs.length > 0 ? (
+                filteredMasterIngs.slice(0, 30).map(ing => {
+                  const nameBg = ing.name_bg || ing.name_en || ing.id;
+                  const nameEn = ing.name_en || ing.name_bg || ing.id;
+                  const displayName = isBg ? nameBg : nameEn;
+                  const isSelected = currentKeywordsList.some(k => k.toLowerCase() === displayName.toLowerCase());
+
+                  return (
+                    <button
+                      key={ing.id}
+                      type="button"
+                      onClick={() => handleAddKeywordFromIng(ing)}
+                      className={`w-full text-left px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                        isSelected 
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
+                          : 'bg-background-dark/50 hover:bg-primary/10 border-primary/10 text-slate-200'
+                      }`}
+                    >
+                      <span>{displayName}</span>
+                      <span className="material-symbols-outlined text-sm">
+                        {isSelected ? 'check_circle' : 'add_circle'}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-xs text-slate-400">
+                    {isBg ? 'Няма намерени съставки' : 'No ingredients found'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Option to add custom search term as a keyword tag */}
+            {ingSearchTerm.trim() && (
+              <div className="p-3 border-t border-primary/10 bg-background-dark/80 flex items-center justify-between gap-2">
+                <span className="text-[10px] text-slate-400 truncate">{isBg ? 'Добави като свободен текст:' : 'Add as custom text:'}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleAddKeywordString(ingSearchTerm.trim());
+                    setIngSearchTerm('');
+                  }}
+                  className="bg-primary/20 text-primary text-xs font-bold px-2.5 py-1 rounded-lg border border-primary/30 hover:bg-primary/30 transition-all cursor-pointer shrink-0"
+                >
+                  + "{ingSearchTerm.trim()}"
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

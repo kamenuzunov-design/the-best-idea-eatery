@@ -13,7 +13,7 @@ import { CUISINES } from '../../data/cuisines';
 import { ROLES } from '../../constants/roles';
 import { getRootCategories, getSubCategories } from '../../data/recipe_categories';
 import { REPUTATION_POINTS } from '../../lib/reputationUtils';
-import { getRecipeTags, normalizeMainGroup, getMainGroupLabel } from '../../lib/recipeMetaUtils';
+import { getRecipeTags } from '../../lib/recipeMetaUtils';
 
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
@@ -75,6 +75,11 @@ const ManageRecipes = () => {
   const [recipeIngredients, setRecipeIngredients] = useState([]); // {id, ingredient_id, amount, unit_id, notes}
   const [recipeSteps, setRecipeSteps] = useState([]); // {id, instruction_bg, instruction_en}
 
+  // Ingredient Search Modal State
+  const [isIngModalOpen, setIsIngModalOpen] = useState(false);
+  const [ingSearchTerm, setIngSearchTerm] = useState('');
+  const [activeTargetRowId, setActiveTargetRowId] = useState(null);
+
   useEffect(() => {
     const unsubRecipes = onSnapshot(query(collection(db, 'recipes')), (snapshot) => {
       setRecipes(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -116,24 +121,6 @@ const ManageRecipes = () => {
     return Math.round(totalCalories / srv);
   }, [recipeIngredients, ingredientsList, measurementsList, servings]);
 
-  const groupedIngredients = React.useMemo(() => {
-    const groups = {};
-    ingredientsList.forEach(ing => {
-      const rawGroup = ing.classification?.main_group || '';
-      const groupKey = normalizeMainGroup(rawGroup);
-      const groupLabel = getMainGroupLabel(groupKey, isBg);
-      if (!groups[groupLabel]) groups[groupLabel] = [];
-      groups[groupLabel].push(ing);
-    });
-    // Sort group names
-    return Object.keys(groups).sort().reduce((acc, key) => {
-      acc[key] = groups[key].sort((a, b) => 
-        (isBg ? a.name_bg : a.name_en).localeCompare(isBg ? b.name_bg : b.name_en)
-      );
-      return acc;
-    }, {});
-  }, [ingredientsList, isBg]);
-
   const handleTitleEnChange = (e) => {
     const val = e.target.value;
     setTitleEn(val);
@@ -143,16 +130,51 @@ const ManageRecipes = () => {
   };
 
   // --- Dynamic Ingredients ---
-  const addIngredientRow = () => {
-    const newId = `ing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setRecipeIngredients([...recipeIngredients, { id: newId, ingredient_id: '', amount: '', unit_id: '', notes_bg: '', notes_en: '' }]);
-  };
   const removeIngredientRow = (id) => {
     setRecipeIngredients(recipeIngredients.filter(ing => ing.id !== id));
   };
   const updateIngredientRow = (id, field, value) => {
     setRecipeIngredients(prev => prev.map(ing => ing.id === id ? { ...ing, [field]: value } : ing));
   };
+
+  const handleOpenIngModal = (rowId = null) => {
+    setActiveTargetRowId(rowId);
+    setIngSearchTerm('');
+    setIsIngModalOpen(true);
+  };
+
+  const handleSelectIngredient = React.useCallback((ingredientId) => {
+    if (activeTargetRowId) {
+      updateIngredientRow(activeTargetRowId, 'ingredient_id', ingredientId);
+      updateIngredientRow(activeTargetRowId, 'unit_id', '');
+    } else {
+      setRecipeIngredients(prev => [
+        ...prev, 
+        { 
+          id: `ing_${prev.length}_${ingredientId}_${String(Date.now()).slice(-6)}`, 
+          ingredient_id: ingredientId, 
+          amount: '', 
+          unit_id: '', 
+          notes_bg: '', 
+          notes_en: '' 
+        }
+      ]);
+    }
+    setIsIngModalOpen(false);
+    setIngSearchTerm('');
+    setActiveTargetRowId(null);
+  }, [activeTargetRowId]);
+
+  const filteredMasterIngs = React.useMemo(() => {
+    if (!ingSearchTerm) return ingredientsList;
+    const term = ingSearchTerm.toLowerCase();
+    return ingredientsList.filter(ing => {
+      const bg = (ing.name_bg || '').toLowerCase();
+      const en = (ing.name_en || '').toLowerCase();
+      const idStr = (ing.id || '').toLowerCase();
+      return bg.includes(term) || en.includes(term) || idStr.includes(term);
+    });
+  }, [ingredientsList, ingSearchTerm]);
   const moveIngredientRow = (index, direction) => {
     if (direction === 'up' && index === 0) return;
     if (direction === 'down' && index === recipeIngredients.length - 1) return;
@@ -1087,8 +1109,8 @@ const ManageRecipes = () => {
                     </select>
                   </div>
                 </div>
-                <button type="button" onClick={addIngredientRow} className="text-xs font-bold text-[#b8860b] bg-[#b8860b]/10 px-3 py-1.5 rounded hover:bg-[#b8860b]/20 transition-colors flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">add</span> {isBg ? 'Добави' : 'Add'}
+                <button type="button" onClick={() => handleOpenIngModal(null)} className="text-xs font-bold text-[#b8860b] bg-[#b8860b]/10 border border-[#b8860b]/30 px-3 py-1.5 rounded hover:bg-[#b8860b]/20 transition-colors flex items-center gap-1 cursor-pointer">
+                  <span className="material-symbols-outlined text-[16px]">add_circle</span> {isBg ? 'Добави съставка' : 'Add Ingredient'}
                 </button>
               </div>
               {recipeIngredients.length === 0 && <div className="text-center py-4 border border-dashed border-primary/20 rounded text-slate-500 text-xs">{isBg ? 'Няма добавени съставки' : 'No ingredients added'}</div>}
@@ -1108,27 +1130,22 @@ const ManageRecipes = () => {
                   <div key={ing.id} className="bg-background-dark border border-primary/10 rounded p-2 flex flex-col gap-2 relative group">
                     <div className="flex gap-2 items-center">
                       <span className="text-xs text-slate-500 w-4 font-bold shrink-0">{idx + 1}.</span>
-                      {/* Ingredient selector - reduced width */}
-                      <select
-                        value={ing.ingredient_id}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateIngredientRow(ing.id, 'ingredient_id', val);
-                          updateIngredientRow(ing.id, 'unit_id', '');
-                        }}
-                        className="w-36 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-[11px] shrink-0"
+                      {/* Ingredient selector - Search Modal trigger */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenIngModal(ing.id)}
+                        className={`w-36 sm:w-48 bg-surface-dark border rounded p-1.5 text-[11px] text-left flex items-center justify-between shrink-0 transition-colors cursor-pointer ${
+                          ing.ingredient_id
+                            ? 'border-[#b8860b]/50 text-slate-100 font-bold bg-[#b8860b]/5'
+                            : 'border-primary/20 text-slate-400 hover:border-primary/50'
+                        }`}
+                        title={isBg ? 'Кликнете за търсене и избор на съставка' : 'Click to search and select ingredient'}
                       >
-                        <option value="">-- {isBg ? 'Продукт' : 'Ingredient'} --</option>
-                        {Object.entries(groupedIngredients).map(([groupName, ings]) => (
-                          <optgroup key={groupName} label={`- ${groupName.toUpperCase()}`}>
-                            {ings.map(i => (
-                              <option key={i.id} value={i.id}>
-                                {isBg ? i.name_bg : i.name_en}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
+                        <span className="truncate">
+                          {dbIng ? (isBg ? dbIng.name_bg : dbIng.name_en) : `-- ${isBg ? 'Продукт' : 'Ingredient'} --`}
+                        </span>
+                        <span className="material-symbols-outlined text-primary text-sm shrink-0 ml-1">search</span>
+                      </button>
 
                       {/* Quantity */}
                       <input
@@ -1416,6 +1433,62 @@ const ManageRecipes = () => {
               >
                 {isBg ? 'Отказ' : 'Cancel'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ingredient Search Modal Dialog */}
+      {isIngModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-background-dark/95 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">search</span>
+                {isBg ? 'Избор на съставка' : 'Select Ingredient'}
+              </h3>
+              <button type="button" onClick={() => setIsIngModalOpen(false)} className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer">
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-3.5 border-b border-primary/10 bg-background-dark/50">
+              <input
+                type="text"
+                placeholder={isBg ? "Търси съставка от базата данни..." : "Search ingredient from database..."}
+                value={ingSearchTerm}
+                onChange={(e) => setIngSearchTerm(e.target.value)}
+                className="w-full bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-primary"
+                autoFocus
+              />
+            </div>
+
+            <div className="p-3.5 overflow-y-auto space-y-1.5 flex-1 custom-scrollbar">
+              {filteredMasterIngs.length > 0 ? (
+                filteredMasterIngs.slice(0, 30).map(ing => {
+                  const nameBg = ing.name_bg || ing.name_en || ing.id;
+                  const nameEn = ing.name_en || ing.name_bg || ing.id;
+                  const displayName = isBg ? nameBg : nameEn;
+
+                  return (
+                    <button
+                      key={ing.id}
+                      type="button"
+                      onClick={() => handleSelectIngredient(ing.id)}
+                      className="w-full text-left px-3 py-2 rounded-xl border bg-background-dark/50 hover:bg-primary/10 border-primary/10 text-xs font-bold text-slate-200 flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <span>{displayName}</span>
+                      <span className="material-symbols-outlined text-primary text-sm">add_circle</span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-xs text-slate-400">
+                    {isBg ? 'Няма намерени съставки' : 'No ingredients found'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

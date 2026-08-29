@@ -57,7 +57,7 @@ const CookingMode = () => {
 
   // Timer states
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerRemaining, setTimerRemaining] = useState(DEFAULT_SAMPLE_STEPS[0].timer_minutes * 60);
+  const [timerRemaining, setTimerRemaining] = useState(0);
   const timerEndTimeRef = useRef(null);
 
   // Text to speech state & available voices
@@ -98,6 +98,7 @@ const CookingMode = () => {
             media_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=1000',
             steps: DEFAULT_SAMPLE_STEPS
           });
+          setTimerRemaining((DEFAULT_SAMPLE_STEPS[0].timer_minutes || 0) * 60);
           setLoading(false);
         }
         return;
@@ -108,7 +109,14 @@ const CookingMode = () => {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const data = { id: snap.id, ...snap.data() };
-          if (isMounted) setRecipe(data);
+          if (isMounted) {
+            setRecipe(data);
+            const firstStep = (data.steps && Array.isArray(data.steps) && data.steps[0]) ? data.steps[0] : null;
+            const firstMins = firstStep 
+              ? (firstStep.timer_minutes || (firstStep.timer ? parseInt(firstStep.timer) : 0)) 
+              : (DEFAULT_SAMPLE_STEPS[0].timer_minutes || 0);
+            setTimerRemaining(firstMins * 60);
+          }
         } else {
           // Fallback if ID not found
           if (isMounted) {
@@ -118,6 +126,7 @@ const CookingMode = () => {
               title_en: 'Cooking Mode',
               steps: DEFAULT_SAMPLE_STEPS
             });
+            setTimerRemaining((DEFAULT_SAMPLE_STEPS[0].timer_minutes || 0) * 60);
           }
         }
       } catch (err) {
@@ -129,6 +138,7 @@ const CookingMode = () => {
             title_en: 'Cooking Mode',
             steps: DEFAULT_SAMPLE_STEPS
           });
+          setTimerRemaining((DEFAULT_SAMPLE_STEPS[0].timer_minutes || 0) * 60);
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -486,26 +496,28 @@ const CookingMode = () => {
           </div>
         </div>
 
-        {/* Step Selector List (Strictly 1-Column Vertical List, No Horizontal Slider) */}
-        <div className="flex flex-col gap-1.5 px-4 pb-3 w-full max-w-3xl mx-auto">
+        {/* Step Selector Grid (Compact 2-Column Grid Layout) */}
+        <div className="grid grid-cols-2 gap-2 px-4 pb-3 w-full max-w-3xl mx-auto">
           {steps.map((st, idx) => (
             <button
               key={idx}
               onClick={() => handleGoToStep(idx)}
-              className={`w-full px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-left flex items-center justify-between cursor-pointer border ${
+              className={`w-full px-2.5 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all text-left flex items-center justify-between cursor-pointer border ${
                 idx === currentStepIndex
-                  ? 'bg-primary text-background-dark shadow-md border-amber-300 font-black'
+                  ? 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark shadow-md border-amber-300 font-black scale-[1.01]'
                   : idx < currentStepIndex
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                  : 'bg-surface-dark/80 text-slate-400 border-primary/10 hover:text-slate-200'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20'
+                  : 'bg-surface-dark/90 text-slate-300 border-primary/35 hover:border-primary hover:text-white hover:bg-primary/10'
               }`}
             >
-              <span>{idx + 1}. {isBg ? st.phase_bg : st.phase_en}</span>
+              <span className="truncate">{isBg ? st.phase_bg : st.phase_en}</span>
               {idx === currentStepIndex ? (
-                <span className="material-symbols-outlined text-base font-bold">play_arrow</span>
+                <span className="material-symbols-outlined text-sm font-bold shrink-0 ml-1">play_arrow</span>
               ) : idx < currentStepIndex ? (
-                <span className="material-symbols-outlined text-base text-emerald-400 font-bold">check_circle</span>
-              ) : null}
+                <span className="material-symbols-outlined text-sm text-emerald-400 font-bold shrink-0 ml-1">check_circle</span>
+              ) : (
+                <span className="material-symbols-outlined text-sm text-primary/40 shrink-0 ml-1">circle</span>
+              )}
             </button>
           ))}
         </div>

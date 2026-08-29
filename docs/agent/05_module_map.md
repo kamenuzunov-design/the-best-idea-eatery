@@ -22,16 +22,16 @@
     *   `AIAssistant.jsx`: Чат/Интерфейс за AI Кулинарен Асистент.
     *   `Login.jsx`: Вход и регистрация.
     *   `GourmetCommunity.jsx`, `GourmetEvents.jsx`: Социални функции (общност, събития).
-    *   `ProfileSettings.jsx`, `EditProfile.jsx`: Настройки и редакция на потребителски профил.
+    *   `ProfileSettings.jsx`, `EditProfile.jsx`, `CookingProgress.jsx`: Настройки, редакция на профил и Кулинарен Прогрес/Постижения.
     *   `AdminDashboard.jsx`: Административен панел (Hub).
     *   `admin/DataDashboard.jsx`: Панел за управление на данните.
     *   `admin/ActivityLog.jsx`, `admin/ManageUsers.jsx`, `admin/ManageMeasurements.jsx`, `admin/Moderation.jsx`, `admin/BackupRecovery.jsx`: Административни под-модули.
-    *   `admin/ManageIngredients.jsx`, `admin/ManageRecipes.jsx`: Модули за създаване на кулинарно съдържание.
+    *   `admin/ManageIngredients.jsx`, `admin/ManageRecipes.jsx`, `admin/ManageAds.jsx`: Модули за създаване на кулинарно съдържание и реклами.
 
-## 4. Services & Config (Firebase)
-*   **Локация:** `src/lib/firebase.js`, `src/lib/activityLogger.js`, `src/lib/moderationUtils.js`, `src/lib/imageUtils.js`
-*   **Отговорности:** Инициализация на Firebase SDK, глобално логване на действията, AI модерация на изображения и клиентско преоразмеряване.
-*   **Връзки:** Използва се в цялото приложение за данни, сигурност и оптимизация.
+## 4. Services & Config & Data (Firebase & Achievements)
+*   **Локация:** `src/lib/firebase.js`, `src/lib/activityLogger.js`, `src/lib/moderationUtils.js`, `src/lib/imageUtils.js`, `src/data/achievements.js`
+*   **Отговорности:** Инициализация на Firebase SDK, глобално логване на действията, AI модерация на изображения, преоразмеряване и дефиниция/оценка на кулинарните медали и постижения.
+*   **Връзки:** Използва се в цялото приложение за данни, сигурност, прогрес и оптимизация.
 
 ## 5. i18n (Интернационализация)
 *   **Локация:** `src/i18n.js` (конфигурация)

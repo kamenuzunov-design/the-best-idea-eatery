@@ -23,6 +23,7 @@ const RecipeDetail = () => {
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userVote, setUserVote] = useState(null);
+  const [hoverStar, setHoverStar] = useState(0);
   const [isVoting, setIsVoting] = useState(false);
   const [variations, setVariations] = useState([]);
   const [parentRecipe, setParentRecipe] = useState(null);
@@ -264,25 +265,9 @@ const RecipeDetail = () => {
   const [repeatingItems, setRepeatingItems] = useState([]);
   const [newItemsToAdd, setNewItemsToAdd] = useState([]);
 
-  // Chef Profile Modal State
-  const [showChefModal, setShowChefModal] = useState(false);
-  const [chefRecipesCount, setChefRecipesCount] = useState(0);
-
-  const handleOpenChefModal = async () => {
-    setShowChefModal(true);
-    try {
-      const pubId = recipe?.publisher_id;
-      const pubName = authorData?.profile?.nickname || authorData?.name;
-      const recipesSnap = await getDocs(collection(db, 'recipes'));
-      const count = recipesSnap.docs.filter(d => {
-        const r = d.data();
-        if (r.is_deleted === true) return false;
-        return (pubId && (r.publisher_id === pubId || r.author?.uid === pubId)) ||
-               (pubName && r.publisher_name === pubName);
-      }).length;
-      setChefRecipesCount(count);
-    } catch (e) {
-      console.warn("Could not fetch chef recipe count:", e);
+  const handleOpenChefModal = () => {
+    if (recipe?.publisher_id) {
+      navigate(`/profile/progress?uid=${recipe.publisher_id}`);
     }
   };
 
@@ -521,35 +506,65 @@ const RecipeDetail = () => {
       alert(isBg ? 'Трябва да сте влезли в профила си, за да гласувате.' : 'You must be logged in to vote.');
       return;
     }
-    if (userVote) return; // Already voted
     if (isVoting) return;
+    if (userVote === score) return; // Same rating, no change needed
 
     setIsVoting(true);
     try {
       const docRef = doc(db, 'recipes', id);
       const currentRatings = recipe.ratings || [];
-      const currentCount = currentRatings.length;
-      const currentAvg = recipe.rating || 0;
+      const existingIndex = currentRatings.findIndex(r => r.userId === user.uid);
       
-      const newTotal = (currentAvg * currentCount) + score;
-      const newCount = currentCount + 1;
-      const newAvg = parseFloat((newTotal / newCount).toFixed(1));
+      let updatedRatings = [];
+      let newCount = 0;
+      let newAvg = 0;
+      let oldScore = 0;
+
+      if (existingIndex !== -1) {
+        oldScore = currentRatings[existingIndex].score || 0;
+        updatedRatings = currentRatings.map((r, idx) => 
+          idx === existingIndex ? { ...r, score, timestamp: new Date().toISOString() } : r
+        );
+        newCount = currentRatings.length;
+        const currentSum = currentRatings.reduce((sum, r) => sum + Number(r.score || 0), 0);
+        const newSum = currentSum - oldScore + score;
+        newAvg = parseFloat((newSum / newCount).toFixed(1));
+      } else {
+        updatedRatings = [...currentRatings, { userId: user.uid, score, timestamp: new Date().toISOString() }];
+        const currentVoteCount = recipe.votes_count || currentRatings.length;
+        newCount = currentVoteCount + 1;
+        const currentSum = (recipe.rating || 0) * currentVoteCount;
+        const newSum = currentSum + score;
+        newAvg = parseFloat((newSum / newCount).toFixed(1));
+      }
 
       await updateDoc(docRef, {
-        ratings: arrayUnion({ userId: user.uid, score: score, timestamp: new Date().toISOString() }),
+        ratings: updatedRatings,
         rating: newAvg,
         votes_count: newCount
       });
 
-      // Award Reputation Points
-      // 1. To the rater
-      await awardPoints(user.uid, REPUTATION_POINTS.RATE_OTHERS);
-      
-      // 2. To the author (if not the same person)
-      if (recipe.publisher_id && recipe.publisher_id !== user.uid) {
-        const pointsForAuthor = getPointsForRating(score);
-        if (pointsForAuthor > 0) {
-          await awardPoints(recipe.publisher_id, pointsForAuthor);
+      // Award / adjust Reputation Points
+      if (existingIndex === -1) {
+        // First time rating - award rater points
+        await awardPoints(user.uid, REPUTATION_POINTS.RATE_OTHERS);
+        
+        // Award author points
+        if (recipe.publisher_id && recipe.publisher_id !== user.uid) {
+          const pointsForAuthor = getPointsForRating(score);
+          if (pointsForAuthor > 0) {
+            await awardPoints(recipe.publisher_id, pointsForAuthor);
+          }
+        }
+      } else {
+        // Changing existing vote - adjust author points difference
+        if (recipe.publisher_id && recipe.publisher_id !== user.uid) {
+          const oldAuthorPoints = getPointsForRating(oldScore);
+          const newAuthorPoints = getPointsForRating(score);
+          const diff = newAuthorPoints - oldAuthorPoints;
+          if (diff !== 0) {
+            await awardPoints(recipe.publisher_id, diff);
+          }
         }
       }
 
@@ -558,7 +573,7 @@ const RecipeDetail = () => {
         ...prev,
         rating: newAvg,
         votes_count: newCount,
-        ratings: [...(prev.ratings || []), { userId: user.uid, score }]
+        ratings: updatedRatings
       }));
     } catch (err) {
       console.error("Error voting:", err);
@@ -888,25 +903,39 @@ const RecipeDetail = () => {
           
           {/* Interactive Rating UI */}
           <div className="flex flex-col items-end gap-1">
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  disabled={!!userVote || !user || isVoting}
-                  onClick={() => handleVote(star)}
-                  className={`material-symbols-outlined text-[20px] transition-all ${
-                    (userVote >= star || (!userVote && recipe.rating >= star)) 
-                      ? 'text-amber-500 fill-1' 
-                      : 'text-slate-500'
-                  } ${(user && !userVote && !isVoting) ? 'hover:scale-125 cursor-pointer hover:text-amber-400' : 'cursor-default'}`}
-                  style={{ fontVariationSettings: (userVote >= star || (!userVote && recipe.rating >= star)) ? "'FILL' 1" : "'FILL' 0" }}
-                >
-                  star
-                </button>
-              ))}
+            <div className="flex gap-1" onMouseLeave={() => setHoverStar(0)}>
+              {[1, 2, 3, 4, 5].map((star) => {
+                const isFilled = hoverStar > 0 ? hoverStar >= star : (userVote ? userVote >= star : false);
+                const isHovered = hoverStar > 0 && hoverStar >= star;
+                return (
+                  <button
+                    key={star}
+                    disabled={!user || isVoting}
+                    onClick={() => {
+                      setHoverStar(0);
+                      handleVote(star);
+                    }}
+                    onMouseEnter={() => user && !isVoting && setHoverStar(star)}
+                    className={`material-symbols-outlined text-[20px] transition-all ${
+                      isFilled
+                        ? isHovered ? 'text-amber-400 fill-1' : 'text-amber-500 fill-1'
+                        : 'text-slate-500'
+                    } ${(user && !isVoting) ? 'hover:scale-125 cursor-pointer' : 'cursor-default'}`}
+                    style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
+                    title={userVote ? (isBg ? `Вашата оценка: ${userVote}★ (Кликнете за промяна)` : `Your rating: ${userVote}★ (Click to change)`) : (isBg ? `Оценете с ${star} звезди` : `Rate ${star} stars`)}
+                  >
+                    star
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              {recipe.rating || 0} / 5 ({recipe.votes_count || 0} {isBg ? 'гласа' : 'votes'})
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+              <span>{recipe.rating || 0} / 5 ({recipe.votes_count || 0} {isBg ? 'гласа' : 'votes'})</span>
+              {userVote && (
+                <span className="text-amber-400 font-semibold normal-case">
+                  • {isBg ? `Вашата оценка: ${userVote}★` : `Your rating: ${userVote}★`}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -1190,154 +1219,99 @@ const RecipeDetail = () => {
           ? (authorData.profile?.bio_bg || authorData.profile?.bio_en || authorData.profile?.bio) 
           : (authorData.profile?.bio_en || authorData.profile?.bio_bg || authorData.profile?.bio);
 
+        const repScore = Number(authorData.reputation?.score) || 0;
+        const repLabel = isBg ? (authorData.reputation?.label || 'Новак') : (authorData.reputation?.label_en || 'Novice');
+        const xpPct = Math.min(100, Math.max(5, Math.round(((repScore % 1000) / 1000) * 100)));
+
         return (
-          <>
-            <div className="mx-6 my-4 p-4 rounded-2xl bg-surface-dark/80 border border-primary/20 flex flex-col gap-3 shadow-md">
-              <div className="flex items-center gap-4">
-                <div 
-                  onClick={handleOpenChefModal}
-                  className="size-12 rounded-full border-2 border-primary/30 overflow-hidden bg-background-dark shrink-0 cursor-pointer hover:border-primary transition-all group/avatar"
-                  title={isBg ? 'Преглед на профила на готвача' : 'View chef profile'}
-                >
+          <div className="mx-6 my-6 p-5 rounded-3xl bg-surface-dark/95 border border-primary/25 flex flex-col gap-4 shadow-xl">
+            <div className="flex items-center gap-4">
+              <div 
+                onClick={handleOpenChefModal}
+                className="relative shrink-0 cursor-pointer group/avatar"
+                title={isBg ? 'Преглед на профила и прогреса' : 'View profile and progress'}
+              >
+                <div className="size-16 rounded-full border-2 border-primary p-0.5 shadow-[0_0_15px_rgba(212,175,53,0.3)] bg-background-dark overflow-hidden flex items-center justify-center">
                   {authorData.profile?.avatar ? (
                     <img src={authorData.profile.avatar} alt="Avatar" className="w-full h-full object-cover group-hover/avatar:scale-105 transition-transform" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-primary/30">
-                      <span className="material-symbols-outlined text-2xl">person</span>
-                    </div>
+                    <span className="material-symbols-outlined text-3xl text-primary/40">person</span>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">
-                    {isBg ? 'Готвач' : 'Chef'}
-                  </p>
-                  <h4 
-                    onClick={handleOpenChefModal}
-                    className="text-slate-100 font-bold text-sm leading-tight truncate hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1 group/author"
-                    title={isBg ? 'Преглед на профила на готвача' : 'View chef profile'}
-                  >
-                    <span>{authorData.profile?.nickname || authorData.name || (isBg ? 'Анонимен' : 'Anonymous')}</span>
-                    <span className="material-symbols-outlined text-xs text-primary/60 group-hover/author:text-primary transition-colors">person</span>
-                  </h4>
-                  {authorLocationStr && (
-                    <div className="flex items-center gap-1 mt-0.5 text-xs text-slate-300 font-medium truncate">
-                      <span className="material-symbols-outlined text-[14px] text-primary shrink-0">location_on</span>
-                      <span className="truncate">{authorLocationStr}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="material-symbols-outlined text-[14px] text-amber-500 shrink-0">military_tech</span>
-                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest truncate">
-                      {isBg ? (authorData.reputation?.label || 'Новак') : (authorData.reputation?.label_en || 'Novice')}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">
-                    {isBg ? 'Репутация' : 'Reputation'}
-                  </p>
-                  <p className="text-primary font-black text-sm">{authorData.reputation?.score || 0}</p>
+                <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-primary to-[#b8860b] text-background-dark rounded-full size-5 flex items-center justify-center shadow-lg">
+                  <span className="material-symbols-outlined text-[13px] font-bold">verified</span>
                 </div>
               </div>
 
-              {authorBio && (
-                <div className="border-t border-primary/10 pt-2.5 mt-0.5">
-                  <p className="text-xs text-slate-300 italic leading-relaxed font-normal">
-                    {authorBio}
-                  </p>
-                </div>
-              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">
+                  {isBg ? 'Готвач & Автор' : 'Chef & Author'}
+                </p>
+                <h4 
+                  onClick={handleOpenChefModal}
+                  className="text-slate-100 font-extrabold text-base leading-tight truncate hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1 group/author"
+                  title={isBg ? 'Преглед на профила и прогреса' : 'View profile and progress'}
+                >
+                  <span>{authorData.profile?.nickname || authorData.name || (isBg ? 'Анонимен' : 'Anonymous')}</span>
+                  <span className="material-symbols-outlined text-xs text-primary/60 group-hover/author:text-primary transition-colors">arrow_forward</span>
+                </h4>
 
-              <button
-                onClick={() => handleViewAuthorRecipes(recipe?.publisher_id, authorData.profile?.nickname || authorData.name)}
-                className="w-full mt-1 py-2 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-              >
-                <span className="material-symbols-outlined text-[16px]">menu_book</span>
-                <span>{isBg ? 'Виж всички рецепти от този готвач' : 'View all recipes by this chef'}</span>
-              </button>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-[10px] font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 inline-flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[12px]">military_tech</span>
+                    {repLabel}
+                  </span>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    {repScore} PTS
+                  </span>
+                </div>
+
+                {authorLocationStr && (
+                  <div className="flex items-center gap-1 mt-1 text-xs text-slate-300 font-medium truncate">
+                    <span className="material-symbols-outlined text-[14px] text-primary shrink-0">location_on</span>
+                    <span className="truncate">{authorLocationStr}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Chef Profile Modal */}
-            {showChefModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[85vh] mb-12">
-                  <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
-                    <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary">person</span>
-                      {isBg ? 'Профил на Готвача' : 'Chef Profile'}
-                    </h3>
-                    <button onClick={() => setShowChefModal(false)} className="text-slate-400 hover:text-rose-500 p-1">
-                      <span className="material-symbols-outlined text-[20px]">close</span>
-                    </button>
-                  </div>
+            {/* Level progress preview bar */}
+            <div className="space-y-1.5 bg-background-dark/60 p-3 rounded-2xl border border-primary/10">
+              <div className="flex justify-between items-center text-[10px] font-bold">
+                <span className="text-slate-300">{isBg ? 'Кулинарно ниво' : 'Culinary Level'}</span>
+                <span className="text-primary">{repScore % 1000} / 1000 XP</span>
+              </div>
+              <div className="h-1.5 w-full bg-background-dark rounded-full overflow-hidden border border-primary/10">
+                <div className="h-full bg-gradient-to-r from-primary to-[#b8860b] rounded-full" style={{ width: `${xpPct}%` }}></div>
+              </div>
+            </div>
 
-                  <div className="p-6 overflow-y-auto space-y-5 custom-scrollbar text-center">
-                    <div className="flex justify-center">
-                      <div className="size-28 rounded-full border-4 border-primary/40 bg-background-dark overflow-hidden shadow-2xl flex items-center justify-center">
-                        {authorData.profile?.avatar ? (
-                          <img src={authorData.profile.avatar} alt="Chef" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="material-symbols-outlined text-6xl text-primary/40">person</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h2 className="text-xl font-extrabold text-slate-100">
-                        {authorData.profile?.nickname || authorData.name || (isBg ? 'Анонимен' : 'Anonymous')}
-                      </h2>
-                      <div className="flex items-center justify-center gap-2 mt-1">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                          <span className="material-symbols-outlined text-xs align-middle mr-1">military_tech</span>
-                          {isBg ? (authorData.reputation?.label || 'Новак') : (authorData.reputation?.label_en || 'Novice')}
-                        </span>
-                      </div>
-                    </div>
-
-                    {authorLocationStr && (
-                      <div className="flex items-center justify-center gap-1.5 text-xs text-slate-300 font-medium">
-                        <span className="material-symbols-outlined text-primary text-base">location_on</span>
-                        <span>{authorLocationStr}</span>
-                      </div>
-                    )}
-
-                    {authorBio && (
-                      <div className="bg-background-dark/50 border border-primary/10 rounded-2xl p-4 text-left">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                          {isBg ? 'За мен' : 'About Chef'}
-                        </p>
-                        <p className="text-xs text-slate-300 italic leading-relaxed font-normal">
-                          "{authorBio}"
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-primary/10">
-                      <div className="bg-background-dark/30 border border-primary/10 rounded-xl p-3">
-                        <p className="text-[9px] font-black text-slate-500 uppercase">{isBg ? 'Репутация' : 'Reputation'}</p>
-                        <p className="text-primary text-base font-extrabold">{authorData.reputation?.score || 0} pts</p>
-                      </div>
-                      <div className="bg-background-dark/30 border border-primary/10 rounded-xl p-3">
-                        <p className="text-[9px] font-black text-slate-500 uppercase">{isBg ? 'Публикувани рецепти' : 'Recipes'}</p>
-                        <p className="text-slate-200 text-base font-extrabold">{chefRecipesCount}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setShowChefModal(false);
-                        handleViewAuthorRecipes(recipe?.publisher_id, authorData.profile?.nickname || authorData.name);
-                      }}
-                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">menu_book</span>
-                      <span>{isBg ? 'Виж всички рецепти от този готвач' : 'View all recipes by this chef'}</span>
-                    </button>
-                  </div>
-                </div>
+            {authorBio && (
+              <div className="border-t border-primary/10 pt-2.5">
+                <p className="text-xs text-slate-300 italic leading-relaxed font-normal">
+                  "{authorBio}"
+                </p>
               </div>
             )}
-          </>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={() => handleViewAuthorRecipes(recipe?.publisher_id, authorData.profile?.nickname || authorData.name)}
+                className="py-2.5 px-3 rounded-xl bg-surface-dark border border-primary/20 hover:border-primary/50 text-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[16px] text-primary">menu_book</span>
+                <span>{isBg ? 'Всички рецепти' : 'All recipes'}</span>
+              </button>
+
+              <button
+                onClick={handleOpenChefModal}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-xs font-extrabold transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <span className="material-symbols-outlined text-[16px]">military_tech</span>
+                <span>{isBg ? 'Пълен прогрес' : 'Full Progress'}</span>
+              </button>
+            </div>
+          </div>
         );
       })()}
 
