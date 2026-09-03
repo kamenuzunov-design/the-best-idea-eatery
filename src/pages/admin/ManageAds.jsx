@@ -127,7 +127,8 @@ const ManageAds = () => {
     campaignId: '',
     maxViews: 0,
     maxClicks: 0,
-    targetKeywords: ''
+    targetKeywords: '',
+    targetIngredientIds: []
   });
 
   const [uploading, setUploading] = useState(false);
@@ -160,24 +161,66 @@ const ManageAds = () => {
     return String(formData.targetKeywords).split(',').map(k => k.trim()).filter(Boolean);
   }, [formData.targetKeywords]);
 
-  const handleAddKeywordString = (kwStr) => {
-    if (!kwStr || !kwStr.trim()) return;
-    const cleanKw = kwStr.trim();
-    const exists = currentKeywordsList.some(k => k.toLowerCase() === cleanKw.toLowerCase());
-    if (!exists) {
-      const updated = [...currentKeywordsList, cleanKw];
-      setFormData(prev => ({ ...prev, targetKeywords: updated.join(', ') }));
-    }
-  };
-
   const handleAddKeywordFromIng = (ing) => {
     const nameBg = ing.name_bg || ing.name_en || ing.id;
-    handleAddKeywordString(nameBg);
+    const slugId = (ing.slug || ing.id || '').trim().toLowerCase();
+    const docId = (ing.id || '').trim().toLowerCase();
+
+    setFormData(prev => {
+      const currentIds = Array.isArray(prev.targetIngredientIds) ? prev.targetIngredientIds : [];
+      const newIds = [slugId, docId].filter(Boolean);
+      const updatedIds = [...new Set([...currentIds, ...newIds])];
+
+      const currentKws = Array.isArray(prev.targetKeywords)
+        ? prev.targetKeywords
+        : (prev.targetKeywords ? String(prev.targetKeywords).split(',').map(k => k.trim()).filter(Boolean) : []);
+
+      const label = `${nameBg} (${slugId})`;
+      const exists = currentKws.some(k => k.toLowerCase() === label.toLowerCase() || k.toLowerCase() === nameBg.toLowerCase() || k.toLowerCase() === slugId);
+      const updatedKws = exists ? currentKws : [...currentKws, label];
+
+      return {
+        ...prev,
+        targetIngredientIds: updatedIds,
+        targetKeywords: updatedKws.join(', ')
+      };
+    });
+
+    setIsIngModalOpen(false);
+    setIngSearchTerm('');
   };
 
   const handleRemoveKeyword = (kwToRemove) => {
-    const updated = currentKeywordsList.filter(k => k.toLowerCase() !== kwToRemove.toLowerCase());
-    setFormData(prev => ({ ...prev, targetKeywords: updated.join(', ') }));
+    const updatedKeywords = currentKeywordsList.filter(k => k.toLowerCase() !== kwToRemove.toLowerCase());
+    
+    // Extract slug from string like "Зехтин Екстра Върджин (zehtin-ekstra-vardzhin)"
+    const slugMatch = kwToRemove.match(/\(([^)]+)\)/);
+    const extractedSlug = slugMatch ? slugMatch[1].toLowerCase().trim() : '';
+
+    const matchedIng = masterIngredients.find(ing => {
+      const bg = (ing.name_bg || '').toLowerCase();
+      const en = (ing.name_en || '').toLowerCase();
+      const slug = (ing.slug || '').toLowerCase();
+      const id = (ing.id || '').toLowerCase();
+      const kw = kwToRemove.toLowerCase();
+      return (extractedSlug && (slug === extractedSlug || id === extractedSlug)) ||
+             kw.includes(slug) || kw.includes(id) || kw.includes(bg) ||
+             bg === kw || en === kw || id === kw || slug === kw;
+    });
+
+    const idsToRemove = [
+      extractedSlug,
+      matchedIng?.id?.toLowerCase(),
+      matchedIng?.slug?.toLowerCase()
+    ].filter(Boolean);
+
+    const updatedIds = (formData.targetIngredientIds || []).filter(id => !idsToRemove.includes(String(id).toLowerCase()));
+
+    setFormData(prev => ({
+      ...prev,
+      targetKeywords: updatedKeywords.join(', '),
+      targetIngredientIds: updatedIds
+    }));
   };
 
   const filteredMasterIngs = useMemo(() => {
@@ -362,6 +405,7 @@ const ManageAds = () => {
         maxViews: Number(formData.maxViews) || 0,
         maxClicks: Number(formData.maxClicks) || 0,
         targetKeywords: keywordsArr,
+        targetIngredientIds: Array.isArray(formData.targetIngredientIds) ? formData.targetIngredientIds : [],
         updatedAt: serverTimestamp()
       };
 
@@ -403,7 +447,8 @@ const ManageAds = () => {
       campaignId: '',
       maxViews: 0,
       maxClicks: 0,
-      targetKeywords: ''
+      targetKeywords: '',
+      targetIngredientIds: []
     });
   };
 
@@ -425,7 +470,8 @@ const ManageAds = () => {
       campaignId: ad.campaignId || '',
       maxViews: ad.maxViews || 0,
       maxClicks: ad.maxClicks || 0,
-      targetKeywords: Array.isArray(ad.targetKeywords) ? ad.targetKeywords.join(', ') : (ad.targetKeywords || '')
+      targetKeywords: Array.isArray(ad.targetKeywords) ? ad.targetKeywords.join(', ') : (ad.targetKeywords || ''),
+      targetIngredientIds: Array.isArray(ad.targetIngredientIds) ? ad.targetIngredientIds : []
     });
     setIsModalOpen(true);
   };
@@ -654,6 +700,17 @@ const ManageAds = () => {
                           {ad.isActive ? (isBg ? 'Активна' : 'Active') : (isBg ? 'Пауза' : 'Paused')}
                         </div>
                       </div>
+
+                      {(ad.startDate || ad.endDate) && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                          <span>📅 {ad.startDate || 'Начало'} — {ad.endDate || 'Безкрай'}</span>
+                          {ad.endDate && new Date().toISOString().split('T')[0] > ad.endDate && (
+                            <span className="text-rose-400 font-bold bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 text-[9px]">
+                              {isBg ? 'ИЗТЕКЛА' : 'EXPIRED'}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-2 border-t border-primary/10">
                         <div className="flex items-center gap-4">
@@ -1023,7 +1080,7 @@ const ManageAds = () => {
                   <div className="flex justify-between items-center">
                     <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-primary text-base">restaurant</span>
-                      {isBg ? 'Ключови думи (Съставки)' : 'Target Keywords (Ingredients)'}
+                      {isBg ? 'Целеви съставки (Продукти)' : 'Target Ingredients'}
                     </label>
                     <button
                       type="button"
@@ -1056,15 +1113,15 @@ const ManageAds = () => {
                       ))
                     ) : (
                       <span className="text-[11px] italic text-slate-500">
-                        {isBg ? 'Все още няма добавени съставки / ключови думи' : 'No ingredients / target keywords added yet'}
+                        {isBg ? 'Все още няма избрани целеви съставки' : 'No target ingredients selected yet'}
                       </span>
                     )}
                   </div>
 
                   <p className="text-[9px] text-slate-400 px-1">
                     {isBg 
-                      ? 'Рекламата ще се показва само в рецепти, съдържащи поне една от тези съставки.' 
-                      : 'The ad will only show in recipes containing at least one of these target ingredients.'}
+                      ? 'Рекламата ще се показва само в рецепти, съдържащи поне един от тези продукти.' 
+                      : 'The ad will only show in recipes containing at least one of these ingredients.'}
                   </p>
                 </div>
               )}
@@ -1277,7 +1334,12 @@ const ManageAds = () => {
                           : 'bg-background-dark/50 hover:bg-primary/10 border-primary/10 text-slate-200'
                       }`}
                     >
-                      <span>{displayName}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <span>{displayName}</span>
+                        <span className="text-[10px] font-mono text-primary/70 font-normal">
+                          Slug (ID): {ing.slug || ing.id}
+                        </span>
+                      </div>
                       <span className="material-symbols-outlined text-sm">
                         {isSelected ? 'check_circle' : 'add_circle'}
                       </span>
@@ -1292,23 +1354,6 @@ const ManageAds = () => {
                 </div>
               )}
             </div>
-
-            {/* Option to add custom search term as a keyword tag */}
-            {ingSearchTerm.trim() && (
-              <div className="p-3 border-t border-primary/10 bg-background-dark/80 flex items-center justify-between gap-2">
-                <span className="text-[10px] text-slate-400 truncate">{isBg ? 'Добави като свободен текст:' : 'Add as custom text:'}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleAddKeywordString(ingSearchTerm.trim());
-                    setIngSearchTerm('');
-                  }}
-                  className="bg-primary/20 text-primary text-xs font-bold px-2.5 py-1 rounded-lg border border-primary/30 hover:bg-primary/30 transition-all cursor-pointer shrink-0"
-                >
-                  + "{ingSearchTerm.trim()}"
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}

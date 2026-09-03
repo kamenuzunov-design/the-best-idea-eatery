@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
@@ -19,6 +19,7 @@ const ManageIngredients = () => {
   const csvImportRef = useRef(null);
   const [csvStatus, setCsvStatus] = useState(''); // '' | 'parsing' | 'saving' | 'done' | 'error'
   const [csvPreview, setCsvPreview] = useState(null); // { newRows, duplicateRows } | null
+  const [syncStatus, setSyncStatus] = useState(''); // '' | 'syncing' | 'done' | 'error'
 
   const [ingredients, setIngredients] = useState([]);
   const [measurements, setMeasurements] = useState([]);
@@ -513,6 +514,161 @@ const ManageIngredients = () => {
     }
   };
 
+  const handleSyncRecipeIngredients = async () => {
+    if (!ingredients || ingredients.length === 0) {
+      alert(isBg ? 'Базата с продукти все още не е заредена.' : 'Ingredients collection is not loaded yet.');
+      return;
+    }
+
+    const confirmMsg = isBg
+      ? 'Сигурни ли сте, че искате да свържете всички съставки във всички рецепти с техните ID-та (ingredient_id) от базата данни?'
+      : 'Are you sure you want to link all recipe ingredients with their ingredient_id from database?';
+    
+    if (!window.confirm(confirmMsg)) return;
+
+    setSyncStatus('syncing');
+    try {
+      const recipesSnap = await getDocs(collection(db, 'recipes'));
+      if (recipesSnap.empty) {
+        alert(isBg ? 'Няма намерени рецепти.' : 'No recipes found.');
+        setSyncStatus('');
+        return;
+      }
+
+      const allRecipes = recipesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      let updatedRecipesCount = 0;
+      let totalLinkedIngredients = 0;
+      let createdIngredientsCount = 0;
+
+      const ingredientMap = new Map();
+      const existingDbIngs = [...ingredients];
+
+      existingDbIngs.forEach(ing => {
+        if (ing.name_bg) ingredientMap.set(ing.name_bg.trim().toLowerCase(), ing);
+        if (ing.name_en) ingredientMap.set(ing.name_en.trim().toLowerCase(), ing);
+      });
+
+      const BATCH_SIZE = 400;
+      let currentBatch = writeBatch(db);
+      let batchOpCount = 0;
+
+      for (const r of allRecipes) {
+        if (!r.ingredients || !Array.isArray(r.ingredients) || r.ingredients.length === 0) {
+          continue;
+        }
+
+        let recipeModified = false;
+        const newIngredientsList = [];
+
+        for (const ing of r.ingredients) {
+          let targetIngId = ing.ingredient_id || ing.id;
+          let matchedDbIng = null;
+
+          if (targetIngId) {
+            matchedDbIng = existingDbIngs.find(dbI => dbI.id === targetIngId);
+          }
+
+          if (!matchedDbIng) {
+            const textBg = (ing.ingredient_bg || ing.name_bg || '').trim().toLowerCase();
+            const textEn = (ing.ingredient_en || ing.name_en || '').trim().toLowerCase();
+
+            if (textBg && ingredientMap.has(textBg)) {
+              matchedDbIng = ingredientMap.get(textBg);
+            } else if (textEn && ingredientMap.has(textEn)) {
+              matchedDbIng = ingredientMap.get(textEn);
+            } else {
+              for (const [key, dbIng] of ingredientMap.entries()) {
+                if (textBg && (key.includes(textBg) || textBg.includes(key))) {
+                  matchedDbIng = dbIng;
+                  break;
+                }
+                if (textEn && (key.includes(textEn) || textEn.includes(key))) {
+                  matchedDbIng = dbIng;
+                  break;
+                }
+              }
+            }
+
+            if (!matchedDbIng && (textBg || textEn)) {
+              const newIngId = doc(collection(db, 'ingredients')).id;
+              const newIngDoc = {
+                id: newIngId,
+                name_bg: ing.ingredient_bg || ing.name_bg || textBg,
+                name_en: ing.ingredient_en || ing.name_en || textEn || ing.ingredient_bg || 'Ingredient',
+                slug: (ing.ingredient_en || ing.ingredient_bg || textEn || textBg).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+                status: 'active',
+                createdAt: new Date().toISOString()
+              };
+
+              currentBatch.set(doc(db, 'ingredients', newIngId), newIngDoc);
+              batchOpCount++;
+
+              matchedDbIng = newIngDoc;
+              existingDbIngs.push(newIngDoc);
+              if (newIngDoc.name_bg) ingredientMap.set(newIngDoc.name_bg.trim().toLowerCase(), newIngDoc);
+              if (newIngDoc.name_en) ingredientMap.set(newIngDoc.name_en.trim().toLowerCase(), newIngDoc);
+              createdIngredientsCount++;
+            }
+          }
+
+          if (matchedDbIng) {
+            const updatedIng = {
+              ...ing,
+              ingredient_id: matchedDbIng.id,
+              ingredient_bg: matchedDbIng.name_bg || ing.ingredient_bg || ing.name_bg || '',
+              ingredient_en: matchedDbIng.name_en || ing.ingredient_en || ing.name_en || ''
+            };
+
+            if (ing.ingredient_id !== matchedDbIng.id || ing.ingredient_bg !== updatedIng.ingredient_bg) {
+              recipeModified = true;
+            }
+            newIngredientsList.push(updatedIng);
+            totalLinkedIngredients++;
+          } else {
+            newIngredientsList.push(ing);
+          }
+        }
+
+        if (recipeModified) {
+          currentBatch.update(doc(db, 'recipes', r.id), { ingredients: newIngredientsList });
+          batchOpCount++;
+          updatedRecipesCount++;
+        }
+
+        if (batchOpCount >= BATCH_SIZE) {
+          await currentBatch.commit();
+          currentBatch = writeBatch(db);
+          batchOpCount = 0;
+        }
+      }
+
+      if (batchOpCount > 0) {
+        await currentBatch.commit();
+      }
+
+      await logActivity(
+        user.uid,
+        user.email,
+        'sync_recipe_ingredients',
+        `Linked ${totalLinkedIngredients} ingredients across ${updatedRecipesCount} recipes. Created ${createdIngredientsCount} missing ingredients.`
+      );
+
+      setSyncStatus('done');
+      const resultMsg = isBg
+        ? `Готово! Успешно свързани ${totalLinkedIngredients} съставки в ${updatedRecipesCount} рецепти! (Създадени нови продукти: ${createdIngredientsCount})`
+        : `Done! Linked ${totalLinkedIngredients} ingredients across ${updatedRecipesCount} recipes! (New ingredients created: ${createdIngredientsCount})`;
+
+      alert(resultMsg);
+      setTimeout(() => setSyncStatus(''), 4000);
+    } catch (err) {
+      console.error('Error syncing ingredients:', err);
+      setSyncStatus('error');
+      alert('Грешка при синхронизация: ' + err.message);
+      setTimeout(() => setSyncStatus(''), 4000);
+    }
+  };
+
   const renderManageButtons = (ing, isActive, ingName) => {
     if (statusFilter === 'deleted') {
       return (
@@ -551,64 +707,95 @@ const ManageIngredients = () => {
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
-            <div>
+        {/* Header Block: Row 1 & Row 2 */}
+        <div className="flex flex-col space-y-1">
+          {/* Row 1: Back Button, Title, Export CSV, Import CSV, View Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
               <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Продукти' : 'Ingredients'}</h1>
-              <p className="text-xs font-medium text-primary/70">{ingredients.length} {isBg ? 'въведени общо' : 'items total'}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {(isAdmin || isOwner) && (
+                <>
+                  <button
+                    onClick={handleExportCSV}
+                    title={isBg ? 'Експорт CSV' : 'Export CSV'}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-xs font-bold border border-emerald-500/20"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">download</span>
+                    CSV
+                  </button>
+                  <button
+                    onClick={() => csvImportRef.current?.click()}
+                    title={isBg ? 'Импорт CSV' : 'Import CSV'}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-bold border ${
+                      csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                      csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                      csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                      'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
+                       csvStatus === 'done'    ? 'check_circle' :
+                       csvStatus === 'error'   ? 'error' : 'upload'}
+                    </span>
+                    {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
+                     csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
+                     csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
+                     csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : 'CSV'}
+                  </button>
+                  <input
+                    ref={csvImportRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={handleImportCSV}
+                  />
+                </>
+              )}
+              <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
+                <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
+                  <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                </button>
+                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
+                  <span className="material-symbols-outlined text-[18px]">view_list</span>
+                </button>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {(isAdmin || isOwner) && (
-              <>
-                <button
-                  onClick={handleExportCSV}
-                  title={isBg ? 'Експорт CSV' : 'Export CSV'}
-                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-[11px] font-bold border border-emerald-500/20"
-                >
-                  <span className="material-symbols-outlined text-[16px]">download</span>
-                  CSV
-                </button>
-                <button
-                  onClick={() => csvImportRef.current?.click()}
-                  title={isBg ? 'Импорт CSV' : 'Import CSV'}
-                  className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors text-[11px] font-bold border ${
-                    csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                    csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                    csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                    'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px]">
-                    {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
-                     csvStatus === 'done'    ? 'check_circle' :
-                     csvStatus === 'error'   ? 'error' : 'upload'}
-                  </span>
-                  {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
-                   csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
-                   csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
-                   csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : 'CSV'}
-                </button>
-                <input
-                  ref={csvImportRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={handleImportCSV}
-                />
-              </>
-            )}
-            <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
-              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
-                <span className="material-symbols-outlined text-[18px]">grid_view</span>
-              </button>
-              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
-                <span className="material-symbols-outlined text-[18px]">view_list</span>
-              </button>
+
+          {/* Row 2: Subtitle (Count under Title) & "Свържи съставки" Button */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-10 mr-2 flex-shrink-0" />
+              <span className="text-xs font-medium text-primary/70">
+                ({ingredients.length} {isBg ? 'въведени общо' : 'items total'})
+              </span>
             </div>
+            {(isAdmin || isOwner) && (
+              <button
+                onClick={handleSyncRecipeIngredients}
+                disabled={syncStatus === 'syncing'}
+                title={isBg ? 'Автоматично свързване на всички съставки в рецептите с техните ID-та (ingredient_id) от базата данни' : 'Sync all recipe ingredients with database IDs'}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-bold border ${
+                  syncStatus === 'syncing' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                  syncStatus === 'done'    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                  syncStatus === 'error'   ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                  'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20 shadow-sm'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {syncStatus === 'syncing' ? 'refresh' : syncStatus === 'done' ? 'check_circle' : syncStatus === 'error' ? 'error' : 'link'}
+                </span>
+                {syncStatus === 'syncing' ? (isBg ? 'Свързва...' : 'Syncing...') :
+                 syncStatus === 'done'    ? (isBg ? 'Готово!' : 'Done!') :
+                 syncStatus === 'error'   ? (isBg ? 'Грешка' : 'Error') : (isBg ? 'Свържи съставки' : 'Link Ingredients')}
+              </button>
+            )}
           </div>
         </div>
 

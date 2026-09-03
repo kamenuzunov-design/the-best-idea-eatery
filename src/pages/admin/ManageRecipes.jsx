@@ -824,77 +824,82 @@ const ManageRecipes = () => {
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 h-screen">
       <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 space-y-3">
-        {/* Row 1: Back, Title, Subtitle, and View Mode Toggle */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
-            <div className="flex items-baseline gap-2">
+        {/* Header Block: Row 1 (Back, Title, Buttons) & Row 2 (Spacer, Count) */}
+        <div className="flex flex-col space-y-0.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
+                <span className="material-symbols-outlined">arrow_back</span>
+              </button>
               <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Рецепти' : 'Recipes'}</h1>
-              <span className="text-xs font-medium text-primary/70">
-                ({recipes.length} {isBg ? 'въведени общо' : 'items total'})
-              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {isPowerUser && (
+                <button
+                  onClick={handleRecalculateTags}
+                  title={isBg ? 'Преизчисли Тагове' : 'Recalculate Tags'}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20"
+                >
+                  <span className="material-symbols-outlined text-[18px]">label</span>
+                  {isBg ? 'Тагове' : 'Tags'}
+                </button>
+              )}
+              {(isAdmin || isOwner) && (
+                <>
+                  <button
+                    onClick={handleExportCSV}
+                    title={isBg ? 'Експорт CSV' : 'Export CSV'}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-xs font-bold border border-emerald-500/20"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">download</span>
+                    CSV
+                  </button>
+                  <button
+                    onClick={() => csvImportRef.current?.click()}
+                    title={isBg ? 'Импорт CSV' : 'Import CSV'}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-bold border ${
+                      csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                      csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                      csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                      'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
+                       csvStatus === 'done'    ? 'check_circle' :
+                       csvStatus === 'error'   ? 'error' : 'upload'}
+                    </span>
+                    {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
+                     csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
+                     csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
+                     csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : 'CSV'}
+                  </button>
+                  <input
+                    ref={csvImportRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={handleImportCSV}
+                  />
+                </>
+              )}
+              <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
+                <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
+                  <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                </button>
+                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
+                  <span className="material-symbols-outlined text-[18px]">view_list</span>
+                </button>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {isPowerUser && (
-              <button
-                onClick={handleRecalculateTags}
-                title={isBg ? 'Преизчисли Тагове' : 'Recalculate Tags'}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20"
-              >
-                <span className="material-symbols-outlined text-[18px]">label</span>
-                {isBg ? 'Тагове' : 'Tags'}
-              </button>
-            )}
-            {(isAdmin || isOwner) && (
-              <>
-                <button
-                  onClick={handleExportCSV}
-                  title={isBg ? 'Експорт CSV' : 'Export CSV'}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-xs font-bold border border-emerald-500/20"
-                >
-                  <span className="material-symbols-outlined text-[18px]">download</span>
-                  CSV
-                </button>
-                <button
-                  onClick={() => csvImportRef.current?.click()}
-                  title={isBg ? 'Импорт CSV' : 'Import CSV'}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-bold border ${
-                    csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                    csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                    csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                    'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
-                     csvStatus === 'done'    ? 'check_circle' :
-                     csvStatus === 'error'   ? 'error' : 'upload'}
-                  </span>
-                  {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
-                   csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
-                   csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
-                   csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : 'CSV'}
-                </button>
-                <input
-                  ref={csvImportRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={handleImportCSV}
-                />
-              </>
-            )}
-            <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
-              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
-                <span className="material-symbols-outlined text-[18px]">grid_view</span>
-              </button>
-              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
-                <span className="material-symbols-outlined text-[18px]">view_list</span>
-              </button>
-            </div>
+
+          {/* Row 2: Empty position for back button + Count text under title */}
+          <div className="flex items-center">
+            <div className="w-10 mr-2 flex-shrink-0" />
+            <span className="text-xs font-medium text-primary/70">
+              ({recipes.length} {isBg ? 'въведени общо' : 'items total'})
+            </span>
           </div>
         </div>
 

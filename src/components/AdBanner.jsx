@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { collection, query, onSnapshot, limit, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useTranslation } from 'react-i18next';
@@ -55,6 +55,9 @@ const AdBanner = () => {
         return true;
       });
 
+      // Sort valid ads by Priority descending (10 > 9 > ... > 1)
+      validAds.sort((a, b) => (Number(b.priority) || 1) - (Number(a.priority) || 1));
+
       setActivePool(validAds);
 
       if (validAds.length === 0) {
@@ -68,15 +71,15 @@ const AdBanner = () => {
       const associatedCamp = firstCampId ? allCampaigns.find(c => c.id === firstCampId) : null;
       setActiveCampaign(associatedCamp);
 
-      const rotationType = associatedCamp?.rotationType || 'sequential';
+      const rotationType = associatedCamp?.rotationType || 'timer';
 
       if (rotationType === 'weighted') {
         // Weighted Random by Priority
-        const totalWeight = validAds.reduce((sum, a) => sum + Math.max(1, a.priority || 1), 0);
+        const totalWeight = validAds.reduce((sum, a) => sum + Math.max(1, Number(a.priority) || 1), 0);
         let rand = Math.random() * totalWeight;
         let chosen = validAds[0];
         for (const ad of validAds) {
-          const weight = Math.max(1, ad.priority || 1);
+          const weight = Math.max(1, Number(ad.priority) || 1);
           if (rand <= weight) {
             chosen = ad;
             break;
@@ -85,7 +88,7 @@ const AdBanner = () => {
         }
         setCurrentAd(chosen);
       } else {
-        // Sequential (Round-Robin)
+        // Sequential / Timer
         const lastIndex = parseInt(sessionStorage.getItem('ad_rotation_index') || '-1', 10);
         const nextIndex = (lastIndex + 1) % validAds.length;
         sessionStorage.setItem('ad_rotation_index', nextIndex.toString());
@@ -109,25 +112,38 @@ const AdBanner = () => {
     };
   }, []);
 
-  // 2. Handle Timer Carousel if active campaign specifies 'timer' rotation
+  // 2. Handle 10-Second Timer Carousel Rotation
+  const activePoolRef = useRef(activePool);
   useEffect(() => {
-    if (!activeCampaign || activeCampaign.rotationType !== 'timer' || activePool.length <= 1) {
+    activePoolRef.current = activePool;
+  }, [activePool]);
+
+  const activePoolKey = useMemo(() => {
+    return activePool.map(a => `${a.id}:${a.priority}`).join(',');
+  }, [activePool]);
+
+  useEffect(() => {
+    const pool = activePoolRef.current;
+    if (!activePoolKey || pool.length <= 1) {
       return;
     }
 
-    const intervalMs = Math.max(3, activeCampaign.timerIntervalSeconds || 10) * 1000;
+    const intervalMs = Math.max(3, activeCampaign?.timerIntervalSeconds || 10) * 1000;
 
     const timer = setInterval(() => {
+      const currentPool = activePoolRef.current;
+      if (currentPool.length <= 1) return;
+
       setCurrentAd(prev => {
-        if (!prev) return activePool[0];
-        const currentIndex = activePool.findIndex(a => a.id === prev.id);
-        const nextIndex = (currentIndex + 1) % activePool.length;
-        return activePool[nextIndex];
+        if (!prev) return currentPool[0];
+        const currentIndex = currentPool.findIndex(a => a.id === prev.id);
+        const nextIndex = (currentIndex + 1) % currentPool.length;
+        return currentPool[nextIndex];
       });
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [activeCampaign, activePool]);
+  }, [activePoolKey, activeCampaign]);
 
   // 3. Increment ViewsCount when an ad is displayed
   useEffect(() => {

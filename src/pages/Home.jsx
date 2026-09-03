@@ -3,10 +3,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, query, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getCuisineById } from '../data/cuisines';
-import { translateTag, getRecipeTags, normalizeMainGroup } from '../lib/recipeMetaUtils';
+import { translateTag, getRecipeTags, normalizeMainGroup, passesDietaryProfile } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
 import { getRecipeImageUrl } from '../lib/imageUtils';
 
@@ -41,6 +42,7 @@ const getPluralCategoryName = (id, lang) => {
 };
 
 const Home = () => {
+  const { user } = useAuth();
   const { pantry } = useAppContext();
   const { t, i18n } = useTranslation();
 
@@ -51,6 +53,7 @@ const Home = () => {
   const isBg = i18n.language === 'bg';
 
   const [realRecipes, setRealRecipes] = useState([]);
+  const [allPublicRecipes, setAllPublicRecipes] = useState([]);
   const [featuredRecipe, setFeaturedRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('newest'); // 'smart' | 'newest' | 'top' | 'popular'
@@ -196,7 +199,14 @@ const Home = () => {
           r.is_active !== false
         );
 
-        // 2. Apply search filter
+        setAllPublicRecipes(filtered);
+
+        // 1.5 Apply Dietary Profile Filter (diets, allergies, excluded foods) - ONLY when browsing (no search query)
+        if (!searchQuery && user?.preferences) {
+          filtered = filtered.filter(r => passesDietaryProfile(r, user.preferences, ingredientsList));
+        }
+
+        // 2. Apply search filter (When searching, show ALL matching recipes regardless of dietary profile)
         if (searchQuery) {
           const searchTerms = searchQuery.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
           if (searchTerms.length > 0) {
@@ -276,7 +286,7 @@ const Home = () => {
     );
 
     return () => unsub();
-  }, [activeTab, searchQuery, selectedCategory, authorFilter, authorNameFilter, pantry, ingredientsList, analyzeRecipe]); // Re-run when tab, search, category, pantry, ingredientsList or analyzeRecipe changes
+  }, [activeTab, searchQuery, selectedCategory, authorFilter, authorNameFilter, pantry, ingredientsList, analyzeRecipe, user]); // Re-run when tab, search, category, pantry, ingredientsList, analyzeRecipe or user changes
 
   useEffect(() => {
     // Fetch a featured recipe pool (up to 100) to select from
@@ -322,14 +332,25 @@ const Home = () => {
   const featuredTags = calculatedFeaturedTags.length > 0 ? calculatedFeaturedTags : (featuredRecipe?.tags || []);
 
   const top10Ingredients = useMemo(() => {
-    if (!showTop10 || !realRecipes.length || !ingredientsList.length) return [];
+    if (!showTop10 || !allPublicRecipes.length || !ingredientsList.length) return [];
     
     const usageCount = {};
-    realRecipes.forEach(recipe => {
-      if (recipe.ingredients) {
+    allPublicRecipes.forEach(recipe => {
+      if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
         const uniqueIds = new Set();
         recipe.ingredients.forEach(ing => {
-          if (ing.ingredient_id) uniqueIds.add(ing.ingredient_id);
+          let foundId = ing.ingredient_id || ing.id;
+          if (!foundId) {
+            const ingText = (ing.ingredient_bg || ing.name_bg || ing.ingredient_en || ing.name_en || '').trim().toLowerCase();
+            if (ingText) {
+              const matched = ingredientsList.find(dbI => 
+                (dbI.name_bg && dbI.name_bg.toLowerCase() === ingText) ||
+                (dbI.name_en && dbI.name_en.toLowerCase() === ingText)
+              );
+              if (matched) foundId = matched.id;
+            }
+          }
+          if (foundId) uniqueIds.add(foundId);
         });
         uniqueIds.forEach(id => {
           if (!usageCount[id]) usageCount[id] = 0;
@@ -341,28 +362,38 @@ const Home = () => {
     // 1. Map to DB ingredients and filter out invalid ones
     const allCounted = Object.keys(usageCount).map(id => {
       const dbIng = ingredientsList.find(i => i.id === id);
-      return {
+      return dbIng ? {
         ...dbIng,
         id,
         count: usageCount[id]
-      };
-    }).filter(i => i.name_bg || i.name_en);
+      } : null;
+    }).filter(i => i && (i.name_bg || i.name_en));
 
-    // 2. Filter out basic staples
+    // 2. Filter out basic staples (water, salt, sugar, flour, vinegar, spices, fats)
     const filtered = allCounted.filter(i => {
       const mainGroup = i.classification?.main_group || '';
-      const name = (i.name_bg || '').toLowerCase();
+      const nameBg = (i.name_bg || '').toLowerCase();
+      const nameEn = (i.name_en || '').toLowerCase();
       
       const normGroup = normalizeMainGroup(mainGroup);
       const isSpiceOrFat = normGroup === 'spices' || normGroup === 'fats';
-      const isBasicStaple = name.includes('вода') || name.includes('сол') || name.includes('захар') || name.includes('брашно') || name.includes('оцет');
+      const isBasicStaple = nameBg.includes('вода') || nameBg.includes('сол') || nameBg.includes('захар') || nameBg.includes('брашно') || nameBg.includes('оцет') || nameEn.includes('water') || nameEn.includes('salt') || nameEn.includes('sugar') || nameEn.includes('flour') || nameEn.includes('vinegar');
       
       return !(isSpiceOrFat || isBasicStaple);
     });
 
-    // 3. Sort by count and take top 12
+    // 3. Sort by count descending and take top 12
     return filtered.sort((a, b) => b.count - a.count).slice(0, 12);
-  }, [showTop10, realRecipes, ingredientsList]);
+  }, [showTop10, allPublicRecipes, ingredientsList]);
+
+  const handleIngredientClick = useCallback((ingName) => {
+    if (!ingName) return;
+    setSearchQuery(ingName);
+    setSearchParams({ search: ingName });
+    if (searchInputRef.current) {
+      searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [setSearchParams]);
 
   return (
     <div className="flex-1 pb-4">
@@ -630,11 +661,11 @@ const Home = () => {
           })}
         </div>
 
-        {realRecipes.length > 0 && (
+        {allPublicRecipes.length > 0 && (
           <div className="mt-8 px-2">
             <button 
               onClick={() => setShowTop10(!showTop10)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-dark border border-primary/20 text-primary font-bold hover:bg-primary/10 transition-colors shadow-md"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-dark border border-primary/20 text-primary font-bold hover:bg-primary/10 transition-colors shadow-md cursor-pointer"
             >
               <span className="material-symbols-outlined">{showTop10 ? 'expand_less' : 'workspace_premium'}</span>
               {isBg ? 'Най-използвани 12 продукта' : 'Top 12 Most Used Ingredients'}
@@ -642,20 +673,30 @@ const Home = () => {
 
             {showTop10 && (
               <div className="mt-4 grid grid-cols-3 gap-3 pb-4">
-                {top10Ingredients.map((ing, idx) => (
-                  <div key={ing.id} className="w-full bg-surface-dark/80 rounded-2xl p-2.5 border border-primary/10 flex flex-col items-center justify-center text-center shadow-lg relative">
-                    <div className="absolute -top-0.5 -left-0.5 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-[#b8860b] text-background-dark font-black text-[10px] flex items-center justify-center shadow-md border border-background-dark">
-                      {idx + 1}
-                    </div>
-                    <span className="material-symbols-outlined text-3xl text-primary/50 mb-2">{ing.icon || 'restaurant'}</span>
-                    <span className="text-slate-100 text-[11px] font-bold line-clamp-2 leading-tight h-8 flex items-center">
-                      {isBg ? (ing.name_bg || ing.name_en) : ing.name_en}
-                    </span>
-                    <span className="text-primary text-[10px] mt-1 font-bold bg-primary/10 px-2 py-0.5 rounded-full">
-                      {ing.count} {isBg ? 'рецепти' : 'recipes'}
-                    </span>
-                  </div>
-                ))}
+                {top10Ingredients.map((ing, idx) => {
+                  const ingName = isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg);
+                  return (
+                    <button
+                      key={ing.id}
+                      onClick={() => handleIngredientClick(ingName)}
+                      className="w-full bg-surface-dark/80 rounded-2xl p-2.5 border border-primary/10 flex flex-col items-center justify-center text-center shadow-lg relative hover:border-primary/50 hover:bg-primary/10 hover:scale-[1.03] transition-all cursor-pointer group"
+                      title={isBg ? `Търси рецепти с "${ingName}"` : `Search recipes with "${ingName}"`}
+                    >
+                      <div className="absolute -top-0.5 -left-0.5 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-[#b8860b] text-background-dark font-black text-[10px] flex items-center justify-center shadow-md border border-background-dark">
+                        {idx + 1}
+                      </div>
+                      <span className="material-symbols-outlined text-3xl text-primary/50 group-hover:text-primary mb-2 transition-colors">
+                        {ing.icon || 'restaurant'}
+                      </span>
+                      <span className="text-slate-100 group-hover:text-primary text-[11px] font-bold line-clamp-2 leading-tight h-8 flex items-center underline decoration-primary/30 group-hover:decoration-primary underline-offset-2 transition-colors">
+                        {ingName}
+                      </span>
+                      <span className="text-primary text-[10px] mt-1 font-bold bg-primary/10 group-hover:bg-primary/20 px-2 py-0.5 rounded-full transition-colors">
+                        {ing.count} {isBg ? 'рецепти' : 'recipes'}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

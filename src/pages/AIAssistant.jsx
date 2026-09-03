@@ -36,7 +36,33 @@ const AIAssistant = () => {
   const [showHelpGuide, setShowHelpGuide] = useState(false);
   const [customApiKey, setCustomApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
   
+  // Extra ingredients for Chef AI queries
+  const [extraIngredients, setExtraIngredients] = useState([]);
+  const [showExtraIngModal, setShowExtraIngModal] = useState(false);
+  const [extraIngSearch, setExtraIngSearch] = useState('');
+  
   const messagesEndRef = useRef(null);
+
+  const handleAddExtraIngredient = (item) => {
+    if (!item) return;
+    const name = typeof item === 'string' ? item.trim() : (item.nameBg || item.nameEn || item.name || '').trim();
+    if (!name) return;
+
+    const exists = extraIngredients.some(i => {
+      const existingName = typeof i === 'string' ? i : (i.nameBg || i.nameEn || i.name || '');
+      return existingName.toLowerCase() === name.toLowerCase();
+    });
+
+    if (!exists) {
+      setExtraIngredients(prev => [...prev, item]);
+    }
+    setExtraIngSearch('');
+    setShowExtraIngModal(false);
+  };
+
+  const handleRemoveExtraIngredient = (indexToRemove) => {
+    setExtraIngredients(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   // Helper to parse and render message text with bold segments and links
   const renderMessageText = (text) => {
@@ -208,12 +234,22 @@ const AIAssistant = () => {
           return pId && rId && pId === rId;
         });
 
-        if (pantryItem) {
+        const isExtraMatched = extraIngredients.some(extra => {
+          const extraName = (typeof extra === 'string' ? extra : (extra.nameBg || extra.nameEn || extra.id || '')).toLowerCase().trim();
+          const rId = String(reqIng.ingredient_id || reqIng.id || '').toLowerCase();
+          const rBg = String(reqIng.ingredient_bg || reqIng.name_bg || '').toLowerCase();
+          const rEn = String(reqIng.ingredient_en || reqIng.name_en || '').toLowerCase();
+          return (rId && rId === extraName) || (rBg && rBg.includes(extraName)) || (rEn && rEn.includes(extraName));
+        });
+
+        if (pantryItem || isExtraMatched) {
           matchedCount++;
-          // Check if expiring soon (<= 3 days)
-          const diff = new Date(pantryItem.expirationDate) - new Date();
-          const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
-          if (daysLeft <= 3) expiringUsed++;
+          if (pantryItem) {
+            // Check if expiring soon (<= 3 days)
+            const diff = new Date(pantryItem.expirationDate) - new Date();
+            const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            if (daysLeft <= 3) expiringUsed++;
+          }
         }
       });
 
@@ -337,10 +373,13 @@ const AIAssistant = () => {
       return handleLocalFallbackResponse(userMessage);
     }
 
+    const extraNamesStr = extraIngredients.map(i => isBg ? (i.nameBg || i.nameEn || i) : (i.nameEn || i.nameBg || i)).join(', ');
+
     const systemPrompt = `You are Chef AI, a world-class gourmet chef culinary assistant.
 Context of the user's kitchen:
 - User selected language: ${isBg ? 'Bulgarian' : 'English'}. Respond ONLY in this language!
 - Pantry items: ${pantry.map(p => `${isBg ? p.nameBg || p.name : p.name} (${p.quantity} ${p.unit}, expires: ${p.expirationDate})`).join(', ')}
+- Extra custom ingredients specified by user (not in pantry): ${extraNamesStr || 'None'}
 - Dietary profile: Diets: ${diets.join(', ') || 'None'}, Allergies: ${allergies.join(', ') || 'None'}, Excluded Ingredient IDs: ${exclusions.join(', ')}
 - Available recipes in our database:
 ${recipes.map(r => `- ${isBg ? r.title_bg : r.title_en} (Tags: ${getRecipeTags(r, ingredientsDB).join(', ')}, Prep time: ${(r.prep_time || 0) + (r.cook_time || 0)}m, Ingredients: ${r.ingredients?.map(i => isBg ? i.ingredient_bg || i.name_bg : i.ingredient_en || i.name_en).join(', ')})`).join('\n')}
@@ -350,7 +389,8 @@ Rules:
 2. Keep answers concise, helpful and full of gourmet chef wisdom.
 3. Recommend recipes from the list above when possible. Refer to them by their exact titles so the system can display clickable cards for them.
 4. If a recipe from the list does not fit the user's diets/allergies/exclusions, do NOT recommend it.
-5. If the user asks for generic advice or ingredients substitution, answer with professional chef expertise.`;
+5. If extra custom ingredients are provided, take them into account alongside pantry items when suggesting recipes.
+6. If the user asks for generic advice or ingredients substitution, answer with professional chef expertise.`;
 
     try {
       const response = await fetch(
@@ -418,7 +458,15 @@ Rules:
     setInputMessage('');
     setIsTyping(true);
 
-    const result = await sendToGemini(textToSend);
+    let effectivePrompt = textToSend;
+    if (extraIngredients.length > 0) {
+      const extraNamesStr = extraIngredients.map(i => isBg ? (i.nameBg || i.nameEn || i) : (i.nameEn || i.nameBg || i)).join(', ');
+      effectivePrompt += isBg 
+        ? ` (Допълнителни съставки за ястието: ${extraNamesStr})` 
+        : ` (Extra ingredients specified: ${extraNamesStr})`;
+    }
+
+    const result = await sendToGemini(effectivePrompt);
 
     setIsTyping(false);
     const chefMsg = {
@@ -617,6 +665,66 @@ Rules:
 
             {/* Input Bar & Suggestions chips */}
             <div className="p-4 bg-surface-dark border-t border-primary/20 space-y-3">
+              {/* Extra Custom Ingredients Bar */}
+              <div className="bg-background-dark/80 p-2.5 rounded-xl border border-primary/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                    <span className="material-symbols-outlined text-sm">post_add</span>
+                    <span>{isBg ? "Допълнителни съставки за Chef AI:" : "Extra Ingredients for Chef AI:"}</span>
+                  </div>
+                  <button
+                    onClick={() => setShowExtraIngModal(true)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-extrabold border border-primary/30 transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    <span>{isBg ? "Добави съставка" : "Add ingredient"}</span>
+                  </button>
+                </div>
+
+                {extraIngredients.length > 0 ? (
+                  <div className="space-y-2 pt-0.5">
+                    <div className="flex flex-wrap gap-1.5">
+                      {extraIngredients.map((item, idx) => {
+                        const name = typeof item === 'string' ? item : (isBg ? (item.nameBg || item.nameEn || item.name) : (item.nameEn || item.nameBg || item.name));
+                        return (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-sm"
+                          >
+                            <span>✨ {name}</span>
+                            <button
+                              onClick={() => handleRemoveExtraIngredient(idx)}
+                              className="hover:text-rose-400 text-slate-400 transition-colors cursor-pointer text-sm font-black"
+                              title={isBg ? "Премахни" : "Remove"}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const extraNamesStr = extraIngredients.map(i => isBg ? (i.nameBg || i.nameEn || i) : (i.nameEn || i.nameBg || i)).join(', ');
+                        const msg = isBg 
+                          ? `Предложи ми рецепти с включване на съставките: ${extraNamesStr}` 
+                          : `Suggest recipes including ingredients: ${extraNamesStr}`;
+                        handleSendMessage(msg);
+                      }}
+                      className="w-full mt-1 py-2 px-3 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm font-black">search</span>
+                      <span>{isBg ? "Потърси рецепти с тези съставки" : "Find recipes with these ingredients"}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-slate-500 italic">
+                    {isBg ? "Няма добавени извънредни съставки. Натиснете '+ Добави съставка' за да тествате с нови продукти." : "No extra ingredients added. Click '+ Add ingredient' to test with new items."}
+                  </p>
+                )}
+              </div>
+
               {/* Message Chips */}
               <div className="flex flex-col gap-2">
                 {/* Featured main prompt on top row */}
@@ -1004,6 +1112,106 @@ Rules:
               >
                 {isBg ? 'Затвори' : 'Close'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for adding extra ingredients to Chef AI */}
+      {showExtraIngModal && (
+        <div className="fixed inset-0 z-[110] bg-background-dark/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-dark border border-primary/30 w-full max-w-md rounded-2xl p-5 space-y-4 shadow-2xl animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-primary/10 pb-3">
+              <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                <span className="material-symbols-outlined">post_add</span>
+                <h3>{isBg ? "Добави съставка за Chef AI" : "Add extra ingredient for Chef AI"}</h3>
+              </div>
+              <button
+                onClick={() => { setShowExtraIngModal(false); setExtraIngSearch(''); }}
+                className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer rounded-lg"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300">
+                {isBg ? "Търси съставка в базата данни или я въведи:" : "Search ingredient in database or type it:"}
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder={isBg ? "напр. Авокадо, Сьомга, Нахут..." : "e.g. Avocado, Salmon, Chickpeas..."}
+                  value={extraIngSearch}
+                  onChange={(e) => setExtraIngSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && extraIngSearch.trim()) {
+                      handleAddExtraIngredient({ nameBg: extraIngSearch.trim(), nameEn: extraIngSearch.trim() });
+                    }
+                  }}
+                  className="w-full bg-background-dark border border-primary/30 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none"
+                />
+                {extraIngSearch.trim() && (
+                  <button
+                    onClick={() => handleAddExtraIngredient({ nameBg: extraIngSearch.trim(), nameEn: extraIngSearch.trim() })}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary text-background-dark text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                  >
+                    {isBg ? "Добави" : "Add"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Autocomplete list */}
+            {extraIngSearch.trim() && (
+              <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                {ingredientsDB
+                  .filter(ing => {
+                    const q = extraIngSearch.toLowerCase();
+                    const nameBg = (ing.name_bg || '').toLowerCase();
+                    const nameEn = (ing.name_en || '').toLowerCase();
+                    return nameBg.includes(q) || nameEn.includes(q);
+                  })
+                  .slice(0, 6)
+                  .map(ing => (
+                    <button
+                      key={ing.id}
+                      onClick={() => handleAddExtraIngredient({ id: ing.id, nameBg: ing.name_bg, nameEn: ing.name_en })}
+                      className="w-full text-left p-2.5 rounded-xl bg-background-dark/50 hover:bg-primary/10 border border-primary/10 hover:border-primary/30 flex items-center justify-between text-xs transition-colors cursor-pointer"
+                    >
+                      <span className="font-bold text-slate-100">{isBg ? ing.name_bg : ing.name_en}</span>
+                      <span className="text-[10px] text-primary font-bold">+ {isBg ? "Избери" : "Select"}</span>
+                    </button>
+                  ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-2 border-t border-primary/10">
+              <button
+                onClick={() => { setShowExtraIngModal(false); setExtraIngSearch(''); }}
+                className="px-4 py-2 rounded-xl bg-surface-dark border border-primary/20 text-slate-300 text-xs font-bold hover:bg-primary/10 transition-colors cursor-pointer"
+              >
+                {isBg ? "Затвори" : "Close"}
+              </button>
+
+              {extraIngredients.length > 0 && (
+                <button
+                  onClick={() => {
+                    setShowExtraIngModal(false);
+                    setExtraIngSearch('');
+                    const extraNamesStr = extraIngredients.map(i => isBg ? (i.nameBg || i.nameEn || i) : (i.nameEn || i.nameBg || i)).join(', ');
+                    const msg = isBg 
+                      ? `Предложи ми рецепти с включване на съставките: ${extraNamesStr}` 
+                      : `Suggest recipes including ingredients: ${extraNamesStr}`;
+                    handleSendMessage(msg);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm font-black">search</span>
+                  <span>{isBg ? "Потърси рецепти" : "Find recipes"}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -599,95 +599,122 @@ const SavedRecipes = () => {
             <span className="material-symbols-outlined animate-spin text-4xl text-primary">refresh</span>
           </div>
         ) : savedRecipes.length === 0 ? (
-          <div className="bg-surface-dark/50 backdrop-blur-sm border border-dashed border-primary/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
-            <span className="material-symbols-outlined text-4xl text-primary/40 mb-2">bookmark_border</span>
+          <div className="bg-surface-dark/50 backdrop-blur-sm border border-dashed border-primary/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-4 shadow-lg">
+            <span className="material-symbols-outlined text-5xl text-primary/40">bookmark_border</span>
             <p className="text-slate-400 text-sm font-medium">{isBg ? 'Нямате запазени рецепти.' : 'No saved recipes yet.'}</p>
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg active:scale-95 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm font-black">explore</span>
+              <span>{isBg ? 'Открий рецепти' : 'Discover recipes'}</span>
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5">
-            {savedRecipes.map(recipe => {
-              const title = isBg ? recipe.title_bg : recipe.title_en;
-              const prepTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
-              const difficulty = isBg ? (recipe.difficulty === 'easy' ? 'Лесно' : recipe.difficulty === 'hard' ? 'Трудно' : 'Средно') : (recipe.difficulty || 'medium');
-              const imageUrl = recipe.images?.main || "/placeholder.jpg";
-              const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
-              const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
-              const calculatedTags = getRecipeTags(recipe, ingredientsList);
-              const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-5">
+              {savedRecipes.map(recipe => {
+                const title = isBg ? recipe.title_bg : recipe.title_en;
+                const prepTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
+                const difficulty = isBg ? (recipe.difficulty === 'easy' ? 'Лесно' : recipe.difficulty === 'hard' ? 'Трудно' : 'Средно') : (recipe.difficulty || 'medium');
+                const imageUrl = recipe.images?.main || "/placeholder.jpg";
+                const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
+                const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
+                const calculatedTags = getRecipeTags(recipe, ingredientsList);
+                const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
 
-              return (
-                <div 
-                  key={recipe.id}
-                  onClick={() => navigate(`/recipe/${recipe.id}`)}
-                  className="bg-surface-dark/90 backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:border-primary/50 transition-colors flex flex-col group cursor-pointer"
-                >
-                  <div className="flex h-auto min-h-[10rem]">
-                    <div className="w-[35%] overflow-hidden relative bg-slate-900">
-                      <img 
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-80 group-hover:opacity-100" 
-                        alt={title} 
-                        src={imageUrl}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/placeholder.jpg';
-                        }}
-                      />
-                    </div>
-                    <div className="w-[65%] p-4 flex flex-col justify-between relative">
-                      <div>
-                        <h4 className="text-slate-100 font-bold text-lg leading-tight line-clamp-1">{title}</h4>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[9px] font-bold uppercase tracking-tighter shadow-md">
-                            {cuisineName}
-                          </span>
-                          {tags.map(tag => (
-                            <span key={tag} className="px-1.5 py-0.5 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[9px] font-bold uppercase tracking-tighter shadow-md">
-                              {translateTag(tag, isBg)}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1.5 font-medium flex-wrap">
-                          <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded"><span className="material-symbols-outlined text-[13px] text-primary">schedule</span> {prepTime}m</span>
-                          <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded"><span className="material-symbols-outlined text-[13px] text-primary">local_fire_department</span> {difficulty}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1.5 font-medium flex-wrap">
-                          <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded text-primary">
-                            <span className="material-symbols-outlined text-[13px] fill-[1]">star</span> 
-                            {(recipe.rating || 0).toFixed(1)} ({recipe.votes_count || 0})
-                          </span>
-                          {calculateEstimatedPrice(recipe, ingredientsList) && (
-                            <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded">
-                              <span className="material-symbols-outlined text-[13px]">payments</span>
-                              <span>~{calculateEstimatedPrice(recipe, ingredientsList)} {isBg ? 'Евро' : 'EUR'}</span>
-                            </span>
-                          )}
-                          {recipe.video_url && (
-                            <span className="flex items-center gap-1 bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded">
-                              <span className="material-symbols-outlined text-[13px]">play_circle</span>
-                              <span>{isBg ? 'Видео' : 'Video'}</span>
-                            </span>
-                          )}
-                        </div>
+                return (
+                  <div 
+                    key={recipe.id}
+                    onClick={() => navigate(`/recipe/${recipe.id}`)}
+                    className="bg-surface-dark/90 backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:border-primary/50 transition-colors flex flex-col group cursor-pointer"
+                  >
+                    <div className="flex h-auto min-h-[10rem]">
+                      <div className="w-[35%] overflow-hidden relative bg-slate-900">
+                        <img 
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-80 group-hover:opacity-100" 
+                          alt={title} 
+                          src={imageUrl}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/placeholder.jpg';
+                          }}
+                        />
                       </div>
+                      <div className="w-[65%] p-4 flex flex-col justify-between relative">
+                        <div>
+                          <h4 className="text-slate-100 font-bold text-lg leading-tight line-clamp-1">{title}</h4>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[9px] font-bold uppercase tracking-tighter shadow-md">
+                              {cuisineName}
+                            </span>
+                            {tags.map(tag => (
+                              <span key={tag} className="px-1.5 py-0.5 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[9px] font-bold uppercase tracking-tighter shadow-md">
+                                {translateTag(tag, isBg)}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1.5 font-medium flex-wrap">
+                            <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded"><span className="material-symbols-outlined text-[13px] text-primary">schedule</span> {prepTime}m</span>
+                            <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded"><span className="material-symbols-outlined text-[13px] text-primary">local_fire_department</span> {difficulty}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1.5 font-medium flex-wrap">
+                            <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded text-primary">
+                              <span className="material-symbols-outlined text-[13px] fill-[1]">star</span> 
+                              {(recipe.rating || 0).toFixed(1)} ({recipe.votes_count || 0})
+                            </span>
+                            {calculateEstimatedPrice(recipe, ingredientsList) && (
+                              <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded">
+                                <span className="material-symbols-outlined text-[13px]">payments</span>
+                                <span>~{calculateEstimatedPrice(recipe, ingredientsList)} {isBg ? 'Евро' : 'EUR'}</span>
+                              </span>
+                            )}
+                            {recipe.video_url && (
+                              <span className="flex items-center gap-1 bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded">
+                                <span className="material-symbols-outlined text-[13px]">play_circle</span>
+                                <span>{isBg ? 'Видео' : 'Video'}</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                      <div className="flex items-center justify-end mt-auto pt-1">
-                        <button 
-                          onClick={(e) => handleUnsave(e, recipe.id)}
-                          className="size-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-lg shadow-rose-500/10 hover:bg-rose-500 hover:text-white active:scale-95 transition-all"
-                          title={isBg ? 'Премахни от запазени' : 'Remove from saved'}
-                        >
-                          <span className="material-symbols-outlined text-sm font-bold">delete</span>
-                        </button>
+                        <div className="flex items-center justify-end mt-auto pt-1">
+                          <button 
+                            onClick={(e) => handleUnsave(e, recipe.id)}
+                            className="size-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-lg shadow-rose-500/10 hover:bg-rose-500 hover:text-white active:scale-95 transition-all"
+                            title={isBg ? 'Премахни от запазени' : 'Remove from saved'}
+                          >
+                            <span className="material-symbols-outlined text-sm font-bold">delete</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            {/* Bottom Navigation Buttons */}
+            <div className="pt-2 flex flex-col gap-3">
+              <button
+                onClick={() => navigate('/')}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base font-black">explore</span>
+                <span>{isBg ? 'Открий още рецепти' : 'Discover More Recipes'}</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/ai-assistant')}
+                className="w-full py-3 px-4 rounded-xl bg-surface-dark border border-primary/30 text-primary font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:bg-primary/10 transition-all cursor-pointer active:scale-[0.98]"
+              >
+                <span className="material-symbols-outlined text-base">smart_toy</span>
+                <span>{isBg ? 'Попитай Chef AI' : 'Ask Chef AI'}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
-
     </div>
   );
 };

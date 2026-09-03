@@ -37,13 +37,14 @@ const RecipeDetail = () => {
   // Native Ads & Campaign State
   const [nativeAds, setNativeAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
-  const [currentAdId, setCurrentAdId] = useState(null);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const trackedNativeAds = useRef(new Set());
 
-  // 1. Real-time Listeners for Native Ads & Campaigns
+  // 1. Real-time Listeners for Native Ads, Campaigns & Ingredients
   useEffect(() => {
     const qAds = query(collection(db, 'ads'), where('type', '==', 'native'), where('isActive', '==', true));
     const qCampaigns = query(collection(db, 'campaigns'));
+    const qIngredients = query(collection(db, 'ingredients'));
 
     const unsubAds = onSnapshot(qAds, (snap) => {
       setNativeAds(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -53,13 +54,18 @@ const RecipeDetail = () => {
       setCampaigns(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (err) => console.warn("Campaigns listener error:", err.message));
 
+    const unsubIngredients = onSnapshot(qIngredients, (snap) => {
+      setIngredientsList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.warn("Ingredients listener error:", err.message));
+
     return () => {
       unsubAds();
       unsubCampaigns();
+      unsubIngredients();
     };
   }, []);
 
-  // 2. Compute Active & Valid Matching Native Ads (Sorted by Priority Descending)
+  // 2. Compute Active & Valid Matching Native Ads (Sorted by Priority Descending: 10 -> 1)
   const matchingList = useMemo(() => {
     if (!recipe?.ingredients || nativeAds.length === 0) return [];
 
@@ -77,12 +83,14 @@ const RecipeDetail = () => {
 
       if (ad.campaignId) {
         const campaign = campaigns.find(c => c.id === ad.campaignId);
-        if (!campaign || !campaign.isActive) return false;
-        const campStart = campaign.startDate || '0000-00-00';
-        const campEnd = campaign.endDate || '9999-99-99';
-        if (now < campStart || now > campEnd) return false;
-        if (campaign.maxViews > 0 && (campaign.viewsCount || 0) >= campaign.maxViews) return false;
-        if (campaign.maxClicks > 0 && (campaign.clicksCount || 0) >= campaign.maxClicks) return false;
+        if (campaign) {
+          if (!campaign.isActive) return false;
+          const campStart = campaign.startDate || '0000-00-00';
+          const campEnd = campaign.endDate || '9999-99-99';
+          if (now < campStart || now > campEnd) return false;
+          if (campaign.maxViews > 0 && (campaign.viewsCount || 0) >= campaign.maxViews) return false;
+          if (campaign.maxClicks > 0 && (campaign.clicksCount || 0) >= campaign.maxClicks) return false;
+        }
       }
 
       return true;
@@ -93,33 +101,88 @@ const RecipeDetail = () => {
       let matchedIdx = -1;
       let isMatched = false;
 
-      let keywords = [];
-      if (Array.isArray(ad.targetKeywords)) {
-        keywords = ad.targetKeywords;
-      } else if (typeof ad.targetKeywords === 'string' && ad.targetKeywords.trim()) {
-        keywords = ad.targetKeywords.split(',').map(k => k.trim());
-      }
+      // Collect all target Slug (IDs) from the Ad
+      const adTargetSlugs = [
+        ...(Array.isArray(ad.targetIngredientIds) ? ad.targetIngredientIds : []),
+        ...(Array.isArray(ad.targetKeywords) ? ad.targetKeywords : (typeof ad.targetKeywords === 'string' ? ad.targetKeywords.split(',') : []))
+      ].map(s => {
+        // If string contains "(slug)", extract the slug inside parentheses
+        const match = String(s).match(/\(([^)]+)\)/);
+        return (match ? match[1] : String(s)).trim().toLowerCase();
+      }).filter(Boolean);
 
-      if (keywords.length > 0) {
+      // Map any Bulgarian/English target ingredient names to their master ingredient slug/id
+      ingredientsList.forEach(dbI => {
+        const bg = (dbI.name_bg || '').trim().toLowerCase();
+        const en = (dbI.name_en || '').trim().toLowerCase();
+        const docId = String(dbI.id || '').trim().toLowerCase();
+        const slug = String(dbI.slug || '').trim().toLowerCase();
+
+        if (adTargetSlugs.some(target => target === bg || target === en || target === docId || target === slug)) {
+          if (slug && !adTargetSlugs.includes(slug)) adTargetSlugs.push(slug);
+          if (docId && !adTargetSlugs.includes(docId)) adTargetSlugs.push(docId);
+        }
+      });
+
+      if (adTargetSlugs.length > 0) {
+        // Match strictly within recipe.ingredients list (never description or steps)
         for (let i = 0; i < recipe.ingredients.length; i++) {
           const ing = recipe.ingredients[i];
-          const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
-          const ingNameBg = (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id || '').toLowerCase();
-          const ingNameEn = (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id || '').toLowerCase();
+          const recId = String(ing.ingredient_id || ing.id || '').trim().toLowerCase();
+          const recSlug = String(ing.slug || '').trim().toLowerCase();
+          const ingBg = String(ing.ingredient_bg || ing.name_bg || '').trim().toLowerCase();
+          const ingEn = String(ing.ingredient_en || ing.name_en || '').trim().toLowerCase();
 
-          const hasMatch = keywords.some(kw => {
-            const cleanKw = kw.toLowerCase().trim();
-            return cleanKw && (ingNameBg.includes(cleanKw) || ingNameEn.includes(cleanKw));
+          // Find corresponding ingredient from ingredientsList
+          const dbIng = ingredientsList.find(d => {
+            const dId = String(d.id || '').trim().toLowerCase();
+            const dSlug = String(d.slug || '').trim().toLowerCase();
+            const dNameBg = (d.name_bg || '').trim().toLowerCase();
+            const dNameEn = (d.name_en || '').trim().toLowerCase();
+
+            return (recId && (dId === recId || dSlug === recId)) ||
+                   (recSlug && (dId === recSlug || dSlug === recSlug)) ||
+                   (ingBg && (dNameBg === ingBg || dId === ingBg || dSlug === ingBg)) ||
+                   (ingEn && (dNameEn === ingEn || dId === ingEn || dSlug === ingEn));
           });
 
-          if (hasMatch) {
+          // All possible Slug (ID) representations for this recipe ingredient
+          const ingredientSlugsAndIds = [
+            recId,
+            recSlug,
+            dbIng?.id?.toLowerCase(),
+            dbIng?.slug?.toLowerCase()
+          ].filter(Boolean);
+
+          // 1. Exact match on Slug (ID)
+          const isSlugMatch = adTargetSlugs.some(targetSlug => {
+            return ingredientSlugsAndIds.some(candidate => {
+              return candidate === targetSlug || 
+                     candidate.includes(targetSlug) || 
+                     targetSlug.includes(candidate);
+            });
+          });
+
+          // 2. Direct text / name fallback match
+          const adRawTexts = [
+            ...(Array.isArray(ad.targetKeywords) ? ad.targetKeywords : []),
+            ...(Array.isArray(ad.targetIngredientIds) ? ad.targetIngredientIds : [])
+          ].map(k => String(k).replace(/\([^)]*\)/g, '').trim().toLowerCase()).filter(Boolean);
+
+          const isTextMatch = adRawTexts.some(kw => {
+            if (!kw) return false;
+            return (ingBg && (ingBg.includes(kw) || kw.includes(ingBg))) ||
+                   (ingEn && (ingEn.includes(kw) || kw.includes(ingEn)));
+          });
+
+          if (isSlugMatch || isTextMatch) {
             matchedIdx = i;
             isMatched = true;
             break;
           }
         }
       } else {
-        // Fallback for native ads without specific keywords
+        // Fallback for native ads without any target criteria
         matchedIdx = 0;
         isMatched = true;
       }
@@ -134,84 +197,111 @@ const RecipeDetail = () => {
     });
 
     // Sort matching ads by Priority (higher number = higher priority: 10 > 9 > ... > 1)
-    matches.sort((a, b) => (b.priority || 1) - (a.priority || 1));
+    // If priorities are equal, sort newest first (createdAt descending)
+    matches.sort((a, b) => {
+      const pA = Number(a.ad.priority) || 1;
+      const pB = Number(b.ad.priority) || 1;
+      if (pB !== pA) return pB - pA;
+      const tA = a.ad.createdAt?.seconds || 0;
+      const tB = b.ad.createdAt?.seconds || 0;
+      return tB - tA;
+    });
 
     return matches;
   }, [recipe, nativeAds, campaigns, ingredientsList]);
 
-  // Unique key of matching ad IDs to prevent re-initializing initial selection on non-ad re-renders
-  const matchingKey = useMemo(() => {
-    return matchingList.map(m => m.ad.id).join(',');
+  // Keep a ref always in sync with latest matchingList
+  const matchingListRef = useRef(matchingList);
+  useEffect(() => {
+    matchingListRef.current = matchingList;
   }, [matchingList]);
 
-  // 3. Handle Initial Ad Selection (runs ONCE when matching ad IDs change)
+  // Stable key of matching ad IDs and priorities to prevent reset when viewsCount updates
+  const matchingKey = useMemo(() => {
+    return matchingList.map(m => `${m.ad.id}:${m.priority}`).join(',');
+  }, [matchingList]);
+
+  // 3. Initial Ad Selection based on Rotation Model (runs on recipe load or ads pool change)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!matchingKey || matchingList.length === 0) {
-        setCurrentAdId(null);
+      const activeList = matchingListRef.current;
+      if (activeList.length === 0) {
+        setCurrentAdIndex(0);
         return;
       }
 
-      const firstCampId = matchingList[0]?.ad?.campaignId;
+      const firstCampId = activeList[0]?.ad?.campaignId;
       const associatedCamp = firstCampId ? campaigns.find(c => c.id === firstCampId) : null;
-      const rotationType = associatedCamp?.rotationType || 'sequential';
-
-      let initialAdId = matchingList[0].ad.id;
+      const rotationType = associatedCamp?.rotationType || 'timer';
 
       if (rotationType === 'weighted') {
-        const totalWeight = matchingList.reduce((sum, item) => sum + Math.max(1, item.priority), 0);
+        // Weighted Random by Priority (1-10)
+        const totalWeight = activeList.reduce((sum, item) => sum + Math.max(1, Number(item.ad.priority) || 1), 0);
         let rand = Math.random() * totalWeight;
-        for (const item of matchingList) {
-          const weight = Math.max(1, item.priority);
+        let chosenIdx = 0;
+        for (let i = 0; i < activeList.length; i++) {
+          const weight = Math.max(1, Number(activeList[i].ad.priority) || 1);
           if (rand <= weight) {
-            initialAdId = item.ad.id;
+            chosenIdx = i;
             break;
           }
           rand -= weight;
         }
+        setCurrentAdIndex(chosenIdx);
       } else if (rotationType === 'sequential') {
+        // Sequential (Round-Robin on each recipe load)
         const storageKey = `native_ad_rot_${recipe?.id || 'global'}`;
         const lastIdx = parseInt(sessionStorage.getItem(storageKey) || '-1', 10);
-        const nextIdx = (lastIdx + 1) % matchingList.length;
+        const nextIdx = (lastIdx + 1) % activeList.length;
         sessionStorage.setItem(storageKey, nextIdx.toString());
-        initialAdId = matchingList[nextIdx].ad.id;
+        setCurrentAdIndex(nextIdx);
+      } else {
+        // 'timer' or default -> start with highest priority (index 0)
+        setCurrentAdIndex(0);
       }
-
-      setCurrentAdId(initialAdId);
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [matchingKey, recipe?.id, matchingList, campaigns]);
+  }, [matchingKey, recipe?.id, campaigns]);
 
-  // 4. Handle 10-Second Timer Carousel Rotation
+  // 4. Handle Timer Carousel Rotation (Cycles every 10s or campaign timerIntervalSeconds)
   useEffect(() => {
-    if (!matchingKey || matchingList.length <= 1) return;
+    const activeList = matchingListRef.current;
+    if (activeList.length <= 1) return;
 
-    const firstCampId = matchingList[0]?.ad?.campaignId;
+    const firstCampId = activeList[0]?.ad?.campaignId;
     const associatedCamp = firstCampId ? campaigns.find(c => c.id === firstCampId) : null;
+    const rotationType = associatedCamp?.rotationType || 'timer';
+
+    // Only run interval if rotationType is 'timer' or not set (standalone ads default to timer)
+    if (associatedCamp && rotationType !== 'timer') return;
+
     const timerInterval = Math.max(3, associatedCamp?.timerIntervalSeconds || 10) * 1000;
 
     const timer = setInterval(() => {
-      setCurrentAdId(prevId => {
-        const curIdx = matchingList.findIndex(m => m.ad.id === prevId);
-        const nextIdx = (curIdx + 1) % matchingList.length;
+      const currentList = matchingListRef.current;
+      if (currentList.length <= 1) return;
+
+      setCurrentAdIndex(prevIdx => {
+        const nextIdx = (prevIdx + 1) % currentList.length;
         const storageKey = `native_ad_rot_${recipe?.id || 'global'}`;
         sessionStorage.setItem(storageKey, nextIdx.toString());
-        return matchingList[nextIdx].ad.id;
+        return nextIdx;
       });
     }, timerInterval);
 
     return () => clearInterval(timer);
-  }, [matchingKey, matchingList, recipe?.id, campaigns]);
+  }, [matchingKey, recipe?.id, campaigns]);
 
   // Derived current matched ad & index
   const currentMatchingItem = useMemo(() => {
-    if (!currentAdId || matchingList.length === 0) return null;
-    return matchingList.find(m => m.ad.id === currentAdId) || matchingList[0];
-  }, [currentAdId, matchingList]);
+    if (matchingList.length === 0) return null;
+    return matchingList[currentAdIndex % matchingList.length] || matchingList[0];
+  }, [currentAdIndex, matchingList]);
 
   const matchedAd = currentMatchingItem?.ad || null;
-  const matchedIngredientIdx = currentMatchingItem?.ingredientIdx ?? -1;
+  const rawIngredientIdx = currentMatchingItem?.ingredientIdx ?? 0;
+  const matchedIngredientIdx = Math.min(Math.max(0, rawIngredientIdx), Math.max(0, (recipe?.ingredients?.length || 1) - 1));
 
   // 5. Increment ViewsCount when an ad is displayed
   useEffect(() => {

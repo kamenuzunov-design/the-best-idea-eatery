@@ -3,6 +3,20 @@
 ## Текуща задача
 Изпълнение на козметични подобрения по визуалните елементи на приложението.
 
+## Изпълнени наскоро задачи (3 Септември 2026)
+- **Свързване и съпоставяне на нативни реклами строго по `Slug (ID)` само в съставките ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx) & [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+  - Въведено прецизно съпоставяне единствено в списъка със съставки (`recipe.ingredients`), игнорирайки описанията и стъпките.
+  - Съпоставянето работи стриктно чрез уникалния `Slug (ID)` на съставката (напр. `zehtin-ekstra-vardzhin`), видим и в панела за управление на рекламите.
+  - Поддържа се плавна ротация (10 сек. карусел, последователна Round-Robin и претеглена по приоритет 1-10) без смущения от брояча на импресии.
+- **Бутони за навигация в "Запазени" ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx))**:
+  - Добавени вертикално разположени бутони под запазените рецепти: 1. **`🔍 Открий още рецепти`** (препращащ към каталога) и 2. под него **`🤖 Попитай Chef AI`** (препращащ към AI асистента).
+- **Допълнителни съставки за Chef AI ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+  - Имплементирана нова функционалност за динамично добавяне на допълнителни съставки за Chef AI (извън дигиталния килер), с модал за автоматично търсене в базата данни, златист бутон **`🔍 Потърси рецепти с тези съставки`** и пълна интеграция с Gemini 3.5 Flash API и офлайн алгоритъма.
+- **Автоматично филтриране по Диетичен Профил в рецептите ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx) & [recipeMetaUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMetaUtils.js))**:
+  - Имплементирано интелигентно филтриране по диетичен профил (Диети, Алергени, Изключени съставки), което скрива непрепоръчителни рецепти при свободно разглеждане, но се байпасира автоматично при конкретно търсене (напр. търсене на "телешко"), показващо всички намерени съвпадения.
+- **Автоматична миграция и 2-редов хедър в Управление на продукти ([ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx))**:
+  - Заглавният блок е преструктуриран на 2 реда (Ред 1: Стрелка назад, "Продукти", CSV и изглед; Ред 2: Подравнен брой въведени продукти отляво и бутон **`🔗 Свържи съставки`** отдясно).
+
 ## Изпълнени наскоро задачи (29 Август 2026)
 - **Обединяване на Профила на готвача с новия макет за "Прогрес" ([CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx) & [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
   - Страницата `/profile/progress` вече е динамичен профил на готвача, поддържащ както текущо влезлия потребител, така и конкретен готвач през `?uid=USER_ID`.
