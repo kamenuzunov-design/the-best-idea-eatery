@@ -2,37 +2,34 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 29 Август 2026 (Край на сесията)
+## Последна сесия: 3 Септември 2026 (Край на сесията)
 
 ### Извършена работа:
-1. **Обединяване на Профила на готвача с "Прогрес" (`/profile/progress`)** ([CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx) & [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx)):
-   - Трансформирахме страницата `/profile/progress` в пълен, динамичен кулинарен профил, работещ за текущия потребител и за всеки друг готвач през `?uid=USER_ID`.
-   - Динамично извличане от Firestore: аватар с верификация, титла, репутация, ниво/XP, брой рецепти, общи часове опит, съставки и скорошни шедьоври с реални изображения (`getRecipeImageUrl`), рейтинг и общо времетраене.
-   - Синхронизиране на секцията за автор в `RecipeDetail.jsx` с директно пренасочване към `/profile/progress?uid=PUBLISHER_ID`.
+1. **Нативни реклами – Свързване строго по `Slug (ID)` и Ротация** ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx) & [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx)):
+   - Изборът на целеви продукти за нативна реклама се извършва структурирано само от съществуващите продукти в базата данни с видим `Slug (ID)`. Премахнат е свободният текст.
+   - В [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx) съпоставянето се извършва единствено в съставките на рецептата (`recipe.ingredients`), игнорирайки описанията и стъпките.
+   - Отстранен конфликтът с циклично рендиране при брояча на импресии. Ротацията (10 сек. таймер, последователна Round-Robin и по приоритет 1-10) работи напълно стабилно.
+   - Добавена видима индикация за период на валидност и червен предупредителен етикет „ИЗТЕКЛА“ на всяка рекламна карта в `/admin/ads`.
 
-2. **Централизирана Система за Постижения и Медали** ([achievements.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/achievements.js)):
-   - Пълен каталог с медали за **всички 10 категории рецепти** (Салати, Супи, Предястия, Основни, Десерти, Тестени, Напитки, Сос/Марината, Закуска, Специален повод), готвене в режим Готвач и общност/последователи.
-   - Показване в **решетка по 3 на ред (`grid-cols-3`)**. Отключените медали са златисти (`✓`), заключените – полупрозрачно сиви (`🔒`).
-   - Добавен интерактивен модален прозорец с детайлни изисквания и прогрес бар при кликване.
+2. **Динамични допълнителни съставки за Chef AI** ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx)):
+   - Добавена възможност за въвеждане на съставки извън килера чрез модал за търсене в базата данни и бутон за моментално генериране на рецепти.
 
-3. **Оптимизации в Режим "Започни готвене"** ([CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx)):
-   - Поправено начално време за стъпка 1.
-   - Преминаване към 2-колонен изглед на стъпките с фин контур в цвета на активната стъпка.
-   - Премахнато дублиращо се номериране ("1. Стъпка 1" -> "Стъпка 1").
+3. **Автоматично филтриране по Диетичен профил** ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx) & [recipeMetaUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMetaUtils.js)):
+   - Началната страница филтрира рецептите спрямо алергените и диетите на потребителя, като при изрично търсене филтърът се байпасира автоматично.
 
-4. **Супер-бърз Избор на Съставки при Рецепти & Реклами** ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) & [ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx)):
-   - Кликваеми реклами (снимки, заглавия) и кампании за директно отваряне на модалите за редактиране.
-   - Нов бърз модален прозорец за търсене на съставки в реално време с авто-фокус и автоматично филтриране на мерни единици.
+4. **Бутони за навигация в "Запазени"** ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx)):
+   - Разположени вертикално бутони *„Открий още рецепти“* и *„Попитай Chef AI“*.
 
-5. **Обява/Покана за Тестване**:
-   - Подготвена пълна, грабваща покана за колеги и приятели (за социални мрежи, имейли и съобщения).
+5. **Качване на живо в GitHub и Firebase Hosting**:
+   - Всички промени са комитнати и пушнати в GitHub (клон `feat/dashboard-and-auth`).
+   - Деплойвано в продукция: [https://bestideaeatery.app](https://bestideaeatery.app) / [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app).
 
 ---
 
 ## ТЕКУЩ ПРИОРИТЕТ ЗА СЛЕДВАЩАТА СЕСИЯ:
-- Обратна връзка и тестване от външни потребители, поканени чрез обявата.
+- Избор и реализация на следващ модул от беклога (напр. **Гурме общество / Социална емисия** `GourmetCommunity.jsx` или **Седмичен плановик** `WeeklyMenuPlanner.jsx`).
 
 ## Важна информация:
 - **Production URL**: [https://bestideaeatery.app](https://bestideaeatery.app) / [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app)
-- **GitHub Repository**: `kamenuzunov-design/the-best-idea-eatery`
+- **GitHub Repository**: `kamenuzunov-design/the-best-idea-eatery` (branch `feat/dashboard-and-auth`)
 
