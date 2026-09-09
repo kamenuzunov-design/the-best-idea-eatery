@@ -113,11 +113,48 @@ const ManageIngredients = () => {
 
   const handleSaveIngredient = async (e) => {
     e.preventDefault();
-    if (!nameBg || !nameEn || !slug) return;
+    const isEn = i18n.language === 'en';
+    if (isEn) {
+      if (!nameEn || !slug) return;
+    } else {
+      if (!nameBg || !nameEn || !slug) return;
+    }
 
     try {
+      const originalIng = editingId ? ingredients.find(i => i.id === editingId) : null;
+      let finalNameBg = nameBg;
+      let needsTranslation = false;
+      let translationReason = null;
+
+      if (isEn) {
+        if (!editingId) {
+          finalNameBg = nameBg || `[за превод] ${nameEn}`;
+          needsTranslation = true;
+          translationReason = 'new';
+        } else {
+          // Editing in English: Option A - preserve existing Bulgarian translation
+          const origNameBg = originalIng?.name_bg || '';
+          finalNameBg = origNameBg || `[за превод] ${nameEn}`;
+          const enNameChanged = originalIng && originalIng.name_en !== nameEn;
+          if (enNameChanged || originalIng?.needs_translation) {
+            needsTranslation = true;
+            translationReason = enNameChanged ? 'en_edited' : (originalIng?.translation_reason || 'pending');
+          }
+        }
+      } else {
+        // Non-EN (e.g. BG) user editing
+        finalNameBg = nameBg;
+        if (!nameBg || nameBg.includes('[за превод]')) {
+          needsTranslation = true;
+          translationReason = originalIng?.translation_reason || 'pending';
+        } else {
+          needsTranslation = false;
+          translationReason = null;
+        }
+      }
+
       const ingredientData = {
-        name_bg: nameBg,
+        name_bg: finalNameBg,
         name_en: nameEn,
         slug: slug,
         classification: {
@@ -140,6 +177,8 @@ const ManageIngredients = () => {
         },
         price_per_100: parseFloat(pricePer100) || 0,
         currency: 'EUR',
+        needs_translation: needsTranslation,
+        translation_reason: translationReason,
         updatedAt: new Date().toISOString()
       };
 
@@ -839,14 +878,16 @@ const ManageIngredients = () => {
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className={i18n.language === 'en' ? "col-span-2" : ""}>
               <label className="text-xs text-slate-400">{isBg ? 'Име (EN) *' : 'Name (EN) *'}</label>
               <input value={nameEn} onChange={handleNameEnChange} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Tomato" />
             </div>
-            <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Име (BG) *' : 'Name (BG) *'}</label>
-              <input value={nameBg} onChange={(e) => setNameBg(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Домат" />
-            </div>
+            {i18n.language !== 'en' && (
+              <div>
+                <label className="text-xs text-slate-400">{isBg ? 'Име (BG) *' : 'Name (BG) *'}</label>
+                <input value={nameBg} onChange={(e) => setNameBg(e.target.value)} required={i18n.language !== 'en'} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Домат" />
+              </div>
+            )}
             <div className="col-span-2">
               <label className="text-xs text-slate-400">{isBg ? 'Slug (ID) *' : 'Slug (ID) *'}</label>
               <div className="flex gap-4 items-center">
@@ -1052,7 +1093,12 @@ const ManageIngredients = () => {
                               {!isActive && !isDeleted && <div className="absolute -top-1 -right-1 size-3 bg-amber-500 rounded-full border-2 border-background-dark"></div>}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 onClick={() => handleEditClick(ing)} className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors">
+                              <h4 onClick={() => handleEditClick(ing)} className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors flex items-center gap-1.5">
+                                {ing.needs_translation && (
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold shrink-0">
+                                    {isBg ? 'ПРЕВОД' : 'TRANS'}
+                                  </span>
+                                )}
                                 {ingName}
                               </h4>
                               <div className="flex flex-wrap gap-1 text-[10px] text-slate-400 mt-1 items-center">
@@ -1082,8 +1128,13 @@ const ManageIngredients = () => {
                           return (
                             <tr key={ing.id} className={`border-b border-primary/5 hover:bg-primary/5 transition-colors ${isDeleted ? 'opacity-60' : !isActive ? 'opacity-75' : ''}`}>
                               <td className="px-3 py-2 w-full">
-                                <button onClick={() => handleEditClick(ing)} className="font-bold text-slate-200 hover:text-primary transition-colors text-left text-[12px] flex items-center gap-2">
+                                <button onClick={() => handleEditClick(ing)} className="font-bold text-slate-200 hover:text-primary transition-colors text-left text-[12px] flex items-center gap-1.5">
                                   {!isActive && !isDeleted && <span className="size-1.5 bg-amber-500 rounded-full inline-block"></span>}
+                                  {ing.needs_translation && (
+                                    <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold shrink-0">
+                                      {isBg ? 'ПРЕВОД' : 'TRANS'}
+                                    </span>
+                                  )}
                                   {ingName}
                                   <span className="text-[10px] text-slate-500 font-normal">({getSubGroupName(ing.classification?.sub_group)})</span>
                                 </button>

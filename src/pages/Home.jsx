@@ -41,6 +41,11 @@ const getPluralCategoryName = (id, lang) => {
   return plurals[lang]?.[id] || id;
 };
 
+const getVotesCount = (recipe) => {
+  if (!recipe) return 0;
+  return Number(recipe.votes_count ?? recipe.reviews_count ?? (Array.isArray(recipe.ratings) ? recipe.ratings.length : 0)) || 0;
+};
+
 const Home = () => {
   const { user } = useAuth();
   const { pantry } = useAppContext();
@@ -239,7 +244,10 @@ const Home = () => {
 
         // 2.5 Apply category filter
         if (selectedCategory) {
-          filtered = filtered.filter(r => r.category_id === selectedCategory);
+          filtered = filtered.filter(r => 
+            (Array.isArray(r.category_ids) && r.category_ids.includes(selectedCategory)) || 
+            r.category_id === selectedCategory
+          );
         }
 
         // 2.6 Apply author filter
@@ -251,18 +259,53 @@ const Home = () => {
         }
 
         // 3. Apply sorting based on tab
+        const getTime = (val) => {
+          if (!val) return 0;
+          if (val.seconds) return val.seconds * 1000;
+          if (typeof val.toDate === 'function') return val.toDate().getTime();
+          return new Date(val).getTime() || 0;
+        };
+
         if (activeTab === 'newest' || activeTab === 'all') {
-          const getTime = (val) => {
-            if (!val) return 0;
-            if (val.seconds) return val.seconds * 1000;
-            if (typeof val.toDate === 'function') return val.toDate().getTime();
-            return new Date(val).getTime() || 0;
-          };
           filtered.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
         } else if (activeTab === 'top') {
-          filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+          filtered.sort((a, b) => {
+            const ratingA = Number(a.rating) || 0;
+            const ratingB = Number(b.rating) || 0;
+            if (ratingB !== ratingA) {
+              return ratingB - ratingA;
+            }
+            const votesA = getVotesCount(a);
+            const votesB = getVotesCount(b);
+            if (votesB !== votesA) {
+              return votesB - votesA;
+            }
+            const viewsA = Number(a.views_count) || 0;
+            const viewsB = Number(b.views_count) || 0;
+            if (viewsB !== viewsA) {
+              return viewsB - viewsA;
+            }
+            return getTime(b.createdAt) - getTime(a.createdAt);
+          });
         } else if (activeTab === 'popular') {
-          filtered.sort((a, b) => (b.views_count || 0) - (a.views_count || 0));
+          filtered.sort((a, b) => {
+            const viewsA = Number(a.views_count) || 0;
+            const viewsB = Number(b.views_count) || 0;
+            if (viewsB !== viewsA) {
+              return viewsB - viewsA;
+            }
+            const ratingA = Number(a.rating) || 0;
+            const ratingB = Number(b.rating) || 0;
+            if (ratingB !== ratingA) {
+              return ratingB - ratingA;
+            }
+            const votesA = getVotesCount(a);
+            const votesB = getVotesCount(b);
+            if (votesB !== votesA) {
+              return votesB - votesA;
+            }
+            return getTime(b.createdAt) - getTime(a.createdAt);
+          });
         }
 
         // If searching or filtering by category, show all matching results.
@@ -628,7 +671,7 @@ const Home = () => {
                       <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1.5 font-medium flex-wrap">
                         <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded text-primary">
                           <span className="material-symbols-outlined text-[13px] fill-[1]">star</span> 
-                          {(recipe.rating || 0).toFixed(1)} ({recipe.votes_count || 0})
+                          {(recipe.rating || 0).toFixed(1)} ({getVotesCount(recipe)})
                         </span>
                         <span className="flex items-center gap-1 bg-background-dark/50 px-2 py-0.5 rounded text-slate-300">
                           <span className="material-symbols-outlined text-[13px]">visibility</span> 

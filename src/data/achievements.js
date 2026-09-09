@@ -1,4 +1,5 @@
 const matchCategory = (r, catId, bgKeywords, enKeywords) => {
+  if (r.category_ids && Array.isArray(r.category_ids) && r.category_ids.includes(catId)) return true;
   const cat = (r.category_id || r.category || r.category_bg || r.category_en || '').toLowerCase();
   const subCat = (r.sub_category_id || '').toLowerCase();
   const title = (r.title_bg || r.title_en || r.title || '').toLowerCase();

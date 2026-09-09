@@ -9,6 +9,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { REPUTATION_POINTS, getPointsForRating } from '../lib/reputationUtils';
+import { getLocalizedField } from '../lib/localeUtils';
 
 const RecipeDetail = () => {
   const { id } = useParams();
@@ -33,12 +34,35 @@ const RecipeDetail = () => {
   const [currentServings, setCurrentServings] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
+  const [previewSubRecipe, setPreviewSubRecipe] = useState(null);
   
   // Native Ads & Campaign State
   const [nativeAds, setNativeAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const trackedNativeAds = useRef(new Set());
+
+  const handleOpenSubRecipePreview = async (ing) => {
+    const targetId = ing.recipe_id || ing.ingredient_id;
+    if (!targetId) return;
+
+    try {
+      const docRef = doc(db, 'recipes', targetId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setPreviewSubRecipe({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        const q = query(collection(db, 'recipes'), where('slug', '==', targetId));
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) {
+          const found = qSnap.docs[0];
+          setPreviewSubRecipe({ id: found.id, ...found.data() });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load sub-recipe for preview:", err);
+    }
+  };
 
   // 1. Real-time Listeners for Native Ads, Campaigns & Ingredients
   useEffect(() => {
@@ -1188,12 +1212,18 @@ const RecipeDetail = () => {
 
         <ul className="space-y-4">
           {recipe.ingredients?.map((ing, idx) => {
+            const isSubRecipe = ing.type === 'recipe';
             const unit = units[ing.unit_id];
             const unitName = isBg ? (unit?.name_bg || ing.unit_id) : (unit?.name_en || ing.unit_id);
-            const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id);
-            const ingName = isBg 
-              ? (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id) 
-              : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id);
+            const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id) : null;
+            
+            const ingName = isSubRecipe
+              ? (getLocalizedField(ing, 'name', isBg ? 'bg' : 'en') || (isBg ? ing.ingredient_bg : ing.ingredient_en) || ing.ingredient_id)
+              : (isBg 
+                  ? (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id) 
+                  : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id));
+
+            const noteText = isBg ? (ing.notes_bg || ing.notes?.bg) : (ing.notes_en || ing.notes?.en);
 
             const isIngMissing = isPantryActive && missing.some(m => 
               (m.ingredient_id || m.id) === (ing.ingredient_id || ing.id)
@@ -1201,26 +1231,44 @@ const RecipeDetail = () => {
 
             return (
               <React.Fragment key={idx}>
-                <li className="flex justify-between items-center border-b border-primary/10 pb-3 mt-3">
-                  <span className="text-slate-200 font-medium">
-                  {ingName}
-                  {((isBg && ing.notes_bg) || (!isBg && ing.notes_en)) && (
-                    <span className="text-primary/70 text-xs italic ml-2">({isBg ? ing.notes_bg : ing.notes_en})</span>
-                  )}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-primary">{(ing.amount * currentServings).toFixed(1).replace('.0', '')} {unitName}</span>
-                  {isPantryActive ? (
-                    isIngMissing ? (
-                      <span className="material-symbols-outlined text-rose-500/70 size-6 text-xl drop-shadow-md" title={isBg ? 'Липсва в килера' : 'Missing in pantry'}>remove_circle</span>
+                <li className={`flex justify-between items-center border-b pb-3 mt-3 transition-colors ${
+                  isSubRecipe ? 'border-primary/20 bg-primary/5 px-3 py-2.5 rounded-xl' : 'border-primary/10'
+                }`}>
+                  <div className="flex items-center gap-2 flex-wrap min-w-0 pr-2">
+                    {isSubRecipe && (
+                      <span className="material-symbols-outlined text-primary text-[18px] shrink-0">restaurant_menu</span>
+                    )}
+                    <span className={`font-medium ${isSubRecipe ? 'text-primary-light font-bold' : 'text-slate-200'}`}>
+                      {ingName}
+                      {noteText && (
+                        <span className="text-primary/70 text-xs italic ml-2">({noteText})</span>
+                      )}
+                    </span>
+                    {isSubRecipe && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenSubRecipePreview(ing)}
+                        className="text-[10px] text-primary hover:text-[#b8860b] underline font-bold inline-flex items-center gap-0.5 cursor-pointer ml-1"
+                        title={isBg ? 'Виж рецептата за заготовката' : 'View sub-recipe'}
+                      >
+                        <span>{isBg ? 'Виж заготовка' : 'View recipe'}</span>
+                        <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-bold text-primary">{(ing.amount * currentServings).toFixed(1).replace('.0', '')} {unitName}</span>
+                    {isPantryActive ? (
+                      isIngMissing ? (
+                        <span className="material-symbols-outlined text-rose-500/70 size-6 text-xl drop-shadow-md" title={isBg ? 'Липсва в килера' : 'Missing in pantry'}>remove_circle</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-emerald-500 size-6 text-xl drop-shadow-md" title={isBg ? 'Налично в килера' : 'Available in pantry'}>check_circle</span>
+                      )
                     ) : (
-                      <span className="material-symbols-outlined text-emerald-500 size-6 text-xl drop-shadow-md" title={isBg ? 'Налично в килера' : 'Available in pantry'}>check_circle</span>
-                    )
-                  ) : (
-                    <span className="material-symbols-outlined text-primary/30 size-6 text-xl drop-shadow-md">check_circle</span>
-                  )}
-                </div>
-              </li>
+                      <span className="material-symbols-outlined text-primary/30 size-6 text-xl drop-shadow-md">check_circle</span>
+                    )}
+                  </div>
+                </li>
               {matchedAd && matchedIngredientIdx === idx && (
                 <li className="mt-2 mb-3 bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-xl p-3 flex flex-col gap-2 shadow-sm cursor-pointer hover:bg-primary/10 transition-colors group" onClick={() => handleAdClick(matchedAd)}>
                   <div className="flex items-center justify-between">
@@ -1598,6 +1646,91 @@ const RecipeDetail = () => {
                 <span className="material-symbols-outlined text-sm">cancel</span>
                 {isBg ? 'Отказ' : 'Cancel'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-Recipe Quick Preview Modal */}
+      {previewSubRecipe && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-background-dark/95 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="material-symbols-outlined text-primary text-lg">restaurant_menu</span>
+                <h3 className="text-sm font-bold text-slate-100 truncate">
+                  {getLocalizedField(previewSubRecipe, 'title', isBg ? 'bg' : 'en')}
+                </h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setPreviewSubRecipe(null)} 
+                className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+              {previewSubRecipe.images?.main && (
+                <div className="aspect-video rounded-xl overflow-hidden border border-primary/20 shadow-md">
+                  <img src={previewSubRecipe.images.main} alt="sub" className="w-full h-full object-cover" />
+                </div>
+              )}
+
+              {getLocalizedField(previewSubRecipe, 'description', isBg ? 'bg' : 'en') && (
+                <p className="text-xs text-slate-300 leading-relaxed italic">
+                  "{getLocalizedField(previewSubRecipe, 'description', isBg ? 'bg' : 'en')}"
+                </p>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 bg-background-dark/50 p-3 rounded-xl border border-primary/10 text-center text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">{isBg ? 'Време' : 'Time'}</span>
+                  <span className="font-bold text-slate-100">{(previewSubRecipe.prep_time || 0) + (previewSubRecipe.cook_time || 0)} min</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">{isBg ? 'Калории / порция' : 'Calories / srv'}</span>
+                  <span className="font-bold text-primary">{previewSubRecipe.calories_per_serving || 0} kcal</span>
+                </div>
+              </div>
+
+              {/* Sub-recipe Ingredients */}
+              {previewSubRecipe.ingredients && previewSubRecipe.ingredients.length > 0 && (
+                <div>
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                    {isBg ? 'Съставки на заготовката' : 'Sub-recipe ingredients'}
+                  </h4>
+                  <ul className="space-y-1.5 text-xs text-slate-200">
+                    {previewSubRecipe.ingredients.map((subIng, sIdx) => {
+                      const subUnit = units[subIng.unit_id];
+                      const sUnitName = isBg ? (subUnit?.name_bg || subIng.unit_id) : (subUnit?.name_en || subIng.unit_id);
+                      const sName = getLocalizedField(subIng, 'name', isBg ? 'bg' : 'en') || (isBg ? subIng.ingredient_bg : subIng.ingredient_en) || subIng.ingredient_id;
+                      return (
+                        <li key={sIdx} className="flex justify-between items-center py-1 border-b border-primary/5">
+                          <span>• {sName}</span>
+                          <span className="text-primary font-bold">{subIng.amount} {sUnitName}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetId = previewSubRecipe.slug || previewSubRecipe.id;
+                    setPreviewSubRecipe(null);
+                    navigate(`/recipe/${targetId}`);
+                  }}
+                  className="w-full bg-gradient-to-r from-primary to-[#b8860b] text-background-dark py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md hover:opacity-95 transition-opacity cursor-pointer"
+                >
+                  <span>{isBg ? 'Отвори пълната рецепта' : 'Open Full Recipe'}</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

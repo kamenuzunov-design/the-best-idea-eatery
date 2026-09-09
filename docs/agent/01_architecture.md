@@ -29,6 +29,7 @@ src/
 │   ├── firebase.js  # Конфигурация за връзка с Firebase
 │   ├── imageUtils.js # Помощни функции за преоразмеряване на снимки
 │   ├── moderationUtils.js # Интеграция с Google Cloud Vision API за модерация
+│   ├── localeUtils.js # Многоезична помощ за локализация (BG, EN, IT, FR, DE)
 │   └── activityLogger.js # Логика за записване на системни действия
 ├── models/          # Дефиниции на модели/интерфейси (ако се използва TypeScript или JSDoc)
 ├── pages/           # Компоненти, представляващи отделните страници
@@ -50,9 +51,9 @@ src/
 
 1.  **`users`** (Имплементирана)
     *   Съхранява вложена (nested) профилна информация за потребителите (`auth.email`, `profile.nickname`, `profile.location` {city_bg/en, country_bg/en}, `profile.bio_bg/en`, `status.level`, `preferences`).
-2.  **`recipes`** (Имплементирана - Базова)
+2.  **`recipes`** (Имплементирана)
     *   Съдържа детайли за рецептите (време за приготвяне, порции, стъпки, категории).
-    *   Схема включва: `category_id`, `sub_category_id`, `calories_per_serving`, `ingredients` (списък от обекти с количество и мерни единици).
+    *   Схема включва: `category_id` (водеща категория), `category_ids` (масив от всички избрани категории), `sub_category_id`, `calories_per_serving`, `ingredients` (списък от продукти или вложени рецепти `type: 'recipe'`, `recipe_id`, мерни единици, локализирани бележки), `needs_translation` (флаг за превод).
 3.  **`ingredients`**
     *   База с данни за всички възможни съставки (калории, макронутриенти).
     *   *Под-колекции:* `translations`.

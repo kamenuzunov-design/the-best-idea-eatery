@@ -3,6 +3,39 @@
 ## Текуща задача
 Изпълнение на козметични подобрения по визуалните елементи на приложението.
 
+## Изпълнени наскоро задачи (9 Септември 2026)
+- **2-редово структуриране на заглавната част в таб „Съставки“ ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+  - Инфо полетата (текст, калории, порции) са на Ред 1, а бутоните за добавяне („Добави съставка“ и „Вложи рецепта“) са на Ред 2, разпределени поравно (`flex-1`).
+- **Оптимизиране на ширината и отстоянията в таб „Съставки“ ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+  - Диференцирана ширина на полето за избор на съставка/заготовка: `w-32` за мобилен екран и разширение с 5% за компютър (`sm:w-[152px]`).
+  - Намалени padding (`p-1.5`) и gap (`gap-1.5`), както и фино коригирани ширините на количеството (`w-11`) и мярката (`w-20 sm:w-22`). Бутонът за изтриване остава 100% видим и на настолен компютър.
+- **Преместване на бутон „Тагове“ на втори ред в Управление на Рецепти ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+  - Бутонът за преизчисляване на таговете е преместен на втория ред в заглавната част, веднага след надписа `({recipes.length} въведени общо)`.
+- **Прецизно подреждане на „Най-оценявани“ рецепти с вторичен фактор брой гласували ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx))**:
+  - В началното табло при избор на „Най-оценявани“ рецепти при еднакъв рейтинг (напр. 5.00) класирането се определя от броя гласували (`votes_count` / `reviews_count` / `ratings.length`).
+  - Рецепта с оценка 5.0 (3 гласа) застава пред рецепта с оценка 5.0 (1 глас).
+  - При равен рейтинг и равни гласове се съобразяват преглежданията и датата. Картата на рецептата показва точния брой гласове чрез `getVotesCount()`.
+- **Вложени рецепти като съставки („Рецепта като съставка“) с многоезична архитектура ([localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+  - Имплементирана функционалност за включване на заготовки / полуфабрикати / субрецепти (напр. *Сос Цезар* в *Салата Цезар*) в съставките на всяка рецепта.
+  - Създаден модул [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js) с универсална поддръжка за BG и EN, и пълна готовност за IT, FR, DE чрез карти за локализирани полета (`name`, `title`, `description`, `notes`).
+  - В [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) е добавен бутон **`+ Вложи рецепта`** и модален прозорец за бързо търсене сред съществуващите рецепти (с изключване на текущата рецепта за предотвратяване на рекурсия).
+  - Редовете за вложени рецепти се открояват с отличителен знак `[🍳 РЕЦЕПТА]`, мерни единици (порция, доза, мл, г) и автоматично калкулиране на калориите от субрецептата.
+  - В [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx) вложените рецепти се визуализират със значка `[Виж заготовка]` и интерактивен модален бърз преглед със снимка, време, калории, съставки и директен линк към пълната рецепта.
+- **Множество Категории за Рецепти ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [achievements.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/achievements.js))**:
+  - Пълна поддръжка на рецепти в множество основни категории с пълна съвместимост във Firestore чрез едновременно съхранение на `category_ids` и водеща `category_id`.
+  - Модерен интерфейс с бутони за избор на категории, звездичка/етикет за водеща категория, превключване и подкатегории, обвързани с водещата категория.
+  - Филтриране в началната страница (`Home.jsx`) и прогрес за медали (`achievements.js`) при съвпадение с някоя от категориите на рецептата.
+  - CSV експорт и импорт на списъци с категории.
+- **Английски като водещ език при рецепти & Опашка за преводи в Модерация ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx))**:
+  - Увеличена височината на полетата за въвеждане на описание (`Description EN/BG`) и инструкции за стъпки (`Steps EN/BG`) от 2 на 4 реда (`rows="4"`).
+  - При избран английски език на интерфейса, потребителят вижда единствено английските полета във формата за рецепти и продукти, без български полета.
+  - Валидацията следи само английския текст и слъг.
+  - При запис на английски, текстът автоматично се копира и в българските полета с префикс `[за превод] ` и се поставя маркер `needs_translation: true`.
+  - При редакция на съществуващи български текстове от английски потребители, те се запазват недокоснати (Вариант А), а рецептата се маркира за превод само ако английският оригинал е променен (`en_edited`).
+  - В Модерация е изграден банер с брояч и филтър "За превод от английски" с бърз преглед и бутон "Преведи / Редактирай", както и визуализация на значки за превод в списъците.
+- **Локализация в секция "Администрация" на Профила ([ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx))**:
+  - Добавен е двуезичен превод (`{isBg ? 'Редактиране Рецепти/Продукти' : 'Edit Recipes/Products'}`) за бутона към контролния панел за данни (`/admin/data`) при превключване на английски език.
+
 ## Изпълнени наскоро задачи (3 Септември 2026)
 - **Свързване и съпоставяне на нативни реклами строго по `Slug (ID)` само в съставките ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx) & [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
   - Въведено прецизно съпоставяне единствено в списъка със съставки (`recipe.ingredients`), игнорирайки описанията и стъпките.

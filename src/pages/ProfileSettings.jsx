@@ -118,6 +118,9 @@ const ProfileSettings = () => {
           fat: parseFloat(r.fat) || 0,
           ingredients: ingredients,
           steps: steps,
+          cuisine_id: r.cuisine_id || '',
+          category_id: r.category_id || '',
+          category_ids: r.category_ids ? r.category_ids.split(';').map(t => t.trim()).filter(Boolean) : (r.category_id ? [r.category_id] : []),
           tags: r.tags ? r.tags.split(',').map(t => t.trim()) : [],
           original_author: r.original_author || '',
           source_link: r.source_link || '',
@@ -305,7 +308,7 @@ const ProfileSettings = () => {
                   <span className="material-symbols-outlined">edit_square</span>
                 </div>
                 <div>
-                  <p className="text-sm font-black text-rose-500 uppercase tracking-wide">Редактиране Рецепти/Продукти</p>
+                  <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{isBg ? 'Редактиране Рецепти/Продукти' : 'Edit Recipes/Products'}</p>
                   <p className="text-[10px] text-rose-500/60 font-bold uppercase">{isBg ? 'Управление на данни' : 'Data Management'}</p>
                 </div>
               </div>

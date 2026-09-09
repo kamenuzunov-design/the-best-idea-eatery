@@ -76,6 +76,22 @@ Tailwind CSS се използва като основен инструмент 
   - Показване в **решетка по 3 на ред (`grid-cols-3`)**. Придобитите медали са златисти (`✓`), а заключените – полупрозрачно сиви (`🔒`). Интерактивен модал с изисквания и прогрес бар при кликване.
 - **Оптимизации в Режим "Започни готвене" ([CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx))**:
   - Двуколона схема за стъпките с фин контур, подобен на активната стъпка. Коригирано време за стъпка 1 и премахнато дублиращо се номериране ("1. Стъпка 1" -> "Стъпка 1").
+- **Вложени рецепти като съставки („Рецепта като съставка“) ([localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+  - Всяка рецепта от каталога може да бъде вложена като компонент/заготовка (напр. *Сос Цезар*, *Домашно тесто за пица*) в друга рецепта с бутон `+ Вложи рецепта`.
+  - Изграден универсален модул [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js) със структурирани карти за преводи (`name`, `notes`), готов за разширение с IT, FR, DE.
+  - В детайлния изглед на рецептата се предоставя бутон `[Виж заготовка]` с бърз модален преглед на снимка, съставки, хранителни стойности и директна препратка към пълната рецепта.
+- **Множество Категории за Рецепти ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [achievements.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/achievements.js))**:
+  - Рецептите поддържат едновременно принадлежност към множество основни категории (напр. „Десерти“ и „Специален повод“) с водеща категория (`category_id`) и пълен масив (`category_ids`).
+  - Пълна интеграция в филтрирането на началната страница (`Home.jsx`), изчисляването на медали и CSV експорта/импорта.
+- **Английски като водещ език при въвеждане & Опашка за преводи в Модерация ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx))**:
+  - Потребители с английски интерфейс въвеждат данни само на английски (българските полета са скрити). Автоматично се създава маркер `needs_translation: true` за модераторите, без да се презаписват съществуващи качествени български текстове при редакция.
+  - В Модерация е добавен кехлибарен банер с брояч и специализиран филтър/таб за превод с опция за бърза редакция на български и маркиране като преведена.
+- **Прецизно подреждане на „Най-оценявани“ рецепти ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx))**:
+  - При равен рейтинг вторичният фактор за класиране е броят на гласувалите потребители (`votes_count`), последван от преглежданията и датата.
+- **UI и Layout оптимизации в Управление на Рецепти ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+  - Бутон „Тагове“ преместен на втори ред след общия брой рецепти.
+  - 2-редово структуриране на горната част в таб „Съставки“: Ред 1 за калории и порции, Ред 2 за бутоните „Добави съставка“ и „Вложи рецепта“.
+  - Балансирана ширина и отстояния в редовете със съставки (с 5% десктоп разширение `sm:w-[152px]`), гарантираща 100% видимост на бутона за изтриване на всякакви екрани.
 - **Реклами & Съставки ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx) & [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
   - Кликваеми снимки, заглавия и кампании при рекламите. Модален прозорец за бързо търсене на съставки (подобно на Скенера) при определяне на ключови думи за реклами и въвеждане на рецепти.
 

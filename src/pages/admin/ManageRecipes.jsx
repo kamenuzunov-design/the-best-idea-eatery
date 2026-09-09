@@ -14,6 +14,7 @@ import { ROLES } from '../../constants/roles';
 import { getRootCategories, getSubCategories } from '../../data/recipe_categories';
 import { REPUTATION_POINTS } from '../../lib/reputationUtils';
 import { getRecipeTags } from '../../lib/recipeMetaUtils';
+import { getLocalizedText, getLocalizedField } from '../../lib/localeUtils';
 
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
@@ -52,6 +53,7 @@ const ManageRecipes = () => {
   const [descEn, setDescEn] = useState('');
   const [cuisineId, setCuisineId] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [categoryIds, setCategoryIds] = useState([]);
   const [subCategoryId, setSubCategoryId] = useState('');
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
@@ -75,10 +77,12 @@ const ManageRecipes = () => {
   const [recipeIngredients, setRecipeIngredients] = useState([]); // {id, ingredient_id, amount, unit_id, notes}
   const [recipeSteps, setRecipeSteps] = useState([]); // {id, instruction_bg, instruction_en}
 
-  // Ingredient Search Modal State
+  // Ingredient & Sub-Recipe Search Modal State
   const [isIngModalOpen, setIsIngModalOpen] = useState(false);
   const [ingSearchTerm, setIngSearchTerm] = useState('');
   const [activeTargetRowId, setActiveTargetRowId] = useState(null);
+  const [isSubRecipeModalOpen, setIsSubRecipeModalOpen] = useState(false);
+  const [subRecipeSearchTerm, setSubRecipeSearchTerm] = useState('');
 
   useEffect(() => {
     const unsubRecipes = onSnapshot(query(collection(db, 'recipes')), (snapshot) => {
@@ -98,6 +102,15 @@ const ManageRecipes = () => {
   const calculatedCalories = React.useMemo(() => {
     let totalCalories = 0;
     recipeIngredients.forEach(ing => {
+      if (ing.type === 'recipe') {
+        const subRec = recipes.find(r => r.id === (ing.recipe_id || ing.ingredient_id) || r.slug === (ing.recipe_id || ing.ingredient_id));
+        if (subRec && (subRec.calories_per_serving || subRec.calories)) {
+          const subCals = parseFloat(subRec.calories_per_serving || subRec.calories) || 0;
+          const amt = parseFloat(ing.amount) || 1;
+          totalCalories += subCals * amt;
+        }
+        return;
+      }
       const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id);
       if (dbIng && dbIng.nutrition_per_100 && ing.amount && ing.unit_id) {
         let weightGrams = 0;
@@ -119,7 +132,7 @@ const ManageRecipes = () => {
     });
     const srv = parseInt(servings) || 1;
     return Math.round(totalCalories / srv);
-  }, [recipeIngredients, ingredientsList, measurementsList, servings]);
+  }, [recipeIngredients, ingredientsList, measurementsList, servings, recipes]);
 
   const handleTitleEnChange = (e) => {
     const val = e.target.value;
@@ -145,6 +158,7 @@ const ManageRecipes = () => {
 
   const handleSelectIngredient = React.useCallback((ingredientId) => {
     if (activeTargetRowId) {
+      updateIngredientRow(activeTargetRowId, 'type', 'ingredient');
       updateIngredientRow(activeTargetRowId, 'ingredient_id', ingredientId);
       updateIngredientRow(activeTargetRowId, 'unit_id', '');
     } else {
@@ -152,6 +166,7 @@ const ManageRecipes = () => {
         ...prev, 
         { 
           id: `ing_${prev.length}_${ingredientId}_${String(Date.now()).slice(-6)}`, 
+          type: 'ingredient',
           ingredient_id: ingredientId, 
           amount: '', 
           unit_id: '', 
@@ -165,6 +180,65 @@ const ManageRecipes = () => {
     setActiveTargetRowId(null);
   }, [activeTargetRowId]);
 
+  const handleOpenSubRecipeModal = (rowId = null) => {
+    setActiveTargetRowId(rowId);
+    setSubRecipeSearchTerm('');
+    setIsSubRecipeModalOpen(true);
+  };
+
+  const handleSelectSubRecipe = React.useCallback((subRecipe) => {
+    const portionUnit = measurementsList.find(m => m.id === 'portion' || m.unit_id === 'portion' || m.id === 'dose');
+    const defaultUnitId = portionUnit ? (portionUnit.unit_id || portionUnit.id) : (measurementsList[0]?.id || 'portion');
+
+    if (activeTargetRowId) {
+      updateIngredientRow(activeTargetRowId, 'type', 'recipe');
+      updateIngredientRow(activeTargetRowId, 'ingredient_id', subRecipe.id);
+      updateIngredientRow(activeTargetRowId, 'recipe_id', subRecipe.id);
+      updateIngredientRow(activeTargetRowId, 'recipe_slug', subRecipe.slug || subRecipe.id);
+      updateIngredientRow(activeTargetRowId, 'ingredient_bg', subRecipe.title_bg || '');
+      updateIngredientRow(activeTargetRowId, 'ingredient_en', subRecipe.title_en || '');
+      updateIngredientRow(activeTargetRowId, 'name', {
+        bg: subRecipe.title_bg || '',
+        en: subRecipe.title_en || '',
+        it: subRecipe.title?.it || '',
+        fr: subRecipe.title?.fr || '',
+        de: subRecipe.title?.de || ''
+      });
+      updateIngredientRow(activeTargetRowId, 'unit_id', defaultUnitId);
+    } else {
+      setRecipeIngredients(prev => [
+        ...prev, 
+        { 
+          id: `subrec_${prev.length}_${subRecipe.id}_${String(Date.now()).slice(-6)}`, 
+          type: 'recipe',
+          ingredient_id: subRecipe.id,
+          recipe_id: subRecipe.id,
+          recipe_slug: subRecipe.slug || subRecipe.id,
+          amount: '1',
+          unit_id: defaultUnitId,
+          name: {
+            bg: subRecipe.title_bg || '',
+            en: subRecipe.title_en || '',
+            it: subRecipe.title?.it || '',
+            fr: subRecipe.title?.fr || '',
+            de: subRecipe.title?.de || ''
+          },
+          ingredient_bg: subRecipe.title_bg || '',
+          ingredient_en: subRecipe.title_en || '',
+          notes: {
+            bg: '',
+            en: ''
+          },
+          notes_bg: '', 
+          notes_en: '' 
+        }
+      ]);
+    }
+    setIsSubRecipeModalOpen(false);
+    setSubRecipeSearchTerm('');
+    setActiveTargetRowId(null);
+  }, [activeTargetRowId, measurementsList]);
+
   const filteredMasterIngs = React.useMemo(() => {
     if (!ingSearchTerm) return ingredientsList;
     const term = ingSearchTerm.toLowerCase();
@@ -175,6 +249,20 @@ const ManageRecipes = () => {
       return bg.includes(term) || en.includes(term) || idStr.includes(term);
     });
   }, [ingredientsList, ingSearchTerm]);
+
+  const filteredSubRecipes = React.useMemo(() => {
+    return recipes.filter(r => {
+      if (editingId && (r.id === editingId || r.slug === slug)) return false;
+      if (slug && r.slug === slug) return false;
+      if (r.is_deleted) return false;
+
+      if (!subRecipeSearchTerm) return true;
+      const term = subRecipeSearchTerm.toLowerCase();
+      const titleBg = (getLocalizedField(r, 'title', 'bg') || '').toLowerCase();
+      const titleEn = (getLocalizedField(r, 'title', 'en') || '').toLowerCase();
+      return titleBg.includes(term) || titleEn.includes(term);
+    });
+  }, [recipes, editingId, slug, subRecipeSearchTerm]);
   const moveIngredientRow = (index, direction) => {
     if (direction === 'up' && index === 0) return;
     if (direction === 'down' && index === recipeIngredients.length - 1) return;
@@ -234,10 +322,14 @@ const ManageRecipes = () => {
 
   const handleSaveRecipe = async (e) => {
     e.preventDefault();
-    if (!titleBg || !titleEn || !slug) return;
+    const isEn = i18n.language === 'en';
+    if (isEn) {
+      if (!titleEn || !slug) return;
+    } else {
+      if (!titleBg || !titleEn || !slug) return;
+    }
 
     try {
-      // eslint-disable-next-line react-hooks/purity
       const timestamp = Date.now();
       // 1. AI Safety Check for new images (Skip for Admins to save resources)
       const isPowerUser = user?.status?.level === ROLES.ADMIN || user?.status?.level === ROLES.OWNER;
@@ -281,19 +373,83 @@ const ManageRecipes = () => {
         return;
       }
 
-      // 2. Prepare Data
+      // 2. Prepare Data & Translation Handling
+      const originalRecipe = editingId ? recipes.find(r => r.id === editingId) : null;
+      let finalTitleBg = titleBg;
+      let finalDescBg = descBg;
+      let needsTranslation = false;
+      let translationReason = null;
+
+      if (isEn) {
+        if (!editingId) {
+          finalTitleBg = titleBg || `[за превод] ${titleEn}`;
+          finalDescBg = descBg || (descEn ? `[за превод] ${descEn}` : '');
+          needsTranslation = true;
+          translationReason = 'new';
+        } else {
+          // Editing in English mode - Option A: preserve existing Bulgarian translation
+          const origTitleBg = originalRecipe?.title_bg || '';
+          finalTitleBg = origTitleBg || `[за превод] ${titleEn}`;
+          
+          const origDescBg = originalRecipe?.description_bg || '';
+          finalDescBg = origDescBg || (descEn ? `[за превод] ${descEn}` : '');
+
+          const enTitleChanged = originalRecipe && originalRecipe.title_en !== titleEn;
+          const enDescChanged = originalRecipe && (originalRecipe.description_en || '') !== (descEn || '');
+          const enStepsChanged = originalRecipe && JSON.stringify(originalRecipe.steps?.map(s => s.instruction_en)) !== JSON.stringify(recipeSteps.map(s => s.instruction_en));
+
+          if (enTitleChanged || enDescChanged || enStepsChanged || originalRecipe?.needs_translation) {
+            needsTranslation = true;
+            translationReason = (enTitleChanged || enDescChanged || enStepsChanged) ? 'en_edited' : (originalRecipe?.translation_reason || 'pending');
+          }
+        }
+      } else {
+        // Non-EN (e.g. BG) user editing/saving
+        finalTitleBg = titleBg;
+        finalDescBg = descBg;
+        const hasUnfinishedTranslation = 
+          !titleBg ||
+          titleBg.includes('[за превод]') || 
+          (descBg && descBg.includes('[за превод]')) ||
+          recipeIngredients.some(i => i.notes_bg?.includes('[за превод]')) ||
+          recipeSteps.some(s => s.instruction_bg?.includes('[за превод]'));
+
+        if (hasUnfinishedTranslation) {
+          needsTranslation = true;
+          translationReason = originalRecipe?.translation_reason || 'pending';
+        } else {
+          needsTranslation = false;
+          translationReason = null;
+        }
+      }
+
       const recipeData = {
-        title_bg: titleBg,
+        title_bg: finalTitleBg,
         title_en: titleEn,
+        title: {
+          bg: finalTitleBg,
+          en: titleEn,
+          it: originalRecipe?.title?.it || '',
+          fr: originalRecipe?.title?.fr || '',
+          de: originalRecipe?.title?.de || ''
+        },
         slug: slug,
-        description_bg: descBg,
+        description_bg: finalDescBg,
         description_en: descEn,
+        description: {
+          bg: finalDescBg,
+          en: descEn,
+          it: originalRecipe?.description?.it || '',
+          fr: originalRecipe?.description?.fr || '',
+          de: originalRecipe?.description?.de || ''
+        },
         cuisine_id: cuisineId,
         prep_time: parseInt(prepTime) || 0,
         cook_time: parseInt(cookTime) || 0,
         servings: parseInt(servings) || 1,
         difficulty: difficulty,
-        category_id: categoryId,
+        category_id: categoryIds[0] || categoryId || '',
+        category_ids: categoryIds.length > 0 ? categoryIds : (categoryId ? [categoryId] : []),
         sub_category_id: subCategoryId,
         calories_per_serving: calculatedCalories,
         video_url: videoUrl,
@@ -305,22 +461,89 @@ const ManageRecipes = () => {
           extra2: e2Url
         },
         ingredients: recipeIngredients.map(i => {
+          let noteBg = i.notes_bg || i.notes?.bg || i.notes || '';
+          let noteEn = i.notes_en || i.notes?.en || i.notes || '';
+          if (isEn && !noteBg && noteEn) {
+            noteBg = `[за превод] ${noteEn}`;
+          }
+
+          if (i.type === 'recipe') {
+            const subRec = recipes.find(r => r.id === (i.recipe_id || i.ingredient_id) || r.slug === (i.recipe_id || i.ingredient_id));
+            const subNameBg = i.ingredient_bg || subRec?.title_bg || '';
+            const subNameEn = i.ingredient_en || subRec?.title_en || '';
+            return {
+              type: 'recipe',
+              ingredient_id: i.recipe_id || i.ingredient_id,
+              recipe_id: i.recipe_id || i.ingredient_id,
+              recipe_slug: subRec?.slug || i.recipe_slug || i.recipe_id || i.ingredient_id,
+              name: {
+                bg: subNameBg,
+                en: subNameEn,
+                it: subRec?.title?.it || i.name?.it || '',
+                fr: subRec?.title?.fr || i.name?.fr || '',
+                de: subRec?.title?.de || i.name?.de || ''
+              },
+              ingredient_bg: subNameBg,
+              ingredient_en: subNameEn,
+              amount: (parseFloat(i.amount) || 0) / (parseInt(servings) || 1),
+              unit_id: i.unit_id,
+              notes: {
+                bg: noteBg,
+                en: noteEn,
+                it: i.notes?.it || '',
+                fr: i.notes?.fr || '',
+                de: i.notes?.de || ''
+              },
+              notes_bg: noteBg,
+              notes_en: noteEn
+            };
+          }
+
           const dbIng = ingredientsList.find(dbI => dbI.id === i.ingredient_id);
           return {
+            type: 'ingredient',
             ingredient_id: i.ingredient_id,
+            name: {
+              bg: dbIng?.name_bg || '',
+              en: dbIng?.name_en || '',
+              it: dbIng?.name?.it || '',
+              fr: dbIng?.name?.fr || '',
+              de: dbIng?.name?.de || ''
+            },
             ingredient_bg: dbIng?.name_bg || '',
             ingredient_en: dbIng?.name_en || '',
             amount: (parseFloat(i.amount) || 0) / (parseInt(servings) || 1),
             unit_id: i.unit_id,
-            notes_bg: i.notes_bg || i.notes || '',
-            notes_en: i.notes_en || i.notes || ''
+            notes: {
+              bg: noteBg,
+              en: noteEn,
+              it: i.notes?.it || '',
+              fr: i.notes?.fr || '',
+              de: i.notes?.de || ''
+            },
+            notes_bg: noteBg,
+            notes_en: noteEn
           };
         }).filter(i => i.ingredient_id && i.amount && i.unit_id),
-        steps: recipeSteps.map(s => ({
-          instruction_bg: s.instruction_bg,
-          instruction_en: s.instruction_en,
-          timer_minutes: parseInt(s.timer_minutes) || null
-        })).filter(s => s.instruction_bg || s.instruction_en),
+        steps: recipeSteps.map((s, idx) => {
+          let instBg = s.instruction_bg || '';
+          let instEn = s.instruction_en || '';
+          if (isEn) {
+            const origStep = originalRecipe?.steps?.[idx];
+            if (origStep?.instruction_bg && !origStep.instruction_bg.startsWith('[за превод]')) {
+              instBg = origStep.instruction_bg;
+            } else if (!instBg && instEn) {
+              instBg = `[за превод] ${instEn}`;
+            }
+          }
+          return {
+            instruction_bg: instBg,
+            instruction_en: instEn,
+            timer_minutes: parseInt(s.timer_minutes) || null
+          };
+        }).filter(s => s.instruction_bg || s.instruction_en),
+        needs_translation: needsTranslation,
+        translation_reason: translationReason,
         updatedAt: new Date().toISOString()
       };
 
@@ -379,7 +602,11 @@ const ManageRecipes = () => {
     setDescBg(recipe.description_bg || '');
     setDescEn(recipe.description_en || '');
     setCuisineId(recipe.cuisine_id || '');
-    setCategoryId(recipe.category_id || '');
+    const loadedCats = Array.isArray(recipe.category_ids) && recipe.category_ids.length > 0
+      ? recipe.category_ids
+      : (recipe.category_id ? [recipe.category_id] : []);
+    setCategoryIds(loadedCats);
+    setCategoryId(loadedCats[0] || recipe.category_id || '');
     setSubCategoryId(recipe.sub_category_id || '');
     setPrepTime(recipe.prep_time || '');
     setCookTime(recipe.cook_time || '');
@@ -402,9 +629,11 @@ const ManageRecipes = () => {
     setRecipeIngredients(recipe.ingredients ? recipe.ingredients.map((i, idx) => ({ 
       ...i, 
       id: `ing_edit_${idx}_${Date.now()}`, 
+      type: i.type || 'ingredient',
       amount: (parseFloat(i.amount) * srv).toString(),
-      notes_bg: i.notes_bg || i.notes || '', 
-      notes_en: i.notes_en || i.notes || '' 
+      notes_bg: i.notes_bg || i.notes?.bg || i.notes || '', 
+      notes_en: i.notes_en || i.notes?.en || i.notes || '',
+      name: i.name || { bg: i.ingredient_bg || '', en: i.ingredient_en || '' }
     })) : []);
     setRecipeSteps(recipe.steps ? recipe.steps.map((s, idx) => ({ ...s, id: `step_edit_${idx}_${Date.now()}` })) : []);
 
@@ -430,7 +659,7 @@ const ManageRecipes = () => {
     const exportable = recipes.filter(r => !r.is_deleted);
     const headers = [
       'slug','title_bg','title_en','description_bg','description_en',
-      'cuisine_id','category_id','sub_category_id','prep_time','cook_time',
+      'cuisine_id','category_id','category_ids','sub_category_id','prep_time','cook_time',
       'servings','difficulty','video_url','original_author','source_link',
       'ingredients','steps'
     ];
@@ -450,6 +679,7 @@ const ManageRecipes = () => {
       escape(r.description_en),
       escape(r.cuisine_id),
       escape(r.category_id),
+      escape(Array.isArray(r.category_ids) ? r.category_ids.join(';') : (r.category_id || '')),
       escape(r.sub_category_id),
       escape(r.prep_time),
       escape(r.cook_time),
@@ -519,12 +749,19 @@ const ManageRecipes = () => {
         try { ingredients = JSON.parse(cols[idx('ingredients')] || '[]'); } catch (err) { console.warn('JSON parsing error:', err); }
         try { steps = JSON.parse(cols[idx('steps')] || '[]'); } catch (err) { console.warn('JSON parsing error:', err); }
 
+        const catIdsRaw = cols[idx('category_ids')]?.trim();
+        const primaryCat = cols[idx('category_id')]?.trim() || '';
+        const parsedCatIds = catIdsRaw 
+          ? catIdsRaw.split(';').map(s => s.trim()).filter(Boolean)
+          : (primaryCat ? [primaryCat] : []);
+
         const row = {
           slug, title_bg, title_en,
           description_bg: cols[idx('description_bg')] || '',
           description_en: cols[idx('description_en')] || '',
           cuisine_id: cols[idx('cuisine_id')] || '',
-          category_id: cols[idx('category_id')] || '',
+          category_id: parsedCatIds[0] || primaryCat || '',
+          category_ids: parsedCatIds,
           sub_category_id: cols[idx('sub_category_id')] || '',
           prep_time: parseInt(cols[idx('prep_time')]) || 0,
           cook_time: parseInt(cols[idx('cook_time')]) || 0,
@@ -634,12 +871,46 @@ const ManageRecipes = () => {
     setServings(newServingsVal);
   };
 
+  const toggleCategory = (catId) => {
+    let nextCats;
+    if (categoryIds.includes(catId)) {
+      nextCats = categoryIds.filter(id => id !== catId);
+    } else {
+      nextCats = [...categoryIds, catId];
+    }
+    setCategoryIds(nextCats);
+    const newPrimary = nextCats[0] || '';
+    setCategoryId(newPrimary);
+    
+    if (newPrimary) {
+      const validSubCats = getSubCategories(newPrimary).map(s => s.id);
+      if (!validSubCats.includes(subCategoryId)) {
+        setSubCategoryId('');
+      }
+    } else {
+      setSubCategoryId('');
+    }
+  };
+
+  const makePrimaryCategory = (catId, e) => {
+    if (e) e.stopPropagation();
+    const filtered = categoryIds.filter(id => id !== catId);
+    const nextCats = [catId, ...filtered];
+    setCategoryIds(nextCats);
+    setCategoryId(catId);
+    const validSubCats = getSubCategories(catId).map(s => s.id);
+    if (!validSubCats.includes(subCategoryId)) {
+      setSubCategoryId('');
+    }
+  };
+
   const handleCancelEdit = () => {
     setEditingId(null);
     setTitleBg(''); setTitleEn(''); setSlug('');
     setDescBg(''); setDescEn('');
     setCuisineId('');
     setCategoryId('');
+    setCategoryIds([]);
     setSubCategoryId('');
     setPrepTime(''); setCookTime(''); setServings('1');
     setDifficulty('medium');
@@ -834,16 +1105,6 @@ const ManageRecipes = () => {
               <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Рецепти' : 'Recipes'}</h1>
             </div>
             <div className="flex items-center gap-2">
-              {isPowerUser && (
-                <button
-                  onClick={handleRecalculateTags}
-                  title={isBg ? 'Преизчисли Тагове' : 'Recalculate Tags'}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20"
-                >
-                  <span className="material-symbols-outlined text-[18px]">label</span>
-                  {isBg ? 'Тагове' : 'Tags'}
-                </button>
-              )}
               {(isAdmin || isOwner) && (
                 <>
                   <button
@@ -894,12 +1155,24 @@ const ManageRecipes = () => {
             </div>
           </div>
 
-          {/* Row 2: Empty position for back button + Count text under title */}
+          {/* Row 2: Empty position for back button + Count text under title + Tags button */}
           <div className="flex items-center">
             <div className="w-10 mr-2 flex-shrink-0" />
-            <span className="text-xs font-medium text-primary/70">
-              ({recipes.length} {isBg ? 'въведени общо' : 'items total'})
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-primary/70">
+                ({recipes.length} {isBg ? 'въведени общо' : 'items total'})
+              </span>
+              {isPowerUser && (
+                <button
+                  onClick={handleRecalculateTags}
+                  title={isBg ? 'Преизчисли Тагове' : 'Recalculate Tags'}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20"
+                >
+                  <span className="material-symbols-outlined text-[16px]">label</span>
+                  {isBg ? 'Тагове' : 'Tags'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -947,14 +1220,16 @@ const ManageRecipes = () => {
           {activeTab === 'basic' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className={i18n.language === 'en' ? "col-span-2" : ""}>
                   <label className="text-xs text-slate-400">{isBg ? 'Заглавие (EN) *' : 'Title (EN) *'}</label>
                   <input value={titleEn} onChange={handleTitleEnChange} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" />
                 </div>
-                <div>
-                  <label className="text-xs text-slate-400">{isBg ? 'Заглавие (BG) *' : 'Title (BG) *'}</label>
-                  <input value={titleBg} onChange={(e) => setTitleBg(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" />
-                </div>
+                {i18n.language !== 'en' && (
+                  <div>
+                    <label className="text-xs text-slate-400">{isBg ? 'Заглавие (BG) *' : 'Title (BG) *'}</label>
+                    <input value={titleBg} onChange={(e) => setTitleBg(e.target.value)} required={i18n.language !== 'en'} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" />
+                  </div>
+                )}
                 <div className="col-span-2">
                   <label className="text-xs text-slate-400">{isBg ? 'Slug (ID) *' : 'Slug (ID) *'}</label>
                   <input value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={!!editingId} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm opacity-70" />
@@ -964,12 +1239,14 @@ const ManageRecipes = () => {
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="text-xs text-slate-400">{isBg ? 'Описание (EN)' : 'Description (EN)'}</label>
-                  <textarea value={descEn} onChange={(e) => setDescEn(e.target.value)} rows="2" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
+                  <textarea value={descEn} onChange={(e) => setDescEn(e.target.value)} rows="4" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
                 </div>
-                <div>
-                  <label className="text-xs text-slate-400">{isBg ? 'Описание (BG)' : 'Description (BG)'}</label>
-                  <textarea value={descBg} onChange={(e) => setDescBg(e.target.value)} rows="2" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
-                </div>
+                {i18n.language !== 'en' && (
+                  <div>
+                    <label className="text-xs text-slate-400">{isBg ? 'Описание (BG)' : 'Description (BG)'}</label>
+                    <textarea value={descBg} onChange={(e) => setDescBg(e.target.value)} rows="4" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-4 gap-4">
@@ -984,37 +1261,88 @@ const ManageRecipes = () => {
                 </div>
               </div>
 
-              {/* Category */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Multi-Category Selection */}
+              <div className="space-y-3 bg-surface-dark/40 p-3 rounded-xl border border-primary/10">
                 <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">
-                    {isBg ? 'Категория' : 'Category'}
-                  </label>
-                  <select
-                    value={categoryId}
-                    onChange={(e) => { setCategoryId(e.target.value); setSubCategoryId(''); }}
-                    className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm outline-none focus:border-[#b8860b]"
-                  >
-                    <option value="">-- {isBg ? 'Избери категория' : 'Select category'} --</option>
-                    {getRootCategories().map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.icon} {isBg ? c.name.bg : c.name.en}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px] text-primary">category</span>
+                      {isBg ? 'Основни категории (изберете една или няколко)' : 'Categories (select one or more)'}
+                    </label>
+                    {categoryIds.length > 0 && (
+                      <span className="text-[10px] font-bold text-[#b8860b] bg-[#b8860b]/10 px-2 py-0.5 rounded-full border border-[#b8860b]/20">
+                        {categoryIds.length} {isBg ? (categoryIds.length === 1 ? 'избрана' : 'избрани') : (categoryIds.length === 1 ? 'selected' : 'selected')}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {getRootCategories().map(c => {
+                      const isSelected = categoryIds.includes(c.id);
+                      const isPrimary = isSelected && (categoryIds[0] === c.id || (categoryIds.length === 0 && categoryId === c.id));
+                      return (
+                        <div
+                          key={c.id}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all select-none border ${
+                            isPrimary
+                              ? 'bg-primary/20 border-primary text-primary-light shadow-sm'
+                              : isSelected
+                                ? 'bg-[#b8860b]/15 border-[#b8860b]/60 text-slate-100 hover:border-[#b8860b]'
+                                : 'bg-background-dark/80 border-primary/20 text-slate-400 hover:text-slate-200 hover:border-primary/40'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleCategory(c.id)}
+                            className="inline-flex items-center gap-1.5 cursor-pointer text-left focus:outline-none"
+                          >
+                            <span className="text-sm">{c.icon}</span>
+                            <span>{isBg ? c.name.bg : c.name.en}</span>
+                          </button>
+
+                          {isPrimary && (
+                            <span 
+                              className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-primary/30 text-primary-light font-bold flex items-center gap-0.5 ml-0.5"
+                              title={isBg ? 'Водеща категория (определя подкатегориите)' : 'Primary category (defines subcategories)'}
+                            >
+                              ★ {isBg ? 'Водеща' : 'Main'}
+                            </span>
+                          )}
+
+                          {isSelected && !isPrimary && (
+                            <button
+                              type="button"
+                              onClick={(e) => makePrimaryCategory(c.id, e)}
+                              className="text-[9px] px-1 py-0.5 rounded bg-surface-dark/80 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 transition-colors ml-0.5"
+                              title={isBg ? 'Направи водеща категория' : 'Set as primary category'}
+                            >
+                              ☆
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+
+                {/* Sub-category for primary category */}
                 <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider">
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">
                     {isBg ? 'Подкатегория' : 'Sub-category'}
+                    {(categoryIds[0] || categoryId) && (
+                      <span className="text-slate-500 font-normal lowercase ml-1">
+                        ({isBg ? 'към водеща' : 'for primary'}: {getRootCategories().find(c => c.id === (categoryIds[0] || categoryId))?.[isBg ? 'name' : 'name']?.[isBg ? 'bg' : 'en'] || ''})
+                      </span>
+                    )}
                   </label>
                   <select
                     value={subCategoryId}
                     onChange={(e) => setSubCategoryId(e.target.value)}
-                    disabled={!categoryId}
+                    disabled={!categoryIds.length && !categoryId}
                     className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm outline-none focus:border-[#b8860b] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <option value="">-- {isBg ? 'Избери подкатегория' : 'Select sub-category'} --</option>
-                    {getSubCategories(categoryId).map(c => (
+                    {getSubCategories(categoryIds[0] || categoryId).map(c => (
                       <option key={c.id} value={c.id}>
                         {c.icon} {isBg ? c.name.bg : c.name.en}
                       </option>
@@ -1093,18 +1421,19 @@ const ManageRecipes = () => {
 
           {activeTab === 'ingredients' && (
             <div className="space-y-2">
-              <div className="flex justify-between items-center mb-2">
-                <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-2 mb-3">
+                {/* Row 1: Info & Servings */}
+                <div className="flex justify-between items-center">
                   <div className="flex flex-col">
                     <p className="text-xs text-slate-400">{isBg ? 'Добавете съставките за рецептата.' : 'Add recipe ingredients.'}</p>
-                    <div className="text-[10px] text-amber-500 font-bold mt-1">
+                    <div className="text-[10px] text-amber-500 font-bold mt-0.5">
                       {isBg ? 'Изчислени калории (1 порция): ' : 'Calculated calories (per serving): '}
                       {calculatedCalories} kcal
                     </div>
                   </div>
-                  {/* Servings moved here */}
-                  <div className="flex flex-col">
-                    <label className="text-[9px] text-primary uppercase font-bold mb-1">{isBg ? 'Данни за брой порции' : 'Data for servings'}</label>
+                  {/* Servings */}
+                  <div className="flex flex-col items-end">
+                    <label className="text-[9px] text-primary uppercase font-bold mb-0.5">{isBg ? 'Данни за брой порции' : 'Data for servings'}</label>
                     <select 
                       value={servings} 
                       onChange={(e) => handleServingsChange(e.target.value)} 
@@ -1114,43 +1443,84 @@ const ManageRecipes = () => {
                     </select>
                   </div>
                 </div>
-                <button type="button" onClick={() => handleOpenIngModal(null)} className="text-xs font-bold text-[#b8860b] bg-[#b8860b]/10 border border-[#b8860b]/30 px-3 py-1.5 rounded hover:bg-[#b8860b]/20 transition-colors flex items-center gap-1 cursor-pointer">
-                  <span className="material-symbols-outlined text-[16px]">add_circle</span> {isBg ? 'Добави съставка' : 'Add Ingredient'}
-                </button>
+
+                {/* Row 2: Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => handleOpenIngModal(null)} 
+                    className="flex-1 text-xs font-bold text-[#b8860b] bg-[#b8860b]/10 border border-[#b8860b]/30 px-2.5 py-2 rounded-lg hover:bg-[#b8860b]/20 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add_circle</span> 
+                    {isBg ? 'Добави съставка' : 'Add Ingredient'}
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => handleOpenSubRecipeModal(null)} 
+                    className="flex-1 text-xs font-bold text-primary-light bg-primary/20 border border-primary/40 px-2.5 py-2 rounded-lg hover:bg-primary/30 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">restaurant_menu</span> 
+                    {isBg ? 'Вложи рецепта' : 'Sub-Recipe'}
+                  </button>
+                </div>
               </div>
               {recipeIngredients.length === 0 && <div className="text-center py-4 border border-dashed border-primary/20 rounded text-slate-500 text-xs">{isBg ? 'Няма добавени съставки' : 'No ingredients added'}</div>}
               {recipeIngredients.map((ing, idx) => {
-                // Find the selected ingredient's definition
-                const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id);
+                const isSubRecipe = ing.type === 'recipe';
+                const subRec = isSubRecipe ? recipes.find(r => r.id === (ing.recipe_id || ing.ingredient_id) || r.slug === (ing.recipe_id || ing.ingredient_id)) : null;
+                const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id) : null;
                 const hasSpecificUnits = dbIng?.units_mapping?.length > 0;
                 const mappedUnitIds = hasSpecificUnits ? dbIng.units_mapping.map(um => um.unit_id) : null;
 
-                const availableUnits = hasSpecificUnits
-                  ? measurementsList.filter(m => mappedUnitIds.includes(m.id) || mappedUnitIds.includes(m.unit_id))
-                  : measurementsList;
+                const availableUnits = isSubRecipe
+                  ? measurementsList
+                  : (hasSpecificUnits
+                      ? measurementsList.filter(m => mappedUnitIds.includes(m.id) || mappedUnitIds.includes(m.unit_id))
+                      : measurementsList);
 
-                const unitDisabled = !ing.ingredient_id || ing.ingredient_id === '';
+                const unitDisabled = isSubRecipe ? false : (!ing.ingredient_id || ing.ingredient_id === '');
+
+                const subTitle = subRec
+                  ? getLocalizedField(subRec, 'title', isBg ? 'bg' : 'en')
+                  : (getLocalizedText(ing.name, isBg ? 'bg' : 'en') || (isBg ? ing.ingredient_bg : ing.ingredient_en) || (isSubRecipe ? (isBg ? '-- Избери заготовка --' : '-- Select Sub-recipe --') : (isBg ? '-- Продукт --' : '-- Ingredient --')));
 
                 return (
-                  <div key={ing.id} className="bg-background-dark border border-primary/10 rounded p-2 flex flex-col gap-2 relative group">
-                    <div className="flex gap-2 items-center">
+                  <div key={ing.id} className={`bg-background-dark border rounded p-1.5 flex flex-col gap-1.5 relative group ${isSubRecipe ? 'border-primary/40 bg-primary/5' : 'border-primary/10'}`}>
+                    <div className="flex gap-1.5 items-center">
                       <span className="text-xs text-slate-500 w-4 font-bold shrink-0">{idx + 1}.</span>
                       {/* Ingredient selector - Search Modal trigger */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenIngModal(ing.id)}
-                        className={`w-36 sm:w-48 bg-surface-dark border rounded p-1.5 text-[11px] text-left flex items-center justify-between shrink-0 transition-colors cursor-pointer ${
-                          ing.ingredient_id
-                            ? 'border-[#b8860b]/50 text-slate-100 font-bold bg-[#b8860b]/5'
-                            : 'border-primary/20 text-slate-400 hover:border-primary/50'
-                        }`}
-                        title={isBg ? 'Кликнете за търсене и избор на съставка' : 'Click to search and select ingredient'}
-                      >
-                        <span className="truncate">
-                          {dbIng ? (isBg ? dbIng.name_bg : dbIng.name_en) : `-- ${isBg ? 'Продукт' : 'Ingredient'} --`}
-                        </span>
-                        <span className="material-symbols-outlined text-primary text-sm shrink-0 ml-1">search</span>
-                      </button>
+                      {isSubRecipe ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenSubRecipeModal(ing.id)}
+                          className="w-32 sm:w-[152px] bg-primary/15 border border-primary/40 rounded px-1.5 py-1 text-[11px] text-left flex items-center justify-between shrink-0 transition-colors cursor-pointer text-primary-light font-bold"
+                          title={isBg ? 'Кликнете за смяна на вложената рецепта' : 'Click to change sub-recipe'}
+                        >
+                          <div className="flex items-center gap-1.5 truncate min-w-0">
+                            <span className="material-symbols-outlined text-primary text-[14px] shrink-0">restaurant_menu</span>
+                            <span className="truncate">{subTitle}</span>
+                          </div>
+                          <span className="text-[8px] uppercase px-1 py-0.5 rounded bg-primary/30 text-primary-light font-black shrink-0 ml-1">
+                            {isBg ? 'РЕЦЕПТА' : 'RECIPE'}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenIngModal(ing.id)}
+                          className={`w-32 sm:w-[152px] bg-surface-dark border rounded px-1.5 py-1 text-[11px] text-left flex items-center justify-between shrink-0 transition-colors cursor-pointer ${
+                            ing.ingredient_id
+                              ? 'border-[#b8860b]/50 text-slate-100 font-bold bg-[#b8860b]/5'
+                              : 'border-primary/20 text-slate-400 hover:border-primary/50'
+                          }`}
+                          title={isBg ? 'Кликнете за търсене и избор на съставка' : 'Click to search and select ingredient'}
+                        >
+                          <span className="truncate">
+                            {dbIng ? (isBg ? dbIng.name_bg : dbIng.name_en) : `-- ${isBg ? 'Продукт' : 'Ingredient'} --`}
+                          </span>
+                          <span className="material-symbols-outlined text-primary text-sm shrink-0 ml-1">search</span>
+                        </button>
+                      )}
 
                       {/* Quantity */}
                       <input
@@ -1159,7 +1529,7 @@ const ManageRecipes = () => {
                         value={ing.amount}
                         onChange={(e) => updateIngredientRow(ing.id, 'amount', e.target.value)}
                         placeholder="Qty"
-                        className="w-12 bg-surface-dark border border-primary/20 rounded p-1.5 text-slate-100 text-[11px] text-center shrink-0"
+                        className="w-11 bg-surface-dark border border-primary/20 rounded px-1 py-1 text-slate-100 text-[11px] text-center shrink-0"
                       />
 
                       {/* Smart unit selector */}
@@ -1168,12 +1538,14 @@ const ManageRecipes = () => {
                         onChange={(e) => updateIngredientRow(ing.id, 'unit_id', e.target.value)}
                         disabled={unitDisabled}
                         title={unitDisabled ? (isBg ? 'Изберете продукт първо' : 'Select ingredient first') : ''}
-                        className={`w-24 bg-surface-dark border rounded p-1.5 text-[11px] transition-colors shrink-0 ${
+                        className={`w-20 sm:w-22 bg-surface-dark border rounded px-1.5 py-1 text-[11px] transition-colors shrink-0 ${
                           unitDisabled
                             ? 'border-primary/10 text-slate-600 cursor-not-allowed opacity-50'
-                            : mappedUnitIds
-                              ? 'border-[#b8860b]/40 text-slate-100'
-                              : 'border-primary/20 text-slate-100'
+                            : isSubRecipe
+                              ? 'border-primary/40 text-primary-light font-medium'
+                              : mappedUnitIds
+                                ? 'border-[#b8860b]/40 text-slate-100'
+                                : 'border-primary/20 text-slate-100'
                         }`}
                       >
                         <option value="">-- {isBg ? 'Мярка' : 'Unit'} --</option>
@@ -1184,19 +1556,17 @@ const ManageRecipes = () => {
                         ))}
                       </select>
 
-
-
                       <button
                         type="button"
                         onClick={() => removeIngredientRow(ing.id)}
-                        className="p-1 text-slate-500 hover:text-rose-500 transition-colors shrink-0"
+                        className="p-0.5 text-slate-500 hover:text-rose-500 transition-colors shrink-0"
                       >
                         <span className="material-symbols-outlined text-[18px]">close</span>
                       </button>
                     </div>
 
                     {/* Bilingual Notes Row with stacked Move controls */}
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-1.5 items-center">
                       {/* Move Up/Down Stacked */}
                       <div className="flex flex-col items-center shrink-0 w-4 -space-y-1.5">
                         <button
@@ -1220,20 +1590,22 @@ const ManageRecipes = () => {
                       </div>
 
                       {/* Notes Inputs */}
-                      <div className="grid grid-cols-2 gap-2 flex-grow">
+                      <div className={i18n.language === 'en' ? "flex-grow" : "grid grid-cols-2 gap-1.5 flex-grow"}>
+                        {i18n.language !== 'en' && (
+                          <input
+                            type="text"
+                            value={ing.notes_bg || ''}
+                            onChange={(e) => updateIngredientRow(ing.id, 'notes_bg', e.target.value)}
+                            placeholder={isBg ? "Бележка (BG) (напр. 'нарязан')" : "Note (BG) (e.g. 'chopped')"}
+                            className="bg-surface-dark/50 border border-primary/10 rounded px-2 py-1 text-slate-300 text-[10px]"
+                          />
+                        )}
                         <input
                           type="text"
-                          value={ing.notes_bg}
-                          onChange={(e) => updateIngredientRow(ing.id, 'notes_bg', e.target.value)}
-                          placeholder={isBg ? "Бележка (BG) (напр. 'нарязан')" : "Note (BG) (e.g. 'chopped')"}
-                          className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px]"
-                        />
-                        <input
-                          type="text"
-                          value={ing.notes_en}
+                          value={ing.notes_en || ''}
                           onChange={(e) => updateIngredientRow(ing.id, 'notes_en', e.target.value)}
                           placeholder={isBg ? "Note (EN) (e.g. 'chopped')" : "Note (EN) (e.g. 'chopped')"}
-                          className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px]"
+                          className="bg-surface-dark/50 border border-primary/10 rounded px-2 py-1 text-slate-300 text-[10px] w-full"
                         />
                       </div>
                     </div>
@@ -1263,7 +1635,7 @@ const ManageRecipes = () => {
                         <input 
                           type="number" 
                           value={step.timer_minutes || ''} 
-                          onChange={(e) => updateStepRow(step.id, 'timer_minutes', e.target.value)}
+                          onChange={(e) => updateStepRow(step.id, 'timer_minutes', e.target.value)} 
                           placeholder={isBg ? 'Мин.' : 'Min.'}
                           className="w-10 bg-transparent text-[11px] text-slate-100 outline-none text-center"
                         />
@@ -1279,16 +1651,18 @@ const ManageRecipes = () => {
                       value={step.instruction_en} 
                       onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
                       placeholder={isBg ? 'Description in English...' : 'Description in English...'} 
-                      rows="2" 
+                      rows="4" 
                       className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
                     ></textarea>
-                    <textarea 
-                      value={step.instruction_bg} 
-                      onChange={(e) => updateStepRow(step.id, 'instruction_bg', e.target.value)} 
-                      placeholder={isBg ? 'Описание на български...' : 'Description in Bulgarian...'} 
-                      rows="2" 
-                      className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
-                    ></textarea>
+                    {i18n.language !== 'en' && (
+                      <textarea 
+                        value={step.instruction_bg} 
+                        onChange={(e) => updateStepRow(step.id, 'instruction_bg', e.target.value)} 
+                        placeholder={isBg ? 'Описание на български...' : 'Description in Bulgarian...'} 
+                        rows="4" 
+                        className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
+                      ></textarea>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1329,6 +1703,11 @@ const ManageRecipes = () => {
                       <img src={r.images?.main || placeholderImg} alt={rName} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-background-dark to-transparent"></div>
                       {!isActive && !isDeleted && <div className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-background-dark text-[10px] font-bold rounded-full">{user?.role === ROLES.USER ? (isBg ? 'В ИЗЧАКВАНЕ' : 'PENDING') : 'INACTIVE'}</div>}
+                      {r.needs_translation && (
+                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-blue-500/90 text-white text-[10px] font-bold rounded-full shadow">
+                          {isBg ? 'ЗА ПРЕВОД' : 'TRANSLATION'}
+                        </div>
+                      )}
                     </div>
                     <div className="p-3 flex justify-between items-center -mt-6 relative z-10">
                       <div className="flex-1 min-w-0 pr-2">
@@ -1374,8 +1753,13 @@ const ManageRecipes = () => {
                             </div>
                           </td>
                           <td className="px-3 py-2">
-                            <button onClick={() => handleEditClick(r)} className="font-bold text-slate-200 hover:text-[#b8860b] transition-colors text-left text-[12px] flex items-center gap-1 line-clamp-2">
+                            <button onClick={() => handleEditClick(r)} className="font-bold text-slate-200 hover:text-[#b8860b] transition-colors text-left text-[12px] flex items-center gap-1.5 line-clamp-2">
                               {!isActive && !isDeleted && <span className="size-1.5 shrink-0 bg-amber-500 rounded-full inline-block"></span>}
+                              {r.needs_translation && (
+                                <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold shrink-0">
+                                  {isBg ? 'ПРЕВОД' : 'TRANS'}
+                                </span>
+                              )}
                               {rName}
                             </button>
                             <div className="text-[10px] text-slate-500">{r.cuisine_bg || r.cuisine_en || '-'}</div>
@@ -1491,6 +1875,72 @@ const ManageRecipes = () => {
                 <div className="text-center py-6">
                   <p className="text-xs text-slate-400">
                     {isBg ? 'Няма намерени съставки' : 'No ingredients found'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-Recipe Search Modal Dialog */}
+      {isSubRecipeModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-background-dark/95 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">restaurant_menu</span>
+                {isBg ? 'Вложи съществуваща рецепта (заготовка)' : 'Select sub-recipe (base component)'}
+              </h3>
+              <button type="button" onClick={() => setIsSubRecipeModalOpen(false)} className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer">
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-3.5 border-b border-primary/10 bg-background-dark/50">
+              <input
+                type="text"
+                placeholder={isBg ? "Търси рецепта (напр. Сос Цезар, Блат, Песто)..." : "Search recipe (e.g. Caesar Dressing, Dough)..."}
+                value={subRecipeSearchTerm}
+                onChange={(e) => setSubRecipeSearchTerm(e.target.value)}
+                className="w-full bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-primary"
+                autoFocus
+              />
+            </div>
+
+            <div className="p-3.5 overflow-y-auto space-y-2 flex-1 custom-scrollbar">
+              {filteredSubRecipes.length > 0 ? (
+                filteredSubRecipes.slice(0, 30).map(rec => {
+                  const title = getLocalizedField(rec, 'title', isBg ? 'bg' : 'en');
+                  const imgUrl = rec.images?.main || "/images/recipe-placeholder.png";
+
+                  return (
+                    <button
+                      key={rec.id}
+                      type="button"
+                      onClick={() => handleSelectSubRecipe(rec)}
+                      className="w-full text-left p-2.5 rounded-xl border bg-background-dark/50 hover:bg-primary/10 border-primary/10 hover:border-primary/40 text-xs text-slate-200 flex items-center gap-3 transition-colors cursor-pointer group"
+                    >
+                      <div className="size-10 rounded-lg overflow-hidden shrink-0 border border-primary/20">
+                        <img src={imgUrl} alt={title} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-100 group-hover:text-primary transition-colors truncate">
+                          {title}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {rec.calories_per_serving ? `${rec.calories_per_serving} kcal` : ''} 
+                          {rec.prep_time ? ` • ${rec.prep_time}m prep` : ''}
+                        </p>
+                      </div>
+                      <span className="material-symbols-outlined text-primary text-sm shrink-0">add_circle</span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-xs text-slate-400">
+                    {isBg ? 'Няма намерени рецепти за вграждане' : 'No recipes found to include'}
                   </p>
                 </div>
               )}

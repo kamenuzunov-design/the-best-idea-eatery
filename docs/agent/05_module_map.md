@@ -29,9 +29,9 @@
     *   `admin/ManageIngredients.jsx`, `admin/ManageRecipes.jsx`, `admin/ManageAds.jsx`: Модули за създаване на кулинарно съдържание и реклами.
 
 ## 4. Services & Config & Data (Firebase & Achievements)
-*   **Локация:** `src/lib/firebase.js`, `src/lib/activityLogger.js`, `src/lib/moderationUtils.js`, `src/lib/imageUtils.js`, `src/data/achievements.js`
-*   **Отговорности:** Инициализация на Firebase SDK, глобално логване на действията, AI модерация на изображения, преоразмеряване и дефиниция/оценка на кулинарните медали и постижения.
-*   **Връзки:** Използва се в цялото приложение за данни, сигурност, прогрес и оптимизация.
+*   **Локация:** `src/lib/firebase.js`, `src/lib/activityLogger.js`, `src/lib/moderationUtils.js`, `src/lib/imageUtils.js`, `src/lib/localeUtils.js`, `src/data/achievements.js`
+*   **Отговорности:** Инициализация на Firebase SDK, глобално логване на действията, AI модерация на изображения, многоезична локализация (BG, EN, IT, FR, DE), преоразмеряване и дефиниция/оценка на кулинарните медали и постижения.
+*   **Връзки:** Използва се в цялото приложение за данни, сигурност, многоезичие, прогрес и оптимизация.
 
 ## 5. i18n (Интернационализация)
 *   **Локация:** `src/i18n.js` (конфигурация)
