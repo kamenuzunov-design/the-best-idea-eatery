@@ -2,7 +2,19 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 9 Септември 2026 (Край на сесията)
+## Последна сесия: 10 Септември 2026
+
+### Извършена работа:
+1. **Поправка на грешката `[object Object]` при празни бележки на съставки и `e.notes_bg?.includes is not a function`** ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [RecipeCustomization.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeCustomization.jsx), [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js)):
+   - Отстранен критичен проблем при редакция и превод на рецепти, при който липсваща българска бележка на съставка се запълваше служебно с `[object Object]`. Причината бе неправилно връщане на целия обект за локализация `{ bg: '', en: '' }` от веригата с алтернативи вместо празен стринг.
+   - Създадена и интегрирана универсална функция `extractLocalizedNote` в `localeUtils.js`.
+   - Коригирана грешката `e.notes_bg?.includes is not a function` при валидация за незавършен превод чрез стриктна проверка за стринг (`typeof i.notes_bg === 'string'`).
+   - Защитено запазването във Firestore така, че в полетата `notes_bg`, `notes_en` и `notes: { bg, en, ... }` да се записват само примитивни текстови низове, предотвратявайки замърсяване на базата данни.
+   - В [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx) е осигурено безопасно извличане на `noteText`, елиминиращо сривовете в React 19 (`Objects are not valid as a React child`), ако в базата данни има стар документ с обект в бележката, гарантирайки че детайлите на рецептата се отварят безпроблемно.
+
+---
+
+## Предишна сесия: 9 Септември 2026
 
 ### Извършена работа:
 1. **Вложени рецепти като съставки („Рецепта като съставка“) с многоезична готовност** ([localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx)):

@@ -3,6 +3,16 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-09-10] - Поправка на грешка [object Object] при празни бележки на съставки и запазване
+### Коригирано (Fixed)
+- **Защита срещу `[object Object]` при бележки на съставките ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [RecipeCustomization.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeCustomization.jsx), [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js))**:
+  - Отстранен критичен проблем, при който празно поле `notes_bg` (или съставка без българска бележка при превод от английски) се запълваше служебно със стойност `[object Object]`. Причината беше връщане на цялостния обект за локализация `{ bg: '', en: '' }` от веригата с алтернативи (`|| i.notes`) вместо празен стринг.
+  - Създадена и интегрирана универсална помощна функция `extractLocalizedNote(noteVal, notesObj, lang)` в `localeUtils.js`, гарантираща, че извлечената бележка винаги е чист примитивен стринг (и никога обект или текст `[object Object]`).
+  - **Коригирана грешка при запис `e.notes_bg?.includes is not a function`**: При валидация и проверка за недовършен превод (`hasUnfinishedTranslation`) вече се прави строга проверка за тип `typeof i.notes_bg === 'string' && i.notes_bg.includes('[за превод]')`.
+  - **Защита при запис във Firestore**: При запазване на рецепта (`handleSubmit`), полетата `notes_bg`, `notes_en`, както и вложените в картата `notes: { bg, en, it, fr, de }` се нормализират стриктно до текстови низове, предотвратявайки навлизането на обекти в базата данни.
+  - **Стабилност в прегледа на рецептата ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**: В детайлния преглед `noteText` се извлича безопасно чрез `extractLocalizedNote`. Това напълно предотвратява срив на React 19 (`Objects are not valid as a React child`), ако в базата данни вече е имало некоректно запазена бележка като обект, гарантирайки че рецептите се отварят безпроблемно.
+  - **Огледална защита в [RecipeCustomization.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeCustomization.jsx)**: Защитени нормализирането, записът и рендерирането на входните полета за бележки на съставките при персонализиране на рецепти.
+
 ## [2026-09-09] - Английски като основен език при въвеждане на съдържание & Опашка за преводи в Модерация
 ### Добавено / Коригирано (Added / Fixed)
 - **2-редово структуриране на заглавната част в таб „Съставки“ ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:

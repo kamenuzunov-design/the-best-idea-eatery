@@ -3,6 +3,14 @@
 ## Текуща задача
 Изпълнение на козметични подобрения по визуалните елементи на приложението.
 
+## Изпълнени наскоро задачи (10 Септември 2026)
+- **Поправка на грешката `[object Object]` при празни бележки на съставки и `e.notes_bg?.includes is not a function` ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [RecipeCustomization.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeCustomization.jsx), [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js))**:
+  - Отстранен проблемът, при който празно поле `notes_bg` зареждаше обекта `{ bg: '', en: '' }` и попълваше `[object Object]` в полето на български.
+  - Създадена и интегрирана универсална помощна функция `extractLocalizedNote` в `localeUtils.js` за безопасно четене на бележки.
+  - Коригирана грешката `e.notes_bg?.includes is not a function` чрез валидация само за стринг.
+  - Защитено записването във Firestore – съхраняват се само чисти стрингове.
+  - Защитено рендерирането в [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx) срещу срив на React 19 при остатъчни обекти в базата данни.
+
 ## Изпълнени наскоро задачи (9 Септември 2026)
 - **2-редово структуриране на заглавната част в таб „Съставки“ ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
   - Инфо полетата (текст, калории, порции) са на Ред 1, а бутоните за добавяне („Добави съставка“ и „Вложи рецепта“) са на Ред 2, разпределени поравно (`flex-1`).

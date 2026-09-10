@@ -25,9 +25,15 @@ export const LANGUAGE_LABELS = {
  */
 export const getLocalizedText = (value, lang = 'bg', fallbackLang = 'en') => {
   if (!value) return '';
-  if (typeof value === 'string') return value;
+  if (typeof value === 'string') {
+    return value === '[object Object]' ? '' : value;
+  }
   if (typeof value === 'object') {
-    return value[lang] || value[fallbackLang] || value['bg'] || Object.values(value).find(Boolean) || '';
+    const candidate = value[lang] || value[fallbackLang] || value['bg'] || Object.values(value).find(v => typeof v === 'string' && v && v !== '[object Object]') || '';
+    if (typeof candidate === 'string') {
+      return candidate === '[object Object]' ? '' : candidate;
+    }
+    return '';
   }
   return String(value);
 };
@@ -53,13 +59,50 @@ export const getLocalizedField = (obj, fieldName, lang = 'bg', fallbackLang = 'e
   }
 
   // 2. Check flat localized properties: obj.title_bg, obj.title_en, etc.
-  if (obj[`${fieldName}_${lang}`]) return obj[`${fieldName}_${lang}`];
-  if (obj[`${fieldName}_${fallbackLang}`]) return obj[`${fieldName}_${fallbackLang}`];
-  if (obj[`${fieldName}_bg`]) return obj[`${fieldName}_bg`];
-  if (obj[`${fieldName}_en`]) return obj[`${fieldName}_en`];
+  const checkFlat = (val) => {
+    if (typeof val === 'string' && val !== '[object Object]') return val;
+    if (val && typeof val === 'object') return getLocalizedText(val, lang, fallbackLang);
+    return '';
+  };
+
+  const fLang = checkFlat(obj[`${fieldName}_${lang}`]);
+  if (fLang) return fLang;
+  const fFallback = checkFlat(obj[`${fieldName}_${fallbackLang}`]);
+  if (fFallback) return fFallback;
+  const fBg = checkFlat(obj[`${fieldName}_bg`]);
+  if (fBg) return fBg;
+  const fEn = checkFlat(obj[`${fieldName}_en`]);
+  if (fEn) return fEn;
 
   // 3. Fallback to direct string property if exists
-  if (typeof obj[fieldName] === 'string') return obj[fieldName];
+  if (typeof obj[fieldName] === 'string' && obj[fieldName] !== '[object Object]') return obj[fieldName];
 
+  return '';
+};
+
+/**
+ * Safely extracts a note string for a specific language from an ingredient or object,
+ * guarding against objects, undefined values, or '[object Object]' strings.
+ * 
+ * @param {string|Object} noteVal - Direct note property (e.g. ing.notes_bg)
+ * @param {string|Object} notesObj - Object note map (e.g. ing.notes)
+ * @param {string} lang - Language code ('bg', 'en', etc.)
+ * @returns {string}
+ */
+export const extractLocalizedNote = (noteVal, notesObj, lang = 'bg') => {
+  if (typeof noteVal === 'string') {
+    return noteVal === '[object Object]' ? '' : noteVal;
+  }
+  if (noteVal && typeof noteVal === 'object') {
+    const fromVal = noteVal[lang] || '';
+    if (typeof fromVal === 'string' && fromVal !== '[object Object]') return fromVal;
+  }
+  if (notesObj) {
+    if (typeof notesObj === 'string' && notesObj !== '[object Object]') return notesObj;
+    if (typeof notesObj === 'object') {
+      const fromObj = notesObj[lang] || '';
+      if (typeof fromObj === 'string' && fromObj !== '[object Object]') return fromObj;
+    }
+  }
   return '';
 };

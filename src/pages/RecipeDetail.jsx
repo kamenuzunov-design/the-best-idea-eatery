@@ -9,7 +9,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { REPUTATION_POINTS, getPointsForRating } from '../lib/reputationUtils';
-import { getLocalizedField } from '../lib/localeUtils';
+import { getLocalizedField, extractLocalizedNote } from '../lib/localeUtils';
 
 const RecipeDetail = () => {
   const { id } = useParams();
@@ -1223,7 +1223,7 @@ const RecipeDetail = () => {
                   ? (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id) 
                   : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id));
 
-            const noteText = isBg ? (ing.notes_bg || ing.notes?.bg) : (ing.notes_en || ing.notes?.en);
+            const noteText = extractLocalizedNote(isBg ? ing.notes_bg : ing.notes_en, ing.notes, isBg ? 'bg' : 'en');
 
             const isIngMissing = isPantryActive && missing.some(m => 
               (m.ingredient_id || m.id) === (ing.ingredient_id || ing.id)

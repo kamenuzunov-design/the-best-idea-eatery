@@ -8,6 +8,7 @@ import { logActivity } from '../lib/activityLogger';
 import { REPUTATION_POINTS } from '../lib/reputationUtils';
 import { ROLES } from '../constants/roles';
 import { normalizeMainGroup, getMainGroupLabel } from '../lib/recipeMetaUtils';
+import { extractLocalizedNote } from '../lib/localeUtils';
 
 const RecipeCustomization = () => {
   const { id } = useParams();
@@ -57,8 +58,8 @@ const RecipeCustomization = () => {
               ingredient_en: ing.ingredient_en || ing.name_en || '',
               amount: Number((rawAmount * srv).toFixed(2)),
               unit_id: ing.unit_id || ing.unit || '',
-              notes_bg: ing.notes_bg || ing.notes || '',
-              notes_en: ing.notes_en || ing.notes || ''
+              notes_bg: extractLocalizedNote(ing.notes_bg, ing.notes, 'bg'),
+              notes_en: extractLocalizedNote(ing.notes_en, ing.notes, 'en')
             };
           });
           setIngredients(normalizedIngredients);
@@ -173,8 +174,8 @@ const RecipeCustomization = () => {
         ingredient_en: i.ingredient_en || '',
         amount: Number(((parseFloat(i.amount) || 0) / (parseInt(servings) || 1)).toFixed(4)),
         unit_id: i.unit_id,
-        notes_bg: i.notes_bg || '',
-        notes_en: i.notes_en || ''
+        notes_bg: (typeof i.notes_bg === 'string' && i.notes_bg !== '[object Object]') ? i.notes_bg.trim() : '',
+        notes_en: (typeof i.notes_en === 'string' && i.notes_en !== '[object Object]') ? i.notes_en.trim() : ''
       })).filter(i => i.ingredient_id && i.amount > 0 && i.unit_id);
 
       const normalizedStepsToSave = steps.map(s => ({
@@ -497,14 +498,14 @@ const RecipeCustomization = () => {
                         <div className="grid grid-cols-2 gap-2 flex-grow">
                           <input
                             type="text"
-                            value={ing.notes_bg || ''}
+                            value={typeof ing.notes_bg === 'string' && ing.notes_bg !== '[object Object]' ? ing.notes_bg : ''}
                             onChange={(e) => updateIngredientRow(ing.id, 'notes_bg', e.target.value)}
                             placeholder={isBg ? "Забележка (BG)" : "Note (BG)"}
                             className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px] outline-none"
                           />
                           <input
                             type="text"
-                            value={ing.notes_en || ''}
+                            value={typeof ing.notes_en === 'string' && ing.notes_en !== '[object Object]' ? ing.notes_en : ''}
                             onChange={(e) => updateIngredientRow(ing.id, 'notes_en', e.target.value)}
                             placeholder={isBg ? "Note (EN)" : "Note (EN)"}
                             className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px] outline-none"

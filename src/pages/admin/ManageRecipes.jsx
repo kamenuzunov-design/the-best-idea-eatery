@@ -14,7 +14,7 @@ import { ROLES } from '../../constants/roles';
 import { getRootCategories, getSubCategories } from '../../data/recipe_categories';
 import { REPUTATION_POINTS } from '../../lib/reputationUtils';
 import { getRecipeTags } from '../../lib/recipeMetaUtils';
-import { getLocalizedText, getLocalizedField } from '../../lib/localeUtils';
+import { getLocalizedText, getLocalizedField, extractLocalizedNote } from '../../lib/localeUtils';
 
 const ManageRecipes = () => {
   const { i18n } = useTranslation();
@@ -410,9 +410,9 @@ const ManageRecipes = () => {
         const hasUnfinishedTranslation = 
           !titleBg ||
           titleBg.includes('[за превод]') || 
-          (descBg && descBg.includes('[за превод]')) ||
-          recipeIngredients.some(i => i.notes_bg?.includes('[за превод]')) ||
-          recipeSteps.some(s => s.instruction_bg?.includes('[за превод]'));
+          (descBg && typeof descBg === 'string' && descBg.includes('[за превод]')) ||
+          recipeIngredients.some(i => typeof i.notes_bg === 'string' && i.notes_bg.includes('[за превод]')) ||
+          recipeSteps.some(s => typeof s.instruction_bg === 'string' && s.instruction_bg.includes('[за превод]'));
 
         if (hasUnfinishedTranslation) {
           needsTranslation = true;
@@ -461,8 +461,8 @@ const ManageRecipes = () => {
           extra2: e2Url
         },
         ingredients: recipeIngredients.map(i => {
-          let noteBg = i.notes_bg || i.notes?.bg || i.notes || '';
-          let noteEn = i.notes_en || i.notes?.en || i.notes || '';
+          let noteBg = extractLocalizedNote(i.notes_bg, i.notes, 'bg').trim();
+          let noteEn = extractLocalizedNote(i.notes_en, i.notes, 'en').trim();
           if (isEn && !noteBg && noteEn) {
             noteBg = `[за превод] ${noteEn}`;
           }
@@ -490,9 +490,9 @@ const ManageRecipes = () => {
               notes: {
                 bg: noteBg,
                 en: noteEn,
-                it: i.notes?.it || '',
-                fr: i.notes?.fr || '',
-                de: i.notes?.de || ''
+                it: (typeof i.notes?.it === 'string' && i.notes.it !== '[object Object]') ? i.notes.it : '',
+                fr: (typeof i.notes?.fr === 'string' && i.notes.fr !== '[object Object]') ? i.notes.fr : '',
+                de: (typeof i.notes?.de === 'string' && i.notes.de !== '[object Object]') ? i.notes.de : ''
               },
               notes_bg: noteBg,
               notes_en: noteEn
@@ -517,9 +517,9 @@ const ManageRecipes = () => {
             notes: {
               bg: noteBg,
               en: noteEn,
-              it: i.notes?.it || '',
-              fr: i.notes?.fr || '',
-              de: i.notes?.de || ''
+              it: (typeof i.notes?.it === 'string' && i.notes.it !== '[object Object]') ? i.notes.it : '',
+              fr: (typeof i.notes?.fr === 'string' && i.notes.fr !== '[object Object]') ? i.notes.fr : '',
+              de: (typeof i.notes?.de === 'string' && i.notes.de !== '[object Object]') ? i.notes.de : ''
             },
             notes_bg: noteBg,
             notes_en: noteEn
@@ -631,11 +631,16 @@ const ManageRecipes = () => {
       id: `ing_edit_${idx}_${Date.now()}`, 
       type: i.type || 'ingredient',
       amount: (parseFloat(i.amount) * srv).toString(),
-      notes_bg: i.notes_bg || i.notes?.bg || i.notes || '', 
-      notes_en: i.notes_en || i.notes?.en || i.notes || '',
+      notes_bg: extractLocalizedNote(i.notes_bg, i.notes, 'bg'), 
+      notes_en: extractLocalizedNote(i.notes_en, i.notes, 'en'),
       name: i.name || { bg: i.ingredient_bg || '', en: i.ingredient_en || '' }
     })) : []);
-    setRecipeSteps(recipe.steps ? recipe.steps.map((s, idx) => ({ ...s, id: `step_edit_${idx}_${Date.now()}` })) : []);
+    setRecipeSteps(recipe.steps ? recipe.steps.map((s, idx) => ({ 
+      ...s, 
+      id: `step_edit_${idx}_${Date.now()}`,
+      instruction_bg: (typeof s.instruction_bg === 'string' && s.instruction_bg !== '[object Object]') ? s.instruction_bg : (typeof s.instruction?.bg === 'string' && s.instruction.bg !== '[object Object]' ? s.instruction.bg : (typeof s.instruction === 'string' && s.instruction !== '[object Object]' ? s.instruction : '')),
+      instruction_en: (typeof s.instruction_en === 'string' && s.instruction_en !== '[object Object]') ? s.instruction_en : (typeof s.instruction?.en === 'string' && s.instruction.en !== '[object Object]' ? s.instruction.en : (typeof s.instruction === 'string' && s.instruction !== '[object Object]' ? s.instruction : ''))
+    })) : []);
 
     setActiveTab('basic');
     setShowForm(true);
@@ -1594,7 +1599,7 @@ const ManageRecipes = () => {
                         {i18n.language !== 'en' && (
                           <input
                             type="text"
-                            value={ing.notes_bg || ''}
+                            value={typeof ing.notes_bg === 'string' && ing.notes_bg !== '[object Object]' ? ing.notes_bg : ''}
                             onChange={(e) => updateIngredientRow(ing.id, 'notes_bg', e.target.value)}
                             placeholder={isBg ? "Бележка (BG) (напр. 'нарязан')" : "Note (BG) (e.g. 'chopped')"}
                             className="bg-surface-dark/50 border border-primary/10 rounded px-2 py-1 text-slate-300 text-[10px]"
@@ -1602,7 +1607,7 @@ const ManageRecipes = () => {
                         )}
                         <input
                           type="text"
-                          value={ing.notes_en || ''}
+                          value={typeof ing.notes_en === 'string' && ing.notes_en !== '[object Object]' ? ing.notes_en : ''}
                           onChange={(e) => updateIngredientRow(ing.id, 'notes_en', e.target.value)}
                           placeholder={isBg ? "Note (EN) (e.g. 'chopped')" : "Note (EN) (e.g. 'chopped')"}
                           className="bg-surface-dark/50 border border-primary/10 rounded px-2 py-1 text-slate-300 text-[10px] w-full"
