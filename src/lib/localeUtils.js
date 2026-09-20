@@ -3,14 +3,14 @@
  * Designed to support BG, EN, and ready for IT, FR, DE and beyond.
  */
 
-export const SUPPORTED_LANGUAGES = ['bg', 'en', 'it', 'fr', 'de'];
+export const SUPPORTED_LANGUAGES = ['en', 'it', 'fr', 'de', 'bg'];
 
 export const LANGUAGE_LABELS = {
-  bg: { name: 'Български', flag: '🇧🇬' },
-  en: { name: 'English', flag: '🇬🇧' },
-  it: { name: 'Italiano', flag: '🇮🇹' },
-  fr: { name: 'Français', flag: '🇫🇷' },
-  de: { name: 'Deutsch', flag: '🇩🇪' }
+  en: { name: 'EN', flagUrl: '/flags/gb.svg', flag: '🇬🇧', fullName: 'English' },
+  it: { name: 'IT', flagUrl: '/flags/it.svg', flag: '🇮🇹', fullName: 'Italiano' },
+  fr: { name: 'FR', flagUrl: '/flags/fr.svg', flag: '🇫🇷', fullName: 'Français' },
+  de: { name: 'DE', flagUrl: '/flags/de.svg', flag: '🇩🇪', fullName: 'Deutsch' },
+  bg: { name: 'BG', flagUrl: '/flags/bg.svg', flag: '🇧🇬', fullName: 'Български' }
 };
 
 /**
@@ -105,4 +105,20 @@ export const extractLocalizedNote = (noteVal, notesObj, lang = 'bg') => {
     }
   }
   return '';
+};
+
+/**
+ * Returns localized recipe title based on language code
+ * @param {Object} recipe
+ * @param {string} lang
+ * @returns {string}
+ */
+export const getLocalizedRecipeTitle = (recipe, lang = 'bg') => {
+  if (!recipe) return '';
+  if (recipe[`title_${lang}`]) return recipe[`title_${lang}`];
+  if (recipe.title) {
+    const fromTitle = getLocalizedText(recipe.title, lang);
+    if (fromTitle) return fromTitle;
+  }
+  return lang === 'bg' ? (recipe.title_bg || recipe.title_en || '') : (recipe.title_en || recipe.title_bg || '');
 };

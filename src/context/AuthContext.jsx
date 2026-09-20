@@ -7,6 +7,7 @@ import {
   signOut,
   updateProfile,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithPopup,
   GoogleAuthProvider,
   OAuthProvider
@@ -27,6 +28,7 @@ import { auth, db } from '../lib/firebase';
 import { logActivity } from '../lib/activityLogger';
 import { deleteUser } from 'firebase/auth';
 import { ROLES } from '../constants/roles';
+import i18n, { SUPPORTED_LANGS } from '../i18n';
 import { awardReputationPoints } from '../lib/reputationUtils';
 
 const AuthContext = createContext();
@@ -111,6 +113,7 @@ export const AuthProvider = ({ children }) => {
                 badges: []
               },
               preferences: {
+                language: i18n.language && SUPPORTED_LANGS.includes(i18n.language) ? i18n.language : 'bg',
                 diet: [],
                 exclusions: [],
                 allergies: [],
@@ -153,6 +156,11 @@ export const AuthProvider = ({ children }) => {
             status: userData.status,
             invited_role: userData.invited_role || null
           });
+
+          // Sync preferred language from profile if available
+          if (userData?.preferences?.language && SUPPORTED_LANGS.includes(userData.preferences.language)) {
+            i18n.changeLanguage(userData.preferences.language);
+          }
         } catch (error) {
           console.error("Error fetching user data:", error);
           setUser(DEFAULT_GUEST);
@@ -170,7 +178,7 @@ export const AuthProvider = ({ children }) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const register = async (email, password, name) => {
+  const register = async (email, password, name, preferredLanguage) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
     
@@ -180,12 +188,12 @@ export const AuthProvider = ({ children }) => {
     // Update auth profile
     await updateProfile(firebaseUser, { displayName: name });
     
-    // Create firestore document (Handled primarily by onAuthStateChanged now, but keeping here for explicit structure)
-    // Actually, onAuthStateChanged catches new registrations via social logins and registers them.
-    // We already handle it there. Wait, no. register does explicit setDoc, which is fine.
-    // Let's keep the explicit setDoc in register so we capture the assigned role and initial fields properly.
     const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@eatery.com';
     const assignedRole = firebaseUser.email === adminEmail ? ROLES.ADMIN : ROLES.USER;
+
+    const chosenLang = preferredLanguage && SUPPORTED_LANGS.includes(preferredLanguage)
+      ? preferredLanguage
+      : (i18n.language && SUPPORTED_LANGS.includes(i18n.language) ? i18n.language : 'bg');
     
     const newUserDoc = {
       uid: firebaseUser.uid,
@@ -206,6 +214,7 @@ export const AuthProvider = ({ children }) => {
         badges: []
       },
       preferences: {
+        language: chosenLang,
         diet: [],
         exclusions: [],
         allergies: [],
@@ -220,6 +229,7 @@ export const AuthProvider = ({ children }) => {
     };
     
     await setDoc(doc(db, 'users', firebaseUser.uid), newUserDoc);
+    i18n.changeLanguage(chosenLang);
 
     await logActivity(
       firebaseUser.uid, 
@@ -285,6 +295,10 @@ export const AuthProvider = ({ children }) => {
           status: updatedData.status,
           invited_role: updatedData.invited_role || null
         }));
+
+        if (updatedData.preferences?.language && SUPPORTED_LANGS.includes(updatedData.preferences.language)) {
+          i18n.changeLanguage(updatedData.preferences.language);
+        }
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -296,6 +310,10 @@ export const AuthProvider = ({ children }) => {
     if (auth.currentUser && !auth.currentUser.emailVerified) {
       await sendEmailVerification(auth.currentUser);
     }
+  };
+
+  const resetPassword = async (email) => {
+    await sendPasswordResetEmail(auth, email);
   };
 
   const deleteAccount = async () => {
@@ -346,6 +364,7 @@ export const AuthProvider = ({ children }) => {
       logout,
       updateUserProfile,
       resendVerificationEmail,
+      resetPassword,
       deleteAccount,
       awardPoints: awardReputationPoints,
       isOwner: user.role === ROLES.OWNER,

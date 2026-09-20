@@ -6,12 +6,16 @@ import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { archiveVersion } from '../../lib/archiveUtils';
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, getLocalizedField } from '../../lib/localeUtils';
 
 const ManageMeasurements = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isBg = i18n.language === 'bg';
+
+  const currentLang = i18n.language || 'bg';
+  const isEn = currentLang === 'en';
+  const localLangMeta = LANGUAGE_LABELS[currentLang] || { name: currentLang.toUpperCase(), flag: '' };
 
   const [measurements, setMeasurements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,10 +23,13 @@ const ManageMeasurements = () => {
   // Form State
   const [editingId, setEditingId] = useState(null);
   const [unitId, setUnitId] = useState('');
-  const [nameBg, setNameBg] = useState('');
+  
+  // Multilingual input state
+  const [nameLocal, setNameLocal] = useState('');
   const [nameEn, setNameEn] = useState('');
-  const [shortBg, setShortBg] = useState('');
+  const [shortLocal, setShortLocal] = useState('');
   const [shortEn, setShortEn] = useState('');
+
   const [category, setCategory] = useState('mass'); // mass, volume, count, custom
   const [isStandard, setIsStandard] = useState(false);
   
@@ -47,17 +54,19 @@ const ManageMeasurements = () => {
 
   const handleSaveMeasurement = async (e) => {
     e.preventDefault();
-    if (!nameBg || !nameEn) return;
 
-    const actualUnitId = editingId || unitId || nameEn.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+    const finalNameEn = nameEn.trim() || nameLocal.trim();
+    if (!finalNameEn) return;
+
+    const finalShortEn = shortEn.trim() || shortLocal.trim();
+    const finalNameLocal = nameLocal.trim() || finalNameEn;
+    const finalShortLocal = shortLocal.trim() || finalShortEn;
+
+    const actualUnitId = editingId || unitId || finalNameEn.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
 
     try {
       const unitData = {
         unit_id: actualUnitId,
-        name_bg: nameBg,
-        name_en: nameEn,
-        short_bg: shortBg,
-        short_en: shortEn,
         category: category,
         is_standard: isStandard,
         conversions: {
@@ -72,34 +81,97 @@ const ManageMeasurements = () => {
         }
       };
 
+      // Multilingual Data Entry Paradigm
+      if (isEn) {
+        unitData.name_en = finalNameEn;
+        unitData.short_en = finalShortEn;
+
+        // Auto-fallback for all supported languages
+        for (const lang of SUPPORTED_LANGUAGES) {
+          unitData[`name_${lang}`] = finalNameEn;
+          unitData[`short_${lang}`] = finalShortEn;
+        }
+        unitData.name_bg = finalNameEn;
+        unitData.short_bg = finalShortEn;
+      } else {
+        unitData.name_en = finalNameEn;
+        unitData.short_en = finalShortEn;
+        unitData[`name_${currentLang}`] = finalNameLocal;
+        unitData[`short_${currentLang}`] = finalShortLocal;
+
+        if (currentLang === 'bg') {
+          unitData.name_bg = finalNameLocal;
+          unitData.short_bg = finalShortLocal;
+        }
+
+        // Auto-fallback to EN for other languages
+        for (const lang of SUPPORTED_LANGUAGES) {
+          if (!unitData[`name_${lang}`]) {
+            unitData[`name_${lang}`] = finalNameEn;
+          }
+          if (!unitData[`short_${lang}`]) {
+            unitData[`short_${lang}`] = finalShortEn;
+          }
+        }
+        if (!unitData.name_bg) unitData.name_bg = finalNameEn;
+        if (!unitData.short_bg) unitData.short_bg = finalShortEn;
+      }
+
       if (editingId) {
+        // When editing, preserve existing translations for other languages from existing unit
+        const existingUnit = measurements.find(m => m.id === editingId);
+        if (existingUnit) {
+          for (const lang of SUPPORTED_LANGUAGES) {
+            if (lang !== currentLang && lang !== 'en' && existingUnit[`name_${lang}`]) {
+              unitData[`name_${lang}`] = existingUnit[`name_${lang}`];
+            }
+            if (lang !== currentLang && lang !== 'en' && existingUnit[`short_${lang}`]) {
+              unitData[`short_${lang}`] = existingUnit[`short_${lang}`];
+            }
+          }
+          if (currentLang !== 'bg' && existingUnit.name_bg) {
+            unitData.name_bg = existingUnit.name_bg;
+          }
+          if (currentLang !== 'bg' && existingUnit.short_bg) {
+            unitData.short_bg = existingUnit.short_bg;
+          }
+        }
+
         // Archive before update
         await archiveVersion('measurements', editingId, user.uid, user.email, 'UPDATE');
         await updateDoc(doc(db, 'measurements', editingId), unitData);
-        await logActivity(user.uid, user.email, 'edit_measurement', `Edited measurement unit: ${nameEn}`);
+        await logActivity(user.uid, user.email, 'edit_measurement', `Edited measurement unit: ${finalNameEn}`);
       } else {
         await setDoc(doc(db, 'measurements', actualUnitId), unitData);
-        await logActivity(user.uid, user.email, 'add_measurement', `Added measurement unit: ${nameEn}`);
+        await logActivity(user.uid, user.email, 'add_measurement', `Added measurement unit: ${finalNameEn}`);
       }
       
       handleCancelEdit();
     } catch (error) {
       console.error("Error saving measurement:", error);
-      alert(isBg ? 'Грешка при запазване.' : 'Error saving.');
+      alert(t('measurements.error_saving'));
     }
   };
 
   const handleEditClick = (m) => {
     setEditingId(m.id);
     setUnitId(m.unit_id || m.id);
-    setNameBg(m.name_bg || m.name || '');
-    setNameEn(m.name_en || '');
-    setShortBg(m.short_bg || '');
-    setShortEn(m.short_en || '');
+
+    // Multilingual names
+    const currentLocalName = m[`name_${currentLang}`] || (currentLang === 'bg' ? (m.name_bg || m.name) : '');
+    const currentEnName = m.name_en || (isEn ? (m.name_bg || m.name) : '');
+    setNameLocal(currentLocalName || '');
+    setNameEn(currentEnName || '');
+
+    // Multilingual short symbols
+    const currentLocalShort = m[`short_${currentLang}`] || (currentLang === 'bg' ? (m.short_bg || '') : '');
+    const currentEnShort = m.short_en || (isEn ? (m.short_bg || '') : '');
+    setShortLocal(currentLocalShort || '');
+    setShortEn(currentEnShort || '');
     
     let cat = m.category || 'mass';
     if (!m.category && m.type) {
-        cat = m.type === 'weight' ? 'mass' : m.type;
+      cat = m.type === 'weight' ? 'mass' : m.type;
     }
     setCategory(cat);
     
@@ -117,9 +189,9 @@ const ManageMeasurements = () => {
   const handleCancelEdit = () => {
     setEditingId(null);
     setUnitId('');
-    setNameBg('');
+    setNameLocal('');
     setNameEn('');
-    setShortBg('');
+    setShortLocal('');
     setShortEn('');
     setCategory('mass');
     setIsStandard(false);
@@ -130,7 +202,7 @@ const ManageMeasurements = () => {
   };
 
   const handleDelete = async (id, mName) => {
-    if (!window.confirm(isBg ? 'Сигурни ли сте, че искате да изтриете тази мярка?' : 'Are you sure you want to delete this unit?')) return;
+    if (!window.confirm(t('measurements.delete_confirm'))) return;
     
     try {
       // Archive before delete
@@ -139,18 +211,19 @@ const ManageMeasurements = () => {
       await logActivity(user.uid, user.email, 'delete_measurement', `Deleted measurement unit: ${mName}`);
     } catch (error) {
       console.error("Error deleting measurement:", error);
+      alert(t('measurements.error_deleting'));
     }
   };
 
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 flex items-center p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
-        <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
+        <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors cursor-pointer">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <div>
-          <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Мерни Единици' : 'Measurements'}</h1>
-          <p className="text-xs font-medium text-primary/70">{measurements.length} {isBg ? 'въведени' : 'units'}</p>
+          <h1 className="text-xl font-bold text-slate-100">{t('measurements.title')}</h1>
+          <p className="text-xs font-medium text-primary/70">{t('measurements.count', { count: measurements.length })}</p>
         </div>
       </div>
 
@@ -159,81 +232,127 @@ const ManageMeasurements = () => {
           <div className="flex justify-between items-center border-b border-primary/10 pb-2">
             <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest">
               {editingId 
-                ? (isBg ? 'Редактиране на мярка' : 'Edit Unit') 
-                : (isBg ? 'Нова мерна единица' : 'New Unit')}
+                ? t('measurements.edit_unit') 
+                : t('measurements.new_unit')}
             </h3>
             {editingId && (
-              <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold">
-                {isBg ? 'Отказ' : 'Cancel'}
+              <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold cursor-pointer">
+                {t('measurements.cancel')}
               </button>
             )}
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Име (BG)' : 'Name (BG)'}</label>
-              <input value={nameBg} onChange={(e) => setNameBg(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Супена лъжица" />
+          {/* Multilingual input fields */}
+          {isEn ? (
+            /* Single English inputs for EN users */
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-slate-400">{t('measurements.name_en')}</label>
+                <input 
+                  value={nameEn} 
+                  onChange={(e) => setNameEn(e.target.value)} 
+                  required 
+                  className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 
+                  placeholder={t('measurements.name_placeholder')} 
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400">{t('measurements.short_en')}</label>
+                <input 
+                  value={shortEn} 
+                  onChange={(e) => setShortEn(e.target.value)} 
+                  className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 
+                  placeholder={t('measurements.short_placeholder')} 
+                />
+              </div>
             </div>
-            
-            <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Име (EN)' : 'Name (EN)'}</label>
-              <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Tablespoon" />
-            </div>
+          ) : (
+            /* Dual Local + English inputs for other languages */
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-slate-400">{t('measurements.name_local', { lang: localLangMeta.name })}</label>
+                <input 
+                  value={nameLocal} 
+                  onChange={(e) => setNameLocal(e.target.value)} 
+                  className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 
+                  placeholder={t('measurements.name_placeholder')} 
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400">{t('measurements.name_en')}</label>
+                <input 
+                  value={nameEn} 
+                  onChange={(e) => setNameEn(e.target.value)} 
+                  required 
+                  className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 
+                  placeholder="e.g. Tablespoon" 
+                />
+              </div>
 
-            <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Съкращение (BG)' : 'Short (BG)'}</label>
-              <input value={shortBg} onChange={(e) => setShortBg(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="с.л." />
+              <div>
+                <label className="text-xs text-slate-400">{t('measurements.short_local', { lang: localLangMeta.name })}</label>
+                <input 
+                  value={shortLocal} 
+                  onChange={(e) => setShortLocal(e.target.value)} 
+                  className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 
+                  placeholder={t('measurements.short_placeholder')} 
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400">{t('measurements.short_en')}</label>
+                <input 
+                  value={shortEn} 
+                  onChange={(e) => setShortEn(e.target.value)} 
+                  className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 
+                  placeholder="e.g. tbsp" 
+                />
+              </div>
             </div>
-
-            <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Съкращение (EN)' : 'Short (EN)'}</label>
-              <input value={shortEn} onChange={(e) => setShortEn(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="tbsp" />
-            </div>
-          </div>
+          )}
 
           <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Категория' : 'Category'}</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm">
-                <option value="mass">{isBg ? 'Маса (Mass) - g, kg' : 'Mass (g, kg)'}</option>
-                <option value="volume">{isBg ? 'Обем (Volume) - ml, l' : 'Volume (ml, l)'}</option>
-                <option value="count">{isBg ? 'Брой (Count)' : 'Count'}</option>
-                <option value="custom">{isBg ? 'Специфично (Custom) - чаша, лъжица' : 'Custom (cup, spoon)'}</option>
+              <label className="text-xs text-slate-400">{t('measurements.category')}</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none">
+                <option value="mass">{t('measurements.categories.mass')}</option>
+                <option value="volume">{t('measurements.categories.volume')}</option>
+                <option value="count">{t('measurements.categories.count')}</option>
+                <option value="custom">{t('measurements.categories.custom')}</option>
               </select>
             </div>
             <div className="flex items-center gap-2 mt-6">
-              <input type="checkbox" id="isStandard" checked={isStandard} onChange={(e) => setIsStandard(e.target.checked)} className="accent-primary" />
-              <label htmlFor="isStandard" className="text-sm text-slate-300">
-                {isBg ? 'Стандартна единица' : 'Standard Unit'}
+              <input type="checkbox" id="isStandard" checked={isStandard} onChange={(e) => setIsStandard(e.target.checked)} className="accent-primary cursor-pointer" />
+              <label htmlFor="isStandard" className="text-sm text-slate-300 cursor-pointer">
+                {t('measurements.is_standard')}
               </label>
             </div>
           </div>
 
           <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Метрична базова стойност (ml)' : 'Metric Base (ml)'}</label>
-              <input type="number" step="0.01" value={toMl} onChange={(e) => setToMl(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="15" />
+              <label className="text-xs text-slate-400">{t('measurements.metric_ml')}</label>
+              <input type="number" step="0.01" value={toMl} onChange={(e) => setToMl(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" placeholder="15" />
             </div>
             <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Метрична базова стойност (g - средно)' : 'Metric Base (g - avg)'}</label>
-              <input type="number" step="0.01" value={toGaverage} onChange={(e) => setToGaverage(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="12" />
+              <label className="text-xs text-slate-400">{t('measurements.metric_g')}</label>
+              <input type="number" step="0.01" value={toGaverage} onChange={(e) => setToGaverage(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" placeholder="12" />
             </div>
           </div>
 
           <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Имперски Еквивалент' : 'Imperial Equivalent'}</label>
-              <input value={imperialEquivalent} onChange={(e) => setImperialEquivalent(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="fl_oz" />
+              <label className="text-xs text-slate-400">{t('measurements.imperial_equiv')}</label>
+              <input value={imperialEquivalent} onChange={(e) => setImperialEquivalent(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" placeholder="fl_oz" />
             </div>
             <div>
-              <label className="text-xs text-slate-400">{isBg ? 'Коефициент за конвертиране' : 'Conversion Factor'}</label>
-              <input type="number" step="0.000001" value={conversionFactor} onChange={(e) => setConversionFactor(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="0.5" />
+              <label className="text-xs text-slate-400">{t('measurements.conversion_factor')}</label>
+              <input type="number" step="0.000001" value={conversionFactor} onChange={(e) => setConversionFactor(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" placeholder="0.5" />
             </div>
           </div>
           
-          <button type="submit" className={`w-full font-bold py-2 rounded-lg transition-colors border mt-2 flex justify-center items-center gap-2 ${editingId ? 'bg-[#b8860b]/20 hover:bg-[#b8860b]/30 text-[#b8860b] border-[#b8860b]/30' : 'bg-primary/20 hover:bg-primary/30 text-primary border-primary/30'}`}>
+          <button type="submit" className={`w-full font-bold py-2 rounded-lg transition-colors border mt-2 flex justify-center items-center gap-2 cursor-pointer ${editingId ? 'bg-[#b8860b]/20 hover:bg-[#b8860b]/30 text-[#b8860b] border-[#b8860b]/30' : 'bg-primary/20 hover:bg-primary/30 text-primary border-primary/30'}`}>
             <span className="material-symbols-outlined text-[20px]">{editingId ? 'save' : 'add'}</span>
-            {editingId ? (isBg ? 'Запази промените' : 'Save Changes') : (isBg ? 'Добави мярка' : 'Add Unit')}
+            {editingId ? t('measurements.save_changes') : t('measurements.add_unit')}
           </button>
         </form>
 
@@ -242,49 +361,64 @@ const ManageMeasurements = () => {
             <div className="flex justify-center p-10 text-primary">
               <span className="material-symbols-outlined animate-spin text-4xl">refresh</span>
             </div>
+          ) : measurements.length === 0 ? (
+            <div className="text-center p-8 text-slate-500 text-sm italic">
+              {t('measurements.empty')}
+            </div>
           ) : (
             measurements.map(m => {
+              const catKey = m.category || (m.type === 'weight' ? 'mass' : m.type);
               const catIcon = {
                 'mass': 'scale',
                 'volume': 'water_drop',
                 'count': 'tag',
                 'custom': 'restaurant_menu'
-              }[m.category || (m.type === 'weight' ? 'mass' : m.type)] || 'category';
+              }[catKey] || 'category';
               
+              const primaryName = getLocalizedField(m, 'name', currentLang) || m.name || m.name_en || m.name_bg || m.id;
+              const primaryShort = getLocalizedField(m, 'short', currentLang);
+              const secondaryName = m.name_en || m.name_bg;
+              const secondaryShort = m.short_en || m.short_bg;
+              const showSecondary = !isEn && secondaryName && secondaryName !== primaryName;
+
               return (
               <div key={m.id} className="bg-surface-dark/50 border border-primary/10 rounded-xl p-3 flex justify-between items-center group hover:border-primary/30 transition-colors">
                 <div className="flex gap-3 items-center">
-                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <span className="material-symbols-outlined text-[20px]">{catIcon}</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-100 flex items-baseline gap-2">
+                    <h4 className="font-bold text-slate-100 flex items-baseline gap-2 flex-wrap">
                       <span>
-                        {isBg ? (m.name_bg || m.name) : (m.name_en || 'Missing EN')}
-                        {(isBg ? m.short_bg : m.short_en) && <span className="text-primary/70 font-normal text-xs ml-1">({isBg ? m.short_bg : m.short_en})</span>}
+                        {primaryName}
+                        {primaryShort && <span className="text-primary/70 font-normal text-xs ml-1">({primaryShort})</span>}
                       </span>
-                      <span className="text-slate-600 font-normal text-xs">/</span>
-                      <span className="text-slate-400 font-medium text-sm">
-                        {!isBg ? (m.name_bg || m.name) : (m.name_en || 'Missing EN')}
-                        {(!isBg ? m.short_bg : m.short_en) && <span className="text-slate-500 font-normal text-[10px] ml-1">({!isBg ? m.short_bg : m.short_en})</span>}
-                      </span>
+                      {showSecondary && (
+                        <>
+                          <span className="text-slate-600 font-normal text-xs">/</span>
+                          <span className="text-slate-400 font-medium text-sm">
+                            {secondaryName}
+                            {secondaryShort && <span className="text-slate-500 font-normal text-[10px] ml-1">({secondaryShort})</span>}
+                          </span>
+                        </>
+                      )}
                     </h4>
                     <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 mt-1 items-center">
                       <span className="bg-background-dark px-1.5 py-0.5 rounded border border-primary/10 uppercase">
-                        {m.category || m.type}
+                        {t(`measurements.categories.${catKey}`) || catKey}
                       </span>
                       {m.conversions?.metric?.to_ml && <span className="text-blue-400">{m.conversions.metric.to_ml} ml</span>}
                       {(m.conversions?.metric?.to_g_average || m.base_weight_grams) && <span className="text-amber-500">{m.conversions?.metric?.to_g_average || m.base_weight_grams} g</span>}
-                      {(m.is_standard || m.is_system_unit) && <span className="text-emerald-500 material-symbols-outlined text-[14px]" title="Standard Unit">verified</span>}
+                      {(m.is_standard || m.is_system_unit) && <span className="text-emerald-500 material-symbols-outlined text-[14px]" title={t('measurements.is_standard')}>verified</span>}
                       <span className="text-slate-500 ml-1">ID: {m.unit_id || m.id}</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEditClick(m)} className="p-2 text-slate-400 hover:text-primary transition-colors bg-background-dark/50 rounded-lg">
+                  <button onClick={() => handleEditClick(m)} className="p-2 text-slate-400 hover:text-primary transition-colors bg-background-dark/50 rounded-lg cursor-pointer">
                     <span className="material-symbols-outlined text-[20px]">edit</span>
                   </button>
-                  <button onClick={() => handleDelete(m.id, m.name_bg || m.name)} className="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg">
+                  <button onClick={() => handleDelete(m.id, primaryName)} className="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg cursor-pointer">
                     <span className="material-symbols-outlined text-[20px]">delete</span>
                   </button>
                 </div>

@@ -10,35 +10,10 @@ import { getCuisineById } from '../data/cuisines';
 import { translateTag, getRecipeTags, normalizeMainGroup, passesDietaryProfile } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
 import { getRecipeImageUrl } from '../lib/imageUtils';
+import { getLocalizedRecipeTitle } from '../lib/localeUtils';
 
-const getPluralCategoryName = (id, lang) => {
-  const plurals = {
-    bg: {
-      salad: 'Салати',
-      soup: 'Супи',
-      appetizer: 'Предястия',
-      main: 'Основни',
-      dessert: 'Десерти',
-      pastry: 'Тестени',
-      drink: 'Напитки',
-      sauce: 'Сос/Марината',
-      breakfast: 'Закуска',
-      special: 'Специален повод'
-    },
-    en: {
-      salad: 'Salads',
-      soup: 'Soups',
-      appetizer: 'Appetizers',
-      main: 'Mains',
-      dessert: 'Desserts',
-      pastry: 'Pastries',
-      drink: 'Drinks',
-      sauce: 'Sauces',
-      breakfast: 'Breakfast',
-      special: 'Special Occasion'
-    }
-  };
-  return plurals[lang]?.[id] || id;
+const getPluralCategoryName = (id, t) => {
+  return t ? t(`categories.${id}`, { defaultValue: id }) : id;
 };
 
 const getVotesCount = (recipe) => {
@@ -370,7 +345,9 @@ const Home = () => {
     return () => unsubFeatured();
   }, []);
   const featuredCuisineObj = featuredRecipe?.cuisine_id ? getCuisineById(featuredRecipe.cuisine_id) : null;
-  const featuredCuisineName = featuredCuisineObj ? (isBg ? featuredCuisineObj.name.bg : featuredCuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
+  const featuredCuisineName = featuredCuisineObj 
+    ? (featuredCuisineObj.name?.[i18n.language] || (isBg ? featuredCuisineObj.name?.bg : featuredCuisineObj.name?.en) || featuredCuisineObj.name?.en || featuredCuisineObj.name?.bg) 
+    : t('home.global_selection');
   const calculatedFeaturedTags = getRecipeTags(featuredRecipe, ingredientsList);
   const featuredTags = calculatedFeaturedTags.length > 0 ? calculatedFeaturedTags : (featuredRecipe?.tags || []);
 
@@ -450,16 +427,16 @@ const Home = () => {
             <div className="relative h-72 w-full overflow-hidden rounded-2xl bg-surface-dark shadow-[0_10px_40px_rgba(212,175,53,0.15)] transition-all duration-500 hover:shadow-[0_15px_50px_rgba(212,175,53,0.25)] border border-primary/20">
               <img 
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                alt={isBg ? featuredRecipe.title_bg : featuredRecipe.title_en} 
+                alt={getLocalizedRecipeTitle(featuredRecipe, i18n.language)} 
                 src={featuredRecipe.images?.main || "/images/recipe-placeholder.png"}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-transparent opacity-90"></div>
               <div className="absolute bottom-0 left-0 p-6 w-full">
                 <span className="inline-block px-3 py-1 mb-3 rounded-full bg-primary text-background-dark text-[10px] font-extrabold uppercase tracking-widest shadow-lg shadow-primary/30">
-                  {isBg ? 'АКЦЕНТ НА ДЕНЯ' : 'TODAY\'S FEATURE'}
+                  {t('home.featured_badge')}
                 </span>
                 <h2 className="text-white text-3xl font-extrabold leading-tight drop-shadow-lg">
-                  {isBg ? featuredRecipe.title_bg : featuredRecipe.title_en}
+                  {getLocalizedRecipeTitle(featuredRecipe, i18n.language)}
                 </h2>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   <span className="px-2 py-1 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[10px] font-bold uppercase tracking-tighter shadow-md">
@@ -467,7 +444,7 @@ const Home = () => {
                   </span>
                   {featuredTags.map(tag => (
                     <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md">
-                      {translateTag(tag, isBg)}
+                      {translateTag(tag, i18n.language)}
                     </span>
                   ))}
                 </div>
@@ -481,15 +458,15 @@ const Home = () => {
                     <span className="text-xs font-bold">{featuredRecipe.views_count || 0}</span>
                   </div>
                   {calculateEstimatedPrice(featuredRecipe, ingredientsList) && (
-                    <div className="flex items-center gap-1 text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded text-[10px] font-bold" title={isBg ? 'Ориентировъчна цена за порция' : 'Estimated price per serving'}>
+                    <div className="flex items-center gap-1 text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded text-[10px] font-bold" title={t('home.estimated_price_title')}>
                       <span className="material-symbols-outlined text-[13px]">payments</span>
-                      <span>~{calculateEstimatedPrice(featuredRecipe, ingredientsList)} {isBg ? 'Евро/порция' : 'EUR/serving'}</span>
+                      <span>{t('home.per_serving', { price: calculateEstimatedPrice(featuredRecipe, ingredientsList) })}</span>
                     </div>
                   )}
                   {featuredRecipe.video_url && (
-                    <div className="flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded text-[10px] font-bold">
+                    <div className="flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded text-[10px] font-bold" title={t('home.has_video_title')}>
                       <span className="material-symbols-outlined text-[13px]">play_circle</span>
-                      <span>{isBg ? 'Видео' : 'Video'}</span>
+                      <span>{t('home.video_badge')}</span>
                     </div>
                   )}
                 </div>
@@ -506,7 +483,7 @@ const Home = () => {
         <div className="relative group">
           <input 
             type="text"
-            placeholder={isBg ? "Потърси рецепта..." : "Search recipes..."}
+            placeholder={t('home.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-surface-dark border-2 border-primary/20 rounded-2xl py-4 pl-12 pr-4 text-slate-100 placeholder:text-slate-500 focus:border-primary/50 focus:outline-none transition-all shadow-lg"
@@ -524,10 +501,10 @@ const Home = () => {
       <section className="px-4 mt-2">
         <div className="grid grid-cols-2 gap-2">
           {[
-            { id: 'newest', bg: 'Най-нови', en: 'Newest' },
-            { id: 'top', bg: 'Най-оценявани', en: 'Top Rated' },
-            { id: 'popular', bg: 'Най-гледани', en: 'Most Viewed' },
-            { id: 'all', bg: 'Всички', en: 'All' }
+            { id: 'newest', label: t('home.tabs.newest') },
+            { id: 'top', label: t('home.tabs.top') },
+            { id: 'popular', label: t('home.tabs.popular') },
+            { id: 'all', label: t('home.tabs.all') }
           ].map(tab => (
             <button
               key={tab.id}
@@ -538,7 +515,7 @@ const Home = () => {
                   : 'bg-surface-dark text-slate-400 border border-primary/10 hover:border-primary/30'
               }`}
             >
-              {isBg ? tab.bg : tab.en}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -547,11 +524,8 @@ const Home = () => {
       <section className="px-4 mt-8">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-slate-100 text-2xl font-bold tracking-tight">
-            {activeTab === 'all' ? (isBg ? 'Всички рецепти' : 'All Recipes') : 
-             activeTab === 'newest' ? (isBg ? 'Най-нови' : 'Newest Recipes') :
-             activeTab === 'top' ? (isBg ? 'Най-оценявани' : 'Top Rated') : 
-             (isBg ? 'Най-гледани' : 'Most Viewed')}
-            {selectedCategory && ` • ${getPluralCategoryName(selectedCategory, isBg ? 'bg' : 'en')}`}
+            {t(`home.headings.${activeTab}`)}
+            {selectedCategory && ` • ${getPluralCategoryName(selectedCategory, t)}`}
           </h3>
         </div>
 
@@ -561,7 +535,7 @@ const Home = () => {
             <div className="flex items-center gap-2 min-w-0">
               <span className="material-symbols-outlined text-primary shrink-0">person_search</span>
               <p className="text-xs font-bold text-slate-100 truncate">
-                {isBg ? `Рецепти от готвач: ${authorNameFilter || 'Готвача'}` : `Recipes by chef: ${authorNameFilter || 'Chef'}`}
+                {t('home.author_filter', { name: authorNameFilter || t('home.author_default') })}
               </p>
             </div>
             <button 
@@ -572,7 +546,7 @@ const Home = () => {
                 setSearchParams(newParams);
               }}
               className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer shrink-0 ml-2 flex items-center justify-center rounded-lg hover:bg-primary/20"
-              title={isBg ? 'Премахни филтъра' : 'Clear filter'}
+              title={t('home.clear_filter')}
             >
               <span className="material-symbols-outlined text-base">close</span>
             </button>
@@ -590,7 +564,7 @@ const Home = () => {
             }`}
           >
             <span>🍽️</span>
-            <span>{isBg ? 'Всички' : 'All'}</span>
+            <span>{t('home.all_categories')}</span>
           </button>
           {getRootCategories().map(cat => {
             const isActive = selectedCategory === cat.id;
@@ -605,7 +579,7 @@ const Home = () => {
                 }`}
               >
                 <span>{cat.icon}</span>
-                <span>{getPluralCategoryName(cat.id, isBg ? 'bg' : 'en')}</span>
+                <span>{getPluralCategoryName(cat.id, t)}</span>
               </button>
             );
           })}
@@ -617,7 +591,7 @@ const Home = () => {
           ) : fetchError ? (
             <div className="text-center py-10 px-6 border border-rose-500/20 rounded-2xl bg-rose-500/5">
               <span className="material-symbols-outlined text-rose-500 text-4xl mb-2">error</span>
-              <p className="text-rose-500 text-sm font-bold uppercase tracking-tight">{isBg ? 'Грешка при зареждане' : 'Load Error'}</p>
+              <p className="text-rose-500 text-sm font-bold uppercase tracking-tight">{t('home.load_error')}</p>
               <p className="text-[10px] text-slate-400 mt-1 mb-4">{fetchError}</p>
               {fetchError.includes('index') && (
                 <a 
@@ -626,22 +600,24 @@ const Home = () => {
                   rel="noopener noreferrer"
                   className="inline-block bg-rose-500 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-rose-500/20"
                 >
-                  {isBg ? 'СЪЗДАЙ ИНДЕКС' : 'CREATE INDEX'}
+                  {t('home.create_index')}
                 </a>
               )}
             </div>
           ) : realRecipes.length === 0 ? (
             <div className="text-center py-10 text-slate-500 uppercase text-[10px] tracking-widest font-bold border border-primary/10 rounded-2xl bg-surface-dark/30">
-              {isBg ? 'Все още няма въведени рецепти' : 'No recipes found yet'}
+              {t('home.empty_recipes')}
             </div>
           ) : realRecipes.map(recipe => {
-            const title = isBg ? recipe.title_bg : recipe.title_en;
+            const title = getLocalizedRecipeTitle(recipe, i18n.language);
             const prepTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
-            const difficulty = isBg ? (recipe.difficulty === 'easy' ? 'Лесно' : recipe.difficulty === 'hard' ? 'Трудно' : 'Средно') : (recipe.difficulty || 'medium');
+            const difficulty = t(`home.difficulty.${recipe.difficulty || 'medium'}`);
             const imageUrl = getRecipeImageUrl(recipe);
 
             const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
-            const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
+            const cuisineName = cuisineObj 
+              ? (cuisineObj.name?.[i18n.language] || (isBg ? cuisineObj.name?.bg : cuisineObj.name?.en) || cuisineObj.name?.en || cuisineObj.name?.bg) 
+              : t('home.global_selection');
             const calculatedTags = getRecipeTags(recipe, ingredientsList);
             const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
 
@@ -660,7 +636,7 @@ const Home = () => {
                         </span>
                         {tags.map(tag => (
                           <span key={tag} className="px-1.5 py-0.5 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[9px] font-bold uppercase tracking-tighter shadow-md">
-                            {translateTag(tag, isBg)}
+                            {translateTag(tag, i18n.language)}
                           </span>
                         ))}
                       </div>
@@ -678,15 +654,15 @@ const Home = () => {
                           {recipe.views_count || 0}
                         </span>
                         {calculateEstimatedPrice(recipe, ingredientsList) && (
-                          <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded" title={isBg ? 'Ориентировъчна цена за порция' : 'Estimated price per serving'}>
+                          <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded" title={t('home.estimated_price_title')}>
                             <span className="material-symbols-outlined text-[13px]">payments</span>
-                            <span>~{calculateEstimatedPrice(recipe, ingredientsList)} {isBg ? 'Евро/порция' : 'EUR/serving'}</span>
+                            <span>{t('home.per_serving', { price: calculateEstimatedPrice(recipe, ingredientsList) })}</span>
                           </span>
                         )}
                         {recipe.video_url && (
-                          <span className="flex items-center gap-1 bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded" title={isBg ? 'Има видео рецепта' : 'Has Video Recipe'}>
+                          <span className="flex items-center gap-1 bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded" title={t('home.has_video_title')}>
                             <span className="material-symbols-outlined text-[13px]">play_circle</span>
-                            <span>{isBg ? 'Видео' : 'Video'}</span>
+                            <span>{t('home.video_badge')}</span>
                           </span>
                         )}
                       </div>
@@ -711,19 +687,19 @@ const Home = () => {
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-dark border border-primary/20 text-primary font-bold hover:bg-primary/10 transition-colors shadow-md cursor-pointer"
             >
               <span className="material-symbols-outlined">{showTop10 ? 'expand_less' : 'workspace_premium'}</span>
-              {isBg ? 'Най-използвани 12 продукта' : 'Top 12 Most Used Ingredients'}
+              {t('home.top_ingredients_btn')}
             </button>
 
             {showTop10 && (
               <div className="mt-4 grid grid-cols-3 gap-3 pb-4">
                 {top10Ingredients.map((ing, idx) => {
-                  const ingName = isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg);
+                  const ingName = ing[`name_${i18n.language}`] || (isBg ? ing.name_bg : ing.name_en) || ing.name_en || ing.name_bg;
                   return (
                     <button
                       key={ing.id}
                       onClick={() => handleIngredientClick(ingName)}
                       className="w-full bg-surface-dark/80 rounded-2xl p-2.5 border border-primary/10 flex flex-col items-center justify-center text-center shadow-lg relative hover:border-primary/50 hover:bg-primary/10 hover:scale-[1.03] transition-all cursor-pointer group"
-                      title={isBg ? `Търси рецепти с "${ingName}"` : `Search recipes with "${ingName}"`}
+                      title={t('home.search_with_ingredient', { name: ingName })}
                     >
                       <div className="absolute -top-0.5 -left-0.5 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-[#b8860b] text-background-dark font-black text-[10px] flex items-center justify-center shadow-md border border-background-dark">
                         {idx + 1}
@@ -735,7 +711,7 @@ const Home = () => {
                         {ingName}
                       </span>
                       <span className="text-primary text-[10px] mt-1 font-bold bg-primary/10 group-hover:bg-primary/20 px-2 py-0.5 rounded-full transition-colors">
-                        {ing.count} {isBg ? 'рецепти' : 'recipes'}
+                        {t('home.recipes_count', { count: ing.count })}
                       </span>
                     </button>
                   );
@@ -760,19 +736,19 @@ const Home = () => {
       </section>
 
       <section className="px-4 mt-8 pb-8">
-        <h3 className="text-slate-100 text-2xl font-bold tracking-tight mb-4">{isBg ? 'Открий & Планирай' : 'Discover & Plan'}</h3>
+        <h3 className="text-slate-100 text-2xl font-bold tracking-tight mb-4">{t('home.discover_plan')}</h3>
         <div className="grid grid-cols-2 gap-4">
           <Link to="/planner" className="bg-surface-dark border border-primary/20 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-md group">
             <span className="material-symbols-outlined text-3xl text-primary group-hover:scale-110 transition-transform">calendar_month</span>
-            <span className="text-sm font-bold text-slate-100 text-center">{isBg ? 'Седмично меню' : 'Weekly Menu'}</span>
+            <span className="text-sm font-bold text-slate-100 text-center">{t('home.weekly_menu')}</span>
           </Link>
           <Link to="/seasonal" className="bg-surface-dark border border-primary/20 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-md group">
             <span className="material-symbols-outlined text-3xl text-primary group-hover:scale-110 transition-transform">ac_unit</span>
-            <span className="text-sm font-bold text-slate-100 text-center">{isBg ? 'Сезонно меню' : 'Seasonal Menu'}</span>
+            <span className="text-sm font-bold text-slate-100 text-center">{t('home.seasonal_menu')}</span>
           </Link>
           <Link to="/cuisines" className="bg-surface-dark border border-primary/20 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-md group col-span-2">
             <span className="material-symbols-outlined text-3xl text-primary group-hover:scale-110 transition-transform">public</span>
-            <span className="text-sm font-bold text-slate-100">{isBg ? 'Световни кухни' : 'Explore Cuisines'}</span>
+            <span className="text-sm font-bold text-slate-100">{t('home.explore_cuisines')}</span>
           </Link>
         </div>
       </section>

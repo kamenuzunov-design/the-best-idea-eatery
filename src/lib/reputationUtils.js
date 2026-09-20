@@ -20,19 +20,72 @@ export const getPointsForRating = (score) => {
 };
 
 export const REPUTATION_TIERS = [
-  { min: 5000, label: { bg: 'Легенда', en: 'Legend' } },
-  { min: 1500, label: { bg: 'Кулинарен гуру', en: 'Culinary Guru' } },
-  { min: 500, label: { bg: 'Майстор-готвач', en: 'Master Chef' } },
-  { min: 100, label: { bg: 'Ентусиаст', en: 'Enthusiast' } },
-  { min: 0, label: { bg: 'Новак', en: 'Novice' } }
+  { 
+    min: 5000, 
+    label: { 
+      bg: 'Легенда', 
+      en: 'Legend', 
+      it: 'Leggenda', 
+      fr: 'Légende', 
+      de: 'Legende' 
+    } 
+  },
+  { 
+    min: 1500, 
+    label: { 
+      bg: 'Кулинарен гуру', 
+      en: 'Culinary Guru', 
+      it: 'Guru Culinario', 
+      fr: 'Gourou Culinaire', 
+      de: 'Kulinarischer Guru' 
+    } 
+  },
+  { 
+    min: 500, 
+    label: { 
+      bg: 'Майстор-готвач', 
+      en: 'Master Chef', 
+      it: 'Mastro Chef', 
+      fr: 'Maître Cuisinier', 
+      de: 'Meisterkoch' 
+    } 
+  },
+  { 
+    min: 100, 
+    label: { 
+      bg: 'Ентусиаст', 
+      en: 'Enthusiast', 
+      it: 'Entusiasta', 
+      fr: 'Enthousiaste', 
+      de: 'Enthusiast' 
+    } 
+  },
+  { 
+    min: 0, 
+    label: { 
+      bg: 'Новак', 
+      en: 'Novice', 
+      it: 'Novizio', 
+      fr: 'Novice', 
+      de: 'Neuling' 
+    } 
+  }
 ];
 
 /**
  * Returns the correct label based on score and language
+ * @param {number} score - Reputation score
+ * @param {string|boolean} langOrIsBg - Language code ('bg','en','it','fr','de') or boolean (isBg)
  */
-export const getReputationLabel = (score, isBg = true) => {
-  const tier = REPUTATION_TIERS.find(t => score >= t.min);
-  return tier ? (isBg ? tier.label.bg : tier.label.en) : (isBg ? 'Новак' : 'Novice');
+export const getReputationLabel = (score, langOrIsBg = 'bg') => {
+  const tier = REPUTATION_TIERS.find(t => score >= t.min) || REPUTATION_TIERS[REPUTATION_TIERS.length - 1];
+  let lang = 'bg';
+  if (typeof langOrIsBg === 'boolean') {
+    lang = langOrIsBg ? 'bg' : 'en';
+  } else if (typeof langOrIsBg === 'string') {
+    lang = langOrIsBg.toLowerCase();
+  }
+  return tier.label[lang] || tier.label.en || tier.label.bg;
 };
 
 /**

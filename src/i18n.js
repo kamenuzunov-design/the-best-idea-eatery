@@ -1,154 +1,55 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-const resources = {
-  en: {
-    translation: {
-      "app.title": "The Best Idea",
-      "app.subtitle": "Eatery",
-      "nav.recipes": "Recipes",
-      "nav.pantry": "Pantry",
-      "nav.scanner": "Food Scanner",
-      "nav.ai": "AI Cook",
-      "nav.saved": "Saved",
-      "nav.profile": "Profile",
-      "nav.login": "Login",
-      "home.featured": "Featured",
-      "home.smart_recipes": "Smart Recipes",
-      "home.missing_items": "Missing {{count}} items",
-      "home.ready_to_cook": "Ready to Cook",
-      "home.add_to_list": "Add to List",
-      "home.what_to_cook": "What to Cook?",
-      "home.find_based_on_ingredients": "Find recipes based on your ingredients",
-      "home.try_ai": "Try the AI Assistant",
-      "pantry.search": "Search ingredients",
-      "pantry.all": "All",
-      "pantry.proteins": "Proteins",
-      "pantry.veggies": "Veggies",
-      "pantry.title": "Your Pantry Inventory",
-      "pantry.subtitle": "Вашият Пантри",
-      "pantry.quick_shop": "Quick Shop",
-      "pantry.expiration": "Expiration",
-      "pantry.in_days": "In {{count}} days",
-      "pantry.add_product": "Add Product",
-      "pantry.product_name": "Product Name",
-      "pantry.quantity": "Quantity",
-      "pantry.unit": "Unit",
-      "pantry.cancel": "Cancel",
-      "pantry.save": "Save",
-      "ai.powered": "AI Powered",
-      "ai.title": "AI Cooking Assistant",
-      "ai.subtitle": "Find recipes based on your ingredients",
-      "ai.desc": "Your Pantry Ingredients:",
-      "ai.generate": "Generate Recipes",
-      "ai.suggested": "Suggested for You",
-      "ai.uses_ingredients": "Uses your ingredients!",
-      "saved.title": "Saved Recipes & List",
-      "saved.shopping_list": "Shopping List",
-      "saved.empty_list": "Your list is empty.",
-      "saved.recipes": "Saved Recipes",
-      "saved.order_online": "Order Online",
-      "saved.order_modal_title": "Order Products Online",
-      "saved.order_modal_desc": "Select a store and search/add ingredients directly to your grocery cart. You can also copy the list.",
-      "saved.select_store": "Select Store",
-      "saved.search_store": "Search in {{store}}",
-      "saved.copy_full_list": "Copy Full List",
-      "saved.copy_names_only": "Copy Names Only",
-      "saved.copy_success": "Copied to clipboard!",
-      "saved.marked_ordered": "Ordered",
-      "saved.close": "Close",
-      "gdpr.consent_text": "I agree to the [Terms of Service] and [Privacy Policy]. I confirm that I am aware of how my personal data is collected and processed for the purposes of the application.",
-      "gdpr.agree": "Agree",
-      "gdpr.disagree": "I Disagree",
-      "gdpr.decline_msg": "To create a profile and save your recipes and products, it is necessary to accept the privacy terms. You can continue to use the app as a guest with limited features.",
-      "gdpr.unlock_features": "You haven't given consent for data storage. [Click here to unlock all features]",
-      "gdpr.tos": "Terms of Service",
-      "gdpr.privacy": "Privacy Policy",
-      "profile.delete_account": "Delete Account",
-      "profile.delete_confirm_title": "Delete your account?",
-      "profile.delete_confirm_desc": "This action is permanent. All your personal data will be deleted. Your recipes will remain but without your name.",
-      "profile.legal": "Legal & Privacy"
-    }
-  },
-  bg: {
-    translation: {
-      "app.title": "Най-добрата идея",
-      "app.subtitle": "За хранене",
-      "nav.recipes": "Рецепти",
-      "nav.pantry": "Килер",
-      "nav.scanner": "Сканиране на продукти",
-      "nav.ai": "AI Готвач",
-      "nav.saved": "Запазени",
-      "nav.profile": "Профил",
-      "nav.login": "Вход",
-      "home.featured": "Акцент",
-      "home.smart_recipes": "Смарт Рецепти",
-      "home.missing_items": "Липсват {{count}} продукта",
-      "home.ready_to_cook": "Готово за готвене",
-      "home.add_to_list": "Добави в списъка",
-      "home.what_to_cook": "Какво да сготвя?",
-      "home.find_based_on_ingredients": "Намери рецепти базирани на твоите продукти",
-      "home.try_ai": "Опитай AI Асистента",
-      "pantry.search": "Търсене на продукти",
-      "pantry.all": "Всички",
-      "pantry.proteins": "Протеини",
-      "pantry.veggies": "Зеленчуци",
-      "pantry.title": "Твоят Килер",
-      "pantry.subtitle": "Наличности",
-      "pantry.quick_shop": "Пазарувай",
-      "pantry.expiration": "Годност",
-      "pantry.in_days": "След {{count}} дни",
-      "pantry.add_product": "Добави Продукт",
-      "pantry.product_name": "Име на продукта",
-      "pantry.quantity": "Количество",
-      "pantry.unit": "Мярка",
-      "pantry.cancel": "Отказ",
-      "pantry.save": "Запази",
-      "ai.powered": "AI Осъществено",
-      "ai.title": "AI Готварски Асистент",
-      "ai.subtitle": "Намери рецепти според наличностите си",
-      "ai.desc": "Продуктите в килера ти:",
-      "ai.generate": "Генерирай Рецепти",
-      "ai.suggested": "Предложени за теб",
-      "ai.uses_ingredients": "Използва твоите съставки!",
-      "saved.title": "Запазени Рецепти и Списък",
-      "saved.shopping_list": "Списък за пазаруване",
-      "saved.empty_list": "Списъкът е празен.",
-      "saved.recipes": "Запазени Рецепти",
-      "saved.order_online": "Поръчай онлайн",
-      "saved.order_modal_title": "Поръчай продукти онлайн",
-      "saved.order_modal_desc": "Изберете магазин и търсете/добавяйте продукти директно в количката си. Можете също да копирате списъка.",
-      "saved.select_store": "Избери магазин",
-      "saved.search_store": "Търси в {{store}}",
-      "saved.copy_full_list": "Копирай целия списък",
-      "saved.copy_names_only": "Копирай само имената",
-      "saved.copy_success": "Копирано в клипборда!",
-      "saved.marked_ordered": "Поръчано",
-      "saved.close": "Затвори",
-      "gdpr.consent_text": "Съгласен съм с [Общите условия] и [Политиката за поверителност]. Потвърждавам, че съм запознат с начина, по който моите лични данни се събират и обработват за нуждите на приложението.",
-      "gdpr.agree": "Съгласен",
-      "gdpr.disagree": "Не съм съгласен",
-      "gdpr.decline_msg": "За да създадете профил и да запазвате вашите рецепти и продукти, е необходимо да приемете условията за поверителност. Можете да продължите да използвате приложението като гост с ограничени функции.",
-      "gdpr.unlock_features": "Вие не сте дали съгласие за съхранение на данни. [Кликнете тук, за да отключите всички функции]",
-      "gdpr.tos": "Общи условия",
-      "gdpr.privacy": "Политика за поверителност",
-      "profile.delete_account": "Изтриване на профила",
-      "profile.delete_confirm_title": "Изтриване на Вашия профил?",
-      "profile.delete_confirm_desc": "Това действие е постоянно. Всички Ваши лични данни ще бъдат изтрити. Вашите рецепти ще останат в системата, но без Вашето име.",
-      "profile.legal": "Правна информация и поверителност"
+import bg from './locales/bg.json';
+import en from './locales/en.json';
+import it from './locales/it.json';
+import fr from './locales/fr.json';
+import de from './locales/de.json';
+
+export const SUPPORTED_LANGS = ['en', 'it', 'fr', 'de', 'bg'];
+
+export const getBrowserLanguage = () => {
+  if (typeof window === 'undefined' || !navigator) return 'en';
+  const candidates = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const code = candidate.toLowerCase().split('-')[0].split('_')[0];
+    if (SUPPORTED_LANGS.includes(code)) {
+      return code;
     }
   }
+  return 'en';
+};
+
+const savedLang = typeof window !== 'undefined' ? localStorage.getItem('user_language') : null;
+const initialLang = savedLang && SUPPORTED_LANGS.includes(savedLang) ? savedLang : getBrowserLanguage();
+
+const resources = {
+  bg: { translation: bg },
+  en: { translation: en },
+  it: { translation: it },
+  fr: { translation: fr },
+  de: { translation: de }
 };
 
 i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: "bg", // Default language
-    fallbackLng: "en",
+    lng: initialLang,
+    fallbackLng: 'en',
+    supportedLngs: SUPPORTED_LANGS,
     interpolation: {
       escapeValue: false
     }
   });
+
+// Persist language preference automatically
+i18n.on('languageChanged', (lng) => {
+  if (typeof window !== 'undefined' && lng) {
+    localStorage.setItem('user_language', lng);
+  }
+});
 
 export default i18n;

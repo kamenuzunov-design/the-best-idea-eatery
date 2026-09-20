@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { logActivity } from '../lib/activityLogger';
+import { LANGUAGE_LABELS } from '../lib/localeUtils';
+import { getReputationLabel } from '../lib/reputationUtils';
 
 const ProfileSettings = () => {
   const { user, logout, isGuest, isAdmin, isOwner, isModerator, isUser, resendVerificationEmail } = useAuth();
@@ -148,7 +150,9 @@ const ProfileSettings = () => {
     }
   };
 
-  const isBg = i18n.language === 'bg';
+  const currentLang = i18n.language || 'bg';
+  const currentLangMeta = LANGUAGE_LABELS[currentLang] || { name: currentLang.toUpperCase(), fullName: currentLang };
+  const currentLangLabel = currentLangMeta.fullName ? `${currentLangMeta.fullName} (${currentLangMeta.name})` : currentLangMeta.name;
 
   if (!user) return null; // Or a loading spinner, but routing handles this
 
@@ -171,10 +175,10 @@ const ProfileSettings = () => {
         </div>
         
         <div className="mt-5 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.profile?.nickname || user.name || 'Потребител'}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.profile?.nickname || user.name || t('profile.roles.default_user')}</h1>
           <p className="text-primary/80 font-bold text-xs uppercase tracking-widest mt-1">
-            {user.reputation && !isGuest ? `${isBg ? (user.reputation.label || 'Новак') : (user.reputation.label_en || 'Novice')} • ` : ''}
-            {isAdmin ? (isBg ? 'Администратор' : 'Administrator') : isOwner ? (isBg ? 'Собственик' : 'Owner') : isModerator ? (isBg ? 'Модератор' : 'Moderator') : isGuest ? (isBg ? 'Гост' : 'Guest') : (isBg ? 'Потребител' : 'Registered User')}
+            {user.reputation && !isGuest ? `${getReputationLabel(user.reputation.score, currentLang)} • ` : ''}
+            {isAdmin ? t('profile.roles.admin') : isOwner ? t('profile.roles.owner') : isModerator ? t('profile.roles.moderator') : isGuest ? t('profile.roles.guest') : t('profile.roles.user')}
           </p>
           {user.email && <p className="text-slate-400 text-sm mt-1">{user.email}</p>}
           {!user.isVerified && !isGuest && (
@@ -193,15 +197,15 @@ const ProfileSettings = () => {
                 )}
                 <span className={`text-xs font-medium ${resendStatus === 'sent' ? 'text-emerald-500' : 'text-rose-500'}`}>
                   {resendStatus === 'loading' 
-                    ? (isBg ? 'Изпращане...' : 'Sending...')
+                    ? t('profile.verification.sending')
                     : resendStatus === 'sent'
-                      ? (isBg ? 'Имейлът е изпратен!' : 'Email sent!')
-                      : (isBg ? 'Неверифициран имейл. Натиснете за нов линк.' : 'Unverified Email. Click to resend.')}
+                      ? t('profile.verification.sent_success')
+                      : t('profile.verification.unverified_badge')}
                 </span>
               </button>
               {resendStatus === 'error' && (
                 <p className="text-[10px] text-rose-500 mt-1">
-                  {isBg ? 'Възникна грешка. Опитайте по-късно.' : 'An error occurred. Try again later.'}
+                  {t('profile.verification.error')}
                 </p>
               )}
             </div>
@@ -209,9 +213,7 @@ const ProfileSettings = () => {
         </div>
 
         {!isGuest && (() => {
-          const bioText = isBg
-            ? (user.profile?.bio_bg || user.profile?.bio || '')
-            : (user.profile?.bio_en || user.profile?.bio || '');
+          const bioText = user.profile?.[`bio_${currentLang}`] || user.profile?.bio_en || user.profile?.bio_bg || user.profile?.bio || '';
           return bioText ? (
             <div className="mt-4 px-6 max-w-sm w-full">
               <p className="text-slate-300 text-sm italic border-l-2 border-primary/30 pl-3 text-left">
@@ -221,22 +223,24 @@ const ProfileSettings = () => {
           ) : null;
         })()}
 
-        {user.profile?.location?.show_location && !isGuest && (user.profile.location.city_bg || user.profile.location.country_bg) && (
-          <div className="mt-3 flex items-center gap-1.5 text-slate-400 text-xs font-medium">
-            <span className="material-symbols-outlined text-primary text-base">location_on</span>
-            <span>
-              {isBg
-                ? [user.profile.location.city_bg, user.profile.location.country_bg].filter(Boolean).join(', ')
-                : [user.profile.location.city_en, user.profile.location.country_en].filter(Boolean).join(', ')}
-            </span>
-          </div>
-        )}
+        {!isGuest && user.profile?.location?.show_location && (() => {
+          const loc = user.profile.location;
+          const city = loc?.[`city_${currentLang}`] || loc?.city_en || loc?.city_bg || '';
+          const country = loc?.[`country_${currentLang}`] || loc?.country_en || loc?.country_bg || '';
+          const locString = [city, country].filter(Boolean).join(', ');
+          return locString ? (
+            <div className="mt-3 flex items-center gap-1.5 text-slate-400 text-xs font-medium">
+              <span className="material-symbols-outlined text-primary text-base">location_on</span>
+              <span>{locString}</span>
+            </div>
+          ) : null;
+        })()}
         
         {!isGuest && (
           <div className="mt-6">
             <Link to="/profile/edit" className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary border border-primary/30 px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm active:scale-95">
               <span className="material-symbols-outlined text-lg">edit</span>
-              {isBg ? 'Редактирай профила' : 'Edit Profile'}
+              {t('profile.buttons.edit_profile')}
             </Link>
           </div>
         )}
@@ -252,19 +256,17 @@ const ProfileSettings = () => {
                   invited_role: null
                 });
                 await logActivity(user.uid, user.email, 'accept_role_invite', `Accepted invite for role: ${user.invited_role}`);
-                alert(i18n.language === 'bg' ? 'Поканата е приета успешно! Моля, презаредете страницата.' : 'Invitation accepted successfully! Please refresh.');
+                alert(t('profile.invites.accepted_success'));
                 window.location.reload();
               } catch(e) {
                 console.error(e);
-                alert(i18n.language === 'bg' ? 'Възникна грешка.' : 'An error occurred.');
+                alert(t('profile.invites.error'));
               }
             }}
             className="w-full flex items-center justify-center gap-2 border border-[#b8860b]/40 text-[#b8860b] bg-[#b8860b]/10 py-3 rounded-2xl hover:bg-[#b8860b]/20 active:scale-95 transition-all font-extrabold shadow-[0_0_15px_rgba(184,134,11,0.2)]"
           >
             <span className="material-symbols-outlined">workspace_premium</span>
-            {i18n.language === 'bg' 
-              ? (user.invited_role === 'moderator' ? 'Кандидатствай за Модератор' : 'Кандидатствай за Администратор')
-              : (user.invited_role === 'moderator' ? 'Accept Moderator Invite' : 'Accept Admin Invite')}
+            {user.invited_role === 'moderator' ? t('profile.invites.apply_moderator') : t('profile.invites.apply_admin')}
           </button>
         </section>
       )}
@@ -276,7 +278,7 @@ const ProfileSettings = () => {
             className="w-full flex items-center justify-center gap-2 border border-rose-500/30 text-rose-500 bg-rose-500/5 py-4 rounded-2xl hover:bg-rose-500/10 active:scale-95 transition-all font-extrabold shadow-sm"
           >
             <span className="material-symbols-outlined">logout</span>
-            {isBg ? 'Изход' : 'Log Out'}
+            {t('profile.buttons.logout')}
           </button>
         </section>
       )}
@@ -285,7 +287,7 @@ const ProfileSettings = () => {
         <section className="mt-8 px-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2 flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">shield_person</span>
-            {isBg ? 'АДМИНИСТРАЦИЯ' : 'ADMINISTRATION'}
+            {t('profile.titles.administration')}
           </h3>
           <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-rose-500/20 border-2 border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
             {(isAdmin || isOwner || isModerator) && (
@@ -295,8 +297,8 @@ const ProfileSettings = () => {
                     <span className="material-symbols-outlined">admin_panel_settings</span>
                   </div>
                   <div>
-                    <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{isBg ? 'Администрация' : 'Administration'}</p>
-                    <p className="text-[10px] text-rose-500/60 font-bold uppercase">{isBg ? 'Контролен панел' : 'Control Panel'}</p>
+                    <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{t('profile.titles.administration')}</p>
+                    <p className="text-[10px] text-rose-500/60 font-bold uppercase">{t('profile.menu_items.control_panel')}</p>
                   </div>
                 </div>
                 <span className="material-symbols-outlined text-rose-500/50">chevron_right</span>
@@ -308,8 +310,8 @@ const ProfileSettings = () => {
                   <span className="material-symbols-outlined">edit_square</span>
                 </div>
                 <div>
-                  <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{isBg ? 'Редактиране Рецепти/Продукти' : 'Edit Recipes/Products'}</p>
-                  <p className="text-[10px] text-rose-500/60 font-bold uppercase">{isBg ? 'Управление на данни' : 'Data Management'}</p>
+                  <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{t('profile.menu_items.edit_data')}</p>
+                  <p className="text-[10px] text-rose-500/60 font-bold uppercase">{t('profile.menu_items.data_management')}</p>
                 </div>
               </div>
               <span className="material-symbols-outlined text-rose-500/50">chevron_right</span>
@@ -323,7 +325,7 @@ const ProfileSettings = () => {
         <section className="mt-8 px-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-500/70 px-2 mb-2 flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">database</span>
-            {isBg ? 'БАЗА ДАННИ (САМО ЗА СОБСТВЕНИК)' : 'DATABASE (OWNER ONLY)'}
+            {t('profile.titles.database_owner')}
           </h3>
           <div className="bg-emerald-500/5 border-2 border-emerald-500/20 rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-4">
@@ -332,10 +334,10 @@ const ProfileSettings = () => {
               </div>
               <div>
                 <p className="text-sm font-black text-slate-100 uppercase tracking-tight">
-                  {isBg ? 'Импорт на 50 рецепти' : 'Import 50 Recipes'}
+                  {t('profile.owner_db.import_50')}
                 </p>
                 <p className="text-[10px] text-slate-400 font-bold uppercase">
-                  {isBg ? 'Захранване на Firestore с базови данни' : 'Populate Firestore with seed data'}
+                  {t('profile.owner_db.import_desc')}
                 </p>
               </div>
             </div>
@@ -349,14 +351,14 @@ const ProfileSettings = () => {
                   ></div>
                 </div>
                 <p className="text-[10px] text-emerald-500 font-bold text-center uppercase tracking-widest">
-                  {isBg ? `Обработка: ${importProgress}%` : `Processing: ${importProgress}%`}
+                  {t('profile.owner_db.processing')}: {importProgress}%
                 </p>
               </div>
             ) : importStatus === 'done' ? (
               <div className="flex items-center justify-center gap-2 text-emerald-500 bg-emerald-500/10 py-3 rounded-xl">
                 <span className="material-symbols-outlined">check_circle</span>
                 <span className="text-xs font-black uppercase tracking-widest">
-                  {isBg ? 'УСПЕШЕН ИМПОРТ!' : 'IMPORT SUCCESSFUL!'}
+                  {t('profile.owner_db.success')}
                 </span>
               </div>
             ) : (
@@ -364,13 +366,13 @@ const ProfileSettings = () => {
                 onClick={handleImportDatabase}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-background-dark font-black py-3 rounded-xl transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs"
               >
-                {isBg ? 'СТАРТИРАЙ ИМПОРТ' : 'START IMPORT'}
+                {t('profile.owner_db.start_import')}
               </button>
             )}
 
             {importStatus === 'error' && (
               <p className="text-[10px] text-rose-500 font-bold text-center uppercase">
-                {isBg ? 'ГРЕШКА ПРИ ИМПОРТ. ПРОВЕРЕТЕ КОНЗОЛАТА.' : 'IMPORT ERROR. CHECK CONSOLE.'}
+                {t('profile.owner_db.error')}
               </p>
             )}
           </div>
@@ -379,29 +381,41 @@ const ProfileSettings = () => {
 
       <section className="mt-6 px-4">
         <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">
-          {isBg ? 'Предпочитания' : 'Preferences'}
+          {t('profile.titles.preferences')}
         </h3>
         <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-primary/10 border border-primary/20 shadow-lg">
-          <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors">
+          <Link 
+            to="/profile/edit?tab=preferences"
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group"
+          >
             <div className="flex items-center gap-4">
-              <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined">language</span>
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-100">{isBg ? 'Език' : 'Language'}</p>
-                <p className="text-xs text-primary/70 font-medium">Bulgarian & English</p>
+                <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.language')}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-xs text-primary font-semibold">{currentLangLabel}</span>
+                  {currentLangMeta.flagUrl && (
+                    <img 
+                      src={currentLangMeta.flagUrl} 
+                      alt="" 
+                      className="h-[10px] w-[14px] object-cover rounded-[1.5px] border border-white/20 shadow-xs inline-block shrink-0" 
+                    />
+                  )}
+                </div>
               </div>
             </div>
-            <span className="material-symbols-outlined text-slate-400">chevron_right</span>
-          </div>
+            <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">chevron_right</span>
+          </Link>
           <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors">
             <div className="flex items-center gap-4">
               <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 <span className="material-symbols-outlined">dark_mode</span>
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-100">{isBg ? 'Тема' : 'Theme Mode'}</p>
-                <p className="text-xs text-primary/70 font-medium">{isBg ? 'Тъмна' : 'Dark'}</p>
+                <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.theme')}</p>
+                <p className="text-xs text-primary/70 font-medium">{t('profile.menu_items.dark_theme')}</p>
               </div>
             </div>
             <div className="w-12 h-6 bg-gradient-to-r from-primary to-[#b8860b] rounded-full relative shadow-inner">
@@ -413,7 +427,7 @@ const ProfileSettings = () => {
 
       <section className="mt-6 px-4">
         <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">
-          {isBg ? 'Активност' : 'Activity'}
+          {t('profile.titles.activity')}
         </h3>
         <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-primary/10 border border-primary/20 shadow-lg">
           <Link to="/profile/progress" className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group">
@@ -421,7 +435,7 @@ const ProfileSettings = () => {
               <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>analytics</span>
               </div>
-              <p className="text-sm font-bold text-slate-100">{isBg ? 'Моят напредък' : 'Cooking Progress'}</p>
+              <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.cooking_progress')}</p>
             </div>
             <span className="material-symbols-outlined text-slate-400">chevron_right</span>
           </Link>
@@ -430,7 +444,7 @@ const ProfileSettings = () => {
 
       <section className="mt-6 px-4">
         <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">
-          {isBg ? 'Вътрешно Меню' : 'Internal Menu'}
+          {t('profile.titles.internal_menu')}
         </h3>
         <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-primary/10 border border-primary/20 shadow-lg">
           <Link to="/community" className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group">
@@ -438,7 +452,7 @@ const ProfileSettings = () => {
               <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined">groups</span>
               </div>
-              <p className="text-sm font-bold text-slate-100">{isBg ? 'Общност' : 'Community'}</p>
+              <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.community')}</p>
             </div>
             <span className="material-symbols-outlined text-slate-400">chevron_right</span>
           </Link>
@@ -447,7 +461,7 @@ const ProfileSettings = () => {
               <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined">event</span>
               </div>
-              <p className="text-sm font-bold text-slate-100">{isBg ? 'Събития' : 'Events'}</p>
+              <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.events')}</p>
             </div>
             <span className="material-symbols-outlined text-slate-400">chevron_right</span>
           </Link>
@@ -456,17 +470,16 @@ const ProfileSettings = () => {
               <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined">receipt_long</span>
               </div>
-              <p className="text-sm font-bold text-slate-100">{isBg ? 'Поръчки' : 'Order History'}</p>
+              <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.orders')}</p>
             </div>
             <span className="material-symbols-outlined text-slate-400">chevron_right</span>
           </Link>
         </div>
       </section>
 
-
       <section className="mt-6 px-4">
         <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2">
-          {t('profile.legal')}
+          {t('profile.titles.legal')}
         </h3>
         <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-primary/10 border border-primary/20 shadow-lg">
           <Link to="/terms" className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group">

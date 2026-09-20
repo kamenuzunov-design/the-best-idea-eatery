@@ -83,6 +83,36 @@ src/
 *   **Оптимизация на ресурси:** Използва се `Canvas API` (`imageUtils.js`) за автоматично мащабиране на изображенията на клиента преди качване в Storage.
 *   **Таксономия:** Статични JSON-базирани структури (`src/data/`) за Кухни и Категории рецепти, които осигуряват консистентност в цялото приложение.
 
+## Многоезичен модел за въвеждане и редактиране на данни (Multilingual Data Entry Paradigm)
+
+За да се осигури безупречно потребителско изживяване и структурна съвместимост в цялата база данни, е въведен следният златен стандарт:
+
+1. **Водещ/Универсален език (Universal Base Language):**
+   * **Английският език (`EN`)** е глобалният свързващ език в базата данни за цялата международна система.
+
+2. **При потребител с английски език (`EN`):**
+   * Навсякъде във формите за въвеждане и редакция (Профил, Рецепти, Продукти, Групи продукти, Мерни единици) потребителят вижда **САМО полета на английски език**.
+   * Не се показват полета на други езици.
+   * При запис, въведената информация на английски се копира автоматично и в останалите езикови полета, за да се гарантира, че базата данни никога не остава с празни ключови стойности.
+   * При **рецептите** се маркира `needs_translation: true` с префикс за превод.
+
+3. **При потребител с локален език (BG, IT, FR, DE):**
+   * Потребителят вижда във формите **точно два езика**:
+     * **Локалния му език** (напр. 🇮🇹 Италиански, 🇫🇷 Френски, 🇩🇪 Немски, 🇧🇬 Български)
+     * **Английски език** (🇬🇧 English - основен международен език).
+   * **Задължително попълване**: Потребителят задължително въвежда данните на английски (основен) и на своя език.
+   * **Автоматично попълване при пропуснати полета (Fallback on Save)**: Ако някое локално поле е пропуснато при натискане на „Запис“, системата автоматично го попълва със стойността от английското поле.
+   * **Преводни маркери при рецепти**: Само при рецептите (създаване/редакция), при автоматично запълване или липсващ локален текст се поставя съответният маркер:
+     * 🇧🇬 BG: `[за превод] `
+     * 🇮🇹 IT: `[per la traduzione] `
+     * 🇫🇷 FR: `[à traduire] `
+     * 🇩🇪 DE: `[zu übersetzen] `
+     и флаг `needs_translation: true`.
+
+4. **Обхват на парадигмата:**
+   * Профил: [EditProfile.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/EditProfile.jsx), [ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx)
+   * Администрация: [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx), [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx).
+
 ## Модел на потока на данните (Data Flow)
 
 1.  Потребителят взаимодейства с UI (React компоненти в `src/pages/`).

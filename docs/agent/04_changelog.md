@@ -3,6 +3,135 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-09-20] - Архитектурна стандартизация на многоезичността (i18n) за 5 езика
+### Добавено / Коригирано (Added / Fixed)
+- **Пълна многоезичност на „Управление на Рецепти“ ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - **Многоезичен модел за въвеждане на данни (Multilingual Data Entry Paradigm)**:
+    - За англоезични потребители (`EN`): Показват се **само английски полета** при въвеждане/редакция на рецепти (Title EN, Description EN, Note EN за съставки, Step EN). Slug/ID се генерира автоматично от английското заглавие. При запис английските стойности автоматично се разпространяват във всички езикови карти (`title: { en, bg, it, fr, de }`, `description`, `notes`, `instruction`) и в плоските съвместими полета (`title_*`, `notes_*`, `instruction_*`) като базова основа (fallback), маркирайки рецептата с `needs_translation: true`.
+    - За останалите потребители (`BG`, `IT`, `FR`, `DE`): Показват се **точно две полета** — местният език (със знаменце, напр. 🇧🇬 Заглавие / 🇮🇹 Titolo / 🇫🇷 Titre / 🇩🇪 Titel) плюс универсалната английска база (`EN`). Ако местното поле не е попълнено, при запис то автоматично поема английската стойност.
+    - При редакция се запазват съществуващите преводи на трети езици във Firestore за заглавия, описания, бележки и стъпки.
+  - **Пълен речник за Рецепти (`recipes.*`) в 5-те езика**:
+    - Добавени над 80 ключа в `bg.json`, `en.json`, `it.json`, `fr.json`, `de.json` за заглавна лента, бутони за преизчисляване на AI тагове, CSV импорт/експорт, филтри по статус (Активни, Чакащи, За превод, Деактивирани, Изтрити), превключване на изглед (Плочки/Таблица), 4-табова навигация (Основни данни, Медия, Съставки, Стъпки), калкулатор на калории, значки, модали за избор на съставка и вложена заготовка, модал за дубликати при CSV импорт и системни съобщения.
+  - **Динамични модали и селектори**:
+    - Модалът за избор на съставка показва имената на текущия език чрез `getLocalizedField(ing, 'name', currentLang)`.
+    - Модалът за вграждане на заготовка показва заглавията на текущия език чрез `getLocalizedField(rec, 'title', currentLang)`.
+    - Таблицата и плочките визуализират кухни чрез `getLocalizedText(cObj.name, currentLang)` и рецептурни заглавия според `currentLang`.
+- **Пълна многоезичност на „Продукти / Съставки“ ([ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [recipeMetaUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMetaUtils.js), [src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - **Многоезичен модел за въвеждане на данни (Multilingual Data Entry Paradigm)**:
+    - За англоезични потребители (`EN`): Показва се **единствено** английско поле за име (`Name (EN) *`), като `Slug (ID)` се генерира автоматично от него. При запис въведената стойност автоматично се попълва във всички езици (`en`, `bg`, `it`, `fr`, `de`) в обекта `name: { ... }` и в плоските полета `name_*` като базова основа (fallback).
+    - За останалите потребители (`BG`, `IT`, `FR`, `DE`): Показват се **точно две полета** — местен език (със знаменце, напр. 🇧🇬 Име / 🇮🇹 Nome / 🇫🇷 Nom / 🇩🇪 Name) плюс английското поле (`Name (EN) *`). Ако местното поле не е въведено, при запис то автоматично поема английската стойност.
+    - При редакция на съществуващ продукт се запазват всички съществуващи преводи на трети езици.
+  - **Локализирани падащи менюта и селектори**:
+    - Основни групи и подгрупи се визуализират на текущия език чрез `getLocalizedText(g.name, currentLang)`.
+    - Мерни единици в `units_mapping`: локализирано име и съкращение чрез `getLocalizedField(m, 'name', currentLang)` и `getLocalizedField(m, 'short', currentLang)`.
+    - Световни кухни: локализирани имена чрез `getLocalizedText(c.name, currentLang)`.
+  - **Разширяване на `getMainGroupLabel` в `recipeMetaUtils.js`**:
+    - Добавени преводи на 14-те основни продуктови групи за италиански, френски и немски (Зеленчуци, Плодове, Месо, Морски дарове, Млечни, Зърнени, Мазнини, Подправки, Ядки, Подсладители, Напитки, Макаронени, Бобови, Други).
+  - **Пълен речник за Продукти (`ingredients.*`) в 5-те езика**:
+    - Преведени всички елементи на интерфейса, филтри (Активни, Деактивирани, Изтрити), изгледи (Плочки/Списък), търсачка, хранителни стойности, тагове, алергени, CSV експорт и импорт с модален преглед на дубликати, и бутон за синхронизация на съставките в рецептите.
+- **Пълна многоезичност на „Групи Продукти“ ([ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx), [src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - **Многоезичен модел за въвеждане на данни (Multilingual Data Entry Paradigm)**:
+    - За англоезични потребители (`EN`): Показва се **единствено** английско поле за име (`Name (EN)`), с автоматично генериране на Slug/ID от английското име при въвеждане. При запис въведената стойност автоматично се разпространява във всички езици (`en`, `bg`, `it`, `fr`, `de`) в обекта `name: { ... }` и плоските полета `name_*` като базова основа (fallback).
+    - За останалите потребители (`BG`, `IT`, `FR`, `DE`): Показват се **точно две полета** — съответният местен език (🇧🇬 Име / 🇮🇹 Nome / 🇫🇷 Nom / 🇩🇪 Name) плюс универсалното английско поле (`Name (EN)`). Ако местното поле остане празно, то автоматично се запълва със стойността от английското поле.
+    - При редакция се запазват съществуващите преводи на трети езици от Firestore.
+  - **Пълен речник за Групи Продукти (`ingredient_groups.*`) в 5-те езика**:
+    - Преведени заглавие, брояч, форма (нова група, редакция на група, ID/Slug, имена с флагове, избор на родителска група, бутони за запис и отказ, потвърждение за изтриване, съобщения за грешки при подгрупи и празни състояния).
+  - **Йерархично дърво с групи и подгрупи**:
+    - Динамично локализиране на имената на групите и подгрупите чрез `getLocalizedText(group.name, currentLang)`.
+    - Извеждане на второстепенно английско наименование, когато текущият език не е английски.
+- **Пълна многоезичност на „Мерни единици“ ([ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx), [src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - **Многоезичен модел за въвеждане на мерни единици**:
+    - За англоезични потребители (`EN`): Показват се **само английски полета** — Име (Name EN) и Съкращение (Short Symbol EN). При запис тези стойности се разпространяват автоматично във всички останали езици (`name_bg`, `name_it`, `name_fr`, `name_de` и съответните `short_*`) като базов резервен вариант (fallback).
+    - За останалите потребители (`BG`, `IT`, `FR`, `DE`): Показват се **точно две двойки полета** — местен език (Име и Съкращение) плюс английски език (`EN`). Ако местните полета останат празни, те автоматично се запълват с английските стойности.
+    - При редакция се запазват вече съществуващите преводи на трети езици в Firestore.
+  - **Пълен речник за Мерни единици (`measurements.*`) в 5-те езика**:
+    - Преведени заглавие, брояч, форма (добавяне/редакция, категории Маса/Обем/Брой/Специфично, стандартна единица, базови стойности в ml и g, имперски еквивалент и коефициент, бутони и известия).
+  - **Динамичен списък с мерни единици**:
+    - Използва `getLocalizedField(m, 'name', currentLang)` и `getLocalizedField(m, 'short', currentLang)` за основно заглавие.
+    - Показва второстепенен етикет на английски (`m.name_en`), когато текущият интерфейсен език е различен от английски.
+- **Пълна многоезичност на модул „Профил“ ([ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx), [EditProfile.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/EditProfile.jsx), [reputationUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/reputationUtils.js), [src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - **Многоезичен модел за въвеждане и редактиране на данни (Multilingual Data Entry Paradigm)**:
+    - За англоезични потребители (`EN`): Показва се **единствено** английско поле при въвеждане (Био, Местоположение). При запазване въведената английска стойност автоматично се попълва във всички останали езикови полета като резервна основа (fallback).
+    - За потребители на друг език (`BG`, `IT`, `FR`, `DE`): Показват се **точно две полета** — местният език (напр. 🇧🇬/🇮🇹/🇫🇷/🇩🇪) + английски език (`EN`). При липса на стойност в местното поле при запис, то автоматично се запълва със стойността от английското поле.
+  - **Пълен речник за Профил (`profile.*`) в 5-те езикови файла**:
+    - `titles`: Заглавия на страници и секции (Профил, Редактирай Профила, Предпочитания, Активност, Вътрешно Меню, Администрация, База Данни, Правна информация);
+    - `roles`: Потребителски роли (Собственик, Администратор, Модератор, Потребител, Гост);
+    - `verification`: Съобщения за имейл верификация (бадж, изпращане, успех, грешка);
+    - `invites`: Кандидатстване и приемане на роли за модератор/администратор;
+    - `menu_items`: Елементи от вътрешното меню (Контролен панел, Редактиране, Моят напредък, Общност, Събития, Поръчки, Език, Тема);
+    - `owner_db`: Секция за първоначален импорт на базата от собственика;
+    - `edit`: Табове, полета (име, фамилия, псевдоним), био, локация, диети, алергии, изключени продукти, мерна система (метрична/имперска), брой порции, активация на килер, модали за изтриване на профил;
+    - `buttons`: Бутони за редакция и изход от профила.
+  - **Репутация и титли ([reputationUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/reputationUtils.js))**:
+    - Разширена структурата `REPUTATION_TIERS` с преводи на титлите (Новак / Novice / Principiante / Novice / Neuling, Любител / Hobbyist / Appassionato / Passionné / Hobbykoch, Шеф / Chef / Chef / Chef / Chef, Майстор Шеф / Master Chef / Maestro Chef / Maître Chef / Meisterkoch, Легенда / Culinary Legend / Leggenda Culinaria / Légende Culinaire / Kulinarische Legende) на 5 езика.
+    - `getReputationLabel` адаптиран да приема код на език (`bg`, `en`, `it`, `fr`, `de`).
+  - **Изключени храни и нежелани съставки ([EditProfile.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/EditProfile.jsx))**:
+    - Интелигентното autocomplete търсене и визуализацията на избраните съставки вече използват динамична локализация през `name_${currentLang}` с резервен вариант (fallback към en/bg).
+- **Инвентаризация и пътна карта на локализацията (i18n Tracking & Roadmap) ([docs/agent/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/agent/))**:
+  - Създаден пълен опис в `00_current_state.md` и `03_active_plan.md` на всички 37 страници и ключови компоненти в проекта, категоризирани по статус на превода (Завършени, В процес, Предстоящи).
+  - Завършени до момента: `Home.jsx`, `Login.jsx`, `TermsOfService.jsx`, `PrivacyPolicy.jsx`, `Header.jsx`, `Navigation.jsx`, `GDPRConsent.jsx`, `RequireVerification.jsx`, `ProtectedRoute.jsx`.
+  - Стартирана подготовка за цялостна локализация на модул „Профил“ (`ProfileSettings.jsx`, `EditProfile.jsx`).
+- **Пълна многоезичност на главната страница „Рецепти“ ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [recipeMetaUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMetaUtils.js), [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js), [src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - Елиминирани всички остатъчни двуезични проверки `isBg ? ... : ...` в [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx).
+  - Преведени на всички 5 езика (BG, EN, IT, FR, DE):
+    - Акцент на деня (бадж, кухня, тагове, цена, видео и др.);
+    - Поле за търсене с плейсхолдър;
+    - Динамични табове (Най-нови, Най-оценявани, Най-гледани, Всички);
+    - Заглавия на списъка и бързи филтри по категории (Салати, Супи, Предястия, Основни, Десерти, Тестени, Напитки, Сосове, Закуска, Специален повод);
+    - Информационен бадж за автор/готвач и бутон за изчистване на филтъра;
+    - Карти на рецепти: заглавие (чрез `getLocalizedRecipeTitle`), време за приготвяне, трудност (Лесно/Средно/Трудно), рейтинг, преглеждания, цена на порция, видео маркер;
+    - Празно състояние при липса на рецепти и грешка при зареждане;
+    - Панел „Най-използвани 12 продукта“ с интерактивно търсене и брой рецепти;
+    - Секция „Какво да сготвя днес?“ и връзка към AI Кулинарния асистент;
+    - Секция „Открий & Планирай“: Седмично меню, Сезонно меню, Световни кухни.
+  - Разширен речникът за диетични тагове в `recipeMetaUtils.js` (`translateTag`) с поддръжка за BG, EN, IT, FR, DE.
+- **Кулинарна брандова адаптация на името на приложението (IT, FR, DE) ([src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/), [Login.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Login.jsx))**:
+  - Без сухота и буквализъм, името бе адаптирано спрямо най-ярките местни кулинарни традиции:
+    - 🇮🇹 **IT**: `title`: *"L'Idea Migliore"*, `subtitle`: *"A Tavola"*
+    - 🇫🇷 **FR**: `title`: *"La Meilleure Idée"*, `subtitle`: *"Pour Bien Manger"*
+    - 🇩🇪 **DE**: `title`: *"Die Beste Idee"*, `subtitle`: *"Für Genießer"*
+  - Актуализирани секциите `"app"` в `it.json`, `fr.json` и `de.json`.
+  - В екрана за вход ([Login.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Login.jsx)) статичният английски надпис бе заменен с динамичния ключ `{t('app.title')}`, хармонизирайки представянето с Хедъра.
+- **Подредба на езиците в селектора: EN, IT, FR, DE, BG ([localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js), [i18n.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/i18n.js))**:
+  - Конфигурационният масив `SUPPORTED_LANGUAGES` е преподреден според изискването: `EN`, `IT`, `FR`, `DE`, `BG`.
+  - Всички места със селектори (десктоп падащо меню в Header, мобилен Drawer, форма за регистрация и таб за предпочитания в профила) вече показват езиците в новата последователност.
+- **Пълна многоезичност на „Общи условия“ и „Политика за поверителност“ ([TermsOfService.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/TermsOfService.jsx), [PrivacyPolicy.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/PrivacyPolicy.jsx), [src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - Създадени пълни, професионални преводи на всичките 6 раздела, заглавия и бележки за последна актуализация за италиански (`it`), френски (`fr`) и немски (`de`), както и запазени оригиналните текстове на български (`bg`) и английски (`en`).
+  - Добавени съответните пространства `"terms"` и `"privacy"` във всички 5 локализационни файла (`bg.json`, `en.json`, `it.json`, `fr.json`, `de.json`).
+  - Премахнати остарелите твърдо кодирани условия (`isBg ? ... : ...`) от [TermsOfService.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/TermsOfService.jsx) и [PrivacyPolicy.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/PrivacyPolicy.jsx), като компонентите преминаха изцяло към куката `useTranslation` и ключове `t('terms.*')` и `t('privacy.*')`.
+- **Цялостна архитектура за 5 езика (BG, EN, IT, FR, DE) ([src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/), [src/i18n.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/i18n.js))**:
+  - Създадена структура от 5 структурирани JSON речника: `bg.json`, `en.json`, `it.json`, `fr.json` и `de.json`.
+  - Въведени йерархични пространства от имена (`common.*`, `auth.*`, `nav.*`, `home.*`, `pantry.*`, `scanner.*`, `recipes.*`, `saved.*`, `ai.*`, `profile.*`, `gdpr.*`).
+  - Пренаписана конфигурацията на `src/i18n.js` със статично зареждане на речниците, персистиране на избрания език в `localStorage` и резервен вариант (fallback) към английски език.
+- **Интелигентно засичане на език и профилни предпочитания ([i18n.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/i18n.js), [AuthContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/AuthContext.jsx), [Login.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Login.jsx), [EditProfile.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/EditProfile.jsx), [ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx))**:
+  - **Автоматично разпознаване за гости / нови потребители**: При първо отваряне системата проверява езика на браузъра/устройството (`navigator.language`). Ако той съвпада с някой от 5-те поддържани езика (BG, EN, IT, FR, DE), приложението се зарежда на него; за всички останали по подразбиране се зарежда английски (**EN**).
+  - **Избор при регистрация**: Във формата за регистрация (`Login.jsx`) е добавен селектор за предпочитан език със знаменца, който веднага актуализира формата и се записва перманентно във Firestore (`preferences.language`).
+  - **Автоматичен език при вход**: При влизане на регистриран потребител от всяко устройство неговият профилен език се зарежда и активира автоматично.
+  - **Управление в Редактирай профила (`/profile/edit?tab=preferences`)**: В таб „Предпочитания“ е добавен селектор за предпочитан език с 5-те опции. При запазване на профила езикът се обновява в базата и се сменя в цялото приложение. Поддържа се директно отваряне на таба чрез URL параметър `?tab=preferences`.
+  - **Интерактивен ред в Профила (`/profile`)**: Редът за език вече показва текущо избрания език с неговото SVG знаменце и при клик отвежда директно в `EditProfile.jsx` в таб „Предпочитания“.
+  - **Запазен бърз селектор в Хедъра**: Потребителят може да продължи да превключва динамично езика по всяко време през хедъра (напр. за да покаже рецепта на чужденец), без това да нарушава постоянния му избор в профила.
+- **Изображения на знамената след езиковите кодове (BG, EN, IT, FR, DE) ([Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx), [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js), [public/flags/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/public/flags/))**:
+  - Заменени емоджи символите с реални векторни SVG изображения на флаговете (`bg.svg`, `gb.svg`, `it.svg`, `fr.svg`, `de.svg`).
+  - Флаговете са позиционирани непосредствено **след** буквените кодове: `BG [знаме]`, `EN [знаме на Великобритания]`, `IT [знаме]`, `FR [знаме]`, `DE [знаме]`.
+  - Височината на изображенията на флаговете е строго ограничена (10px, `h-[10px] w-[14px]`) и не надвишава височината на главните букви на текста.
+  - Приложена е същата подредба и в хедър бутона, падащото меню и мобилния Drawer.
+- **Пълна миграция на Автентикацията и семантични HTML етикети ([Login.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Login.jsx))**:
+  - Елиминирани всички твърдо кодирани условия `isBg ? ... : ...`.
+  - Всички етикети, бутони, подсказки и съобщения за грешка използват `t('auth.*')` и `t('common.*')`.
+  - Добавени семантични HTML атрибути за браузерно автопопълване: `htmlFor`, `id`, `name`, `autoComplete`.
+- **Миграция на защитни и общи компоненти ([ProtectedRoute.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/ProtectedRoute.jsx), [RequireVerification.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/RequireVerification.jsx), [GDPRConsent.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/GDPRConsent.jsx))**:
+  - Използване на универсални ключове `t('auth.protection.*')`, `t('nav.login_register')` и `t('gdpr.title')`.
+- **Възстановяване на забравена парола ([AuthContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/AuthContext.jsx), [Login.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Login.jsx))**:
+  - Интегрирана функция `resetPassword(email)` в `AuthContext`, базирана на `sendPasswordResetEmail` от Firebase Authentication SDK.
+  - Активиран бутонът „Забравена парола?“ във формата за вход, който отваря стилен модален прозорец (Вариант А).
+  - Модалът автоматично пренася предварително попълнения имейл адрес от основната форма.
+  - Добавена обработка на валидации и локализирани съобщения за грешки (`auth/user-not-found`, `auth/invalid-email`, `auth/too-many-requests`) и банер за успешно изпращане.
+- **Показване/Скриване на паролата в страницата за вход ([Login.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Login.jsx))**:
+  - Въведено локално реактивно състояние `showPassword` за динамично превключване на типа на полето (`type={showPassword ? 'text' : 'password'}`).
+  - Активиран бутонът с иконата за видимост чрез `onClick` обработчик.
+  - Добавена динамична смяна на иконата между `visibility` (за скрито състояние / показване) и `visibility_off` (за открито състояние / скриване).
+  - Добавени двуезични атрибути `title` и `aria-label` ("Покажи паролата" / "Скрий паролата") за достъпност и подсказка на потребителя.
+
 ## [2026-09-10] - Поправка на грешка [object Object] при празни бележки на съставки и запазване
 ### Коригирано (Fixed)
 - **Защита срещу `[object Object]` при бележки на съставките ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [RecipeCustomization.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeCustomization.jsx), [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js))**:

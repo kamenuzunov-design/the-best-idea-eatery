@@ -5,10 +5,9 @@ import { Link, useLocation } from 'react-router-dom';
 const GDPR_CONSENT_KEY = 'gdpr_consent_v1';
 
 const GDPRConsent = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   const location = useLocation();
-  const isBg = i18n.language === 'bg';
   
   const isLegalPage = location.pathname === '/terms' || location.pathname === '/privacy';
 
@@ -63,7 +62,7 @@ const GDPRConsent = () => {
             <span className="material-symbols-outlined text-3xl">verified_user</span>
           </div>
           <h2 className="text-xl font-bold text-slate-100">
-            {isBg ? 'Вашата поверителност' : 'Your Privacy'}
+            {t('gdpr.title')}
           </h2>
         </div>
 

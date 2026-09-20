@@ -8,14 +8,18 @@ import { logActivity } from '../../lib/activityLogger';
 import { archiveVersion } from '../../lib/archiveUtils';
 import { CUISINES } from '../../data/cuisines';
 import { normalizeMainGroup, getMainGroupLabel } from '../../lib/recipeMetaUtils';
+import { getLocalizedText, getLocalizedField, LANGUAGE_LABELS } from '../../lib/localeUtils';
 
 const ManageIngredients = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'bg';
+  const isEn = currentLang === 'en';
+  const localLangMeta = LANGUAGE_LABELS[currentLang] || LANGUAGE_LABELS.bg;
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editIdFromUrl = searchParams.get('edit');
   const { user, isAdmin, isOwner } = useAuth();
-  const isBg = i18n.language === 'bg';
   const csvImportRef = useRef(null);
   const [csvStatus, setCsvStatus] = useState(''); // '' | 'parsing' | 'saving' | 'done' | 'error'
   const [csvPreview, setCsvPreview] = useState(null); // { newRows, duplicateRows } | null
@@ -34,8 +38,8 @@ const ManageIngredients = () => {
   // Form State
   const [editingId, setEditingId] = useState(null);
   
-  // Identity
-  const [nameBg, setNameBg] = useState('');
+  // Identity (Multilingual Data Entry Paradigm)
+  const [nameLocal, setNameLocal] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [slug, setSlug] = useState('');
   
@@ -113,38 +117,53 @@ const ManageIngredients = () => {
 
   const handleSaveIngredient = async (e) => {
     e.preventDefault();
-    const isEn = i18n.language === 'en';
     if (isEn) {
-      if (!nameEn || !slug) return;
+      if (!nameEn.trim() || !slug.trim()) return;
     } else {
-      if (!nameBg || !nameEn || !slug) return;
+      if (!nameEn.trim() && !nameLocal.trim()) return;
+      if (!slug.trim()) return;
     }
 
     try {
       const originalIng = editingId ? ingredients.find(i => i.id === editingId) : null;
-      let finalNameBg = nameBg;
+      const originalNameMap = (originalIng && typeof originalIng.name === 'object') ? originalIng.name : {};
+
+      const finalNameEn = nameEn.trim() || nameLocal.trim();
+      const finalNameLocal = nameLocal.trim() || finalNameEn;
+
       let needsTranslation = false;
       let translationReason = null;
 
+      // Multilingual Data Entry Paradigm: build robust map for 5 languages
+      const updatedNameMap = {
+        en: finalNameEn,
+        bg: isEn
+          ? (originalNameMap.bg || (editingId ? originalIng?.name_bg : '') || finalNameEn)
+          : (currentLang === 'bg' ? finalNameLocal : (originalNameMap.bg || originalIng?.name_bg || finalNameEn)),
+        it: isEn
+          ? (originalNameMap.it || (editingId ? originalIng?.name_it : '') || finalNameEn)
+          : (currentLang === 'it' ? finalNameLocal : (originalNameMap.it || originalIng?.name_it || finalNameEn)),
+        fr: isEn
+          ? (originalNameMap.fr || (editingId ? originalIng?.name_fr : '') || finalNameEn)
+          : (currentLang === 'fr' ? finalNameLocal : (originalNameMap.fr || originalIng?.name_fr || finalNameEn)),
+        de: isEn
+          ? (originalNameMap.de || (editingId ? originalIng?.name_de : '') || finalNameEn)
+          : (currentLang === 'de' ? finalNameLocal : (originalNameMap.de || originalIng?.name_de || finalNameEn))
+      };
+
       if (isEn) {
         if (!editingId) {
-          finalNameBg = nameBg || `[за превод] ${nameEn}`;
           needsTranslation = true;
           translationReason = 'new';
         } else {
-          // Editing in English: Option A - preserve existing Bulgarian translation
-          const origNameBg = originalIng?.name_bg || '';
-          finalNameBg = origNameBg || `[за превод] ${nameEn}`;
-          const enNameChanged = originalIng && originalIng.name_en !== nameEn;
+          const enNameChanged = originalIng && (originalIng.name_en !== finalNameEn || originalIng.name?.en !== finalNameEn);
           if (enNameChanged || originalIng?.needs_translation) {
             needsTranslation = true;
             translationReason = enNameChanged ? 'en_edited' : (originalIng?.translation_reason || 'pending');
           }
         }
       } else {
-        // Non-EN (e.g. BG) user editing
-        finalNameBg = nameBg;
-        if (!nameBg || nameBg.includes('[за превод]')) {
+        if (!nameLocal.trim() || nameLocal.includes('[за превод]')) {
           needsTranslation = true;
           translationReason = originalIng?.translation_reason || 'pending';
         } else {
@@ -154,9 +173,13 @@ const ManageIngredients = () => {
       }
 
       const ingredientData = {
-        name_bg: finalNameBg,
-        name_en: nameEn,
-        slug: slug,
+        name: updatedNameMap,
+        name_en: updatedNameMap.en,
+        name_bg: updatedNameMap.bg,
+        name_it: updatedNameMap.it,
+        name_fr: updatedNameMap.fr,
+        name_de: updatedNameMap.de,
+        slug: slug.trim(),
         classification: {
           main_group: mainGroup,
           sub_group: subGroup,
@@ -186,27 +209,28 @@ const ManageIngredients = () => {
         // Archive before update
         await archiveVersion('ingredients', editingId, user.uid, user.email, 'UPDATE');
         await updateDoc(doc(db, 'ingredients', editingId), ingredientData);
-        await logActivity(user.uid, user.email, 'edit_ingredient', `Edited ingredient: ${nameEn}`);
+        await logActivity(user.uid, user.email, 'edit_ingredient', `Edited ingredient: ${finalNameEn}`);
       } else {
         ingredientData.createdAt = new Date().toISOString();
         ingredientData.is_active = true;
         ingredientData.is_deleted = false;
-        await setDoc(doc(db, 'ingredients', slug), ingredientData);
-        await logActivity(user.uid, user.email, 'add_ingredient', `Added ingredient: ${nameEn}`);
+        await setDoc(doc(db, 'ingredients', slug.trim()), ingredientData);
+        await logActivity(user.uid, user.email, 'add_ingredient', `Added ingredient: ${finalNameEn}`);
       }
       
       handleCancelEdit();
     } catch (error) {
       console.error("Error saving ingredient:", error);
-      alert(isBg ? 'Грешка при запазване.' : 'Error saving.');
+      alert(t('ingredients.error_saving'));
     }
   };
 
   const handleEditClick = (ing) => {
     setEditingId(ing.id);
-    setNameBg(ing.name_bg || '');
-    setNameEn(ing.name_en || '');
+    setNameEn(ing.name_en || (typeof ing.name === 'object' ? ing.name.en : '') || '');
+    setNameLocal(ing[`name_${currentLang}`] || (typeof ing.name === 'object' ? ing.name[currentLang] : '') || (currentLang === 'bg' ? ing.name_bg : '') || '');
     setSlug(ing.slug || ing.id);
+
     const mg = ing.classification?.main_group || '';
     const normMg = normalizeMainGroup(mg);
     const mainGroupObj = ingredientGroups.find(g => {
@@ -259,7 +283,7 @@ const ManageIngredients = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setNameBg('');
+    setNameLocal('');
     setNameEn('');
     setSlug('');
     setMainGroup('');
@@ -278,31 +302,31 @@ const ManageIngredients = () => {
   };
 
   const handleToggleActive = async (targetId, targetName, currentActiveStatus) => {
-    const actionName = currentActiveStatus ? (isBg ? 'деактивирате' : 'deactivate') : (isBg ? 'активирате' : 'activate');
-    if (!window.confirm(isBg ? `Сигурни ли сте, че искате да ${actionName} ${targetName}?` : `Are you sure you want to ${actionName} ${targetName}?`)) return;
+    const actionName = currentActiveStatus ? t('ingredients.action_deactivate') : t('ingredients.action_activate');
+    if (!window.confirm(t('ingredients.confirm_status', { action: actionName, name: targetName }))) return;
 
     try {
-      // Archive before update
       await archiveVersion('ingredients', targetId, user.uid, user.email, 'UPDATE');
       const ingRef = doc(db, 'ingredients', targetId);
       await updateDoc(ingRef, { 'is_active': !currentActiveStatus });
       await logActivity(user.uid, user.email, 'ingredient_status_change', `${!currentActiveStatus ? 'Activated' : 'Deactivated'} ingredient ${targetName}`);
     } catch (error) {
       console.error("Error updating status:", error);
+      alert(t('ingredients.error_status'));
     }
   };
 
   const handleDelete = async (targetId, targetName) => {
-    if (!window.confirm(isBg ? `Сигурни ли сте, че искате да изтриете ${targetName}?` : `Are you sure you want to delete ${targetName}?`)) return;
+    if (!window.confirm(t('ingredients.confirm_delete', { name: targetName }))) return;
     
     try {
-      // Archive before delete
       await archiveVersion('ingredients', targetId, user.uid, user.email, 'DELETE');
       const ingRef = doc(db, 'ingredients', targetId);
       await updateDoc(ingRef, { 'is_deleted': true, 'is_active': false });
       await logActivity(user.uid, user.email, 'delete_ingredient', `Deleted ingredient: ${targetName}`);
     } catch (error) {
       console.error("Error deleting ingredient:", error);
+      alert(t('ingredients.error_deleting'));
     }
   };
 
@@ -319,7 +343,7 @@ const ManageIngredients = () => {
   const getGroupName = (val) => {
     if (!val) return '-';
     const normVal = normalizeMainGroup(val);
-    let group = ingredientGroups.find(g => {
+    const group = ingredientGroups.find(g => {
       if (!g) return false;
       const gId = String(g.id || '').toLowerCase();
       const gBg = String(g.name?.bg || '').toLowerCase();
@@ -327,14 +351,14 @@ const ManageIngredients = () => {
       return gId === String(val).toLowerCase() || gBg === String(val).toLowerCase() || gEn === String(val).toLowerCase() ||
              normalizeMainGroup(gId) === normVal || normalizeMainGroup(gBg) === normVal || normalizeMainGroup(gEn) === normVal;
     });
-    if (group) return isBg ? (group.name?.bg || group.name?.en) : (group.name?.en || group.name?.bg);
-    return getMainGroupLabel(val, isBg);
+    if (group) return getLocalizedText(group.name, currentLang);
+    return getMainGroupLabel(val, currentLang);
   };
 
   const getSubGroupName = (val) => {
     if (!val) return '-';
     const normVal = normalizeMainGroup(val);
-    let group = ingredientGroups.find(g => {
+    const group = ingredientGroups.find(g => {
       if (!g) return false;
       const gId = String(g.id || '').toLowerCase();
       const gBg = String(g.name?.bg || '').toLowerCase();
@@ -342,8 +366,8 @@ const ManageIngredients = () => {
       return gId === String(val).toLowerCase() || gBg === String(val).toLowerCase() || gEn === String(val).toLowerCase() ||
              normalizeMainGroup(gId) === normVal || normalizeMainGroup(gBg) === normVal || normalizeMainGroup(gEn) === normVal;
     });
-    if (group) return isBg ? (group.name?.bg || group.name?.en) : (group.name?.en || group.name?.bg);
-    return getMainGroupLabel(val, isBg);
+    if (group) return getLocalizedText(group.name, currentLang);
+    return getMainGroupLabel(val, currentLang);
   };
 
   const getGroupIcon = (val) => {
@@ -351,17 +375,25 @@ const ManageIngredients = () => {
     if (v.includes('veg') || v.includes('зеленчуци')) return 'eco';
     if (v.includes('fruit') || v.includes('плодове')) return 'nutrition';
     if (v.includes('meat') || v.includes('месо')) return 'kebab_dining';
-    if (v.includes('fish') || v.includes('риба') || v.includes('sea')) return 'set_meal';
+    if (v.includes('fish') || v.includes('риба') || v.includes('sea') || v.includes('морски')) return 'set_meal';
     if (v.includes('dairy') || v.includes('млечни')) return 'water_drop';
     if (v.includes('spice') || v.includes('подправки')) return 'spa';
     if (v.includes('grain') || v.includes('зърнени')) return 'grass';
     if (v.includes('bakery') || v.includes('тестени')) return 'bakery_dining';
-    if (v.includes('sweet') || v.includes('десерт')) return 'icecream';
+    if (v.includes('sweet') || v.includes('десерт') || v.includes('подсладители')) return 'icecream';
     if (v.includes('drink') || v.includes('напитки')) return 'local_drink';
-    if (v.includes('oil') || v.includes('мазнини')) return 'oil_barrel';
+    if (v.includes('oil') || v.includes('мазнини') || v.includes('fat')) return 'oil_barrel';
     if (v.includes('egg') || v.includes('яйца')) return 'egg';
     if (v.includes('nut') || v.includes('ядки')) return 'nut';
     return 'category';
+  };
+
+  const getIngredientDisplayName = (ing) => {
+    return getLocalizedField(ing, 'name', currentLang) ||
+      (currentLang === 'bg' ? ing.name_bg : ing.name_en) ||
+      ing.name_en ||
+      ing.name_bg ||
+      ing.id;
   };
 
   const filteredIngredients = ingredients.filter(ing => {
@@ -374,11 +406,20 @@ const ManageIngredients = () => {
     if (statusFilter === 'deactivated' && !isDeactivated) return false;
     if (statusFilter === 'deleted' && !isDeleted) return false;
 
-    // Search term
+    // Search term across all language names and slug
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      if (!(ing.name_bg?.toLowerCase() || '').includes(term) && 
-          !(ing.name_en?.toLowerCase() || '').includes(term)) {
+      const allNames = [
+        ing.name_en,
+        ing.name_bg,
+        ing.name_it,
+        ing.name_fr,
+        ing.name_de,
+        typeof ing.name === 'object' ? Object.values(ing.name).join(' ') : '',
+        ing.slug
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      if (!allNames.includes(term)) {
         return false;
       }
     }
@@ -402,8 +443,8 @@ const ManageIngredients = () => {
     };
     const rows = exportable.map(ing => [
       escape(ing.slug || ing.id),
-      escape(ing.name_en),
-      escape(ing.name_bg),
+      escape(ing.name_en || ing.name?.en || ''),
+      escape(ing.name_bg || ing.name?.bg || ''),
       escape(ing.classification?.main_group),
       escape(ing.classification?.sub_group),
       escape(ing.classification?.cuisine_origin),
@@ -456,8 +497,8 @@ const ManageIngredients = () => {
       };
 
       const existingSlugs = new Set(ingredients.map(i => i.slug || i.id));
-      const existingNamesBg = new Set(ingredients.map(i => (i.name_bg || '').toLowerCase()));
-      const existingNamesEn = new Set(ingredients.map(i => (i.name_en || '').toLowerCase()));
+      const existingNamesBg = new Set(ingredients.map(i => (i.name_bg || i.name?.bg || '').toLowerCase()));
+      const existingNamesEn = new Set(ingredients.map(i => (i.name_en || i.name?.en || '').toLowerCase()));
 
       const newRows = [];
       const duplicateRows = [];
@@ -474,7 +515,16 @@ const ManageIngredients = () => {
         try { units_mapping = JSON.parse(cols[idx('units_mapping')] || '[]'); } catch { /* ignore parse error */ }
 
         const row = {
-          slug, name_en, name_bg,
+          slug,
+          name_en,
+          name_bg,
+          name: {
+            en: name_en,
+            bg: name_bg,
+            it: name_en,
+            fr: name_en,
+            de: name_en
+          },
           classification: {
             main_group: cols[idx('main_group')] || '',
             sub_group: cols[idx('sub_group')] || '',
@@ -496,7 +546,7 @@ const ManageIngredients = () => {
           currency: 'EUR',
           units_mapping,
           is_active: true,
-          is_deleted: false,
+          is_deleted: false
         };
 
         const isDuplicate =
@@ -519,7 +569,6 @@ const ManageIngredients = () => {
 
   // ── CSV Import: Step 2 — execute write ───────────────────────────────────────
   const executeImport = async (mode) => {
-    // mode: 'new' | 'all' | 'cancel'
     if (mode === 'cancel') { setCsvPreview(null); return; }
     const rows = mode === 'new'
       ? csvPreview.newRows
@@ -529,7 +578,6 @@ const ManageIngredients = () => {
     setCsvStatus('saving');
     try {
       const now = new Date().toISOString();
-      // Firestore batch limit = 500 docs
       const BATCH_SIZE = 400;
       for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
         const batch = writeBatch(db);
@@ -555,21 +603,17 @@ const ManageIngredients = () => {
 
   const handleSyncRecipeIngredients = async () => {
     if (!ingredients || ingredients.length === 0) {
-      alert(isBg ? 'Базата с продукти все още не е заредена.' : 'Ingredients collection is not loaded yet.');
+      alert(t('ingredients.link_not_loaded'));
       return;
     }
 
-    const confirmMsg = isBg
-      ? 'Сигурни ли сте, че искате да свържете всички съставки във всички рецепти с техните ID-та (ingredient_id) от базата данни?'
-      : 'Are you sure you want to link all recipe ingredients with their ingredient_id from database?';
-    
-    if (!window.confirm(confirmMsg)) return;
+    if (!window.confirm(t('ingredients.link_confirm'))) return;
 
     setSyncStatus('syncing');
     try {
       const recipesSnap = await getDocs(collection(db, 'recipes'));
       if (recipesSnap.empty) {
-        alert(isBg ? 'Няма намерени рецепти.' : 'No recipes found.');
+        alert(t('ingredients.link_no_recipes'));
         setSyncStatus('');
         return;
       }
@@ -586,6 +630,13 @@ const ManageIngredients = () => {
       existingDbIngs.forEach(ing => {
         if (ing.name_bg) ingredientMap.set(ing.name_bg.trim().toLowerCase(), ing);
         if (ing.name_en) ingredientMap.set(ing.name_en.trim().toLowerCase(), ing);
+        if (ing.name && typeof ing.name === 'object') {
+          Object.values(ing.name).forEach(val => {
+            if (typeof val === 'string' && val.trim()) {
+              ingredientMap.set(val.trim().toLowerCase(), ing);
+            }
+          });
+        }
       });
 
       const BATCH_SIZE = 400;
@@ -631,12 +682,23 @@ const ManageIngredients = () => {
 
             if (!matchedDbIng && (textBg || textEn)) {
               const newIngId = doc(collection(db, 'ingredients')).id;
+              const autoNameEn = ing.ingredient_en || ing.name_en || textEn || ing.ingredient_bg || 'Ingredient';
+              const autoNameBg = ing.ingredient_bg || ing.name_bg || textBg || autoNameEn;
               const newIngDoc = {
                 id: newIngId,
-                name_bg: ing.ingredient_bg || ing.name_bg || textBg,
-                name_en: ing.ingredient_en || ing.name_en || textEn || ing.ingredient_bg || 'Ingredient',
-                slug: (ing.ingredient_en || ing.ingredient_bg || textEn || textBg).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+                name_bg: autoNameBg,
+                name_en: autoNameEn,
+                name: {
+                  en: autoNameEn,
+                  bg: autoNameBg,
+                  it: autoNameEn,
+                  fr: autoNameEn,
+                  de: autoNameEn
+                },
+                slug: autoNameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
                 status: 'active',
+                is_active: true,
+                is_deleted: false,
                 createdAt: new Date().toISOString()
               };
 
@@ -694,16 +756,16 @@ const ManageIngredients = () => {
       );
 
       setSyncStatus('done');
-      const resultMsg = isBg
-        ? `Готово! Успешно свързани ${totalLinkedIngredients} съставки в ${updatedRecipesCount} рецепти! (Създадени нови продукти: ${createdIngredientsCount})`
-        : `Done! Linked ${totalLinkedIngredients} ingredients across ${updatedRecipesCount} recipes! (New ingredients created: ${createdIngredientsCount})`;
-
-      alert(resultMsg);
+      alert(t('ingredients.link_success', {
+        linkedCount: totalLinkedIngredients,
+        recipesCount: updatedRecipesCount,
+        createdCount: createdIngredientsCount
+      }));
       setTimeout(() => setSyncStatus(''), 4000);
     } catch (err) {
       console.error('Error syncing ingredients:', err);
       setSyncStatus('error');
-      alert('Грешка при синхронизация: ' + err.message);
+      alert(t('ingredients.link_error', { message: err.message }));
       setTimeout(() => setSyncStatus(''), 4000);
     }
   };
@@ -713,16 +775,20 @@ const ManageIngredients = () => {
       return (
         <button 
           onClick={() => handleRestore(ing.id, ingName)}
-          className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors"
+          className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors border border-emerald-500/20"
         >
-          {isBg ? 'Възстанови' : 'Restore'}
+          {t('ingredients.restore')}
         </button>
       );
     }
     
     return (
       <div className="flex gap-1">
-        <button onClick={() => handleEditClick(ing)} className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg" title={isBg ? 'Редактирай' : 'Edit'}>
+        <button 
+          onClick={() => handleEditClick(ing)} 
+          className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg" 
+          title={t('ingredients.edit')}
+        >
           <span className="material-symbols-outlined text-[16px]">edit</span>
         </button>
         <button 
@@ -732,11 +798,15 @@ const ManageIngredients = () => {
               ? 'bg-background-dark/50 text-amber-500 hover:bg-amber-500/20' 
               : 'bg-background-dark/50 text-emerald-500 hover:bg-emerald-500/20'
           }`}
-          title={isActive ? (isBg ? 'Деактивирай' : 'Deactivate') : (isBg ? 'Активирай' : 'Activate')}
+          title={isActive ? t('ingredients.deactivate') : t('ingredients.activate')}
         >
           <span className="material-symbols-outlined text-[16px]">{isActive ? 'power_settings_new' : 'play_arrow'}</span>
         </button>
-        <button onClick={() => handleDelete(ing.id, ingName)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg" title={isBg ? 'Изтрий' : 'Delete'}>
+        <button 
+          onClick={() => handleDelete(ing.id, ingName)} 
+          className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg" 
+          title={t('ingredients.delete')}
+        >
           <span className="material-symbols-outlined text-[16px]">delete</span>
         </button>
       </div>
@@ -754,22 +824,22 @@ const ManageIngredients = () => {
               <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
                 <span className="material-symbols-outlined">arrow_back</span>
               </button>
-              <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Продукти' : 'Ingredients'}</h1>
+              <h1 className="text-xl font-bold text-slate-100">{t('ingredients.title')}</h1>
             </div>
             <div className="flex items-center gap-2">
               {(isAdmin || isOwner) && (
                 <>
                   <button
                     onClick={handleExportCSV}
-                    title={isBg ? 'Експорт CSV' : 'Export CSV'}
+                    title={t('ingredients.export_csv_title')}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors text-xs font-bold border border-emerald-500/20"
                   >
                     <span className="material-symbols-outlined text-[18px]">download</span>
-                    CSV
+                    {t('ingredients.export_csv')}
                   </button>
                   <button
                     onClick={() => csvImportRef.current?.click()}
-                    title={isBg ? 'Импорт CSV' : 'Import CSV'}
+                    title={t('ingredients.import_csv_title')}
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-bold border ${
                       csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                       csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
@@ -782,10 +852,10 @@ const ManageIngredients = () => {
                        csvStatus === 'done'    ? 'check_circle' :
                        csvStatus === 'error'   ? 'error' : 'upload'}
                     </span>
-                    {csvStatus === 'parsing' ? (isBg ? 'Анализира...' : 'Parsing...') :
-                     csvStatus === 'saving'   ? (isBg ? 'Записва...'  : 'Saving...') :
-                     csvStatus === 'done'     ? (isBg ? 'Готово!'     : 'Done!') :
-                     csvStatus === 'error'    ? (isBg ? 'Грешка'      : 'Error') : 'CSV'}
+                    {csvStatus === 'parsing' ? t('ingredients.parsing') :
+                     csvStatus === 'saving'   ? t('ingredients.saving') :
+                     csvStatus === 'done'     ? t('ingredients.done') :
+                     csvStatus === 'error'    ? t('ingredients.error') : t('ingredients.import_csv')}
                   </button>
                   <input
                     ref={csvImportRef}
@@ -797,10 +867,10 @@ const ManageIngredients = () => {
                 </>
               )}
               <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5">
-                <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Плочки' : 'Grid View'}>
+                <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={t('ingredients.view_grid')}>
                   <span className="material-symbols-outlined text-[18px]">grid_view</span>
                 </button>
-                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={isBg ? 'Списък' : 'List View'}>
+                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`} title={t('ingredients.view_list')}>
                   <span className="material-symbols-outlined text-[18px]">view_list</span>
                 </button>
               </div>
@@ -812,14 +882,14 @@ const ManageIngredients = () => {
             <div className="flex items-center">
               <div className="w-10 mr-2 flex-shrink-0" />
               <span className="text-xs font-medium text-primary/70">
-                ({ingredients.length} {isBg ? 'въведени общо' : 'items total'})
+                ({ingredients.length} {t('ingredients.total_count')})
               </span>
             </div>
             {(isAdmin || isOwner) && (
               <button
                 onClick={handleSyncRecipeIngredients}
                 disabled={syncStatus === 'syncing'}
-                title={isBg ? 'Автоматично свързване на всички съставки в рецептите с техните ID-та (ingredient_id) от базата данни' : 'Sync all recipe ingredients with database IDs'}
+                title={t('ingredients.link_ingredients_title')}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors text-xs font-bold border ${
                   syncStatus === 'syncing' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                   syncStatus === 'done'    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
@@ -830,9 +900,9 @@ const ManageIngredients = () => {
                 <span className="material-symbols-outlined text-[16px]">
                   {syncStatus === 'syncing' ? 'refresh' : syncStatus === 'done' ? 'check_circle' : syncStatus === 'error' ? 'error' : 'link'}
                 </span>
-                {syncStatus === 'syncing' ? (isBg ? 'Свързва...' : 'Syncing...') :
-                 syncStatus === 'done'    ? (isBg ? 'Готово!' : 'Done!') :
-                 syncStatus === 'error'   ? (isBg ? 'Грешка' : 'Error') : (isBg ? 'Свържи съставки' : 'Link Ingredients')}
+                {syncStatus === 'syncing' ? t('ingredients.link_syncing') :
+                 syncStatus === 'done'    ? t('ingredients.done') :
+                 syncStatus === 'error'   ? t('ingredients.error') : t('ingredients.link_ingredients')}
               </button>
             )}
           </div>
@@ -844,19 +914,19 @@ const ManageIngredients = () => {
             onClick={() => setStatusFilter('active')}
             className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'active' ? 'bg-primary text-background-dark border-primary' : 'bg-surface-dark text-slate-400 border-primary/30 hover:bg-primary/10'}`}
           >
-            {isBg ? 'Активни' : 'Active'}
+            {t('ingredients.filter_active')}
           </button>
           <button 
             onClick={() => setStatusFilter('deactivated')}
             className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deactivated' ? 'bg-amber-500 text-background-dark border-amber-500' : 'bg-surface-dark text-slate-400 border-amber-500/30 hover:bg-amber-500/10'}`}
           >
-            {isBg ? 'Деактивирани' : 'Deactivated'}
+            {t('ingredients.filter_deactivated')}
           </button>
           <button 
             onClick={() => setStatusFilter('deleted')}
             className={`px-4 py-1.5 rounded-full transition-colors whitespace-nowrap border ${statusFilter === 'deleted' ? 'bg-rose-500 text-white border-rose-500' : 'bg-surface-dark text-slate-400 border-rose-500/30 hover:bg-rose-500/10'}`}
           >
-            {isBg ? 'Изтрити' : 'Deleted'}
+            {t('ingredients.filter_deleted')}
           </button>
         </div>
       </div>
@@ -867,114 +937,154 @@ const ManageIngredients = () => {
           <div className="flex justify-between items-center border-b border-primary/10 pb-2">
             <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest">
               {editingId 
-                ? (isBg ? 'Редактиране на продукт' : 'Edit Ingredient') 
-                : (isBg ? 'Нов продукт' : 'New Ingredient')}
+                ? t('ingredients.edit_ingredient') 
+                : t('ingredients.new_ingredient')}
             </h3>
             {editingId && (
               <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded">
-                {isBg ? 'Отказ' : 'Cancel'}
+                {t('common.cancel')}
               </button>
             )}
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className={i18n.language === 'en' ? "col-span-2" : ""}>
-              <label className="text-xs text-slate-400">{isBg ? 'Име (EN) *' : 'Name (EN) *'}</label>
-              <input value={nameEn} onChange={handleNameEnChange} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Tomato" />
-            </div>
-            {i18n.language !== 'en' && (
-              <div>
-                <label className="text-xs text-slate-400">{isBg ? 'Име (BG) *' : 'Name (BG) *'}</label>
-                <input value={nameBg} onChange={(e) => setNameBg(e.target.value)} required={i18n.language !== 'en'} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm" placeholder="Домат" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {isEn ? (
+              <div className="col-span-1 md:col-span-2">
+                <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1">
+                  <img src="/flags/gb.svg" alt="" className="h-[10px] w-[14px] object-cover rounded-[1px]" />
+                  <span>{t('ingredients.name_en')}</span>
+                </label>
+                <input 
+                  value={nameEn} 
+                  onChange={handleNameEnChange} 
+                  required 
+                  className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50" 
+                  placeholder="e.g. Tomato" 
+                />
               </div>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1">
+                    <img src={localLangMeta.flagUrl} alt="" className="h-[10px] w-[14px] object-cover rounded-[1px]" />
+                    <span>{t('ingredients.name_local', { lang: localLangMeta.name })}</span>
+                  </label>
+                  <input 
+                    value={nameLocal} 
+                    onChange={(e) => setNameLocal(e.target.value)} 
+                    className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50" 
+                    placeholder={currentLang === 'bg' ? 'напр. Домат' : '...'} 
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mb-1">
+                    <img src="/flags/gb.svg" alt="" className="h-[10px] w-[14px] object-cover rounded-[1px]" />
+                    <span>{t('ingredients.name_en')}</span>
+                  </label>
+                  <input 
+                    value={nameEn} 
+                    onChange={handleNameEnChange} 
+                    required 
+                    className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50" 
+                    placeholder="e.g. Tomato" 
+                  />
+                </div>
+              </>
             )}
-            <div className="col-span-2">
-              <label className="text-xs text-slate-400">{isBg ? 'Slug (ID) *' : 'Slug (ID) *'}</label>
+            <div className="col-span-1 md:col-span-2">
+              <label className="text-xs text-slate-400 font-medium mb-1 block">{t('ingredients.slug_id')}</label>
               <div className="flex gap-4 items-center">
-                <input value={slug} onChange={(e) => setSlug(e.target.value)} required disabled={!!editingId} className="flex-1 bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm opacity-70" placeholder="tomato" />
-                <label className="flex items-center gap-2 cursor-pointer pr-2">
-                  <input type="checkbox" checked={isLiquid} onChange={(e) => setIsLiquid(e.target.checked)} className="accent-primary w-4 h-4" />
-                  <span className="text-sm text-slate-200 font-bold">{isBg ? 'Течност' : 'Liquid'}</span>
+                <input 
+                  value={slug} 
+                  onChange={(e) => setSlug(e.target.value)} 
+                  required 
+                  disabled={!!editingId} 
+                  className="flex-1 bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm opacity-70 focus:outline-none focus:border-primary/50 disabled:cursor-not-allowed" 
+                  placeholder="tomato" 
+                />
+                <label className="flex items-center gap-2 cursor-pointer pr-2 shrink-0">
+                  <input type="checkbox" checked={isLiquid} onChange={(e) => setIsLiquid(e.target.checked)} className="accent-primary w-4 h-4 cursor-pointer" />
+                  <span className="text-sm text-slate-200 font-bold">{t('ingredients.is_liquid')}</span>
                 </label>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-primary/10 pt-2 grid grid-cols-3 gap-2">
+          <div className="border-t border-primary/10 pt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
             <div>
-              <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Основна Група' : 'Main Group'}</label>
+              <label className="text-[10px] text-slate-400 uppercase font-medium">{t('ingredients.main_group')}</label>
               <select value={mainGroup} onChange={(e) => {
                 setMainGroup(e.target.value);
                 setSubGroup('');
-              }} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm">
-                <option value="">-- {isBg ? 'Избери' : 'Select'} --</option>
+              }} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50">
+                <option value="">{t('ingredients.select_placeholder')}</option>
                 {ingredientGroups.filter(g => g.level === 0).map(g => (
-                  <option key={g.id} value={g.id}>{isBg ? g.name?.bg : g.name?.en}</option>
+                  <option key={g.id} value={g.id}>{getLocalizedText(g.name, currentLang)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Подгрупа' : 'Sub Group'}</label>
-              <select value={subGroup} onChange={(e) => setSubGroup(e.target.value)} disabled={!mainGroup} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm">
-                <option value="">-- {isBg ? 'Избери' : 'Select'} --</option>
-                {ingredientGroups.filter(g => g.level === 1 && (g.parentId === mainGroup || ingredientGroups.find(p => p.name?.bg === mainGroup)?.id === g.parentId)).map(g => (
-                  <option key={g.id} value={g.id}>{isBg ? g.name?.bg : g.name?.en}</option>
+              <label className="text-[10px] text-slate-400 uppercase font-medium">{t('ingredients.sub_group')}</label>
+              <select value={subGroup} onChange={(e) => setSubGroup(e.target.value)} disabled={!mainGroup} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50 disabled:opacity-50">
+                <option value="">{t('ingredients.select_placeholder')}</option>
+                {ingredientGroups.filter(g => g.level === 1 && (g.parentId === mainGroup || ingredientGroups.find(p => p.name?.bg === mainGroup || p.name?.en === mainGroup || p.id === mainGroup)?.id === g.parentId)).map(g => (
+                  <option key={g.id} value={g.id}>{getLocalizedText(g.name, currentLang)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Кухня (Произход)' : 'Cuisine'}</label>
-              <select value={cuisineOrigin} onChange={(e) => setCuisineOrigin(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm">
-                <option value="">-- {isBg ? 'Избери' : 'Select'} --</option>
+              <label className="text-[10px] text-slate-400 uppercase font-medium">{t('ingredients.cuisine')}</label>
+              <select value={cuisineOrigin} onChange={(e) => setCuisineOrigin(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50">
+                <option value="">{t('ingredients.select_placeholder')}</option>
                 {CUISINES.map(c => (
-                  <option key={c.id} value={c.name?.bg}>{isBg ? c.name?.bg : c.name?.en}</option>
+                  <option key={c.id} value={c.name?.en || c.name?.bg || c.id}>{getLocalizedText(c.name, currentLang)}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div className="border-t border-primary/10 pt-2">
-            <h4 className="text-xs font-bold text-slate-300 mb-2">{isBg ? 'Хранителни стойности (на 100g/ml)' : 'Nutrition (per 100g/ml)'}</h4>
-            <div className="grid grid-cols-4 gap-2">
+            <h4 className="text-xs font-bold text-slate-300 mb-2">{t('ingredients.nutrition_header')}</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div>
-                <label className="text-[10px] text-slate-400">Calories (kcal)</label>
-                <input type="number" step="0.1" value={calories} onChange={(e) => setCalories(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-amber-500 text-sm font-medium" placeholder="0" />
+                <label className="text-[10px] text-slate-400">{t('ingredients.calories')}</label>
+                <input type="number" step="0.1" value={calories} onChange={(e) => setCalories(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-amber-500 text-sm font-medium focus:outline-none focus:border-primary/50" placeholder="0" />
               </div>
               <div>
-                <label className="text-[10px] text-slate-400">Proteins (g)</label>
-                <input type="number" step="0.1" value={proteins} onChange={(e) => setProteins(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-emerald-500 text-sm font-medium" placeholder="0" />
+                <label className="text-[10px] text-slate-400">{t('ingredients.proteins')}</label>
+                <input type="number" step="0.1" value={proteins} onChange={(e) => setProteins(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-emerald-500 text-sm font-medium focus:outline-none focus:border-primary/50" placeholder="0" />
               </div>
               <div>
-                <label className="text-[10px] text-slate-400">Carbs (g)</label>
-                <input type="number" step="0.1" value={carbs} onChange={(e) => setCarbs(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-blue-400 text-sm font-medium" placeholder="0" />
+                <label className="text-[10px] text-slate-400">{t('ingredients.carbs')}</label>
+                <input type="number" step="0.1" value={carbs} onChange={(e) => setCarbs(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-blue-400 text-sm font-medium focus:outline-none focus:border-primary/50" placeholder="0" />
               </div>
               <div>
-                <label className="text-[10px] text-slate-400">Fats (g)</label>
-                <input type="number" step="0.1" value={fats} onChange={(e) => setFats(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-rose-500 text-sm font-medium" placeholder="0" />
+                <label className="text-[10px] text-slate-400">{t('ingredients.fats')}</label>
+                <input type="number" step="0.1" value={fats} onChange={(e) => setFats(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-rose-500 text-sm font-medium focus:outline-none focus:border-primary/50" placeholder="0" />
               </div>
             </div>
           </div>
 
           <div className="border-t border-primary/10 pt-2">
             <div className="flex justify-between items-center mb-2">
-              <h4 className="text-xs font-bold text-slate-300">{isBg ? 'Мерни единици (Unit Mappings)' : 'Units Mappings'}</h4>
-              <button type="button" onClick={handleAddUnitMapping} className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30 transition-colors">
-                + {isBg ? 'Добави мярка' : 'Add Unit'}
+              <h4 className="text-xs font-bold text-slate-300">{t('ingredients.units_mapping_header')}</h4>
+              <button type="button" onClick={handleAddUnitMapping} className="text-[10px] bg-primary/20 text-primary px-2.5 py-1 rounded hover:bg-primary/30 transition-colors font-bold">
+                {t('ingredients.add_unit')}
               </button>
             </div>
-            {unitsMapping.length === 0 && <p className="text-[10px] text-slate-500 italic">{isBg ? 'Няма въведени мерки' : 'No units mapped'}</p>}
+            {unitsMapping.length === 0 && <p className="text-[10px] text-slate-500 italic">{t('ingredients.no_units_mapped')}</p>}
             <div className="space-y-2">
               {unitsMapping.map((mapping, idx) => (
                 <div key={idx} className="flex gap-1.5 items-center">
                   <select 
                     value={mapping.unit_id} 
                     onChange={(e) => handleUnitMappingChange(idx, 'unit_id', e.target.value)}
-                    className="flex-1 bg-background-dark border border-primary/20 rounded p-1 text-slate-100 text-[11px]"
+                    className="flex-1 bg-background-dark border border-primary/20 rounded p-1 text-slate-100 text-[11px] focus:outline-none focus:border-primary/50"
                   >
-                    <option value="">-- {isBg ? 'Избери мярка' : 'Select unit'} --</option>
+                    <option value="">{t('ingredients.select_unit')}</option>
                     {measurements.map(m => (
                       <option key={m.unit_id || m.id} value={m.unit_id || m.id}>
-                        {isBg ? (m.name_bg || m.name) : (m.name_en || m.name)}
+                        {getLocalizedField(m, 'name', currentLang)} ({getLocalizedField(m, 'short', currentLang)})
                       </option>
                     ))}
                   </select>
@@ -984,7 +1094,7 @@ const ManageIngredients = () => {
                       type="number" step="0.1" 
                       value={mapping.weight_grams} 
                       onChange={(e) => handleUnitMappingChange(idx, 'weight_grams', e.target.value)}
-                      className="w-14 bg-background-dark border border-primary/20 rounded p-1 text-slate-100 text-[11px] text-center" 
+                      className="w-14 bg-background-dark border border-primary/20 rounded p-1 text-slate-100 text-[11px] text-center focus:outline-none focus:border-primary/50" 
                       placeholder="g" 
                     />
                     <span className="text-[10px] text-slate-400">g/ml</span>
@@ -997,30 +1107,30 @@ const ManageIngredients = () => {
             </div>
           </div>
 
-          <div className="border-t border-primary/10 pt-2 grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Тагове (запетая)' : 'Tags (comma separated)'}</label>
-              <input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="vegan, keto, superfood" />
+          <div className="border-t border-primary/10 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-1 md:col-span-2">
+              <label className="text-[10px] text-slate-400 uppercase font-medium">{t('ingredients.tags')}</label>
+              <input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50" placeholder={t('ingredients.tags_placeholder')} />
             </div>
             <div>
-              <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Алергени (запетая)' : 'Allergens (comma separated)'}</label>
-              <input value={allergensStr} onChange={(e) => setAllergensStr(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="gluten, dairy, nuts" />
+              <label className="text-[10px] text-slate-400 uppercase font-medium">{t('ingredients.allergens')}</label>
+              <input value={allergensStr} onChange={(e) => setAllergensStr(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50" placeholder={t('ingredients.allergens_placeholder')} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Срок годност' : 'Shelf Life (days)'}</label>
-                <input type="number" value={shelfLife} onChange={(e) => setShelfLife(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="Days" />
+                <label className="text-[10px] text-slate-400 uppercase font-medium">{t('ingredients.shelf_life')}</label>
+                <input type="number" value={shelfLife} onChange={(e) => setShelfLife(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50" placeholder={t('ingredients.shelf_life_days')} />
               </div>
               <div>
-                <label className="text-[10px] text-slate-400 uppercase">{isBg ? 'Цена/100g (€)' : 'Price/100g (€)'}</label>
-                <input type="number" step="0.01" value={pricePer100} onChange={(e) => setPricePer100(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm" placeholder="0.00" />
+                <label className="text-[10px] text-slate-400 uppercase font-medium">{t('ingredients.price_per_100')}</label>
+                <input type="number" step="0.01" value={pricePer100} onChange={(e) => setPricePer100(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50" placeholder="0.00" />
               </div>
             </div>
           </div>
           
           <button type="submit" className={`w-full font-bold py-2 rounded-lg transition-colors border mt-2 flex justify-center items-center gap-2 ${editingId ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-blue-500/30' : 'bg-primary/20 hover:bg-primary/30 text-primary border-primary/30'}`}>
             <span className="material-symbols-outlined text-[20px]">{editingId ? 'save' : 'add'}</span>
-            {editingId ? (isBg ? 'Запази промените' : 'Save Changes') : (isBg ? 'Добави продукт' : 'Add Ingredient')}
+            {editingId ? t('ingredients.save_changes') : t('ingredients.add_ingredient')}
           </button>
         </form>
 
@@ -1030,8 +1140,8 @@ const ManageIngredients = () => {
           <input 
             type="text" 
             value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={isBg ? 'Търси продукт по име...' : 'Search ingredient...'}
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            placeholder={t('ingredients.search_placeholder')}
             className="w-full bg-surface-dark/80 backdrop-blur-md border border-primary/20 rounded-xl py-3 pl-10 pr-4 text-slate-100 focus:outline-none focus:border-primary/50"
           />
         </div>
@@ -1045,7 +1155,7 @@ const ManageIngredients = () => {
           ) : filteredIngredients.length === 0 ? (
             <div className="text-center p-8 text-slate-500">
                <span className="material-symbols-outlined text-4xl opacity-50 mb-2">search_off</span>
-               <p>{isBg ? 'Няма намерени продукти' : 'No ingredients found'}</p>
+               <p>{t('ingredients.empty')}</p>
             </div>
           ) : (() => {
             // Grouping logic
@@ -1072,7 +1182,7 @@ const ManageIngredients = () => {
                       {groupKey === 'other' ? 'inventory_2' : getGroupIcon(groupKey)}
                     </span>
                     <h3 className="text-[18px] font-black uppercase tracking-[0.2em]">
-                      {groupKey === 'other' ? (isBg ? 'ДРУГИ' : 'OTHERS') : getGroupName(groupKey).toUpperCase()}
+                      {groupKey === 'other' ? t('ingredients.others_group') : getGroupName(groupKey).toUpperCase()}
                     </h3>
                   </div>
                   <span className="h-[1px] flex-1 bg-primary/20"></span>
@@ -1083,7 +1193,9 @@ const ManageIngredients = () => {
                     {grouped[groupKey].map(ing => {
                       const isActive = ing.is_active !== false;
                       const isDeleted = ing.is_deleted === true;
-                      const ingName = isBg ? ing.name_bg : ing.name_en;
+                      const displayName = getIngredientDisplayName(ing);
+                      const enName = ing.name_en || (typeof ing.name === 'object' ? ing.name.en : '');
+                      const showSecondaryEn = !isEn && enName && enName.toLowerCase() !== displayName.toLowerCase();
 
                       return (
                         <div key={ing.id} className={`bg-surface-dark/50 border rounded-xl p-3 flex justify-between items-center group transition-colors ${isDeleted ? 'border-rose-500/30 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/10 hover:border-primary/30'}`}>
@@ -1096,13 +1208,16 @@ const ManageIngredients = () => {
                               <h4 onClick={() => handleEditClick(ing)} className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors flex items-center gap-1.5">
                                 {ing.needs_translation && (
                                   <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold shrink-0">
-                                    {isBg ? 'ПРЕВОД' : 'TRANS'}
+                                    {t('ingredients.needs_translation_badge')}
                                   </span>
                                 )}
-                                {ingName}
+                                <span>{displayName}</span>
+                                {showSecondaryEn && (
+                                  <span className="text-xs text-slate-400 font-normal">({enName})</span>
+                                )}
                               </h4>
                               <div className="flex flex-wrap gap-1 text-[10px] text-slate-400 mt-1 items-center">
-                                <span className="bg-background-dark px-1.5 py-0.5 rounded border border-primary/10 truncate max-w-[100px]">
+                                <span className="bg-background-dark px-1.5 py-0.5 rounded border border-primary/10 truncate max-w-[120px]">
                                   {getSubGroupName(ing.classification?.sub_group)}
                                 </span>
                                 <span className="text-amber-500 ml-1">{ing.nutrition_per_100?.calories || 0} kcal</span>
@@ -1110,7 +1225,7 @@ const ManageIngredients = () => {
                             </div>
                           </div>
                           <div className="shrink-0 flex items-center">
-                            {renderManageButtons(ing, isActive, ingName)}
+                            {renderManageButtons(ing, isActive, displayName)}
                           </div>
                         </div>
                       );
@@ -1123,7 +1238,9 @@ const ManageIngredients = () => {
                         {grouped[groupKey].map(ing => {
                           const isActive = ing.is_active !== false;
                           const isDeleted = ing.is_deleted === true;
-                          const ingName = isBg ? ing.name_bg : ing.name_en;
+                          const displayName = getIngredientDisplayName(ing);
+                          const enName = ing.name_en || (typeof ing.name === 'object' ? ing.name.en : '');
+                          const showSecondaryEn = !isEn && enName && enName.toLowerCase() !== displayName.toLowerCase();
 
                           return (
                             <tr key={ing.id} className={`border-b border-primary/5 hover:bg-primary/5 transition-colors ${isDeleted ? 'opacity-60' : !isActive ? 'opacity-75' : ''}`}>
@@ -1132,16 +1249,19 @@ const ManageIngredients = () => {
                                   {!isActive && !isDeleted && <span className="size-1.5 bg-amber-500 rounded-full inline-block"></span>}
                                   {ing.needs_translation && (
                                     <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold shrink-0">
-                                      {isBg ? 'ПРЕВОД' : 'TRANS'}
+                                      {t('ingredients.needs_translation_badge')}
                                     </span>
                                   )}
-                                  {ingName}
+                                  <span>{displayName}</span>
+                                  {showSecondaryEn && (
+                                    <span className="text-[10px] text-slate-400 font-normal">({enName})</span>
+                                  )}
                                   <span className="text-[10px] text-slate-500 font-normal">({getSubGroupName(ing.classification?.sub_group)})</span>
                                 </button>
                               </td>
                               <td className="px-3 py-2">
                                 <div className="flex justify-end">
-                                  {renderManageButtons(ing, isActive, ingName)}
+                                  {renderManageButtons(ing, isActive, displayName)}
                                 </div>
                               </td>
                             </tr>
@@ -1169,10 +1289,10 @@ const ManageIngredients = () => {
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-slate-100">
-                  {isBg ? 'Преглед на импорта' : 'Import Preview'}
+                  {t('ingredients.csv_modal_title')}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  {isBg ? 'Намерени са съвпадения. Изберете действие.' : 'Duplicates detected. Choose an action.'}
+                  {t('ingredients.csv_modal_desc')}
                 </p>
               </div>
             </div>
@@ -1182,13 +1302,13 @@ const ManageIngredients = () => {
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
                 <p className="text-2xl font-extrabold text-emerald-400">{csvPreview.newRows.length}</p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
-                  {isBg ? 'Нови продукта' : 'New ingredients'}
+                  {t('ingredients.csv_new_count')}
                 </p>
               </div>
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-center">
                 <p className="text-2xl font-extrabold text-amber-400">{csvPreview.duplicateRows.length}</p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
-                  {isBg ? 'Дублирани' : 'Duplicates'}
+                  {t('ingredients.csv_duplicate_count')}
                 </p>
               </div>
             </div>
@@ -1197,12 +1317,12 @@ const ManageIngredients = () => {
             {csvPreview.duplicateRows.length > 0 && (
               <div className="mb-5 max-h-32 overflow-y-auto space-y-1 bg-background-dark/60 rounded-xl p-3 border border-amber-500/20">
                 <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mb-2">
-                  {isBg ? 'Дублирани записи:' : 'Duplicate entries:'}
+                  {t('ingredients.csv_duplicates_list')}
                 </p>
                 {csvPreview.duplicateRows.map((r, i) => (
                   <div key={i} className="flex items-center gap-2 text-[11px] text-slate-400">
                     <span className="material-symbols-outlined text-[12px] text-amber-500">content_copy</span>
-                    <span className="font-medium text-slate-300">{isBg ? r.name_bg : r.name_en}</span>
+                    <span className="font-medium text-slate-300">{r.name_bg || r.name_en}</span>
                     <span className="text-slate-600 text-[9px]">({r.slug})</span>
                   </div>
                 ))}
@@ -1217,9 +1337,7 @@ const ManageIngredients = () => {
                   className="w-full py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-sm hover:bg-emerald-500/25 transition-colors flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                  {isBg
-                    ? `Импортирай само новите (${csvPreview.newRows.length})`
-                    : `Import new only (${csvPreview.newRows.length})`}
+                  {t('ingredients.csv_import_new', { count: csvPreview.newRows.length })}
                 </button>
               )}
 
@@ -1229,9 +1347,7 @@ const ManageIngredients = () => {
                   className="w-full py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-sm hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">sync</span>
-                  {isBg
-                    ? `Импортирай всички и презапиши (${csvPreview.newRows.length + csvPreview.duplicateRows.length})`
-                    : `Import all & overwrite (${csvPreview.newRows.length + csvPreview.duplicateRows.length})`}
+                  {t('ingredients.csv_import_all', { count: csvPreview.newRows.length + csvPreview.duplicateRows.length })}
                 </button>
               )}
 
@@ -1240,7 +1356,7 @@ const ManageIngredients = () => {
                 className="w-full py-3 rounded-xl border border-rose-500/30 text-rose-400 font-bold text-sm hover:bg-rose-500/10 transition-colors flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">cancel</span>
-                {isBg ? 'Откажи импорта' : 'Cancel import'}
+                {t('ingredients.csv_cancel')}
               </button>
             </div>
           </div>

@@ -8,9 +8,7 @@ import { useTranslation } from 'react-i18next';
  */
 const RequireVerification = ({ children, fallback }) => {
   const { user, isAdmin } = useAuth();
-  const { i18n } = useTranslation();
-  
-  const isBg = i18n.language === 'bg';
+  const { t } = useTranslation();
 
   // Admins are assumed verified, or if the user is actually verified
   if (user.isVerified || isAdmin) {
@@ -28,12 +26,10 @@ const RequireVerification = ({ children, fallback }) => {
         <span className="material-symbols-outlined text-rose-500 text-3xl">mark_email_unread</span>
       </div>
       <h3 className="text-slate-100 font-bold mb-2">
-        {isBg ? 'Изисква се верификация' : 'Verification Required'}
+        {t('auth.protection.verification_required_title')}
       </h3>
       <p className="text-slate-400 text-sm">
-        {isBg 
-          ? 'Моля, верифицирайте своя имейл адрес, за да отключите тази функционалност. Проверете пощата си за връзка за потвърждение.'
-          : 'Please verify your email address to unlock this feature. Check your inbox for a confirmation link.'}
+        {t('auth.protection.verification_required_desc')}
       </p>
     </div>
   );

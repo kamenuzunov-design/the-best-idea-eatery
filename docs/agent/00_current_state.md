@@ -12,13 +12,72 @@
 ## Текуща структура на директориите
 - `src/components/`: Общи компоненти (Navigation, Header и др.)
 - `src/pages/`: Основните екрани на приложението (AIAssistant, AdminDashboard, CookingMode, Home, Login, Pantry, RecipeDetail, ManageIngredientGroups и др.)
-- `src/lib/`: Библиотеки и конфигурации (firebase.js)
+- `src/lib/`: Библиотеки и конфигурации (firebase.js, localeUtils.js и др.)
+- `src/locales/`: Структурирани JSON речници за многоезичност (`bg.json`, `en.json`, `it.json`, `fr.json`, `de.json`)
 - `docs/agent/`: Документация за AI агентите
 
 ## Конфигурация и код
-Приложението е настроено за работа с няколко езика (Английски, Български, Италиански, Френски и Немски).
+Приложението е настроено за работа с 5 езика (Български, Английски, Италиански, Френски и Немски) чрез i18next и структурирани JSON речници с универсални ключове в `src/locales/`, персистирани в `localStorage`. Подредбата на езиците във всички селектори е строго: **EN, IT, FR, DE, BG**.
 Firebase е интегриран и настроен (конфигурацията е в `src/lib/firebase.js`).
 Tailwind CSS се използва като основен инструмент за стилизация (`index.css` и `tailwind.config.js`).
+
+## Карта на локализацията (i18n Status & Roadmap)
+
+### 1. Напълно преведени модули и страници (5 езика: EN, IT, FR, DE, BG)
+*   **Глобални компоненти:**
+    *   `src/components/Header.jsx`: Главно лого (кулинарно адаптирано според езика), селектор за език с векторни флагове (EN, IT, FR, DE, BG), навигационни връзки, мобилен Drawer.
+    *   `src/components/Navigation.jsx`: Долна мобилна навигационна лента (Начало, Килер, AI Шеф, Запазени, Профил).
+    *   `src/components/GDPRConsent.jsx`: Банер и модал за поверителност и „Бисквитки“.
+    *   `src/components/RequireVerification.jsx`: Екран и съобщения за задължителна верификация на имейл.
+    *   `src/components/ProtectedRoute.jsx`: Съобщения за неоторизиран достъп и защита на маршрути.
+*   **Основни страници:**
+    *   `src/pages/Home.jsx`: Каталог с рецепти, търсачка, секция „Акцент на деня“, табове („Всички“, „Най-нови“, „Бързи“, „Любими“, „Най-оценявани“), категории (плурализирани), диетични филтри/тагове (`translateTag`), филтър по автор, значки (време, порции, трудност, видео), Top 12 съставки, празни и грешни състояния, футър „Откривай и планирай“.
+    *   `src/pages/Login.jsx`: Вход и регистрация, избор на език при създаване на профил, възстановяване на парола, показване/скриване на парола, социален вход.
+    *   `src/pages/TermsOfService.jsx`: Общи условия за ползване (структуриран правен текст на 5-те езика).
+    *   `src/pages/PrivacyPolicy.jsx`: Политика за поверителност и защита на личните данни (структуриран правен текст на 5-те езика).
+    *   `src/pages/ProfileSettings.jsx` (`/profile`): Основен екран на профила (динамични роли, верификация, репутация, менюта, администрация).
+    *   `src/pages/EditProfile.jsx` (`/profile/edit`): Редакция на профил (Многоезичен модел за въвеждане: само EN за англоезични потребители с auto-fallback; локален език + EN за останалите; диети, алергени, изключени съставки).
+    *   `src/pages/admin/ManageMeasurements.jsx` (`/admin/measurements`): Управление на мерни единици (Многоезичен модел за въвеждане: само EN за англоезични с пълно разпространение; локален език + EN за останалите, категории, конверсии).
+    *   `src/pages/admin/ManageIngredientGroups.jsx` (`/admin/ingredient-groups`): Управление на групи продукти (Многоезичен модел за въвеждане: само EN за англоезични с автогенериране на slug и разпространение във всички езици; локален език + EN за останалите, йерархично дърво с групи).
+    *   `src/pages/admin/ManageIngredients.jsx` (`/admin/ingredients`): Управление на продукти и съставки (Многоезичен модел за въвеждане: само EN за англоезични с автогенериране на slug и fallback разпространение; локален език + EN за останалите, локализирани групи, кухни, мерки, CSV импорт/експорт).
+    *   `src/pages/admin/ManageRecipes.jsx` (`/admin/recipes`): Управление на рецепти (Многоезичен модел за въвеждане: само EN за англоезични потребители с auto-fallback във всички езици и маркиране за превод; локален език + EN за останалите, локализирани табове, съставки с бележки, стъпки, модали за избор на съставка и вложена заготовка, модал за CSV импорт, преизчисляване на AI тагове).
+
+### 2. В процес на работа (Следващ фокус)
+*   Очаква се избор от възложителя за следващия модул от „Администрация“ (напр. `AdminDashboard.jsx` `/admin`, `Moderation.jsx` `/admin/moderation`, `ManageUsers.jsx` `/admin/users`, `ManageAds.jsx` `/admin/ads`).
+
+### 3. Предстоящи за превод страници (Pending)
+*   **Секция „Профил и потребител“ (свързани):**
+    *   `src/pages/DietaryProfileEdit.jsx` (`/pantry/diet`): Разширен редактор на диетичен профил и алергии.
+    *   `src/pages/CookingProgress.jsx` (`/profile/progress`): Кулинарен профил, статистика, нива/XP, каталог с медали и постижения за 10-те категории.
+    *   `src/pages/OrderHistory.jsx` (`/orders`): История на поръчките.
+*   **Секция „Рецепти и Готвене“:**
+    *   `src/pages/RecipeDetail.jsx` (`/recipe/:id`): Детайли за рецепта, съставки, стъпки, калкулатор за порции, хранителни стойности, автор, оценки/ревюта, нативни реклами, вложени рецепти.
+    *   `src/pages/RecipeCustomization.jsx` (`/recipe/:id/customize`): Персонализиране и промяна на съставки в рецепта.
+    *   `src/pages/CookingMode.jsx` (`/recipe/:id/cooking`): Интерактивен режим за готвене, стъпки, таймер, гласово четене (TTS).
+    *   `src/pages/SavedRecipes.jsx` (`/saved`): Запазени рецепти и бързи връзки към търсене и AI.
+    *   `src/pages/RecipeSearchResults.jsx` (`/search`): Резултати от филтриране и търсене на рецепти.
+    *   `src/pages/WinePairing.jsx` (`/recipe/:id/wine`): Препоръки за съчетаване на храна и вино.
+*   **Секция „Интелигентни кулинарни инструменти“:**
+    *   `src/pages/Pantry.jsx` (`/pantry`): Дигитален килер, наличности, срокове на годност, бързо търсене, списък за пазаруване.
+    *   `src/pages/IngredientScanner.jsx` (`/scanner`): AI визуален скенер за разпознаване на съставки (основен и спомагателни).
+    *   `src/pages/AIAssistant.jsx` (`/ai-assistant`): Шеф AI чат и предложения на рецепти.
+    *   `src/pages/AIIngredientsSearch.jsx` (`/ai-search`): Търсене по списък със съставки.
+    *   `src/pages/WeeklyMenuPlanner.jsx` (`/planner`): Седмичен плановик на храненията.
+*   **Секция „Общност, Сезонни и Кухни“:**
+    *   `src/pages/CuisinesExplorer.jsx` (`/cuisines`): Каталог на световните кухни.
+    *   `src/pages/SeasonalMenu.jsx` (`/seasonal`): Сезонни предложения и селекции.
+    *   `src/pages/GourmetCommunity.jsx` (`/community`): Кулинарна общност и публикации.
+    *   `src/pages/GourmetEvents.jsx` (`/events`): Гурме събития и работилници.
+    *   `src/pages/AdvertiseInfo.jsx` (`/advertise`): Рекламни пакети и правила за реклама.
+*   **Секция „Администрация (Admin Dashboard)“:**
+    *   `src/pages/AdminDashboard.jsx` (`/admin`): Главно табло за администрация.
+    *   `src/pages/admin/DataDashboard.jsx` (`/admin/data`): Табло за управление на данни.
+    *   `src/pages/admin/ManageUsers.jsx` (`/admin/users`): Потребителски роли, нива и права.
+    *   `src/pages/admin/Moderation.jsx` (`/admin/moderation`): Модерация на съдържание и преводи.
+    *   `src/pages/admin/ManageAds.jsx` (`/admin/ads`): Управление на банери, кампании и нативни реклами.
+    *   `src/pages/admin/ActivityLog.jsx` (`/admin/activity`): Дневник на системната активност.
+    *   `src/pages/admin/BackupRecovery.jsx` (`/admin/backup`): Архивиране и възстановяване на базата.
+    *   `src/pages/admin/SystemHistory.jsx`: Системна история на редакциите.
 
 ## Какво е имплементирано до момента
 Основните страници са създадени (поне като файлова структура в `src/pages/`):
