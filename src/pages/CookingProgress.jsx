@@ -6,13 +6,14 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { getRecipeImageUrl } from '../lib/imageUtils';
 import { evaluateAchievements } from '../data/achievements';
+import { getLocalizedField, getLocalizedText } from '../lib/localeUtils';
 
 const CookingProgress = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const isBg = i18n.language === 'bg';
+  const currentLang = i18n.language || 'bg';
 
   const queryUid = searchParams.get('uid');
   const targetUid = queryUid || user?.uid;
@@ -74,24 +75,23 @@ const CookingProgress = () => {
   }, [targetUid, isOwnProfile, user]);
 
   // Derived Values & Calculations
-  const chefName = chefData?.profile?.nickname || chefData?.name || (isBg ? 'Кулинарен майстор' : 'Culinary Master');
+  const chefName = chefData?.profile?.nickname || chefData?.name || t('cooking_progress.default_chef_name');
   const chefAvatar = chefData?.profile?.avatar || user?.photoURL || '';
   const reputationScore = Number(chefData?.reputation?.score) || 0;
-  const reputationLabel = isBg 
-    ? (chefData?.reputation?.label || 'Новак') 
-    : (chefData?.reputation?.label_en || 'Novice');
+  const reputationLabel = chefData?.reputation?.[`label_${currentLang}`] 
+    || (currentLang === 'bg' ? chefData?.reputation?.label : chefData?.reputation?.label_en) 
+    || chefData?.reputation?.label 
+    || t('cooking_progress.default_reputation_label');
 
   // Location string
   const loc = chefData?.profile?.location;
   const isLocationPublic = loc && loc.show_location !== false;
-  const city = isBg ? (loc?.city_bg || loc?.city_en || loc?.city) : (loc?.city_en || loc?.city_bg || loc?.city);
-  const country = isBg ? (loc?.country_bg || loc?.country_en || loc?.country) : (loc?.country_en || loc?.country_bg || loc?.country);
+  const city = getLocalizedField(loc, 'city', currentLang) || loc?.city || '';
+  const country = getLocalizedField(loc, 'country', currentLang) || loc?.country || '';
   const locationStr = isLocationPublic ? [city, country].filter(Boolean).join(', ') : '';
 
   // Bio
-  const bio = isBg 
-    ? (chefData?.profile?.bio_bg || chefData?.profile?.bio_en || chefData?.profile?.bio) 
-    : (chefData?.profile?.bio_en || chefData?.profile?.bio_bg || chefData?.profile?.bio);
+  const bio = getLocalizedField(chefData?.profile, 'bio', currentLang) || chefData?.profile?.bio || '';
 
   // Statistics
   const recipesCount = chefRecipes.length;
@@ -136,25 +136,27 @@ const CookingProgress = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-24 overflow-x-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 p-4 shadow-sm">
+      <header className="sticky top-0 z-10 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 p-4 shadow-sm">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <button 
-            onClick={() => navigate(-1)} 
+            onClick={() => navigate(queryUid ? -1 : '/profile')} 
             className="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors group cursor-pointer"
-            title={isBg ? "Назад" : "Back"}
+            title={t('common.buttons.back')}
+            aria-label={t('common.buttons.back')}
           >
             <span className="material-symbols-outlined text-primary group-hover:-translate-x-1 transition-transform">arrow_back</span>
           </button>
           <h1 className="text-lg font-extrabold tracking-tight text-center flex-1 text-slate-100 truncate px-2">
             {isOwnProfile 
-              ? (isBg ? 'Моят кулинарен прогрес' : 'My Cooking Progress')
-              : (isBg ? `Прогрес на ${chefName}` : `${chefName}'s Progress`)}
+              ? t('cooking_progress.title_my')
+              : t('cooking_progress.title_chef', { name: chefName })}
           </h1>
           {isOwnProfile ? (
             <Link 
               to="/profile/edit" 
               className="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors text-primary"
-              title={isBg ? "Редактирай профила" : "Edit Profile"}
+              title={t('cooking_progress.edit_profile_btn')}
+              aria-label={t('cooking_progress.edit_profile_btn')}
             >
               <span className="material-symbols-outlined text-xl">edit</span>
             </Link>
@@ -168,7 +170,7 @@ const CookingProgress = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{isBg ? 'Зареждане на прогреса...' : 'Loading progress...'}</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('cooking_progress.loading')}</p>
           </div>
         ) : (
           <>
@@ -183,7 +185,7 @@ const CookingProgress = () => {
                       <span className="material-symbols-outlined text-4xl text-primary/40">person</span>
                     )}
                   </div>
-                  <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-primary to-[#b8860b] text-background-dark rounded-full size-6 flex items-center justify-center shadow-lg" title={isBg ? "Потвърден готвач" : "Verified Chef"}>
+                  <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-primary to-[#b8860b] text-background-dark rounded-full size-6 flex items-center justify-center shadow-lg" title={t('cooking_progress.verified_chef')}>
                     <span className="material-symbols-outlined text-[16px] font-bold">verified</span>
                   </div>
                 </div>
@@ -211,7 +213,7 @@ const CookingProgress = () => {
 
               {bio && (
                 <div className="bg-surface-dark/80 border border-primary/10 rounded-2xl p-3.5 mb-5 shadow-sm">
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{isBg ? 'За готвача' : 'About Chef'}</p>
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{t('cooking_progress.about_chef')}</p>
                   <p className="text-xs text-slate-300 italic leading-relaxed">"{bio}"</p>
                 </div>
               )}
@@ -219,7 +221,7 @@ const CookingProgress = () => {
               {/* Level Progress Bar */}
               <div className="space-y-2 bg-surface-dark/95 p-4 rounded-2xl border border-primary/20 shadow-inner">
                 <div className="flex justify-between items-end">
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">{isBg ? 'Кулинарно ниво' : 'Culinary Level'}</span>
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">{t('cooking_progress.culinary_level')}</span>
                   <span className="text-xs font-extrabold text-primary">{currentXP} / 1000 XP</span>
                 </div>
                 <div className="h-2.5 w-full bg-background-dark rounded-full overflow-hidden border border-primary/10 p-0.5">
@@ -232,23 +234,23 @@ const CookingProgress = () => {
             <section className="px-6 py-4">
               <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-4 px-2 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-sm">monitoring</span>
-                {isBg ? 'Статистика' : 'Stats'}
+                {t('cooking_progress.stats_title')}
               </h3>
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-surface-dark border border-primary/20 rounded-2xl p-4 flex flex-col items-center text-center shadow-lg hover:border-primary/40 transition-all">
                   <span className="material-symbols-outlined text-primary mb-1.5 text-3xl">restaurant_menu</span>
                   <span className="text-2xl font-extrabold text-slate-100">{recipesCount}</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">{isBg ? 'Рецепти' : 'Recipes'}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">{t('cooking_progress.stats_recipes')}</span>
                 </div>
                 <div className="bg-surface-dark border border-primary/20 rounded-2xl p-4 flex flex-col items-center text-center shadow-lg hover:border-primary/40 transition-all">
                   <span className="material-symbols-outlined text-primary mb-1.5 text-3xl">schedule</span>
                   <span className="text-2xl font-extrabold text-slate-100">{totalHours}</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">{isBg ? 'Часа опит' : 'Hours Exp'}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">{t('cooking_progress.stats_hours')}</span>
                 </div>
                 <div className="bg-surface-dark border border-primary/20 rounded-2xl p-4 flex flex-col items-center text-center shadow-lg hover:border-primary/40 transition-all">
                   <span className="material-symbols-outlined text-primary mb-1.5 text-3xl">set_meal</span>
                   <span className="text-2xl font-extrabold text-slate-100">{totalIngredientsCount}</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">{isBg ? 'Съставки' : 'Ingredients'}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">{t('cooking_progress.stats_ingredients')}</span>
                 </div>
               </div>
             </section>
@@ -258,7 +260,7 @@ const CookingProgress = () => {
               <div className="flex justify-between items-center mb-4 px-2">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-sm">workspace_premium</span>
-                  {isBg ? 'Постижения & Медали' : 'Achievements & Medals'}
+                  {t('cooking_progress.achievements_title')}
                   <span className="text-[10px] font-black bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 ml-1">
                     {unlockedCount} / {evaluatedAchievements.length}
                   </span>
@@ -267,8 +269,8 @@ const CookingProgress = () => {
 
               <div className="grid grid-cols-3 gap-y-5 gap-x-3">
                 {evaluatedAchievements.map(ach => {
-                  const achName = isBg ? ach.name.bg : ach.name.en;
-                  const achSub = isBg ? ach.subtitle.bg : ach.subtitle.en;
+                  const achName = getLocalizedText(ach.name, currentLang);
+                  const achSub = getLocalizedText(ach.subtitle, currentLang);
 
                   return (
                     <div 
@@ -326,14 +328,14 @@ const CookingProgress = () => {
               <div className="flex items-center justify-between mb-4 px-2">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-sm">auto_awesome</span>
-                  {isBg ? 'Скорошни шедьоври & рецепти' : 'Masterpieces & Recipes'}
+                  {t('cooking_progress.recipes_title')}
                 </h3>
                 {recipesCount > 0 && (
                   <button 
                     onClick={() => navigate(`/?author=${targetUid}&authorName=${encodeURIComponent(chefName)}`)}
                     className="text-xs font-bold text-primary hover:underline cursor-pointer"
                   >
-                    {isBg ? `Виж всички (${recipesCount})` : `View all (${recipesCount})`}
+                    {t('cooking_progress.view_all_recipes', { count: recipesCount })}
                   </button>
                 )}
               </div>
@@ -341,8 +343,8 @@ const CookingProgress = () => {
               {chefRecipes.length > 0 ? (
                 <div className="space-y-3.5">
                   {chefRecipes.slice(0, 5).map(r => {
-                    const rTitle = isBg ? (r.title_bg || r.title_en) : (r.title_en || r.title_bg);
-                    const rDesc = isBg ? (r.description_bg || r.description_en) : (r.description_en || r.description_bg);
+                    const rTitle = getLocalizedField(r, 'title', currentLang) || r.title || '';
+                    const rDesc = getLocalizedField(r, 'description', currentLang) || r.description || '';
                     
                     const imgUrl = getRecipeImageUrl(r);
                     const ratingScore = (r.rating !== undefined && r.rating !== null) 
@@ -376,7 +378,7 @@ const CookingProgress = () => {
                             </span>
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-0.5">
                               <span className="material-symbols-outlined text-xs text-primary">schedule</span>
-                              {totalMins} {isBg ? 'мин' : 'min'}
+                              {totalMins} {t('cooking_progress.min_abbr')}
                             </span>
                           </div>
                           <h4 className="font-extrabold text-sm sm:text-base leading-snug text-slate-100 group-hover:text-primary transition-colors truncate">
@@ -396,7 +398,7 @@ const CookingProgress = () => {
                 <div className="text-center py-8 bg-surface-dark/50 border border-dashed border-primary/20 rounded-2xl">
                   <span className="material-symbols-outlined text-3xl text-slate-500 mb-1">restaurant</span>
                   <p className="text-xs text-slate-400 font-medium">
-                    {isBg ? 'Все още няма публикувани рецепти от този готвач' : 'No recipes published by this chef yet'}
+                    {t('cooking_progress.no_recipes')}
                   </p>
                 </div>
               )}
@@ -438,30 +440,30 @@ const CookingProgress = () => {
                 <span className="material-symbols-outlined text-xs">
                   {selectedAchievement.isUnlocked ? 'verified' : 'lock'}
                 </span>
-                {selectedAchievement.isUnlocked ? (isBg ? 'Придобито постижение' : 'Achievement Unlocked') : (isBg ? 'Заключено постижение' : 'Locked Achievement')}
+                {selectedAchievement.isUnlocked ? t('cooking_progress.modal_unlocked') : t('cooking_progress.modal_locked')}
               </span>
             </div>
 
             <h3 className="text-xl font-extrabold text-slate-100">
-              {isBg ? selectedAchievement.name.bg : selectedAchievement.name.en}
+              {getLocalizedText(selectedAchievement.name, currentLang)}
             </h3>
             <p className="text-xs text-primary font-bold mt-0.5">
-              {isBg ? selectedAchievement.subtitle.bg : selectedAchievement.subtitle.en}
+              {getLocalizedText(selectedAchievement.subtitle, currentLang)}
             </p>
 
             <div className="my-4 p-3.5 bg-background-dark/60 rounded-2xl border border-primary/10 text-left">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                {isBg ? 'Условие за спечелване' : 'Requirement'}
+                {t('cooking_progress.modal_requirement')}
               </p>
               <p className="text-xs text-slate-200 font-medium leading-relaxed">
-                {isBg ? selectedAchievement.description.bg : selectedAchievement.description.en}
+                {getLocalizedText(selectedAchievement.description, currentLang)}
               </p>
 
               {/* Progress bar inside modal */}
               {selectedAchievement.progress && (
                 <div className="mt-3 pt-3 border-t border-primary/10 space-y-1.5">
                   <div className="flex justify-between items-center text-[10px] font-bold">
-                    <span className="text-slate-400">{isBg ? 'Прогрес:' : 'Progress:'}</span>
+                    <span className="text-slate-400">{t('cooking_progress.modal_progress')}</span>
                     <span className={selectedAchievement.isUnlocked ? 'text-emerald-400' : 'text-amber-400'}>
                       {selectedAchievement.progress.current} / {selectedAchievement.progress.target}
                     </span>
@@ -484,7 +486,7 @@ const CookingProgress = () => {
               onClick={() => setSelectedAchievement(null)}
               className="w-full py-3 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-xl text-xs uppercase tracking-wider cursor-pointer shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
             >
-              {isBg ? 'Разбрах' : 'Got it'}
+              {t('cooking_progress.modal_close')}
             </button>
           </div>
         </div>

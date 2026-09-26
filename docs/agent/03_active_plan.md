@@ -14,18 +14,27 @@
 - [x] **Правни страници**: [TermsOfService.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/TermsOfService.jsx), [PrivacyPolicy.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/PrivacyPolicy.jsx)
 - [x] **Основен екран на Профила**: [ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx) (`/profile`) (5 езика, динамични репутационни нива, роли, менюта, бележки, бутони)
 - [x] **Редакция на Профила**: [EditProfile.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/EditProfile.jsx) (`/profile/edit`) (Многоезичен модел за въвеждане: само EN за англоезични потребители с автоматичен fallback; локален език + EN за останалите; диети, алергии, изключени продукти с многоезичен autocomplete)
-- [x] **Мерни единици**: [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx) (`/admin/measurements`) (5 езика, многоезичен модел за въвеждане: само EN за англоезични потребители с автопопълване; локален език + EN за останалите, локализирани категории, конверсии и съобщения)
+- [x] **Мерни единици**: [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx) (`/admin/measurements`) (5 езика, многоезичен модел за въвеждане: само EN за англоезични потребители с автопопълване; локален език + EN за останалите, локализирани категории, конверсии и съобщения; визуален индикатор за автогенерирани ID-та и вграден инструмент за каскадна миграция [MeasurementIdMigrationModal.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/MeasurementIdMigrationModal.jsx))
 - [x] **Групи Продукти**: [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx) (`/admin/ingredient-groups`) (5 езика, многоезичен модел за въвеждане: само EN за англоезични потребители с автогенериране на slug и запис на стойността като fallback във всички езици; локален език + EN за останалите с автопопълване; йерархично дърво с родителски групи, локализирани имена и безопасно запазване на преводи)
 - [x] **Продукти / Съставки**: [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx) (`/admin/ingredients`) (5 езика, многоезичен модел за въвеждане: само EN за англоезични с автогенериране на slug и разпространение във всички езици; локален език + EN за останалите потребители с автопопълване; локализирани групи, подгрупи, кухни, мерни единици в unit mappings, CSV импорт/експорт и синхронизация на рецепти)
 - [x] **Управление на Рецепти**: [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) (`/admin/recipes`) (5 езика, многоезичен модел за въвеждане: само EN за англоезични с автопопълване във всички езици и флаг `needs_translation`; локален език + EN за останалите; 4-табова структура, съставки с локализирани бележки, стъпки с таймери, модали за избор на съставка и вложена заготовка, модал за CSV проверка, преизчисляване на тагове)
+- [x] **Табло за Управление на Данни (Меню за Рецепти и Продукти)**: [DataDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/DataDashboard.jsx) (`/admin/data`) (5 езика, преведени заглавие, подзаглавие и картите за Рецепти, Продукти, Групи и Мерни единици)
+- [x] **Главно табло за Администрация (Контролен център)**: [AdminDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AdminDashboard.jsx) (`/admin`) (5 езика: EN, IT, FR, DE, BG чрез `admin_dashboard`, локализирани заглавие, подзаглавие, значка за чакащи одобрение, бутон за Owner права и всички навигационни карти: Модерация, Потребители, Дневник на действията, Бекъп и Реклами)
+- [x] **Опашка за Модерация и Езикова Адаптация**: [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx) (`/admin/moderation`) (5 езика: EN, IT, FR, DE, BG чрез `moderation`, многоезични заглавия с флагове според `currentLang`, банер за адаптация с динамично склонение, филтърни табове, типове елементи, значки за одобрение/причина за превод, действия за одобрение, отхвърляне и маркиране като преведено)
+- [x] **Управление на Потребители**: [ManageUsers.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageUsers.jsx) (`/admin/users`) (5 езика: EN, IT, FR, DE, BG чрез `manage_users`, филтриране по статус активни/деактивирани/изтрити, филтър по роля, табличен и плочков изглед, модал за профил с локализирани полета, диетични предпочитания, статистика и покани за ранг)
+- [x] **Дневник на Действията (Системна активност)**: [ActivityLog.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ActivityLog.jsx) (`/admin/activity`, `/admin/activity-log`) (5 езика: EN, IT, FR, DE, BG чрез `activity_log`, плочков и списъчен изглед, експорт на всички/филтрирани записи, изчистване, филтри по действие и потребителски имейл, форматиране на дата и час)
+- [x] **Бекъп и Сигурност (Архивиране и Възстановяване)**: [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx) (`/admin/backup`) (5 езика: EN, IT, FR, DE, BG чрез `backup_recovery`, облачни архиви във Firebase Storage, локален JSON експорт, сигурно възстановяване с chunking през writeBatch, локализирани потвърждения и статуси в реално време)
+- [x] **Управление на Реклами**: [ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx) (`/admin/ads`) (5 езика: EN, IT, FR, DE, BG чрез `manage_ads`, списъци с реклами и кампании, модели на ротация, нативни реклами с таргетиране по съставки, модали за кампании, реклами, правила и избор на съставки, многоезично сортиране и системни съобщения)
+- [x] **Моят кулинарен прогрес**: [CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx) (`/profile/progress`) (5 езика: EN, IT, FR, DE, BG чрез `cooking_progress` и актуализиран `src/data/achievements.js` за 5 езика, кулинарно ниво, XP, статистика за опит, 16 постижения с многоезични модали, отстранен z-index визуален конфликт при падащото меню за смяна на езика)
+- [x] **Дигитален Килер (Pantry)**: [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx) (`/pantry`) (5 езика: EN, IT, FR, DE, BG чрез `pantry`, банер за диетичен профил, броячи, динамични групи, значки за срок на годност, модали за добавяне и редакция с многоезично търсене и мерни единици, изтриване с потвърждение)
+- [x] **Редактор на Диетичен Профил**: [DietaryProfileEdit.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/DietaryProfileEdit.jsx) (`/pantry/diet`) (5 езика: EN, IT, FR, DE, BG чрез `pantry`, диети, алергени, изключени продукти с многоезичен autocomplete)
+- [x] **Chef AI Кулинарен Асистент**: [AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx) (`/ai-assistant`) (5 езика: EN, IT, FR, DE, BG чрез `ai`, персонализирани поздрави, локализирани fallback отговори при липса на Gemini API ключ или мрежови грешки, многоезичен модал за настройки и многоезично 4-стъпково ръководство за Gemini API с динамични връзки, FAQ, модал за допълнителни съставки и чипове за бързи действия)
 
 #### 🔄 2. В процес на работа (Следваща стъпка)
-- [ ] Очаква се избор от възложителя за следващата страница от администрацията (напр. `AdminDashboard.jsx` `/admin`, `Moderation.jsx` `/admin/moderation`, `ManageUsers.jsx` `/admin/users`, `ManageAds.jsx` `/admin/ads`).
+- [ ] Очаква се избор от възложителя за следващия модул: Скенер за съставки `IngredientScanner.jsx` (`/scanner`), Седмичен планьор на менюто `WeeklyMenuPlanner.jsx` (`/planner`), История на поръчките `OrderHistory.jsx` (`/orders`), или рецепти (`RecipeDetail.jsx`, `CookingMode.jsx`, `SavedRecipes.jsx`).
 
 #### ⏳ 3. Предстоящи за превод страници (Pending Roadmap)
 - **Свързани с потребителския профил:**
-  - [ ] `DietaryProfileEdit.jsx` (`/pantry/diet`)
-  - [ ] `CookingProgress.jsx` (`/profile/progress`)
   - [ ] `OrderHistory.jsx` (`/orders`)
 - **Рецепти и готвене:**
   - [ ] `RecipeDetail.jsx` (`/recipe/:id`)
@@ -35,9 +44,7 @@
   - [ ] `RecipeSearchResults.jsx` (`/search`)
   - [ ] `WinePairing.jsx` (`/recipe/:id/wine`)
 - **Интелигентни кулинарни инструменти:**
-  - [ ] `Pantry.jsx` (`/pantry`)
   - [ ] `IngredientScanner.jsx` (`/scanner`)
-  - [ ] `AIAssistant.jsx` (`/ai-assistant`)
   - [ ] `AIIngredientsSearch.jsx` (`/ai-search`)
   - [ ] `WeeklyMenuPlanner.jsx` (`/planner`)
 - **Общност, Сезонни и Кухни:**
@@ -47,13 +54,6 @@
   - [ ] `GourmetEvents.jsx` (`/events`)
   - [ ] `AdvertiseInfo.jsx` (`/advertise`)
 - **Администрация (Admin Dashboard):**
-  - [ ] `AdminDashboard.jsx` (`/admin`)
-  - [ ] `DataDashboard.jsx` (`/admin/data`)
-  - [ ] `ManageUsers.jsx` (`/admin/users`)
-  - [ ] `Moderation.jsx` (`/admin/moderation`)
-  - [ ] `ManageAds.jsx` (`/admin/ads`)
-  - [ ] `ActivityLog.jsx` (`/admin/activity`)
-  - [ ] `BackupRecovery.jsx` (`/admin/backup`)
   - [ ] `SystemHistory.jsx`
 
 ---

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { normalizeMainGroup, getMainGroupLabel } from '../lib/recipeMetaUtils';
+import { getLocalizedField } from '../lib/localeUtils';
 
 const getGroupIcon = (val) => {
   const v = String(val || '').toLowerCase();
@@ -28,7 +29,14 @@ const Pantry = () => {
   const { pantry, addPantryItem, updatePantryItem, removePantryItem } = useAppContext();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const isBg = i18n.language === 'bg';
+  const currentLang = i18n.language || 'bg';
+
+  const getItemName = (item) => {
+    if (!item) return '';
+    return getLocalizedField(item, 'name', currentLang) || 
+      (currentLang === 'bg' ? item.nameBg : item.nameEn) || 
+      item.nameEn || item.nameBg || item.name || '';
+  };
 
   const [ingredientsDB, setIngredientsDB] = useState([]);
   const [measurementsDB, setMeasurementsDB] = useState([]);
@@ -71,17 +79,24 @@ const Pantry = () => {
       return;
     }
     const lowerQ = q.toLowerCase();
-    const matches = ingredientsDB.filter(ing => 
-      (ing.name_bg && ing.name_bg.toLowerCase().includes(lowerQ)) ||
-      (ing.name_en && ing.name_en.toLowerCase().includes(lowerQ))
-    ).filter(ing => ing.is_active !== false && ing.is_deleted !== true);
+    const matches = ingredientsDB.filter(ing => {
+      const nameBg = (ing.name_bg || ing.name?.bg || '').toLowerCase();
+      const nameEn = (ing.name_en || ing.name?.en || '').toLowerCase();
+      const nameIt = (ing.name_it || ing.name?.it || '').toLowerCase();
+      const nameFr = (ing.name_fr || ing.name?.fr || '').toLowerCase();
+      const nameDe = (ing.name_de || ing.name?.de || '').toLowerCase();
+      const nameGeneric = (ing.name && typeof ing.name === 'string' ? ing.name : '').toLowerCase();
+      return nameBg.includes(lowerQ) || nameEn.includes(lowerQ) || nameIt.includes(lowerQ) || 
+             nameFr.includes(lowerQ) || nameDe.includes(lowerQ) || nameGeneric.includes(lowerQ);
+    }).filter(ing => ing.is_active !== false && ing.is_deleted !== true);
     
     setFilteredIngredients(matches.slice(0, 8));
   };
 
   const selectIngredient = (ing) => {
     setSelectedIngredient(ing);
-    setSearchQuery(isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg));
+    const localizedName = getLocalizedField(ing, 'name', currentLang) || ing.name || ing.name_bg || ing.name_en || '';
+    setSearchQuery(localizedName);
     setFilteredIngredients([]);
     
     // Calculate default expiration date (currentDate + average_shelf_life_days)
@@ -111,8 +126,15 @@ const Pantry = () => {
     
     addPantryItem({
       ingredientId: selectedIngredient.id,
-      nameBg: selectedIngredient.name_bg || selectedIngredient.name_en,
-      nameEn: selectedIngredient.name_en || selectedIngredient.name_bg,
+      nameBg: selectedIngredient.name_bg || selectedIngredient.name?.bg || selectedIngredient.name_en || selectedIngredient.name,
+      nameEn: selectedIngredient.name_en || selectedIngredient.name?.en || selectedIngredient.name_bg || selectedIngredient.name,
+      nameIt: selectedIngredient.name_it || selectedIngredient.name?.it,
+      nameFr: selectedIngredient.name_fr || selectedIngredient.name?.fr,
+      nameDe: selectedIngredient.name_de || selectedIngredient.name?.de,
+      name: selectedIngredient.name || {
+        bg: selectedIngredient.name_bg,
+        en: selectedIngredient.name_en
+      },
       category: selectedIngredient.classification?.main_group || 'other',
       quantity: Number(newItem.quantity),
       unit: newItem.unit,
@@ -156,27 +178,28 @@ const Pantry = () => {
     let group = ingredientGroupsDB.find(g => {
       if (!g) return false;
       const gId = String(g.id || '').toLowerCase();
-      const gBg = String(g.name?.bg || '').toLowerCase();
-      const gEn = String(g.name?.en || '').toLowerCase();
+      const gBg = String(g.name?.bg || g.name_bg || '').toLowerCase();
+      const gEn = String(g.name?.en || g.name_en || '').toLowerCase();
       return gId === String(val).toLowerCase() || gBg === String(val).toLowerCase() || gEn === String(val).toLowerCase() ||
              normalizeMainGroup(gId) === normVal || normalizeMainGroup(gBg) === normVal || normalizeMainGroup(gEn) === normVal;
     });
-    if (group) return isBg ? (group.name?.bg || group.name?.en) : (group.name?.en || group.name?.bg);
-    return getMainGroupLabel(val, isBg);
+    if (group) {
+      return getLocalizedField(group, 'name', currentLang) || group.name?.[currentLang] || group.name?.bg || group.name?.en || getMainGroupLabel(val, currentLang);
+    }
+    return getMainGroupLabel(val, currentLang);
   };
 
   const getUnitName = (unitId) => {
     if (!unitId) return '';
     const norm = String(unitId).toLowerCase().trim();
-    if (norm === 'g') return isBg ? 'гр.' : 'g';
-    if (norm === 'kg') return isBg ? 'кг.' : 'kg';
-    if (norm === 'ml') return isBg ? 'мл.' : 'ml';
-    if (norm === 'l') return isBg ? 'л.' : 'l';
-    if (norm === 'pcs') return isBg ? 'бр.' : 'pcs';
+    const unitTranslationKey = `pantry.units.${norm}`;
+    if (i18n.exists(unitTranslationKey)) {
+      return t(unitTranslationKey);
+    }
 
     const found = measurementsDB.find(m => (m.unit_id === unitId || m.id === unitId));
     if (found) {
-      return isBg ? (found.name_bg || found.name || unitId) : (found.name_en || found.name || unitId);
+      return getLocalizedField(found, 'name', currentLang) || found.name_bg || found.name_en || found.name || unitId;
     }
     return unitId;
   };
@@ -228,10 +251,10 @@ const Pantry = () => {
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-100 uppercase tracking-wide">
-              {isBg ? 'Моят Диетичен Профил' : 'My Dietary Profile'}
+              {t('pantry.dietary_profile')}
             </h3>
             <p className="text-[10px] text-slate-400 font-medium uppercase">
-              {isBg ? 'Диети, алергии и изключени храни' : 'Diets, allergies & exclusions'}
+              {t('pantry.dietary_subtitle')}
             </p>
           </div>
         </div>
@@ -241,7 +264,7 @@ const Pantry = () => {
           className="text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all active:scale-95 px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm"
         >
           <span className="material-symbols-outlined text-sm">edit</span>
-          {isBg ? 'Редактирай' : 'Edit'}
+          {t('pantry.edit_btn')}
         </button>
       </div>
 
@@ -258,21 +281,21 @@ const Pantry = () => {
               className="text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px] font-black">add</span>
-              {isBg ? 'Добави' : 'Add'}
+              {t('pantry.add_btn')}
             </button>
             <button 
               type="button"
               onClick={() => navigate('/ai-assistant')}
               className="text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-primary to-[#b8860b] text-background-dark hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
-              title="Chef AI Assistant"
+              title={t('pantry.chef_ai_btn')}
             >
               <span className="material-symbols-outlined text-[16px] font-black">auto_awesome</span>
-              {isBg ? 'Chef AI' : 'Chef AI'}
+              {t('pantry.chef_ai_btn')}
             </button>
           </div>
         </div>
         <div className="text-xs text-slate-400 font-bold bg-surface-dark border border-primary/20 px-3 py-1 rounded-full shadow-inner">
-          {pantry.length} {isBg ? 'продукта' : 'items'}
+          {pantry.length === 1 ? t('pantry.items_count_one', { count: pantry.length }) : t('pantry.items_count_other', { count: pantry.length })}
         </div>
       </div>
 
@@ -280,7 +303,7 @@ const Pantry = () => {
         {pantry.length === 0 ? (
           <div className="text-center py-10 opacity-50">
             <span className="material-symbols-outlined text-6xl text-primary mb-2">kitchen</span>
-            <p className="text-slate-200">{isBg ? 'Килерът е празен.' : 'Pantry is empty.'}</p>
+            <p className="text-slate-200">{t('pantry.empty')}</p>
           </div>
         ) : (() => {
           // Grouping logic
@@ -307,7 +330,7 @@ const Pantry = () => {
                     {groupKey === 'other' ? 'inventory_2' : getGroupIcon(groupKey)}
                   </span>
                   <h3 className="text-sm font-black uppercase tracking-[0.2em]">
-                    {groupKey === 'other' ? (isBg ? 'ДРУГИ' : 'OTHERS') : getGroupName(groupKey).toUpperCase()}
+                    {groupKey === 'other' ? t('pantry.others').toUpperCase() : getGroupName(groupKey).toUpperCase()}
                   </h3>
                 </div>
                 <span className="h-[1px] flex-1 bg-primary/20"></span>
@@ -318,7 +341,7 @@ const Pantry = () => {
                   const daysLeft = getDaysUntilExpiration(item.expirationDate);
                   const isExpiringSoon = daysLeft <= 3 && daysLeft >= 0;
                   const isExpired = daysLeft < 0;
-                  const name = isBg ? item.nameBg : item.nameEn;
+                  const name = getItemName(item);
 
                   return (
                     <div key={item.id} className="bg-surface-dark/50 border border-primary/10 hover:border-primary/30 rounded-xl p-3 flex justify-between items-center group/card transition-all duration-300">
@@ -345,7 +368,7 @@ const Pantry = () => {
                             </span>
                             <span className={`font-bold flex items-center gap-1 uppercase tracking-widest text-[9px] ${isExpired ? 'text-rose-500' : isExpiringSoon ? 'text-amber-500' : 'text-emerald-400'}`}>
                               <span className="material-symbols-outlined text-[12px]">event</span>
-                              {isExpired ? (isBg ? 'С ИЗТЕКЪЛ СРОК' : 'EXPIRED') : t('pantry.in_days', { count: daysLeft })}
+                              {isExpired ? t('pantry.expired_badge') : t('pantry.in_days', { count: daysLeft })}
                             </span>
                           </div>
                           {/* Mini Expiration Progress Line */}
@@ -358,14 +381,14 @@ const Pantry = () => {
                         <button 
                           onClick={() => handleEditClick(item)} 
                           className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg" 
-                          title={isBg ? 'Редактирай' : 'Edit'}
+                          title={t('pantry.edit_btn')}
                         >
                           <span className="material-symbols-outlined text-[16px]">edit</span>
                         </button>
                         <button 
-                          onClick={() => { if(window.confirm(isBg ? 'Изтриване?' : 'Delete?')) removePantryItem(item.id); }} 
+                          onClick={() => { if(window.confirm(t('pantry.delete_confirm', { name }))) removePantryItem(item.id); }} 
                           className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg" 
-                          title={isBg ? 'Изтрий' : 'Delete'}
+                          title={t('pantry.delete_btn')}
                         >
                           <span className="material-symbols-outlined text-[16px]">delete</span>
                         </button>
@@ -398,13 +421,13 @@ const Pantry = () => {
             </button>
             <h3 className="text-base font-extrabold text-slate-100 mb-6 flex items-center gap-2 uppercase tracking-tighter">
               <span className="material-symbols-outlined text-primary">add_circle</span>
-              {isBg ? 'Добави в Килера' : 'Add to Pantry'}
+              {t('pantry.add_modal_title')}
             </h3>
             
             <form onSubmit={handleAddItem} className="space-y-4">
               {/* Ingredient Search */}
               <div className="relative">
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{isBg ? 'Търси продукт *' : 'Search Product *'}</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{t('pantry.search_label')}</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
                   <input 
@@ -412,7 +435,7 @@ const Pantry = () => {
                     value={searchQuery}
                     onChange={handleSearchChange}
                     className="w-full bg-background-dark border border-primary/30 rounded-xl py-3 pl-10 pr-4 text-slate-100 focus:ring-primary focus:border-primary shadow-inner" 
-                    placeholder={isBg ? 'Напр. домати, зехтин...' : 'e.g. tomato, olive oil...'}
+                    placeholder={t('pantry.search_placeholder')}
                     required={!selectedIngredient}
                   />
                 </div>
@@ -427,7 +450,7 @@ const Pantry = () => {
                         className="px-4 py-2 hover:bg-primary/20 cursor-pointer flex items-center gap-2 border-b border-white/5 last:border-0"
                       >
                         <span className="material-symbols-outlined text-primary/50 text-[18px]">{getGroupIcon(ing.classification?.main_group)}</span>
-                        <span className="text-sm font-bold text-slate-200">{isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg)}</span>
+                        <span className="text-sm font-bold text-slate-200">{getLocalizedField(ing, 'name', currentLang) || ing.name_bg || ing.name_en || ing.name}</span>
                       </div>
                     ))}
                   </div>
@@ -436,10 +459,10 @@ const Pantry = () => {
 
               {selectedIngredient && (
                 <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center justify-between text-emerald-400 text-xs font-bold uppercase tracking-widest shadow-inner mb-4">
-                  <span>{isBg ? 'Избран продукт:' : 'Selected:'}</span>
+                  <span>{t('pantry.selected_product')}</span>
                   <span className="text-slate-100 flex items-center gap-1 truncate max-w-[150px]">
                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                     {isBg ? (selectedIngredient.name_bg || selectedIngredient.name_en) : (selectedIngredient.name_en || selectedIngredient.name_bg)}
+                     {getLocalizedField(selectedIngredient, 'name', currentLang) || selectedIngredient.name_bg || selectedIngredient.name_en || selectedIngredient.name}
                   </span>
                 </div>
               )}
@@ -511,15 +534,15 @@ const Pantry = () => {
             </button>
             <h3 className="text-base font-extrabold text-slate-100 mb-6 flex items-center gap-2 uppercase tracking-tighter">
               <span className="material-symbols-outlined text-blue-400">edit_note</span>
-              {isBg ? 'Редактиране на продукт' : 'Edit Pantry Product'}
+              {t('pantry.edit_modal_title')}
             </h3>
             
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{isBg ? 'Продукт' : 'Product'}</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">{t('pantry.product_label')}</label>
                 <input 
                   type="text" 
-                  value={isBg ? (editingItem.nameBg || editingItem.nameEn) : (editingItem.nameEn || editingItem.nameBg)}
+                  value={getItemName(editingItem)}
                   disabled
                   className="w-full bg-background-dark/50 border border-white/10 rounded-xl p-3 text-slate-400 shadow-inner font-bold cursor-not-allowed opacity-60" 
                 />
@@ -571,7 +594,7 @@ const Pantry = () => {
                   className="w-full py-4 rounded-xl font-black shadow-lg uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:scale-[1.02] active:scale-95 border border-cyan-500/30"
                 >
                   <span className="material-symbols-outlined text-[20px]">save</span>
-                  {isBg ? 'Запази промените' : 'Save Changes'}
+                  {t('pantry.save_changes')}
                 </button>
               </div>
             </form>

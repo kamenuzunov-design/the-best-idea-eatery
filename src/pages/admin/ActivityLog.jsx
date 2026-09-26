@@ -8,10 +8,10 @@ import { ROLES } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
 
 const ActivityLog = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const isBg = i18n.language === 'bg';
+  const currentLang = i18n.language || 'bg';
   const isAuthorized = user.role === ROLES.OWNER || user.role === ROLES.ADMIN;
 
   useEffect(() => {
@@ -67,7 +67,7 @@ const ActivityLog = () => {
   };
 
   const handleClearLogs = async () => {
-    if (!window.confirm(isBg ? 'Сигурни ли сте, че искате да изтриете всички записи?' : 'Are you sure you want to clear all logs?')) {
+    if (!window.confirm(t('activity_log.confirm_clear_all'))) {
       return;
     }
     
@@ -86,7 +86,7 @@ const ActivityLog = () => {
       await logActivity(user.uid, user.email || 'N/A', 'clear_logs', 'Cleared all previous activity logs');
     } catch (error) {
       console.error("Error clearing logs:", error);
-      alert(isBg ? 'Грешка при изчистване на дневника.' : 'Error clearing logs.');
+      alert(t('activity_log.error_clear'));
     } finally {
       setLoading(false);
     }
@@ -94,7 +94,7 @@ const ActivityLog = () => {
 
   const handleDeleteFiltered = async () => {
     if (!filterKey) return;
-    if (!window.confirm(isBg ? `Сигурни ли сте, че искате да изтриете всички записи от групата '${filterKey}'?` : `Are you sure you want to delete all logs in group '${filterKey}'?`)) {
+    if (!window.confirm(t('activity_log.confirm_delete_filtered', { action: filterKey }))) {
       return;
     }
     
@@ -115,15 +115,21 @@ const ActivityLog = () => {
       setSearchParams(searchParams);
     } catch (error) {
       console.error("Error deleting filtered logs:", error);
-      alert(isBg ? 'Грешка при изтриване на филтрираните записи.' : 'Error deleting filtered logs.');
+      alert(t('activity_log.error_delete_filtered'));
     } finally {
       setLoading(false);
     }
   };
 
   const formatDate = (isoString) => {
+    if (!isoString) return '';
     const date = new Date(isoString);
-    return date.toLocaleString(isBg ? 'bg-BG' : 'en-US');
+    return date.toLocaleString(
+      currentLang === 'bg' ? 'bg-BG' :
+      currentLang === 'de' ? 'de-DE' :
+      currentLang === 'it' ? 'it-IT' :
+      currentLang === 'fr' ? 'fr-FR' : 'en-US'
+    );
   };
 
   const safeStr = (val) => {
@@ -142,32 +148,36 @@ const ActivityLog = () => {
     <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
         <div className="flex items-center">
-          <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
+          <button 
+            onClick={() => navigate(-1)} 
+            aria-label={t('common.buttons.back')}
+            className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors"
+          >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Дневник' : 'Activity Log'}</h1>
+          <h1 className="text-xl font-bold text-slate-100">{t('activity_log.title')}</h1>
         </div>
         <div className="flex gap-2 items-center">
           <div className="flex bg-background-dark border border-primary/20 rounded-lg p-0.5 mr-2">
             <button 
               onClick={() => setViewMode('grid')} 
               className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`}
-              title={isBg ? 'Плочки' : 'Grid View'}
+              title={t('activity_log.views.grid')}
             >
               <span className="material-symbols-outlined text-[18px]">grid_view</span>
             </button>
             <button 
               onClick={() => setViewMode('list')} 
               className={`p-1.5 rounded-md transition-colors flex items-center ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-slate-500 hover:text-slate-300'}`}
-              title={isBg ? 'Списък' : 'List View'}
+              title={t('activity_log.views.list')}
             >
               <span className="material-symbols-outlined text-[18px]">view_list</span>
             </button>
           </div>
-          <button onClick={() => handleExport(logs)} className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors" title={isBg ? 'Експорт на всички' : 'Export All'}>
+          <button onClick={() => handleExport(logs)} className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors" title={t('activity_log.actions.export_all')}>
             <span className="material-symbols-outlined">download</span>
           </button>
-          <button onClick={handleClearLogs} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors" title={isBg ? 'Изчисти всички' : 'Clear All'}>
+          <button onClick={handleClearLogs} className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors" title={t('activity_log.actions.clear_all')}>
             <span className="material-symbols-outlined">delete_sweep</span>
           </button>
         </div>
@@ -180,25 +190,25 @@ const ActivityLog = () => {
               <button 
                 onClick={() => { searchParams.delete('action'); searchParams.delete('email'); setSearchParams(searchParams); }}
                 className="flex items-center justify-center p-1 rounded hover:bg-primary/20 hover:text-rose-500 transition-colors"
-                title={isBg ? 'Изчисти филтъра' : 'Clear Filter'}
+                title={t('activity_log.actions.clear_filter')}
               >
                 <span className="material-symbols-outlined text-[18px]">filter_alt_off</span>
               </button>
-              <span>{isBg ? 'Филтър:' : 'Filter:'} <strong className="font-mono bg-background-dark px-2 py-1 rounded ml-1">{filterKey || filterEmail}</strong></span>
-              <span className="text-xs ml-2 opacity-70">({displayedLogs.length} {isBg ? 'записа' : 'logs'})</span>
+              <span>{t('activity_log.filter_label')} <strong className="font-mono bg-background-dark px-2 py-1 rounded ml-1">{filterKey || filterEmail}</strong></span>
+              <span className="text-xs ml-2 opacity-70">({displayedLogs.length} {t('activity_log.records')})</span>
             </div>
             <div className="flex gap-2 items-center">
               <button 
                 onClick={() => handleExport(displayedLogs)}
                 className="text-primary hover:bg-primary/20 bg-background-dark/50 p-2 rounded flex items-center transition-colors"
-                title={isBg ? 'Свали групата' : 'Export Group'}
+                title={t('activity_log.actions.export_group')}
               >
                 <span className="material-symbols-outlined text-[18px]">download</span>
               </button>
               <button 
                 onClick={handleDeleteFiltered}
                 className="text-rose-500 hover:bg-rose-500/20 bg-background-dark/50 p-2 rounded flex items-center transition-colors"
-                title={isBg ? 'Изтрий групата' : 'Delete Group'}
+                title={t('activity_log.actions.delete_group')}
               >
                 <span className="material-symbols-outlined text-[18px]">delete</span>
               </button>
@@ -212,18 +222,18 @@ const ActivityLog = () => {
               <button 
                 onClick={() => { searchParams.delete('email'); setSearchParams(searchParams); }}
                 className="flex items-center justify-center p-1 rounded hover:bg-primary/20 hover:text-rose-500 transition-colors"
-                title={isBg ? 'Изчисти филтъра' : 'Clear Filter'}
+                title={t('activity_log.actions.clear_filter')}
               >
                 <span className="material-symbols-outlined text-[18px]">filter_alt_off</span>
               </button>
-              <span>{isBg ? 'Потребител:' : 'User:'} <strong className="font-mono bg-background-dark px-2 py-1 rounded ml-1">{filterEmail}</strong></span>
-              <span className="text-xs ml-2 opacity-70">({displayedLogs.length} {isBg ? 'записа' : 'logs'})</span>
+              <span>{t('activity_log.user_filter_label')} <strong className="font-mono bg-background-dark px-2 py-1 rounded ml-1">{filterEmail}</strong></span>
+              <span className="text-xs ml-2 opacity-70">({displayedLogs.length} {t('activity_log.records')})</span>
             </div>
             <div className="flex gap-2 items-center">
               <button 
                 onClick={() => handleExport(displayedLogs)}
                 className="text-primary hover:bg-primary/20 bg-background-dark/50 p-2 rounded flex items-center transition-colors"
-                title={isBg ? 'Свали групата' : 'Export Group'}
+                title={t('activity_log.actions.export_group')}
               >
                 <span className="material-symbols-outlined text-[18px]">download</span>
               </button>
@@ -238,11 +248,11 @@ const ActivityLog = () => {
         ) : logs.length === 0 ? (
           <div className="text-center p-10 text-slate-500">
             <span className="material-symbols-outlined text-5xl mb-2 opacity-50">history_toggle_off</span>
-            <p>{isBg ? 'Няма записани действия.' : 'No activity logged.'}</p>
+            <p>{t('activity_log.empty_logs')}</p>
           </div>
         ) : displayedLogs.length === 0 ? (
            <div className="text-center p-6 text-slate-500">
-             <p>{isBg ? 'Няма намерени записи за тази група.' : 'No logs found for this group.'}</p>
+             <p>{t('activity_log.empty_filtered')}</p>
            </div>
         ) : (
           viewMode === 'grid' ? (
@@ -252,7 +262,7 @@ const ActivityLog = () => {
                   <div className="flex justify-between items-start mb-2">
                     <button 
                       onClick={() => { searchParams.set('action', safeStr(log.action)); setSearchParams(searchParams); }}
-                      title={isBg ? 'Филтрирай по това действие' : 'Filter by this action'}
+                      title={t('activity_log.actions.filter_by_action')}
                       className="text-xs font-bold text-primary/80 uppercase bg-primary/10 hover:bg-primary/20 hover:text-primary transition-colors px-2 py-0.5 rounded cursor-pointer"
                     >
                       {safeStr(log.action)}
@@ -264,6 +274,7 @@ const ActivityLog = () => {
                     <span className="material-symbols-outlined text-[14px]">person</span>
                     <button 
                       onClick={() => { searchParams.set('email', safeStr(log.userEmail)); setSearchParams(searchParams); }}
+                      title={t('activity_log.actions.filter_by_user')}
                       className="hover:text-primary transition-colors hover:underline"
                     >
                       {safeStr(log.userEmail)}
@@ -278,10 +289,10 @@ const ActivityLog = () => {
                 <table className="w-full text-left text-sm text-slate-300">
                   <thead className="text-xs text-slate-400 uppercase bg-background-dark border-b border-primary/20">
                     <tr>
-                      <th className="px-4 py-1.5">{isBg ? 'Време' : 'Time'}</th>
-                      <th className="px-4 py-1.5">{isBg ? 'Действие' : 'Action'}</th>
-                      <th className="px-4 py-1.5">{isBg ? 'Потребител' : 'User Email'}</th>
-                      <th className="px-4 py-1.5">{isBg ? 'Детайли' : 'Details'}</th>
+                      <th className="px-4 py-1.5">{t('activity_log.table.time')}</th>
+                      <th className="px-4 py-1.5">{t('activity_log.table.action')}</th>
+                      <th className="px-4 py-1.5">{t('activity_log.table.user')}</th>
+                      <th className="px-4 py-1.5">{t('activity_log.table.details')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -291,6 +302,7 @@ const ActivityLog = () => {
                         <td className="px-4 py-1.5 whitespace-nowrap">
                           <button 
                             onClick={() => { searchParams.set('action', safeStr(log.action)); setSearchParams(searchParams); }}
+                            title={t('activity_log.actions.filter_by_action')}
                             className="text-xs font-bold text-primary/80 uppercase hover:text-primary transition-colors"
                           >
                             {safeStr(log.action)}
@@ -299,6 +311,7 @@ const ActivityLog = () => {
                         <td className="px-4 py-1.5 whitespace-nowrap font-mono text-xs">
                           <button 
                             onClick={() => { searchParams.set('email', safeStr(log.userEmail)); setSearchParams(searchParams); }}
+                            title={t('activity_log.actions.filter_by_user')}
                             className="hover:text-primary transition-colors hover:underline"
                           >
                             {safeStr(log.userEmail)}

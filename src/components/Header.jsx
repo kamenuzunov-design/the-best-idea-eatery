@@ -43,7 +43,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl p-4 justify-between border-b border-primary/20 shadow-sm">
+      <header className="sticky top-0 z-50 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-xl p-4 justify-between border-b border-primary/20 shadow-sm">
         <button 
           onClick={() => setIsMenuOpen(true)}
           className="text-primary flex size-10 shrink-0 items-center justify-center hover:bg-primary/10 rounded-full cursor-pointer transition-colors"
@@ -94,7 +94,7 @@ const Header = () => {
 
           {/* Language Dropdown Menu */}
           {isLangMenuOpen && (
-            <div className="absolute right-0 top-12 z-50 w-32 bg-surface-dark border border-primary/30 rounded-2xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.8)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 space-y-1">
+            <div className="absolute right-0 top-12 z-[60] w-32 bg-surface-dark border border-primary/30 rounded-2xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.8)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 space-y-1">
               {SUPPORTED_LANGUAGES.map((langKey) => {
                 const meta = LANGUAGE_LABELS[langKey] || { name: langKey.toUpperCase() };
                 const isSelected = currentLang === langKey;
@@ -132,7 +132,7 @@ const Header = () => {
 
       {/* Mobile Navigation Drawer Modal */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-50 max-w-md mx-auto flex overflow-hidden">
+        <div className="fixed inset-0 z-[70] max-w-md mx-auto flex overflow-hidden">
           {/* Backdrop Overlay */}
           <div 
             className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"

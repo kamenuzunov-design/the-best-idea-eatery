@@ -175,7 +175,7 @@ const ProfileSettings = () => {
         </div>
         
         <div className="mt-5 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.profile?.nickname || user.name || t('profile.roles.default_user')}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.profile?.nickname || (isGuest ? t('profile.roles.guest') : (user.name || t('profile.roles.default_user')))}</h1>
           <p className="text-primary/80 font-bold text-xs uppercase tracking-widest mt-1">
             {user.reputation && !isGuest ? `${getReputationLabel(user.reputation.score, currentLang)} • ` : ''}
             {isAdmin ? t('profile.roles.admin') : isOwner ? t('profile.roles.owner') : isModerator ? t('profile.roles.moderator') : isGuest ? t('profile.roles.guest') : t('profile.roles.user')}
@@ -522,7 +522,7 @@ const ProfileSettings = () => {
           }}
           className="text-center text-[10px] text-slate-500 mt-8 font-bold uppercase tracking-widest cursor-default select-none"
         >
-          The Best Idea Eatery v3.0
+          {t('app.title')} v3.0
         </p>
       </section>
     </div>

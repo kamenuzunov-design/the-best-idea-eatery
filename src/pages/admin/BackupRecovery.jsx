@@ -25,10 +25,10 @@ import { ROLES } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
 
 const BackupRecovery = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isBg = i18n.language === 'bg';
+  const currentLang = i18n.language || 'bg';
   
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
@@ -63,7 +63,7 @@ const BackupRecovery = () => {
     const fullBackup = {};
     for (const collName of COLLECTIONS) {
       if (updateStatusCallback) {
-        updateStatusCallback(isBg ? `Извличане на ${collName}...` : `Fetching ${collName}...`);
+        updateStatusCallback(t('backup_recovery.status.fetching_collection', { collection: collName }));
       }
       const snapshot = await getDocs(collection(db, collName));
       const docs = [];
@@ -85,10 +85,10 @@ const BackupRecovery = () => {
   };
 
   const handleExport = async () => {
-    if (!window.confirm(isBg ? 'Сигурни ли сте, че искате да експортирате цялата база данни?' : 'Are you sure you want to export the full database?')) return;
+    if (!window.confirm(t('backup_recovery.confirm_export'))) return;
     
     setLoading(true);
-    setStatus(isBg ? 'Подготовка на данните...' : 'Preparing data...');
+    setStatus(t('backup_recovery.status.preparing_data'));
     
     try {
       const fullBackup = await fetchFullBackupData(setStatus);
@@ -105,10 +105,10 @@ const BackupRecovery = () => {
       document.body.removeChild(link);
       
       await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'backup_export', `Exported database on ${date}`);
-      setStatus(isBg ? 'Експортът завърши успешно!' : 'Export completed successfully!');
+      setStatus(t('backup_recovery.status.export_success'));
     } catch (error) {
       console.error("Export error:", error);
-      setStatus(isBg ? 'Грешка при експорта.' : 'Export failed.');
+      setStatus(t('backup_recovery.status.export_error'));
     } finally {
       setLoading(false);
     }
@@ -124,7 +124,7 @@ const BackupRecovery = () => {
     if (!restoreFile) return;
     
     setLoading(true);
-    setStatus(isBg ? 'Проверка на файла...' : 'Validating file...');
+    setStatus(t('backup_recovery.status.validating_file'));
     
     try {
       const reader = new FileReader();
@@ -136,7 +136,7 @@ const BackupRecovery = () => {
           setShowConfirmRestore(false);
         } catch (err) {
           console.error("Restore inner error:", err);
-          setStatus(isBg ? 'Невалиден файл или грешка при запис.' : 'Invalid file or write error.');
+          setStatus(t('backup_recovery.status.invalid_file_or_write_error'));
         } finally {
           setLoading(false);
         }
@@ -144,7 +144,7 @@ const BackupRecovery = () => {
       reader.readAsText(restoreFile);
     } catch (error) {
       console.error("Restore error:", error);
-      setStatus(isBg ? 'Грешка при четене на файла.' : 'Error reading file.');
+      setStatus(t('backup_recovery.status.error_reading_file'));
       setLoading(false);
     }
   };
@@ -155,7 +155,7 @@ const BackupRecovery = () => {
       throw new Error("Invalid backup format");
     }
 
-    setStatus(isBg ? 'Започване на възстановяването...' : 'Starting restoration...');
+    setStatus(t('backup_recovery.status.starting_restoration'));
     
     const operations = [];
     
@@ -184,7 +184,7 @@ const BackupRecovery = () => {
       });
     }
 
-    setStatus(isBg ? `Изпълнение на възстановяването (${operations.length} операции)...` : `Executing restoration (${operations.length} operations)...`);
+    setStatus(t('backup_recovery.status.executing_restoration', { count: operations.length }));
 
     const BATCH_SIZE = 400;
     for (let i = 0; i < operations.length; i += BATCH_SIZE) {
@@ -196,21 +196,21 @@ const BackupRecovery = () => {
       });
       
       await batch.commit();
-      setStatus(isBg 
-        ? `Възстановени ${Math.min(i + BATCH_SIZE, operations.length)} от ${operations.length} записа...`
-        : `Restored ${Math.min(i + BATCH_SIZE, operations.length)} of ${operations.length} records...`
-      );
+      setStatus(t('backup_recovery.status.restored_chunk', {
+        current: Math.min(i + BATCH_SIZE, operations.length),
+        total: operations.length
+      }));
     }
 
     await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'backup_restore', `Restored database from ${sourceName} (${operations.length} docs)`);
-    setStatus(isBg ? `Успешно възстановени ${operations.length} записа!` : `Successfully restored ${operations.length} records!`);
+    setStatus(t('backup_recovery.status.restore_success', { count: operations.length }));
   };
 
   const handleCloudBackup = async () => {
-    if (!window.confirm(isBg ? 'Искате ли да създадете нов облачен архив?' : 'Do you want to create a new cloud backup?')) return;
+    if (!window.confirm(t('backup_recovery.confirm_cloud_backup'))) return;
     
     setCloudLoading(true);
-    setStatus(isBg ? 'Подготовка на данните...' : 'Preparing data...');
+    setStatus(t('backup_recovery.status.preparing_data'));
     
     try {
       const fullBackup = await fetchFullBackupData(setStatus);
@@ -220,7 +220,7 @@ const BackupRecovery = () => {
       const storageRef = ref(storage, `backups/${filename}`);
       const blob = new Blob([JSON.stringify(fullBackup)], { type: 'application/json' });
       
-      setStatus(isBg ? 'Качване в облака...' : 'Uploading to cloud...');
+      setStatus(t('backup_recovery.status.uploading_to_cloud'));
       await uploadBytes(storageRef, blob);
       const downloadURL = await getDownloadURL(storageRef);
       
@@ -238,20 +238,28 @@ const BackupRecovery = () => {
       }
 
       await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'cloud_backup_create', `Created cloud backup: ${filename}`);
-      setStatus(isBg ? 'Облачният архив е създаден успешно!' : 'Cloud backup created successfully!');
+      setStatus(t('backup_recovery.status.cloud_backup_success'));
     } catch (error) {
       console.error("Cloud backup error:", error);
-      setStatus(isBg ? 'Грешка при облачния архив.' : 'Cloud backup failed.');
+      setStatus(t('backup_recovery.status.cloud_backup_error'));
     } finally {
       setCloudLoading(false);
     }
   };
 
   const handleRestoreFromCloud = async (backup) => {
-    if (!window.confirm(isBg ? `Сигурни ли сте, че искате да възстановите базата от архив: ${new Date(backup.timestamp?.toDate()).toLocaleString()}? Всички текущи данни ще бъдат презаписани!` : `Are you sure you want to restore from backup: ${new Date(backup.timestamp?.toDate()).toLocaleString()}? All current data will be overwritten!`)) return;
+    const formattedDate = backup.timestamp?.toDate 
+      ? new Date(backup.timestamp.toDate()).toLocaleString(
+          currentLang === 'bg' ? 'bg-BG' :
+          currentLang === 'de' ? 'de-DE' :
+          currentLang === 'it' ? 'it-IT' :
+          currentLang === 'fr' ? 'fr-FR' : 'en-US'
+        ) 
+      : '';
+    if (!window.confirm(t('backup_recovery.confirm_cloud_restore', { date: formattedDate }))) return;
 
     setLoading(true);
-    setStatus(isBg ? 'Изтегляне на архив...' : 'Downloading backup...');
+    setStatus(t('backup_recovery.status.downloading_backup'));
     
     try {
       const response = await fetch(backup.url);
@@ -259,14 +267,14 @@ const BackupRecovery = () => {
       await performRestore(data, backup.name);
     } catch (error) {
       console.error("Cloud restore error:", error);
-      setStatus(isBg ? 'Грешка при възстановяване от облака.' : 'Cloud restore failed.');
+      setStatus(t('backup_recovery.status.cloud_restore_error'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteCloudBackup = async (backup, isAuto = false) => {
-    if (!isAuto && !window.confirm(isBg ? 'Сигурни ли сте, че искате да изтриете този архив?' : 'Are you sure you want to delete this backup?')) return;
+    if (!isAuto && !window.confirm(t('backup_recovery.confirm_delete_backup'))) return;
     
     try {
       const storageRef = ref(storage, backup.storagePath);
@@ -274,23 +282,38 @@ const BackupRecovery = () => {
       await deleteDoc(doc(db, 'system_backups', backup.id));
       if (!isAuto) {
         await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'cloud_backup_delete', `Deleted cloud backup: ${backup.name}`);
-        setStatus(isBg ? 'Архивът е изтрит.' : 'Backup deleted.');
+        setStatus(t('backup_recovery.status.backup_deleted'));
       }
     } catch (error) {
       console.error("Delete backup error:", error);
-      if (!isAuto) setStatus(isBg ? 'Грешка при изтриване.' : 'Delete failed.');
+      if (!isAuto) setStatus(t('backup_recovery.status.delete_backup_error'));
     }
   };
+
+  const isSuccessStatus = Boolean(
+    status && 
+    !loading && 
+    !status.endsWith('...') && 
+    !status.toLowerCase().includes('error') && 
+    !status.includes('Грешка') && 
+    !status.includes('Erreur') && 
+    !status.includes('Fehler') && 
+    !status.includes('Errore')
+  );
 
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 font-display">
       <div className="sticky top-0 z-10 flex items-center p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
-        <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors cursor-pointer"
+          aria-label={t('common.buttons.back')}
+        >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <div>
-          <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Бекъп и Възстановяване' : 'Backup & Recovery'}</h1>
-          <p className="text-xs font-medium text-amber-500">{isBg ? 'Зона за сигурност' : 'Security Zone'}</p>
+          <h1 className="text-xl font-bold text-slate-100">{t('backup_recovery.title')}</h1>
+          <p className="text-xs font-medium text-amber-500">{t('backup_recovery.security_zone')}</p>
         </div>
       </div>
 
@@ -302,14 +325,14 @@ const BackupRecovery = () => {
               <span className="material-symbols-outlined text-2xl">cloud_upload</span>
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-bold text-slate-100">{isBg ? 'Облачни Архиви' : 'Cloud Backups'}</h2>
-              <p className="text-xs text-slate-400">{isBg ? 'Сигурни копия във Firebase Storage' : 'Secure copies in Firebase Storage'}</p>
+              <h2 className="text-lg font-bold text-slate-100">{t('backup_recovery.cloud.title')}</h2>
+              <p className="text-xs text-slate-400">{t('backup_recovery.cloud.desc')}</p>
             </div>
             <button 
               onClick={handleCloudBackup}
               disabled={loading || cloudLoading}
               className="p-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-              title={isBg ? 'Създай нов облачен архив' : 'Create new cloud backup'}
+              title={t('backup_recovery.cloud.create_btn_tooltip')}
             >
               <span className="material-symbols-outlined">add_task</span>
             </button>
@@ -318,14 +341,16 @@ const BackupRecovery = () => {
           <div className="flex flex-col gap-3">
             {cloudBackups.length === 0 ? (
               <div className="text-center py-8 border-2 border-dashed border-primary/5 rounded-2xl">
-                <p className="text-xs text-slate-500">{isBg ? 'Няма намерени облачни архиви' : 'No cloud backups found'}</p>
+                <p className="text-xs text-slate-500">{t('backup_recovery.cloud.empty')}</p>
               </div>
             ) : (
               cloudBackups.map((backup) => (
                 <div key={backup.id} className="flex items-center gap-4 p-4 bg-background-dark/40 rounded-2xl border border-primary/5 hover:border-primary/20 transition-all group">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-200 truncate">
-                      {backup.timestamp?.toDate ? new Date(backup.timestamp.toDate()).toLocaleString(i18n.language) : 'Pending...'}
+                      {backup.timestamp?.toDate ? new Date(backup.timestamp.toDate()).toLocaleString(
+                        currentLang === 'bg' ? 'bg-BG' : currentLang === 'de' ? 'de-DE' : currentLang === 'it' ? 'it-IT' : currentLang === 'fr' ? 'fr-FR' : 'en-US'
+                      ) : t('backup_recovery.cloud.pending')}
                     </p>
                     <p className="text-[10px] text-slate-500 font-mono">
                       {(backup.size / 1024).toFixed(1)} KB • {backup.name}
@@ -336,7 +361,7 @@ const BackupRecovery = () => {
                       onClick={() => handleRestoreFromCloud(backup)}
                       disabled={loading || cloudLoading}
                       className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"
-                      title={isBg ? 'Възстанови от този архив' : 'Restore from this backup'}
+                      title={t('backup_recovery.cloud.restore_tooltip')}
                     >
                       <span className="material-symbols-outlined text-xl">settings_backup_restore</span>
                     </button>
@@ -344,7 +369,7 @@ const BackupRecovery = () => {
                       onClick={() => handleDeleteCloudBackup(backup)}
                       disabled={loading || cloudLoading}
                       className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                      title={isBg ? 'Изтрий архива' : 'Delete backup'}
+                      title={t('backup_recovery.cloud.delete_tooltip')}
                     >
                       <span className="material-symbols-outlined text-xl">delete</span>
                     </button>
@@ -353,7 +378,7 @@ const BackupRecovery = () => {
               ))
             )}
             <p className="text-[10px] text-center text-slate-500 mt-2 italic">
-              {isBg ? '* Пазят се до 5 последни архива автоматично' : '* Up to 5 latest backups are kept automatically'}
+              {t('backup_recovery.cloud.auto_limit_note')}
             </p>
           </div>
         </section>
@@ -365,15 +390,13 @@ const BackupRecovery = () => {
               <span className="material-symbols-outlined text-2xl">download</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-100">{isBg ? 'Локален Експорт' : 'Local Export'}</h2>
-              <p className="text-xs text-slate-400">{isBg ? 'Свалете цялата база данни на вашия компютър' : 'Download the entire database to your computer'}</p>
+              <h2 className="text-lg font-bold text-slate-100">{t('backup_recovery.local_export.title')}</h2>
+              <p className="text-xs text-slate-400">{t('backup_recovery.local_export.desc')}</p>
             </div>
           </div>
           
           <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-            {isBg 
-              ? 'Това ще създаде JSON файл, съдържащ всички рецепти, продукти, потребители и дневници. Препоръчително е да го правите поне веднъж седмично.' 
-              : 'This will create a JSON file containing all recipes, ingredients, users, and logs. It is recommended to do this at least once a week.'}
+            {t('backup_recovery.local_export.info')}
           </p>
 
           <button 
@@ -382,7 +405,7 @@ const BackupRecovery = () => {
             className="w-full bg-gradient-to-r from-amber-600 to-amber-800 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer"
           >
             <span className="material-symbols-outlined">save_alt</span>
-            {isBg ? 'Експортирай в JSON' : 'Export to JSON'}
+            {t('backup_recovery.local_export.btn')}
           </button>
         </section>
 
@@ -393,52 +416,77 @@ const BackupRecovery = () => {
               <span className="material-symbols-outlined text-2xl">upload</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-100">{isBg ? 'Възстановяване от локален файл' : 'Restore from Local File'}</h2>
-              <p className="text-xs text-rose-400/80 font-bold uppercase tracking-tighter">{isBg ? 'ВНИМАНИЕ: Опасна операция' : 'CAUTION: Dangerous Operation'}</p>
+              <h2 className="text-lg font-bold text-slate-100">{t('backup_recovery.local_restore.title')}</h2>
+              <p className="text-xs text-rose-400/80 font-bold uppercase tracking-tighter">{t('backup_recovery.local_restore.caution')}</p>
             </div>
           </div>
           
           <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-            {isBg 
-              ? 'Изберете JSON файл, създаден чрез Експорт. Тази операция ще презапише съществуващите данни в базата.' 
-              : 'Select a JSON file created via Export. This operation will overwrite existing data in the database.'}
+            {t('backup_recovery.local_restore.info')}
           </p>
 
           <div className="flex flex-col gap-4">
-            <input 
-              type="file" 
-              accept=".json" 
-              onChange={handleFileChange}
-              className="text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer"
-            />
+            <div className="flex items-center gap-3 bg-background-dark/50 p-2.5 rounded-2xl border border-primary/10">
+              <label className="cursor-pointer">
+                <input 
+                  type="file" 
+                  accept=".json" 
+                  onChange={handleFileChange}
+                  onClick={(e) => { e.target.value = null; }}
+                  className="hidden"
+                />
+                <span className="py-2 px-4 rounded-xl text-xs font-semibold bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 transition-all inline-flex items-center gap-2 shadow-sm cursor-pointer active:scale-95">
+                  <span className="material-symbols-outlined text-base">folder_open</span>
+                  {t('backup_recovery.local_restore.choose_file_btn')}
+                </span>
+              </label>
+              
+              <span className="text-xs text-slate-300 truncate flex-1 font-mono">
+                {restoreFile ? restoreFile.name : t('backup_recovery.local_restore.no_file_selected')}
+              </span>
+
+              {restoreFile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRestoreFile(null);
+                    setShowConfirmRestore(false);
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg transition-colors cursor-pointer"
+                  title={t('common.buttons.delete')}
+                >
+                  <span className="material-symbols-outlined text-base">close</span>
+                </button>
+              )}
+            </div>
             
             {restoreFile && !showConfirmRestore && (
               <button 
                 onClick={() => setShowConfirmRestore(true)}
                 className="w-full bg-rose-500/20 border border-rose-500/30 text-rose-500 font-bold py-4 rounded-2xl transition-all hover:bg-rose-500/30 cursor-pointer"
               >
-                {isBg ? 'Подготви Възстановяване' : 'Prepare Restoration'}
+                {t('backup_recovery.local_restore.prepare_btn')}
               </button>
             )}
 
             {showConfirmRestore && (
               <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl animate-pulse">
                 <p className="text-center text-rose-500 font-black text-xs uppercase mb-4 tracking-widest">
-                  {isBg ? 'СИГУРНИ ЛИ СТЕ? ДАННИТЕ ЩЕ БЪДАТ ПРЕЗАПИСАНИ!' : 'ARE YOU SURE? DATA WILL BE OVERWRITTEN!'}
+                  {t('backup_recovery.local_restore.confirm_warning')}
                 </p>
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setShowConfirmRestore(false)}
                     className="flex-1 bg-slate-800 text-white font-bold py-3 rounded-xl text-xs cursor-pointer"
                   >
-                    {isBg ? 'Отказ' : 'Cancel'}
+                    {t('common.buttons.cancel')}
                   </button>
                   <button 
                     onClick={handleRestore}
                     disabled={loading}
                     className="flex-[2] bg-rose-600 text-white font-bold py-3 rounded-xl text-xs shadow-lg cursor-pointer"
                   >
-                    {isBg ? 'ДА, ВЪЗСТАНОВИ СЕГА' : 'YES, RESTORE NOW'}
+                    {t('backup_recovery.local_restore.confirm_btn')}
                   </button>
                 </div>
               </div>
@@ -448,7 +496,9 @@ const BackupRecovery = () => {
 
         {/* Status Indicator */}
         {status && (
-          <div className={`p-4 rounded-2xl text-center text-xs font-bold ${status.includes('Успешно') || status.includes('successfully') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'}`}>
+          <div className={`p-4 rounded-2xl text-center text-xs font-bold ${
+            isSuccessStatus ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'
+          }`}>
             {loading && <span className="animate-spin inline-block mr-2 text-lg align-middle">⏳</span>}
             {status}
           </div>

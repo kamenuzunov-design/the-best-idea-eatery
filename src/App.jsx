@@ -180,6 +180,11 @@ function App() {
               <ActivityLog />
             </ProtectedRoute>
           } />
+          <Route path="/admin/activity-log" element={
+            <ProtectedRoute allowedRoles={[ROLES.OWNER]}>
+              <ActivityLog />
+            </ProtectedRoute>
+          } />
           <Route path="/admin/backup" element={
             <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <BackupRecovery />

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
+import { getLocalizedField } from '../lib/localeUtils';
 import { useNavigate } from 'react-router-dom';
 
 const getUniqueId = (prefix) => {
@@ -20,7 +21,15 @@ const AIAssistant = () => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const isBg = i18n.language === 'bg';
+  const currentLang = i18n.language || 'bg';
+
+  const getItemName = (item) => {
+    if (!item) return '';
+    if (typeof item === 'string') return item.trim();
+    return getLocalizedField(item, 'name', currentLang) || 
+      (currentLang === 'bg' ? item.nameBg : item.nameEn) || 
+      item.name || item.nameEn || item.nameBg || '';
+  };
 
   // State
   const [recipes, setRecipes] = useState([]);
@@ -45,11 +54,11 @@ const AIAssistant = () => {
 
   const handleAddExtraIngredient = (item) => {
     if (!item) return;
-    const name = typeof item === 'string' ? item.trim() : (item.nameBg || item.nameEn || item.name || '').trim();
+    const name = getItemName(item);
     if (!name) return;
 
     const exists = extraIngredients.some(i => {
-      const existingName = typeof i === 'string' ? i : (i.nameBg || i.nameEn || i.name || '');
+      const existingName = getItemName(i);
       return existingName.toLowerCase() === name.toLowerCase();
     });
 
@@ -152,16 +161,14 @@ const AIAssistant = () => {
   // Set initial Chef greeting on mount / once recipes load
   useEffect(() => {
     if (recipes.length > 0 && messages.length === 0) {
-      const greeting = isBg
-        ? `Здравейте! Аз съм вашият **Chef AI** – вашият личен гурме кулинарен асистент. 🧑‍🍳\n\nВиждам, че имате **${pantry.length} продукта** в килера си. Мога да ви предложа рецепти от нашата селекция, напълно съобразени с вашите диетични предпочитания, изключения и алергии.\n\nКакво желаете да сготвим днес?`
-        : `Hello! I am **Chef AI** – your personal gourmet culinary assistant. 🧑‍🍳\n\nI see you have **${pantry.length} items** in your pantry. I can suggest recipes from our selection, fully customized to your dietary preferences, exclusions, and allergies.\n\nWhat would you like to cook today?`;
+      const greeting = t('ai.chef_greeting', { count: pantry.length });
       
       const timer = setTimeout(() => {
         setMessages([{ sender: 'chef', text: greeting, id: 'welcome', timestamp: getCurrentDate() }]);
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [recipes, pantry.length, isBg, messages.length]);
+  }, [recipes, pantry.length, currentLang, messages.length, t]);
 
   // Scroll to bottom of chat
   useEffect(() => {
@@ -235,7 +242,7 @@ const AIAssistant = () => {
         });
 
         const isExtraMatched = extraIngredients.some(extra => {
-          const extraName = (typeof extra === 'string' ? extra : (extra.nameBg || extra.nameEn || extra.id || '')).toLowerCase().trim();
+          const extraName = getItemName(extra).toLowerCase().trim();
           const rId = String(reqIng.ingredient_id || reqIng.id || '').toLowerCase();
           const rBg = String(reqIng.ingredient_bg || reqIng.name_bg || '').toLowerCase();
           const rEn = String(reqIng.ingredient_en || reqIng.name_en || '').toLowerCase();
@@ -273,7 +280,17 @@ const AIAssistant = () => {
     return recipes.filter(r => {
       const titleBg = (r.title_bg || '').toLowerCase().trim();
       const titleEn = (r.title_en || '').toLowerCase().trim();
-      return text.toLowerCase().includes(titleBg) || text.toLowerCase().includes(titleEn);
+      const titleIt = (r.title_it || '').toLowerCase().trim();
+      const titleFr = (r.title_fr || '').toLowerCase().trim();
+      const titleDe = (r.title_de || '').toLowerCase().trim();
+      const titleGen = (r.title || '').toLowerCase().trim();
+      const lower = text.toLowerCase();
+      return (titleBg && lower.includes(titleBg)) || 
+             (titleEn && lower.includes(titleEn)) || 
+             (titleIt && lower.includes(titleIt)) || 
+             (titleFr && lower.includes(titleFr)) || 
+             (titleDe && lower.includes(titleDe)) || 
+             (titleGen && lower.includes(titleGen));
     }).slice(0, 3);
   };
 
@@ -291,65 +308,33 @@ const AIAssistant = () => {
       return diff / (1000 * 60 * 60 * 24) <= 3;
     });
 
-    if (queryLower.includes('изтича') || queryLower.includes('expir') || queryLower.includes('килер') || queryLower.includes('pantry') || queryLower.includes('годно')) {
+    if (queryLower.includes('изтича') || queryLower.includes('expir') || queryLower.includes('scad') || queryLower.includes('périm') || queryLower.includes('ablauf') || queryLower.includes('килер') || queryLower.includes('pantry') || queryLower.includes('dispensa') || queryLower.includes('garde-manger') || queryLower.includes('vorrat') || queryLower.includes('годно')) {
       if (expiringSoon.length > 0) {
-        const names = expiringSoon.map(item => isBg ? item.nameBg || item.name : item.name).join(', ');
-        text = isBg 
-          ? `Във вашия килер следните продукти изтичат скоро: **${names}**. Препоръчвам ви да приготвите някоя от следните рецепти, за да намалите хранителния отпадък:`
-          : `The following items in your pantry are expiring soon: **${names}**. I recommend cooking one of these recipes to reduce food waste:`;
-        
+        const names = expiringSoon.map(item => getItemName(item)).join(', ');
+        text = t('ai.fallback_expiring_with_items', { names });
         matchedRecipes = filtered.filter(recipe => recipe.expiringUsed > 0);
       } else {
-        text = isBg
-          ? `Нямате продукти с изтичащ срок на годност в рамките на 3 дни. Ето най-добрите съвпадения въз основа на наличните продукти в килера ви:`
-          : `You don't have any items expiring in the next 3 days. Here are the best recipe suggestions using your pantry items:`;
-        
+        text = t('ai.fallback_expiring_none');
         matchedRecipes = filtered.filter(recipe => recipe.matchedCount > 0);
       }
-    } else if (queryLower.includes('кето') || queryLower.includes('keto')) {
-      text = isBg
-        ? `Разбира се! Ето нашите най-добри **Кето** рецепти, съобразени с вашите диетични профили:`
-        : `Sure thing! Here are our top **Keto** recipes matching your dietary profile:`;
+    } else if (queryLower.includes('кето') || queryLower.includes('keto') || queryLower.includes('céto')) {
+      text = t('ai.fallback_keto');
       matchedRecipes = filtered.filter(r => getRecipeTags(r, ingredientsDB).includes('keto'));
-    } else if (queryLower.includes('веган') || queryLower.includes('vegan')) {
-      text = isBg
-        ? `Ето нашите подбрани **Веган** предложения, които не съдържат никакви животински съставки:`
-        : `Here are our curated **Vegan** options containing no animal products:`;
+    } else if (queryLower.includes('веган') || queryLower.includes('vegan') || queryLower.includes('vegano') || queryLower.includes('végane')) {
+      text = t('ai.fallback_vegan');
       matchedRecipes = filtered.filter(r => getRecipeTags(r, ingredientsDB).includes('vegan'));
-    } else if (queryLower.includes('заместител') || queryLower.includes('substitut') || queryLower.includes('замяна') || queryLower.includes('заменя')) {
-      text = isBg
-        ? `Като кулинарен асистент, ето няколко златни правила за здравословни кулинарни заместители:\n\n` +
-          `* **Яйца (за печене)**: Смесете 1 с.л. чиа или счукано ленено семе с 3 с.л. вода и оставете да набъбне, или използвайте 1/4 ч.ч. ябълково пюре.\n` +
-          `* **Млечни продукти**: Заменете готварската сметана с кокосова сметана, а кравето мляко – с овесено, бадемово или соево мляко.\n` +
-          `* **Краве масло**: Може да се замени 1-към-1 с нерафинирано кокосово масло или пюре от авокадо.\n` +
-          `* **Глутен**: Заменете пшеничното брашно с безглутенови смеси (оризово, бадемово брашно или нишесте от тапиока).`
-        : `As your culinary assistant, here are some essential substitution guidelines:\n\n` +
-          `* **Eggs (in baking)**: Mix 1 tbsp ground chia or flaxseeds with 3 tbsp water, let it sit, or use 1/4 cup applesauce.\n` +
-          `* **Dairy**: Replace cooking cream with coconut cream, and milk with oat, almond, or soy milk.\n` +
-          `* **Butter**: Can be replaced 1-to-1 with coconut oil or mashed avocado.\n` +
-          `* **Gluten**: Substitute wheat flour with gluten-free flour blends (rice, almond, or tapioca starch).`;
+    } else if (queryLower.includes('заместител') || queryLower.includes('substitut') || queryLower.includes('sostituz') || queryLower.includes('ersatz') || queryLower.includes('замяна') || queryLower.includes('заменя')) {
+      text = t('ai.fallback_substitutions');
     } else {
       // Default greeting or random match
       if (errorDetails) {
         let displayError = errorDetails;
         if (errorDetails.includes('Failed to fetch')) {
-          displayError = isBg 
-            ? 'Мрежова грешка (Failed to fetch). Вероятно е налице CORS блокаж от браузъра или липса на интернет връзка.' 
-            : 'Network request failed (Failed to fetch). Likely caused by browser CORS block or no internet connection.';
+          displayError = t('ai.network_error_details');
         }
-        text = isBg
-          ? `Изпълнявам се в **локален кулинарен режим (Local Offline)**, тъй като възникна проблем при връзката с Gemini API.\n\n` +
-            `⚠️ **Детайли за грешката:** \`${displayError}\`\n\n` +
-            `Въпреки това анализирах вашия диетичен профил и съставки. Въз основа на вашия килер, ви препоръчвам да опитате тези рецепти:`
-          : `I am running in **Local Offline Mode** because the Gemini API connection failed.\n\n` +
-            `⚠️ **Error Details:** \`${displayError}\`\n\n` +
-            `However, I have scanned your ingredients and dietary filters. Based on your pantry, I recommend trying these recipes:`;
+        text = t('ai.fallback_error', { error: displayError });
       } else {
-        text = isBg
-          ? `Здравейте! Изпълнявам се в **локален кулинарен режим (Local Offline)** поради липса на [връзка с Gemini API](action:help). Въпреки това анализирах вашия диетичен профил и съставки.\n\n` +
-            `Въз основа на вашия килер, ви препоръчвам да опитате тези рецепти:`
-          : `Hello! I am running in **Local Offline Mode** because the [Gemini API connection](action:help) is unavailable. However, I have scanned your ingredients and dietary filters.\n\n` +
-            `Based on your pantry, I recommend trying these recipes:`;
+        text = t('ai.fallback_offline');
       }
       
       matchedRecipes = filtered.filter(recipe => recipe.matchedCount > 0);
@@ -373,19 +358,21 @@ const AIAssistant = () => {
       return handleLocalFallbackResponse(userMessage);
     }
 
-    const extraNamesStr = extraIngredients.map(i => isBg ? (i.nameBg || i.nameEn || i) : (i.nameEn || i.nameBg || i)).join(', ');
+    const langNames = { bg: 'Bulgarian', en: 'English', it: 'Italian', fr: 'French', de: 'German' };
+    const targetLangName = langNames[currentLang] || 'Bulgarian';
+    const extraNamesStr = extraIngredients.map(i => getItemName(i)).join(', ');
 
     const systemPrompt = `You are Chef AI, a world-class gourmet chef culinary assistant.
 Context of the user's kitchen:
-- User selected language: ${isBg ? 'Bulgarian' : 'English'}. Respond ONLY in this language!
-- Pantry items: ${pantry.map(p => `${isBg ? p.nameBg || p.name : p.name} (${p.quantity} ${p.unit}, expires: ${p.expirationDate})`).join(', ')}
+- User selected language: ${targetLangName}. Respond ONLY in this language!
+- Pantry items: ${pantry.map(p => `${getItemName(p)} (${p.quantity} ${p.unit}, expires: ${p.expirationDate})`).join(', ')}
 - Extra custom ingredients specified by user (not in pantry): ${extraNamesStr || 'None'}
 - Dietary profile: Diets: ${diets.join(', ') || 'None'}, Allergies: ${allergies.join(', ') || 'None'}, Excluded Ingredient IDs: ${exclusions.join(', ')}
 - Available recipes in our database:
-${recipes.map(r => `- ${isBg ? r.title_bg : r.title_en} (Tags: ${getRecipeTags(r, ingredientsDB).join(', ')}, Prep time: ${(r.prep_time || 0) + (r.cook_time || 0)}m, Ingredients: ${r.ingredients?.map(i => isBg ? i.ingredient_bg || i.name_bg : i.ingredient_en || i.name_en).join(', ')})`).join('\n')}
+${recipes.map(r => `- ${getLocalizedField(r, 'title', currentLang) || r.title_bg || r.title_en || r.title} (Tags: ${getRecipeTags(r, ingredientsDB).join(', ')}, Prep time: ${(r.prep_time || 0) + (r.cook_time || 0)}m, Ingredients: ${r.ingredients?.map(i => getLocalizedField(i, 'name', currentLang) || i.ingredient_bg || i.name_bg || i.ingredient_en || i.name_en).join(', ')})`).join('\n')}
 
 Rules:
-1. Always respond in the user's language (${isBg ? 'Bulgarian' : 'English'}).
+1. Always respond in the user's language (${targetLangName}).
 2. Keep answers concise, helpful and full of gourmet chef wisdom.
 3. Recommend recipes from the list above when possible. Refer to them by their exact titles so the system can display clickable cards for them.
 4. If a recipe from the list does not fit the user's diets/allergies/exclusions, do NOT recommend it.
@@ -460,10 +447,8 @@ Rules:
 
     let effectivePrompt = textToSend;
     if (extraIngredients.length > 0) {
-      const extraNamesStr = extraIngredients.map(i => isBg ? (i.nameBg || i.nameEn || i) : (i.nameEn || i.nameBg || i)).join(', ');
-      effectivePrompt += isBg 
-        ? ` (Допълнителни съставки за ястието: ${extraNamesStr})` 
-        : ` (Extra ingredients specified: ${extraNamesStr})`;
+      const extraNamesStr = extraIngredients.map(i => getItemName(i)).join(', ');
+      effectivePrompt += t('ai.prompt_extra_ingredients', { names: extraNamesStr });
     }
 
     const result = await sendToGemini(effectivePrompt);
@@ -491,14 +476,14 @@ Rules:
     localStorage.setItem('gemini_api_key', trimmedKey);
     setCustomApiKey(trimmedKey);
     setShowSettings(false);
-    alert(isBg ? 'API ключът е записан успешно!' : 'API Key saved successfully!');
+    alert(t('ai.api_key_saved'));
   };
 
   const handleClearApiKey = () => {
     localStorage.removeItem('gemini_api_key');
     setCustomApiKey('');
     setShowSettings(false);
-    alert(isBg ? 'Използва се системният ключ.' : 'System key restored.');
+    alert(t('ai.system_key_restored'));
   };
 
   const filteredMatches = getFilteredRecipes();
@@ -526,7 +511,7 @@ Rules:
             id="btn-help-ai"
             onClick={() => setShowHelpGuide(true)}
             className="p-2 text-slate-400 hover:text-primary transition-colors cursor-pointer flex items-center"
-            title={isBg ? "Инструкции и помощ" : "Guide & Help"}
+            title={t('ai.help_tooltip')}
           >
             <span className="material-symbols-outlined text-xl">help</span>
           </button>
@@ -536,7 +521,7 @@ Rules:
             id="btn-settings-ai"
             onClick={() => setShowSettings(true)}
             className="p-2 text-slate-400 hover:text-primary transition-colors cursor-pointer flex items-center"
-            title="AI Settings"
+            title={t('ai.settings_tooltip')}
           >
             <span className="material-symbols-outlined text-xl">settings</span>
           </button>
@@ -555,7 +540,7 @@ Rules:
           }`}
         >
           <span className="material-symbols-outlined text-[14px]">chat_bubble</span>
-          {isBg ? 'Чат с Chef AI' : 'Chef Chat'}
+          {t('ai.tabs_chat')}
         </button>
         <button
           id="tab-suggestions-ai"
@@ -567,7 +552,7 @@ Rules:
           }`}
         >
           <span className="material-symbols-outlined text-[14px]">restaurant_menu</span>
-          {isBg ? 'Бързи идеи' : 'Suggestions'} ({filteredMatches.length})
+          {t('ai.tabs_suggestions')} ({filteredMatches.length})
         </button>
       </section>
 
@@ -609,7 +594,7 @@ Rules:
                     {msg.recipes && msg.recipes.length > 0 && (
                       <div className="grid grid-cols-1 gap-2 mt-1">
                         {msg.recipes.map((recipe) => {
-                          const title = isBg ? recipe.title_bg : recipe.title_en;
+                          const title = getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || recipe.title;
                           const calculatedTags = getRecipeTags(recipe, ingredientsDB);
                           const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
                           return (
@@ -628,9 +613,9 @@ Rules:
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-xs font-bold text-slate-100 truncate leading-tight group-hover:text-primary transition-colors">{title}</h4>
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                  {tags.slice(0, 2).map((t) => (
-                                    <span key={t} className="text-[8px] px-1 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 font-bold uppercase">
-                                      {translateTag(t, isBg)}
+                                  {tags.slice(0, 2).map((tg) => (
+                                    <span key={tg} className="text-[8px] px-1 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 font-bold uppercase">
+                                      {translateTag(tg, currentLang)}
                                     </span>
                                   ))}
                                   <span className="text-[8px] text-slate-400 font-medium">
@@ -670,14 +655,14 @@ Rules:
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
                     <span className="material-symbols-outlined text-sm">post_add</span>
-                    <span>{isBg ? "Допълнителни съставки за Chef AI:" : "Extra Ingredients for Chef AI:"}</span>
+                    <span>{t('ai.extra_ingredients_title')}</span>
                   </div>
                   <button
                     onClick={() => setShowExtraIngModal(true)}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-extrabold border border-primary/30 transition-colors cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[14px]">add</span>
-                    <span>{isBg ? "Добави съставка" : "Add ingredient"}</span>
+                    <span>{t('ai.add_ingredient_btn')}</span>
                   </button>
                 </div>
 
@@ -685,7 +670,7 @@ Rules:
                   <div className="space-y-2 pt-0.5">
                     <div className="flex flex-wrap gap-1.5">
                       {extraIngredients.map((item, idx) => {
-                        const name = typeof item === 'string' ? item : (isBg ? (item.nameBg || item.nameEn || item.name) : (item.nameEn || item.nameBg || item.name));
+                        const name = getItemName(item);
                         return (
                           <span
                             key={idx}
@@ -695,7 +680,7 @@ Rules:
                             <button
                               onClick={() => handleRemoveExtraIngredient(idx)}
                               className="hover:text-rose-400 text-slate-400 transition-colors cursor-pointer text-sm font-black"
-                              title={isBg ? "Премахни" : "Remove"}
+                              title={t('ai.remove_btn')}
                             >
                               ×
                             </button>
@@ -706,21 +691,19 @@ Rules:
 
                     <button
                       onClick={() => {
-                        const extraNamesStr = extraIngredients.map(i => isBg ? (i.nameBg || i.nameEn || i) : (i.nameEn || i.nameBg || i)).join(', ');
-                        const msg = isBg 
-                          ? `Предложи ми рецепти с включване на съставките: ${extraNamesStr}` 
-                          : `Suggest recipes including ingredients: ${extraNamesStr}`;
+                        const extraNamesStr = extraIngredients.map(i => getItemName(i)).join(', ');
+                        const msg = t('ai.suggest_with_ingredients', { names: extraNamesStr });
                         handleSendMessage(msg);
                       }}
                       className="w-full mt-1 py-2 px-3 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] transition-all cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-sm font-black">search</span>
-                      <span>{isBg ? "Потърси рецепти с тези съставки" : "Find recipes with these ingredients"}</span>
+                      <span>{t('ai.find_recipes_btn')}</span>
                     </button>
                   </div>
                 ) : (
                   <p className="text-[10px] text-slate-500 italic">
-                    {isBg ? "Няма добавени извънредни съставки. Натиснете '+ Добави съставка' за да тествате с нови продукти." : "No extra ingredients added. Click '+ Add ingredient' to test with new items."}
+                    {t('ai.no_extra_ingredients')}
                   </p>
                 )}
               </div>
@@ -729,20 +712,20 @@ Rules:
               <div className="flex flex-col gap-2">
                 {/* Featured main prompt on top row */}
                 <button
-                  onClick={() => handleChipClick(isBg ? "Предложи ми ястие с наличните продукти" : "Suggest a meal with my pantry items")}
+                  onClick={() => handleChipClick(t('ai.chip_suggest_meal'))}
                   className="w-full px-3 py-2.5 rounded-xl bg-background-dark/80 text-primary border border-primary/30 hover:border-primary/60 text-[11px] font-bold text-center flex items-center justify-center gap-1.5 leading-tight transition-all cursor-pointer shadow-sm active:scale-[0.99]"
                 >
                   <span className="material-symbols-outlined text-[15px]">restaurant</span>
-                  <span>{isBg ? "Предложи ми ястие с наличните продукти" : "Suggest a meal with my pantry items"}</span>
+                  <span>{t('ai.chip_suggest_meal')}</span>
                 </button>
 
                 {/* Secondary prompts in 2x2 grid */}
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    isBg ? "Какво изтича най-скоро?" : "What's expiring soon?",
-                    isBg ? "Веган идеи с наличностите" : "Vegan ideas from pantry",
-                    isBg ? "Кето рецепти" : "Keto recipes",
-                    isBg ? "Заместители на съставки" : "Ingredient substitutes"
+                    t('ai.chip_expiring'),
+                    t('ai.chip_vegan'),
+                    t('ai.chip_keto'),
+                    t('ai.chip_substitutes')
                   ].map((chip, idx) => (
                     <button
                       key={idx}
@@ -760,7 +743,7 @@ Rules:
                 <input
                   id="chat-message-input"
                   type="text"
-                  placeholder={isBg ? "Попитай Chef AI за рецепта..." : "Ask Chef AI for a recipe..."}
+                  placeholder={t('ai.input_placeholder')}
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
@@ -781,7 +764,7 @@ Rules:
           <div className="h-full overflow-y-auto p-4 space-y-6">
             {/* Header info about profile */}
             <div className="p-4 bg-surface-dark/50 border border-primary/10 rounded-2xl shadow-inner space-y-2">
-              <h3 className="text-xs font-black text-primary uppercase tracking-wider">{isBg ? 'Вашият Хранителен Профил:' : 'Your Dietary Profile:'}</h3>
+              <h3 className="text-xs font-black text-primary uppercase tracking-wider">{t('ai.dietary_profile_title')}</h3>
               <div className="flex flex-wrap gap-1.5">
                 {diets.map(d => (
                   <span key={d} className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[9px] font-bold uppercase">
@@ -795,11 +778,11 @@ Rules:
                 ))}
                 {exclusions.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 text-[9px] font-bold uppercase">
-                    🚫 {exclusions.length} {isBg ? 'изключени съставки' : 'excluded items'}
+                    🚫 {t('ai.excluded_items_count', { count: exclusions.length })}
                   </span>
                 )}
                 {diets.length === 0 && allergies.length === 0 && exclusions.length === 0 && (
-                  <p className="text-xs text-slate-500 italic px-1">{isBg ? 'Няма въведени ограничения' : 'No diet preferences configured'}</p>
+                  <p className="text-xs text-slate-500 italic px-1">{t('ai.no_dietary_restrictions')}</p>
                 )}
               </div>
             </div>
@@ -808,17 +791,17 @@ Rules:
             <div className="space-y-4">
               <h3 className="text-slate-100 text-lg font-bold tracking-tight flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">restaurant_menu</span>
-                {isBg ? 'Предложени кулинарни рецепти' : 'Suggested Recipes'}
+                {t('ai.suggested_recipes_title')}
               </h3>
               
               <div className="grid grid-cols-1 gap-4">
                 {filteredMatches.length === 0 ? (
                   <div className="text-center py-10 text-slate-500 uppercase text-[10px] tracking-widest font-bold border border-primary/10 rounded-2xl bg-surface-dark/30">
-                    {isBg ? 'Няма подходящи рецепти. Променете диетичните настройки.' : 'No recipes fit your filters. Update your dietary settings.'}
+                    {t('ai.no_matching_recipes')}
                   </div>
                 ) : (
                   filteredMatches.map(recipe => {
-                    const title = isBg ? recipe.title_bg : recipe.title_en;
+                    const title = getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || recipe.title;
                     const calculatedTags = getRecipeTags(recipe, ingredientsDB);
                     const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
                     
@@ -841,7 +824,7 @@ Rules:
                             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                               {tags.slice(0, 3).map(tag => (
                                 <span key={tag} className="px-1.5 py-0.5 rounded border border-emerald-400/20 bg-emerald-400/5 text-emerald-400 text-[8px] font-bold uppercase">
-                                  {translateTag(tag, isBg)}
+                                  {translateTag(tag, currentLang)}
                                 </span>
                               ))}
                             </div>
@@ -851,12 +834,12 @@ Rules:
                             {recipe.matchedCount > 0 ? (
                               <span className="text-[10px] text-primary font-bold flex items-center gap-0.5 bg-primary/10 px-2 py-0.5 rounded-full">
                                 <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                                {isBg ? `Ползва ${recipe.matchedCount} съставки` : `Uses ${recipe.matchedCount} pantry items`}
-                                {recipe.expiringUsed > 0 && ` (${recipe.expiringUsed} ${isBg ? 'изтичащи' : 'expiring'})`}
+                                {t('ai.uses_pantry_items', { count: recipe.matchedCount })}
+                                {recipe.expiringUsed > 0 && ` ${t('ai.expiring_count', { count: recipe.expiringUsed })}`}
                               </span>
                             ) : (
                               <span className="text-[9px] text-slate-500 font-medium">
-                                {isBg ? 'Няма наличности' : 'No ingredients in pantry'}
+                                {t('ai.no_pantry_ingredients')}
                               </span>
                             )}
                             
@@ -886,13 +869,11 @@ Rules:
 
             <h3 className="text-slate-100 font-extrabold text-lg mb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">key</span>
-              {isBg ? 'Настройки на Chef AI' : 'Chef AI Settings'}
+              {t('ai.settings_modal_title')}
             </h3>
             
             <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-              {isBg 
-                ? 'Въведете собствен Gemini API Ключ, за да активирате пълния интерактивен разговор. Ключът се запазва локално във вашия браузър.' 
-                : 'Enter your personal Gemini API Key to enable the full conversational LLM model. The key is saved locally in your browser.'}
+              {t('ai.settings_modal_desc')}
             </p>
 
             <form onSubmit={handleSaveApiKey} className="space-y-4">
@@ -914,7 +895,7 @@ Rules:
                   type="submit"
                   className="w-full h-11 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold rounded-xl shadow-lg active:scale-95 transition-all cursor-pointer text-sm"
                 >
-                  {isBg ? 'Запиши' : 'Save Key'}
+                  {t('ai.save_key_btn')}
                 </button>
                 {localStorage.getItem('gemini_api_key') && (
                   <button
@@ -922,7 +903,7 @@ Rules:
                     onClick={handleClearApiKey}
                     className="w-full h-11 bg-transparent border border-rose-500/25 hover:border-rose-500/50 text-rose-400 font-bold rounded-xl transition-colors cursor-pointer text-sm"
                   >
-                    {isBg ? 'Изчисти ключ' : 'Clear Key'}
+                    {t('ai.clear_key_btn')}
                   </button>
                 )}
               </div>
@@ -940,7 +921,7 @@ Rules:
               >
                 <span className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">help</span>
-                  {isBg ? 'Виж пълното ръководство за безплатен ключ' : 'View full guide for a free key'}
+                  {t('ai.view_full_guide_link')}
                 </span>
                 <span className="material-symbols-outlined text-sm">chevron_right</span>
               </button>
@@ -957,7 +938,7 @@ Rules:
             <button
               onClick={() => setShowHelpGuide(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-primary transition-colors cursor-pointer flex items-center justify-center p-1"
-              title={isBg ? 'Затвори' : 'Close'}
+              title={t('ai.close_btn')}
             >
               <span className="material-symbols-outlined text-xl">close</span>
             </button>
@@ -965,13 +946,11 @@ Rules:
             {/* Header */}
             <h3 className="text-slate-100 font-extrabold text-lg mb-2 flex items-center gap-2 pr-8">
               <span className="material-symbols-outlined text-primary">auto_stories</span>
-              {isBg ? 'Ръководство за Chef AI и Gemini API' : 'Chef AI & Gemini API Guide'}
+              {t('ai.guide_modal_title')}
             </h3>
             
             <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-              {isBg 
-                ? 'За да отключите пълния интерактивен разговор с вашия Chef AI, е необходимо да въведете собствен Gemini API ключ. Следвайте лесното ни ръководство от 4 стъпки:' 
-                : 'To unlock full interactive chat capability with Chef AI, you need to set up a personal Gemini API Key. Follow our simple 4-step setup:'}
+              {t('ai.guide_modal_desc')}
             </p>
 
             {/* Setup Steps (Flex List of Step Cards) */}
@@ -983,16 +962,11 @@ Rules:
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-xs font-black text-slate-100 uppercase tracking-wider">
-                    {isBg ? 'Вход в Google AI Studio' : 'Log in to Google AI Studio'}
+                    {t('ai.guide_step1_title')}
                   </h4>
-                  <p className="text-xs text-slate-300 leading-normal">
-                    {isBg ? 'Отворете платформата ' : 'Open '}
-                    <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-bold inline-flex items-center gap-0.5">
-                      aistudio.google.com
-                      <span className="material-symbols-outlined text-[10px]">open_in_new</span>
-                    </a>
-                    {isBg ? ' и влезте с вашия личен Google акаунт (Gmail).' : ' and sign in with your personal Google account (Gmail).'}
-                  </p>
+                  <div className="text-xs text-slate-300 leading-normal">
+                    {renderMessageText(t('ai.guide_step1_text'))}
+                  </div>
                 </div>
               </div>
 
@@ -1003,12 +977,10 @@ Rules:
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-xs font-black text-slate-100 uppercase tracking-wider">
-                    {isBg ? 'Генериране на API Ключ' : 'Create API Key'}
+                    {t('ai.guide_step2_title')}
                   </h4>
                   <p className="text-xs text-slate-300 leading-normal">
-                    {isBg 
-                      ? 'В горния ляв ъгъл кликнете върху бутона "Get API key" (икона с ключ), след което изберете големия син бутон "Create API key".'
-                      : 'In the top left, click the "Get API key" button, then click the blue button "Create API key".'}
+                    {t('ai.guide_step2_text')}
                   </p>
                 </div>
               </div>
@@ -1020,12 +992,10 @@ Rules:
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-xs font-black text-slate-100 uppercase tracking-wider">
-                    {isBg ? 'Копиране на ключа' : 'Copy the Key'}
+                    {t('ai.guide_step3_title')}
                   </h4>
                   <p className="text-xs text-slate-300 leading-normal">
-                    {isBg 
-                      ? 'Ще се появи прозорец с код, започващ с "AIzaSy...". Натиснете бутона "Copy" вдясно от него, за да го копирате. Пазете този код в тайна!'
-                      : 'A code starting with "AIzaSy..." will appear. Click "Copy" on the right. Keep this code private!'}
+                    {t('ai.guide_step3_text')}
                   </p>
                 </div>
               </div>
@@ -1037,12 +1007,10 @@ Rules:
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-xs font-black text-slate-100 uppercase tracking-wider">
-                    {isBg ? 'Въвеждане в асистента' : 'Enter Key in Assistant'}
+                    {t('ai.guide_step4_title')}
                   </h4>
                   <p className="text-xs text-slate-300 leading-normal">
-                    {isBg 
-                      ? 'Затворете това ръководство, отворете настройките ⚙️ в лентата най-горе, поставете ключа в полето и натиснете "Запиши".'
-                      : 'Close this guide, open Settings ⚙️ in the header above, paste your key, and click "Save Key".'}
+                    {t('ai.guide_step4_text')}
                   </p>
                 </div>
               </div>
@@ -1051,45 +1019,39 @@ Rules:
             {/* Collapsible FAQ Section using standard styled <details> */}
             <div className="space-y-2 border-t border-primary/10 pt-4">
               <h4 className="text-xs font-black text-primary uppercase tracking-wider mb-2.5">
-                {isBg ? 'Често задавани въпроси (FAQ)' : 'Frequently Asked Questions'}
+                {t('ai.faq_title')}
               </h4>
 
               {/* Q1 */}
               <details className="group border border-primary/10 rounded-xl bg-background-dark/30 overflow-hidden">
                 <summary className="flex justify-between items-center p-3 cursor-pointer select-none font-bold text-xs text-primary hover:bg-primary/5 transition-colors">
-                  <span>{isBg ? 'Безплатен ли е наистина?' : 'Is it really free?'}</span>
+                  <span>{t('ai.faq_q1')}</span>
                   <span className="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span>
                 </summary>
                 <div className="p-3 pt-0 border-t border-primary/5 text-[11px] text-slate-300 leading-relaxed">
-                  {isBg 
-                    ? 'Да! Google предоставя щедър безплатен лимит от 15 заявки на минута за модела Gemini 3.5 Flash за персонална употреба. Не се изисква кредитна/дебитна карта или плащане.'
-                    : 'Yes! Google provides a generous free tier of 15 queries per minute for Gemini 3.5 Flash for personal use. No credit card or billing configuration is required.'}
+                  {t('ai.faq_a1')}
                 </div>
               </details>
 
               {/* Q2 */}
               <details className="group border border-primary/10 rounded-xl bg-background-dark/30 overflow-hidden">
                 <summary className="flex justify-between items-center p-3 cursor-pointer select-none font-bold text-xs text-primary hover:bg-primary/5 transition-colors">
-                  <span>{isBg ? 'Как се съхранява ключът ми?' : 'How is my key stored?'}</span>
+                  <span>{t('ai.faq_q2')}</span>
                   <span className="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span>
                 </summary>
                 <div className="p-3 pt-0 border-t border-primary/5 text-[11px] text-slate-300 leading-relaxed">
-                  {isBg 
-                    ? 'Ключът се записва единствено локално на вашето устройство (в localStorage на браузъра). Ние не го събираме и не го изпращаме към наши сървъри. Заявките за разговори се подписват директно от вашия браузър към API на Google.'
-                    : 'The key is saved locally in your browser\'s localStorage. We do not store or transmit it to our servers. Your chat requests are sent directly from your device to the Google API endpoint.'}
+                  {t('ai.faq_a2')}
                 </div>
               </details>
 
               {/* Q3 */}
               <details className="group border border-primary/10 rounded-xl bg-background-dark/30 overflow-hidden">
                 <summary className="flex justify-between items-center p-3 cursor-pointer select-none font-bold text-xs text-primary hover:bg-primary/5 transition-colors">
-                  <span>{isBg ? 'Какво е Офлайн режим (Gourmet Rule Engine)?' : 'What is Gourmet Rule Engine (Offline mode)?'}</span>
+                  <span>{t('ai.faq_q3')}</span>
                   <span className="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span>
                 </summary>
                 <div className="p-3 pt-0 border-t border-primary/5 text-[11px] text-slate-300 leading-relaxed">
-                  {isBg 
-                    ? 'Ако не разполагате с ключ или вашият личен ключ се окаже ограничен (грешка 403), Chef AI не спира да работи. Приложението превключва към локален интелигентен алгоритъм, който филтрира рецепти и дава съвети спрямо наличностите и диетата ви изцяло на вашето устройство.'
-                    : 'If you do not have a key or if your key is restricted (yielding a 403 error), Chef AI switches to our custom local algorithm. It automatically filters recipes and outputs suggestions adjusted to your pantry and diet without using the internet.'}
+                  {t('ai.faq_a3')}
                 </div>
               </details>
             </div>
@@ -1104,13 +1066,13 @@ Rules:
                 className="flex-1 h-11 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold rounded-xl shadow-lg active:scale-95 transition-all cursor-pointer text-xs flex items-center justify-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[16px] font-black">key</span>
-                {isBg ? 'Въвеждане на API ключ' : 'Enter API Key'}
+                {t('ai.enter_key_btn')}
               </button>
               <button
                 onClick={() => setShowHelpGuide(false)}
                 className="px-4 h-11 bg-transparent border border-primary/20 hover:border-primary/45 text-slate-300 font-bold rounded-xl transition-colors cursor-pointer text-xs flex items-center justify-center"
               >
-                {isBg ? 'Затвори' : 'Close'}
+                {t('ai.close_btn')}
               </button>
             </div>
           </div>
@@ -1124,7 +1086,7 @@ Rules:
             <div className="flex items-center justify-between border-b border-primary/10 pb-3">
               <div className="flex items-center gap-2 text-primary font-bold text-sm">
                 <span className="material-symbols-outlined">post_add</span>
-                <h3>{isBg ? "Добави съставка за Chef AI" : "Add extra ingredient for Chef AI"}</h3>
+                <h3>{t('ai.extra_modal_title')}</h3>
               </div>
               <button
                 onClick={() => { setShowExtraIngModal(false); setExtraIngSearch(''); }}
@@ -1136,13 +1098,13 @@ Rules:
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-300">
-                {isBg ? "Търси съставка в базата данни или я въведи:" : "Search ingredient in database or type it:"}
+                {t('ai.extra_modal_label')}
               </label>
               <div className="relative">
                 <input
                   type="text"
                   autoFocus
-                  placeholder={isBg ? "напр. Авокадо, Сьомга, Нахут..." : "e.g. Avocado, Salmon, Chickpeas..."}
+                  placeholder={t('ai.extra_modal_placeholder')}
                   value={extraIngSearch}
                   onChange={(e) => setExtraIngSearch(e.target.value)}
                   onKeyDown={(e) => {
@@ -1157,7 +1119,7 @@ Rules:
                     onClick={() => handleAddExtraIngredient({ nameBg: extraIngSearch.trim(), nameEn: extraIngSearch.trim() })}
                     className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary text-background-dark text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
                   >
-                    {isBg ? "Добави" : "Add"}
+                    {t('ai.extra_modal_add')}
                   </button>
                 )}
               </div>
@@ -1171,17 +1133,21 @@ Rules:
                     const q = extraIngSearch.toLowerCase();
                     const nameBg = (ing.name_bg || '').toLowerCase();
                     const nameEn = (ing.name_en || '').toLowerCase();
-                    return nameBg.includes(q) || nameEn.includes(q);
+                    const nameIt = (ing.name_it || '').toLowerCase();
+                    const nameFr = (ing.name_fr || '').toLowerCase();
+                    const nameDe = (ing.name_de || '').toLowerCase();
+                    const nameGen = (ing.name && typeof ing.name === 'string' ? ing.name : '').toLowerCase();
+                    return nameBg.includes(q) || nameEn.includes(q) || nameIt.includes(q) || nameFr.includes(q) || nameDe.includes(q) || nameGen.includes(q);
                   })
                   .slice(0, 6)
                   .map(ing => (
                     <button
                       key={ing.id}
-                      onClick={() => handleAddExtraIngredient({ id: ing.id, nameBg: ing.name_bg, nameEn: ing.name_en })}
+                      onClick={() => handleAddExtraIngredient({ id: ing.id, nameBg: ing.name_bg, nameEn: ing.name_en, name: ing.name })}
                       className="w-full text-left p-2.5 rounded-xl bg-background-dark/50 hover:bg-primary/10 border border-primary/10 hover:border-primary/30 flex items-center justify-between text-xs transition-colors cursor-pointer"
                     >
-                      <span className="font-bold text-slate-100">{isBg ? ing.name_bg : ing.name_en}</span>
-                      <span className="text-[10px] text-primary font-bold">+ {isBg ? "Избери" : "Select"}</span>
+                      <span className="font-bold text-slate-100">{getLocalizedField(ing, 'name', currentLang) || ing.name_bg || ing.name_en || ing.name}</span>
+                      <span className="text-[10px] text-primary font-bold">+ {t('ai.extra_modal_select')}</span>
                     </button>
                   ))}
               </div>
@@ -1192,7 +1158,7 @@ Rules:
                 onClick={() => { setShowExtraIngModal(false); setExtraIngSearch(''); }}
                 className="px-4 py-2 rounded-xl bg-surface-dark border border-primary/20 text-slate-300 text-xs font-bold hover:bg-primary/10 transition-colors cursor-pointer"
               >
-                {isBg ? "Затвори" : "Close"}
+                {t('ai.extra_modal_close')}
               </button>
 
               {extraIngredients.length > 0 && (
@@ -1200,16 +1166,14 @@ Rules:
                   onClick={() => {
                     setShowExtraIngModal(false);
                     setExtraIngSearch('');
-                    const extraNamesStr = extraIngredients.map(i => isBg ? (i.nameBg || i.nameEn || i) : (i.nameEn || i.nameBg || i)).join(', ');
-                    const msg = isBg 
-                      ? `Предложи ми рецепти с включване на съставките: ${extraNamesStr}` 
-                      : `Suggest recipes including ingredients: ${extraNamesStr}`;
+                    const extraNamesStr = extraIngredients.map(i => getItemName(i)).join(', ');
+                    const msg = t('ai.suggest_with_ingredients', { names: extraNamesStr });
                     handleSendMessage(msg);
                   }}
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-sm font-black">search</span>
-                  <span>{isBg ? "Потърси рецепти" : "Find recipes"}</span>
+                  <span>{t('ai.extra_modal_find_recipes')}</span>
                 </button>
               )}
             </div>

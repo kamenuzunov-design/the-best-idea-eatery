@@ -2,7 +2,32 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 20 Септември 2026
+## Последна сесия: 26 Септември 2026
+
+### Извършена работа:
+1. **Пълна многоезичност на административния сектор на 5 езика (BG, EN, IT, FR, DE)**:
+   - [DataDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/DataDashboard.jsx) (`/admin/data`): Главно меню за данни.
+   - [AdminDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AdminDashboard.jsx) (`/admin`): Централно табло за управление на системата.
+   - [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx) (`/admin/moderation`): Опашка за модерация и езикова адаптация на рецепти и съставки.
+   - [ManageUsers.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageUsers.jsx) (`/admin/users`): Управление на потребители, филтри, роли и модален редактор.
+   - [ActivityLog.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ActivityLog.jsx) (`/admin/activity`): Дневник на системните действия, експорт и изчистване.
+   - [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx) (`/admin/backup`): Облачни и локални архиви, възстановяване, персонализиран файлов селектор.
+   - [ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx) (`/admin/ads`): Кампании, реклами, таргетиране по съставки и правила.
+2. **Пълна многоезичност на потребителския профил и кулинарния прогрес на 5 езика**:
+   - [CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx) (`/profile/progress`): Кулинарно ниво, XP, статистика, 16 постижения и модали с преводи в [achievements.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/achievements.js).
+   - Козметичен фикс на z-index йерархията между Header, езиковото падащо меню и заглавната лента на напредъка.
+   - Надежден детерминистичен бутон „Назад“ в административните табла към `/profile`.
+3. **Пълна многоезичност на модул „Килер и Интелигентен AI инструмент“ на 5 езика**:
+   - [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx) (`/pantry`): Банер за диетичен профил, броячи, динамични групи, срокове на годност, модали за добавяне и редакция с многоезично търсене и мерни единици.
+   - [DietaryProfileEdit.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/DietaryProfileEdit.jsx) (`/pantry/diet`): Редакция на диетичен профил, диети, алергени и изключени съставки с многоезичен autocomplete.
+   - [AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx) (`/ai-assistant`): Шеф AI чат, многоезични поздрави и резервни режими (изтичащи храни, кето, веган, заместители), модал за Gemini API настройки с интерактивно 4-стъпково ръководство и FAQ, модал за допълнителни съставки.
+4. **Инструмент за каскадна миграция на ID-та на мерни единици**:
+   - Реализирани [measurementUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/measurementUtils.js) и [MeasurementIdMigrationModal.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/MeasurementIdMigrationModal.jsx) за автоматично разпознаване на автогенерирани Firestore ID-та и каскадно обновяване в `measurements`, `ingredients`, `recipes` и `pantry`.
+   - След успешна миграция, бутонът бе премахнат от интерфейса на [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx), оставяйки екрана чист.
+
+---
+
+## Предишна сесия: 20 Септември 2026
 
 ### Извършена работа:
 1. **Пълна локализация на „Управление на Рецепти“ на 5 езика (EN, IT, FR, DE, BG)** ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [src/locales/](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/)):

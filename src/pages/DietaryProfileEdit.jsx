@@ -8,13 +8,19 @@ import { db } from '../lib/firebase';
 const DietaryProfileEdit = () => {
   const { user, updateUserProfile } = useAuth();
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
-  const isBg = i18n.language === 'bg';
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'bg';
 
   // Master ingredients references
   const [ingredientsDB, setIngredientsDB] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredIngredients, setFilteredIngredients] = useState([]);
+
+  const getItemName = (item) => {
+    if (!item) return '';
+    const langKey = `name_${currentLang}`;
+    return item[langKey] || item.name_bg || item.name_en || item.name || '';
+  };
 
   // Initialize state
   const [diet, setDiet] = useState(user?.preferences?.diet?.join(', ') || '');
@@ -47,7 +53,10 @@ const DietaryProfileEdit = () => {
     const lowerQ = q.toLowerCase();
     const matches = ingredientsDB.filter(ing => 
       (ing.name_bg && ing.name_bg.toLowerCase().includes(lowerQ)) ||
-      (ing.name_en && ing.name_en.toLowerCase().includes(lowerQ))
+      (ing.name_en && ing.name_en.toLowerCase().includes(lowerQ)) ||
+      (ing.name_it && ing.name_it.toLowerCase().includes(lowerQ)) ||
+      (ing.name_fr && ing.name_fr.toLowerCase().includes(lowerQ)) ||
+      (ing.name_de && ing.name_de.toLowerCase().includes(lowerQ))
     ).filter(ing => ing.is_active !== false && ing.is_deleted !== true);
     
     setFilteredIngredients(matches.slice(0, 8));
@@ -79,11 +88,11 @@ const DietaryProfileEdit = () => {
         'preferences.exclusions': exclusions,
       });
 
-      alert(isBg ? 'Диетичният профил е записан успешно!' : 'Dietary profile saved successfully!');
+      alert(t('pantry.diet_saved_success'));
       navigate('/pantry');
     } catch (err) {
       console.error(err);
-      setError(isBg ? 'Възникна грешка при запазване.' : 'Error saving profile.');
+      setError(t('pantry.diet_saved_error'));
     } finally {
       setLoading(false);
     }
@@ -98,10 +107,10 @@ const DietaryProfileEdit = () => {
         </button>
         <div>
           <h1 className="text-xl font-bold text-slate-100">
-            {isBg ? 'Редактиране на Диетичен Профил' : 'Edit Dietary Profile'}
+            {t('pantry.diet_edit_title')}
           </h1>
           <p className="text-xs text-primary/70">
-            {isBg ? 'Персонализирайте вашите предпочитания и алергии' : 'Customize your preferences & allergies'}
+            {t('pantry.diet_edit_subtitle')}
           </p>
         </div>
       </div>
@@ -118,19 +127,17 @@ const DietaryProfileEdit = () => {
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm text-primary">eco</span>
-              {isBg ? 'Хранителен Режим / Диети (Само на английски)' : 'Diets / Nutritional Regimes (English Only)'}
+              {t('pantry.diet_label')}
             </label>
             <input
               value={diet}
               onChange={(e) => setDiet(e.target.value)}
               className="w-full h-12 bg-surface-dark/50 backdrop-blur-md border border-primary/20 rounded-xl px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-slate-100 shadow-inner text-sm"
-              placeholder={isBg ? 'напр. vegan, vegetarian, keto, paleo, gluten-free' : 'e.g. vegan, vegetarian, keto, paleo, gluten-free'}
+              placeholder={t('pantry.diet_placeholder')}
               type="text"
             />
             <p className="text-[10px] text-slate-500 px-1 italic">
-              {isBg 
-                ? 'Въведете режими, разделени със запетая. ВАЖНО: Използвайте САМО английски думи, тъй като филтрите на продуктите в базата данни работят с английски тагове.' 
-                : 'Enter regimes separated by commas. IMPORTANT: Use English words only, as the product database filters rely on English tags.'}
+              {t('pantry.diet_hint')}
             </p>
           </div>
 
@@ -138,19 +145,17 @@ const DietaryProfileEdit = () => {
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm text-rose-400">warning</span>
-              {isBg ? 'Алергии и Непоносимости (Само на английски)' : 'Allergies & Intolerances (English Only)'}
+              {t('pantry.allergies_label')}
             </label>
             <input
               value={allergies}
               onChange={(e) => setAllergies(e.target.value)}
               className="w-full h-12 bg-surface-dark/50 backdrop-blur-md border border-rose-500/30 rounded-xl px-4 focus:ring-1 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all text-slate-100 shadow-inner text-sm"
-              placeholder={isBg ? 'напр. nuts, peanuts, gluten, lactose, eggs, fish' : 'e.g. nuts, peanuts, gluten, lactose, eggs, fish'}
+              placeholder={t('pantry.allergies_placeholder')}
               type="text"
             />
             <p className="text-[10px] text-slate-500 px-1 italic">
-              {isBg 
-                ? 'Въведете алергени, разделени със запетая. ВАЖНО: Използвайте САМО английски думи, за да съвпадат точно с алергените на продуктите в базата.' 
-                : 'Enter allergens separated by commas. IMPORTANT: Use English words only to match the allergens defined in the database.'}
+              {t('pantry.allergies_hint')}
             </p>
           </div>
 
@@ -158,7 +163,7 @@ const DietaryProfileEdit = () => {
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm text-amber-500">block</span>
-              {isBg ? 'Изключени храни / Нежелани съставки' : 'Exclusions / Disliked Ingredients'}
+              {t('pantry.exclusions_label')}
             </label>
             
             {/* Exclusions Autocomplete Search */}
@@ -168,13 +173,13 @@ const DietaryProfileEdit = () => {
                 value={searchQuery}
                 onChange={handleSearchChange}
                 className="w-full h-12 bg-surface-dark/50 backdrop-blur-md border border-primary/20 rounded-xl px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all text-slate-100 shadow-inner text-sm"
-                placeholder={isBg ? 'Потърсете и изберете продукт за изключване...' : 'Search and select product to exclude...'}
+                placeholder={t('pantry.exclusions_placeholder')}
               />
               
               {filteredIngredients.length > 0 && (
                 <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto bg-surface-dark border border-primary/20 rounded-xl shadow-xl divide-y divide-primary/10">
                   {filteredIngredients.map(ing => {
-                    const name = isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg);
+                    const name = getItemName(ing);
                     return (
                       <div
                         key={ing.id}
@@ -194,12 +199,12 @@ const DietaryProfileEdit = () => {
             <div className="space-y-2 mt-3">
               {exclusions.length === 0 ? (
                 <p className="text-xs text-slate-500 italic px-1">
-                  {isBg ? 'Няма изключени продукти' : 'No excluded products'}
+                  {t('pantry.exclusions_empty')}
                 </p>
               ) : (
                 exclusions.map(exId => {
                   const ing = ingredientsDB.find(i => i.id === exId);
-                  const name = ing ? (isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg)) : exId;
+                  const name = ing ? getItemName(ing) : exId;
                   return (
                     <div key={exId} className="flex justify-between items-center bg-surface-dark/30 border border-primary/10 rounded-xl p-3 hover:border-primary/30 transition-colors animate-in fade-in slide-in-from-top-1 duration-150">
                       <div className="flex items-center gap-2">
@@ -210,7 +215,7 @@ const DietaryProfileEdit = () => {
                         type="button"
                         onClick={() => handleRemoveExclusion(exId)}
                         className="text-slate-400 hover:text-rose-500 transition-colors p-1"
-                        title={isBg ? 'Премахни' : 'Remove'}
+                        title={t('pantry.delete_btn')}
                       >
                         <span className="material-symbols-outlined text-lg">close</span>
                       </button>
@@ -232,7 +237,7 @@ const DietaryProfileEdit = () => {
                 <span className="material-symbols-outlined animate-spin">refresh</span>
               ) : (
                 <>
-                  <span>{isBg ? 'Запиши' : 'Save'}</span>
+                  <span>{t('pantry.save')}</span>
                   <span className="material-symbols-outlined font-bold">check_circle</span>
                 </>
               )}
@@ -244,7 +249,7 @@ const DietaryProfileEdit = () => {
               disabled={loading}
               className="w-full h-14 bg-transparent border border-primary/20 text-slate-400 font-bold hover:text-slate-200 transition-colors rounded-xl flex items-center justify-center gap-2"
             >
-              <span>{isBg ? 'Отказ' : 'Cancel'}</span>
+              <span>{t('pantry.cancel')}</span>
               <span className="material-symbols-outlined">cancel</span>
             </button>
           </div>

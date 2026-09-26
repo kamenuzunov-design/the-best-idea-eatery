@@ -22,8 +22,8 @@ import { logActivity } from '../../lib/activityLogger';
 const ManageAds = () => {
   const { isAdmin, isOwner, user } = useAuth();
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
-  const isBg = i18n.language === 'bg';
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'bg';
   
   const [ads, setAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -46,13 +46,17 @@ const ManageAds = () => {
       case 'date-asc':
         return list.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
       case 'title':
-        return list.sort((a, b) => (a.title_bg || '').localeCompare(b.title_bg || ''));
+        return list.sort((a, b) => {
+          const titleA = currentLang === 'bg' ? (a.title_bg || a.title_en || '') : (a.title_en || a.title_bg || '');
+          const titleB = currentLang === 'bg' ? (b.title_bg || b.title_en || '') : (b.title_en || b.title_bg || '');
+          return titleA.localeCompare(titleB);
+        });
       case 'type':
         return list.sort((a, b) => (a.type || '').localeCompare(b.type || ''));
       default:
         return list;
     }
-  }, [ads, adsSortBy]);
+  }, [ads, adsSortBy, currentLang]);
 
   // Computed sorted Campaigns
   const sortedCampaigns = useMemo(() => {
@@ -282,7 +286,7 @@ const ManageAds = () => {
       setFormData({ ...formData, contentUrl: url });
     } catch (err) {
       console.error(err);
-      alert("Upload failed");
+      alert(t('manage_ads.alerts.upload_failed'));
     } finally {
       setUploading(false);
     }
@@ -349,24 +353,24 @@ const ManageAds = () => {
       setEditingCampaign(null);
     } catch (err) {
       console.error("Save campaign error:", err);
-      alert(isBg ? `Грешка при запазване на кампанията: ${err.message}` : `Error saving campaign: ${err.message}`);
+      alert(t('manage_ads.alerts.save_campaign_error', { message: err.message }));
     }
   };
 
   const handleDeleteCampaign = async (id, name) => {
-    if (window.confirm(isBg ? `Сигурни ли сте, че искате да изтриете кампания "${name}"?` : `Delete campaign "${name}"?`)) {
+    if (window.confirm(t('manage_ads.confirms.delete_campaign', { name }))) {
       try {
         await deleteDoc(doc(db, 'campaigns', id));
         await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'DELETE_CAMPAIGN', `Изтрита кампания: ${name}`);
       } catch (err) {
         console.error(err);
-        alert("Error deleting campaign");
+        alert(t('manage_ads.alerts.delete_campaign_error'));
       }
     }
   };
 
   const handleResetCampaignStats = async (id, name) => {
-    if (window.confirm(isBg ? `Нулиране на статистиките за кампания "${name}"?` : `Reset stats for campaign "${name}"?`)) {
+    if (window.confirm(t('manage_ads.confirms.reset_campaign_stats', { name }))) {
       try {
         await updateDoc(doc(db, 'campaigns', id), {
           viewsCount: 0,
@@ -426,7 +430,7 @@ const ManageAds = () => {
       resetForm();
     } catch (err) {
       console.error("Save ad error:", err);
-      alert(isBg ? `Грешка при запазване на рекламата: ${err.message}` : `Error saving ad: ${err.message}`);
+      alert(t('manage_ads.alerts.save_ad_error', { message: err.message }));
     }
   };
 
@@ -477,14 +481,14 @@ const ManageAds = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm(isBg ? "Изтриване на тази реклама?" : "Delete this ad?")) {
+    if (window.confirm(t('manage_ads.confirms.delete_ad'))) {
       await deleteDoc(doc(db, 'ads', id));
       await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'DELETE_AD', `Изтрита реклама ID: ${id}`);
     }
   };
 
   const handleResetStats = async (id, title) => {
-    if (window.confirm(isBg ? "Сигурни ли сте, че искате да нулирате статистиката (показвания и кликове) за тази реклама?" : "Are you sure you want to reset stats for this ad?")) {
+    if (window.confirm(t('manage_ads.confirms.reset_ad_stats'))) {
       try {
         await updateDoc(doc(db, 'ads', id), {
           viewsCount: 0,
@@ -493,7 +497,7 @@ const ManageAds = () => {
         await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'RESET_AD_STATS', `Нулирана статистика за реклама: ${title}`);
       } catch (err) {
         console.error(err);
-        alert("Error resetting stats");
+        alert(t('manage_ads.alerts.reset_stats_error'));
       }
     }
   };
@@ -527,17 +531,17 @@ const ManageAds = () => {
       }, { merge: true });
       await logActivity(user.uid, user.email || 'N/A', 'UPDATE_AD_SETTINGS', `Обновени правила за реклама`);
       setIsSettingsModalOpen(false);
-      alert(isBg ? "Правилата са запазени успешно!" : "Rules saved successfully!");
+      alert(t('manage_ads.alerts.save_settings_success'));
     } catch(err) {
       console.error(err);
-      alert("Error saving rules");
+      alert(t('manage_ads.alerts.save_settings_error'));
     }
   };
 
   const copyAdLink = () => {
     const url = window.location.origin + '/advertise';
     navigator.clipboard.writeText(url);
-    alert(isBg ? "Линкът е копиран! Можете да го поставите в полето 'Линк за препращане'." : "Link copied! Paste it in the 'Link URL' field.");
+    alert(t('manage_ads.alerts.link_copied'));
   };
 
   return (
@@ -548,14 +552,15 @@ const ManageAds = () => {
           <button 
             onClick={() => navigate('/admin')} 
             className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors cursor-pointer"
-            title={isBg ? 'Назад към Администрация' : 'Back to Admin'}
+            title={t('manage_ads.header.back_tooltip')}
+            aria-label={t('common.buttons.back')}
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-100">{isBg ? 'Управление на Реклами' : 'Manage Ads'}</h1>
+            <h1 className="text-xl font-bold text-slate-100">{t('manage_ads.title')}</h1>
             <p className="text-xs text-slate-400 font-normal mt-0.5">
-              {isBg ? 'Управление на кампании, графици и реклами' : 'Ad Campaigns & Scheduling'}
+              {t('manage_ads.subtitle')}
             </p>
           </div>
         </div>
@@ -567,7 +572,7 @@ const ManageAds = () => {
             className="flex-1 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold cursor-pointer"
           >
             <span className="material-symbols-outlined text-sm">folder</span>
-            <span>{isBg ? 'Нова Кампания' : 'New Campaign'}</span>
+            <span>{t('manage_ads.buttons.new_campaign')}</span>
           </button>
 
           <button 
@@ -575,7 +580,7 @@ const ManageAds = () => {
             className="flex-1 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold cursor-pointer"
           >
             <span className="material-symbols-outlined text-sm">add</span>
-            <span>{isBg ? 'Нова Реклама' : 'New Ad'}</span>
+            <span>{t('manage_ads.buttons.new_ad')}</span>
           </button>
         </div>
 
@@ -586,7 +591,7 @@ const ManageAds = () => {
             className="w-full bg-surface-dark border border-primary/20 text-slate-300 hover:text-primary hover:border-primary/40 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-xs font-bold cursor-pointer"
           >
             <span className="material-symbols-outlined text-sm">gavel</span>
-            <span>{isBg ? 'Правила за Реклама' : 'Ad Rules'}</span>
+            <span>{t('manage_ads.buttons.ad_rules')}</span>
           </button>
         </div>
       </header>
@@ -598,25 +603,25 @@ const ManageAds = () => {
           <div className="pb-2 border-b border-primary/20">
             <h2 className="text-sm font-black text-primary uppercase tracking-widest flex items-center gap-2">
               <span className="material-symbols-outlined text-base">campaign</span>
-              <span>{isBg ? 'Списък с Реклами' : 'Ads List'} ({sortedAds.length})</span>
+              <span>{t('manage_ads.ads_list.title')} ({sortedAds.length})</span>
             </h2>
           </div>
 
           {/* Header Row 2: Sort controls */}
           <div className="flex items-center gap-1.5 bg-background-dark/80 px-3 py-2 rounded-xl border border-primary/30 w-full">
             <span className="material-symbols-outlined text-xs text-primary">sort</span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">{isBg ? 'Сортирай:' : 'Sort:'}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">{t('manage_ads.sort_label')}</span>
             <select 
               value={adsSortBy} 
               onChange={e => setAdsSortBy(e.target.value)} 
               className="bg-transparent text-slate-200 text-xs font-bold outline-none cursor-pointer w-full"
             >
-              <option value="priority-desc" className="bg-surface-dark">{isBg ? '⭐ Приоритет (10 ➔ 1)' : '⭐ Priority (10 ➔ 1)'}</option>
-              <option value="priority-asc" className="bg-surface-dark">{isBg ? '⭐ Приоритет (1 ➔ 10)' : '⭐ Priority (1 ➔ 10)'}</option>
-              <option value="date-desc" className="bg-surface-dark">{isBg ? '📅 Най-нови първо' : '📅 Newest First'}</option>
-              <option value="date-asc" className="bg-surface-dark">{isBg ? '📅 Най-стари първо' : '📅 Oldest First'}</option>
-              <option value="title" className="bg-surface-dark">{isBg ? '🔤 По Име (А-Я)' : '🔤 By Title'}</option>
-              <option value="type" className="bg-surface-dark">{isBg ? '🏷️ По Тип' : '🏷️ By Type'}</option>
+              <option value="priority-desc" className="bg-surface-dark">{t('manage_ads.sort_ads.priority_desc')}</option>
+              <option value="priority-asc" className="bg-surface-dark">{t('manage_ads.sort_ads.priority_asc')}</option>
+              <option value="date-desc" className="bg-surface-dark">{t('manage_ads.sort_ads.date_desc')}</option>
+              <option value="date-asc" className="bg-surface-dark">{t('manage_ads.sort_ads.date_asc')}</option>
+              <option value="title" className="bg-surface-dark">{t('manage_ads.sort_ads.title')}</option>
+              <option value="type" className="bg-surface-dark">{t('manage_ads.sort_ads.type')}</option>
             </select>
           </div>
 
@@ -627,7 +632,7 @@ const ManageAds = () => {
               className="w-full py-2.5 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm">add</span>
-              <span>{isBg ? 'Нова Реклама' : 'New Ad'}</span>
+              <span>{t('manage_ads.buttons.new_ad')}</span>
             </button>
           </div>
 
@@ -638,7 +643,7 @@ const ManageAds = () => {
           ) : sortedAds.length === 0 ? (
             <div className="text-center py-16 bg-background-dark/40 rounded-2xl border border-primary/10 flex flex-col items-center justify-center p-4">
               <span className="material-symbols-outlined text-5xl text-slate-700 mb-2">campaign</span>
-              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">{isBg ? 'Няма създадени реклами' : 'No ads created yet'}</p>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">{t('manage_ads.ads_list.empty')}</p>
             </div>
           ) : (
             /* Single Column Layout on all screens */
@@ -651,7 +656,7 @@ const ManageAds = () => {
                     <div 
                       onClick={() => handleEdit(ad)}
                       className="h-40 bg-background-dark relative group cursor-pointer"
-                      title={isBg ? 'Редактирай рекламата' : 'Edit ad'}
+                      title={t('manage_ads.card.edit_tooltip')}
                     >
                       {ad.type === 'image' || ad.type === 'native' ? (
                         <img src={ad.contentUrl} className="w-full h-full object-cover opacity-75 group-hover:opacity-90 transition-opacity" alt="Ad" />
@@ -675,10 +680,10 @@ const ManageAds = () => {
                         )}
                       </div>
                       <div onClick={(e) => e.stopPropagation()} className="absolute top-3 right-3 flex gap-1.5">
-                        <button onClick={() => handleEdit(ad)} className="size-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all cursor-pointer" title={isBg ? 'Редактирай' : 'Edit'}>
+                        <button onClick={() => handleEdit(ad)} className="size-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all cursor-pointer" title={t('manage_ads.card.edit_tooltip')}>
                           <span className="material-symbols-outlined text-sm">edit</span>
                         </button>
-                        <button onClick={() => handleDelete(ad.id)} className="size-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer" title={isBg ? 'Изтрий' : 'Delete'}>
+                        <button onClick={() => handleDelete(ad.id)} className="size-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer" title={t('manage_ads.card.delete_tooltip')}>
                           <span className="material-symbols-outlined text-sm">delete</span>
                         </button>
                       </div>
@@ -690,23 +695,25 @@ const ManageAds = () => {
                           <h3 
                             onClick={() => handleEdit(ad)}
                             className="font-bold text-slate-100 text-sm sm:text-base cursor-pointer hover:text-primary transition-colors inline-block"
-                            title={isBg ? 'Редактирай рекламата' : 'Edit ad'}
+                            title={t('manage_ads.card.edit_tooltip')}
                           >
-                            {isBg ? ad.title_bg : ad.title_en}
+                            {currentLang === 'bg' ? (ad.title_bg || ad.title_en) : (ad.title_en || ad.title_bg)}
                           </h3>
-                          <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 mt-0.5">{isBg ? ad.description_bg : ad.description_en}</p>
+                          <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 mt-0.5">
+                            {currentLang === 'bg' ? (ad.description_bg || ad.description_en) : (ad.description_en || ad.description_bg)}
+                          </p>
                         </div>
                         <div className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0 ${ad.isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700 text-slate-400'}`}>
-                          {ad.isActive ? (isBg ? 'Активна' : 'Active') : (isBg ? 'Пауза' : 'Paused')}
+                          {ad.isActive ? t('manage_ads.status.active') : t('manage_ads.status.paused')}
                         </div>
                       </div>
 
                       {(ad.startDate || ad.endDate) && (
                         <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                          <span>📅 {ad.startDate || 'Начало'} — {ad.endDate || 'Безкрай'}</span>
+                          <span>📅 {ad.startDate || t('manage_ads.dates.start')} — {ad.endDate || t('manage_ads.dates.unlimited')}</span>
                           {ad.endDate && new Date().toISOString().split('T')[0] > ad.endDate && (
                             <span className="text-rose-400 font-bold bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 text-[9px]">
-                              {isBg ? 'ИЗТЕКЛА' : 'EXPIRED'}
+                              {t('manage_ads.status.expired')}
                             </span>
                           )}
                         </div>
@@ -714,11 +721,11 @@ const ManageAds = () => {
 
                       <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider pt-2 border-t border-primary/10">
                         <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1" title="Показвания / Лимит">
+                          <span className="flex items-center gap-1" title={t('manage_ads.stats.views_limit')}>
                             <span className="material-symbols-outlined text-xs text-primary">visibility</span> 
                             {ad.viewsCount || 0} / {ad.maxViews > 0 ? ad.maxViews : '∞'}
                           </span>
-                          <span className="flex items-center gap-1" title="Кликове / Лимит">
+                          <span className="flex items-center gap-1" title={t('manage_ads.stats.clicks_limit')}>
                             <span className="material-symbols-outlined text-xs text-amber-500">touch_app</span> 
                             {ad.clicksCount || 0} / {ad.maxClicks > 0 ? ad.maxClicks : '∞'}
                           </span>
@@ -726,17 +733,17 @@ const ManageAds = () => {
 
                         <div className="flex items-center gap-2 ml-auto">
                           {/* Inline Priority Reordering Control */}
-                          <div className="flex items-center gap-1 bg-background-dark/80 px-2 py-0.5 rounded-lg border border-primary/20" title={isBg ? "Пренареждане на приоритет (1-10)" : "Reorder priority (1-10)"}>
-                            <span className="text-amber-400 text-[10px]">⭐ Пр: {ad.priority || 1}</span>
-                            <button onClick={() => handleAdjustPriority(ad, 1)} disabled={(ad.priority || 1) >= 10} className="text-slate-400 hover:text-emerald-400 disabled:opacity-30 cursor-pointer p-0.5" title={isBg ? "Увеличи приоритет" : "Increase priority"}>
+                          <div className="flex items-center gap-1 bg-background-dark/80 px-2 py-0.5 rounded-lg border border-primary/20" title={t('manage_ads.card.reorder_tooltip')}>
+                            <span className="text-amber-400 text-[10px]">⭐ {t('manage_ads.priority_abbr')}: {ad.priority || 1}</span>
+                            <button onClick={() => handleAdjustPriority(ad, 1)} disabled={(ad.priority || 1) >= 10} className="text-slate-400 hover:text-emerald-400 disabled:opacity-30 cursor-pointer p-0.5" title={t('manage_ads.card.increase_priority_tooltip')}>
                               <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
                             </button>
-                            <button onClick={() => handleAdjustPriority(ad, -1)} disabled={(ad.priority || 1) <= 1} className="text-slate-400 hover:text-rose-400 disabled:opacity-30 cursor-pointer p-0.5" title={isBg ? "Намали приоритет" : "Decrease priority"}>
+                            <button onClick={() => handleAdjustPriority(ad, -1)} disabled={(ad.priority || 1) <= 1} className="text-slate-400 hover:text-rose-400 disabled:opacity-30 cursor-pointer p-0.5" title={t('manage_ads.card.decrease_priority_tooltip')}>
                               <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
                             </button>
                           </div>
 
-                          <button onClick={() => handleResetStats(ad.id, ad.title_bg)} className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title={isBg ? 'Нулирай статистиката' : 'Reset stats'}>
+                          <button onClick={() => handleResetStats(ad.id, ad.title_bg)} className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title={t('manage_ads.card.reset_stats_tooltip')}>
                             <span className="material-symbols-outlined text-xs">restart_alt</span>
                           </button>
                         </div>
@@ -755,23 +762,23 @@ const ManageAds = () => {
           <div className="pb-2 border-b border-amber-500/20">
             <h2 className="text-sm font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
               <span className="material-symbols-outlined text-base">folder_open</span>
-              <span>{isBg ? 'Рекламни Кампании' : 'Ad Campaigns'} ({sortedCampaigns.length})</span>
+              <span>{t('manage_ads.campaigns_list.title')} ({sortedCampaigns.length})</span>
             </h2>
           </div>
 
           {/* Header Row 2: Sort controls */}
           <div className="flex items-center gap-1.5 bg-background-dark/80 px-3 py-2 rounded-xl border border-amber-500/30 w-full">
             <span className="material-symbols-outlined text-xs text-amber-400">sort</span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">{isBg ? 'Сортирай:' : 'Sort:'}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">{t('manage_ads.sort_label')}</span>
             <select 
               value={campaignsSortBy} 
               onChange={e => setCampaignsSortBy(e.target.value)} 
               className="bg-transparent text-slate-200 text-xs font-bold outline-none cursor-pointer w-full"
             >
-              <option value="name-asc" className="bg-surface-dark">{isBg ? '🔤 По Име (А-Я)' : '🔤 By Name (A-Z)'}</option>
-              <option value="date-desc" className="bg-surface-dark">{isBg ? '📅 Най-нови първо' : '📅 Newest First'}</option>
-              <option value="active-first" className="bg-surface-dark">{isBg ? '⚡ Активни първо' : '⚡ Active First'}</option>
-              <option value="ads-count" className="bg-surface-dark">{isBg ? '📊 Брой реклами' : '📊 Ad Count'}</option>
+              <option value="name-asc" className="bg-surface-dark">{t('manage_ads.sort_campaigns.name_asc')}</option>
+              <option value="date-desc" className="bg-surface-dark">{t('manage_ads.sort_campaigns.date_desc')}</option>
+              <option value="active-first" className="bg-surface-dark">{t('manage_ads.sort_campaigns.active_first')}</option>
+              <option value="ads-count" className="bg-surface-dark">{t('manage_ads.sort_campaigns.ads_count')}</option>
             </select>
           </div>
 
@@ -782,20 +789,20 @@ const ManageAds = () => {
               className="w-full py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm">add</span>
-              <span>{isBg ? 'Нова Кампания' : 'New Campaign'}</span>
+              <span>{t('manage_ads.buttons.new_campaign')}</span>
             </button>
           </div>
 
           {sortedCampaigns.length === 0 ? (
             <div className="text-center py-12 bg-background-dark/40 rounded-2xl border border-amber-500/10 flex flex-col items-center justify-center p-4">
               <span className="material-symbols-outlined text-4xl text-slate-600 mb-1">folder_off</span>
-              <p className="text-slate-400 text-xs font-bold">{isBg ? 'Няма създадени кампании' : 'No campaigns created yet'}</p>
+              <p className="text-slate-400 text-xs font-bold">{t('manage_ads.campaigns_list.empty')}</p>
               <button 
                 onClick={() => handleOpenCampaignModal()}
                 className="mt-3 px-3.5 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl text-[10px] font-black uppercase hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
-                <span>{isBg ? 'Създай Кампания' : 'Create Campaign'}</span>
+                <span>{t('manage_ads.buttons.create_campaign')}</span>
               </button>
             </div>
           ) : (
@@ -807,10 +814,10 @@ const ManageAds = () => {
 
                 const rotationLabel = 
                   c.rotationType === 'weighted' 
-                    ? (isBg ? 'Случайна по приоритет' : 'Weighted Random') 
+                    ? t('manage_ads.rotation.weighted')
                     : c.rotationType === 'timer' 
-                      ? (isBg ? `С таймер (${c.timerIntervalSeconds || 10}сек)` : `Timer Carousel (${c.timerIntervalSeconds || 10}s)`)
-                      : (isBg ? 'Последователна (Round-Robin)' : 'Sequential');
+                      ? t('manage_ads.rotation.timer', { seconds: c.timerIntervalSeconds || 10 })
+                      : t('manage_ads.rotation.sequential');
 
                 return (
                   <div key={c.id} className="bg-surface-dark/95 rounded-2xl border border-amber-500/20 p-4 shadow-lg flex flex-col gap-3 hover:border-amber-500/40 transition-all">
@@ -820,16 +827,16 @@ const ManageAds = () => {
                           <span 
                             onClick={() => handleOpenCampaignModal(c)}
                             className="cursor-pointer hover:text-amber-400 transition-colors"
-                            title={isBg ? 'Редактирай кампанията' : 'Edit campaign'}
+                            title={t('manage_ads.card.edit_campaign_tooltip')}
                           >
                             {c.name}
                           </span>
                           <span className="bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-amber-500/20">
-                            {assignedAdsCount} {isBg ? 'реклами' : 'ads'}
+                            {assignedAdsCount} {t('manage_ads.campaigns_list.ads_count_label')}
                           </span>
                         </h3>
                         <p className="text-[10px] text-slate-400 font-medium mt-1">
-                          Модел на ротация: <strong className="text-slate-300">{rotationLabel}</strong>
+                          {t('manage_ads.campaigns_list.rotation_model')}: <strong className="text-slate-300">{rotationLabel}</strong>
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -839,12 +846,12 @@ const ManageAds = () => {
                             c.isActive ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                           }`}
                         >
-                          {c.isActive ? (isBg ? 'Активна' : 'Active') : (isBg ? 'Пауза' : 'Paused')}
+                          {c.isActive ? t('manage_ads.status.active') : t('manage_ads.status.paused')}
                         </button>
-                        <button onClick={() => handleOpenCampaignModal(c)} className="p-1 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer" title={isBg ? 'Редактирай кампанията' : 'Edit campaign'}>
+                        <button onClick={() => handleOpenCampaignModal(c)} className="p-1 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer" title={t('manage_ads.card.edit_campaign_tooltip')}>
                           <span className="material-symbols-outlined text-base">edit</span>
                         </button>
-                        <button onClick={() => handleDeleteCampaign(c.id, c.name)} className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer" title={isBg ? 'Изтрий кампанията' : 'Delete campaign'}>
+                        <button onClick={() => handleDeleteCampaign(c.id, c.name)} className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer" title={t('manage_ads.card.delete_campaign_tooltip')}>
                           <span className="material-symbols-outlined text-base">delete</span>
                         </button>
                       </div>
@@ -853,7 +860,7 @@ const ManageAds = () => {
                     {/* Dates & Stats */}
                     <div className="grid grid-cols-2 gap-2 text-[10px] bg-background-dark/50 p-2.5 rounded-xl border border-amber-500/10">
                       <div>
-                        <span className="text-slate-500 font-bold uppercase tracking-wider block">{isBg ? 'Показвания:' : 'Views:'}</span>
+                        <span className="text-slate-500 font-bold uppercase tracking-wider block">{t('manage_ads.stats.views')}</span>
                         <span className="text-slate-200 font-bold">
                           {c.viewsCount || 0} / {c.maxViews > 0 ? c.maxViews : '∞'}
                         </span>
@@ -864,7 +871,7 @@ const ManageAds = () => {
                         )}
                       </div>
                       <div>
-                        <span className="text-slate-500 font-bold uppercase tracking-wider block">{isBg ? 'Кликове:' : 'Clicks:'}</span>
+                        <span className="text-slate-500 font-bold uppercase tracking-wider block">{t('manage_ads.stats.clicks')}</span>
                         <span className="text-slate-200 font-bold">
                           {c.clicksCount || 0} / {c.maxClicks > 0 ? c.maxClicks : '∞'}
                         </span>
@@ -877,10 +884,10 @@ const ManageAds = () => {
                     </div>
 
                     <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-amber-500/10">
-                      <span>📅 {c.startDate || 'Начало'} — {c.endDate || 'Безкрай'}</span>
+                      <span>📅 {c.startDate || t('manage_ads.dates.start')} — {c.endDate || t('manage_ads.dates.unlimited')}</span>
                       <button onClick={() => handleResetCampaignStats(c.id, c.name)} className="text-rose-400 hover:underline cursor-pointer flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-[12px]">restart_alt</span>
-                        {isBg ? 'Нулирай' : 'Reset'}
+                        {t('manage_ads.buttons.reset')}
                       </button>
                     </div>
                   </div>
@@ -897,38 +904,38 @@ const ManageAds = () => {
           <div className="bg-surface-dark w-full max-w-lg rounded-[2.5rem] border border-primary/30 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-primary/20 flex justify-between items-center bg-gradient-to-r from-primary/5 to-transparent">
               <h2 className="text-primary font-black uppercase tracking-tighter text-xl">
-                {editingCampaign ? (isBg ? 'Редактирай Кампания' : 'Edit Campaign') : (isBg ? 'Нова Рекламна Кампания' : 'New Campaign')}
+                {editingCampaign ? t('manage_ads.campaign_modal.edit_title') : t('manage_ads.campaign_modal.new_title')}
               </h2>
-              <button onClick={() => setIsCampaignModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setIsCampaignModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer" aria-label={t('common.buttons.close')}>
                 <span className="material-symbols-outlined text-3xl">close</span>
               </button>
             </div>
 
             <form onSubmit={handleSaveCampaign} className="p-6 overflow-y-auto space-y-5 no-scrollbar">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Име на Кампанията' : 'Campaign Name'}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.campaign_modal.name_label')}</label>
                 <input 
                   required 
                   value={campaignFormData.name} 
                   onChange={e => setCampaignFormData({...campaignFormData, name: e.target.value})} 
                   className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary"
-                  placeholder={isBg ? "напр. Лятна Промоция 2026" : "e.g. Summer Promo 2026"}
+                  placeholder={t('manage_ads.campaign_modal.name_placeholder')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between px-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isBg ? 'Начална Дата' : 'Start Date'}</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('manage_ads.campaign_modal.start_date')}</label>
                     {campaignFormData.startDate && (
                       <button 
                         type="button" 
                         onClick={() => setCampaignFormData({...campaignFormData, startDate: ''})}
                         className="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase cursor-pointer flex items-center gap-0.5"
-                        title={isBg ? "Нулирай начална дата" : "Clear start date"}
+                        title={t('manage_ads.buttons.clear')}
                       >
                         <span className="material-symbols-outlined text-[12px]">backspace</span>
-                        <span>{isBg ? 'Нулирай' : 'Clear'}</span>
+                        <span>{t('manage_ads.buttons.clear')}</span>
                       </button>
                     )}
                   </div>
@@ -936,16 +943,16 @@ const ManageAds = () => {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between px-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isBg ? 'Крайна Дата' : 'End Date'}</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('manage_ads.campaign_modal.end_date')}</label>
                     {campaignFormData.endDate && (
                       <button 
                         type="button" 
                         onClick={() => setCampaignFormData({...campaignFormData, endDate: ''})}
                         className="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase cursor-pointer flex items-center gap-0.5"
-                        title={isBg ? "Нулирай крайна дата" : "Clear end date"}
+                        title={t('manage_ads.buttons.clear')}
                       >
                         <span className="material-symbols-outlined text-[12px]">backspace</span>
-                        <span>{isBg ? 'Нулирай' : 'Clear'}</span>
+                        <span>{t('manage_ads.buttons.clear')}</span>
                       </button>
                     )}
                   </div>
@@ -954,21 +961,21 @@ const ManageAds = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Тип Ротация' : 'Rotation Model'}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.campaign_modal.rotation_label')}</label>
                 <select 
                   value={campaignFormData.rotationType}
                   onChange={e => setCampaignFormData({...campaignFormData, rotationType: e.target.value})}
                   className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary"
                 >
-                  <option value="sequential">{isBg ? 'Последователна (Round-Robin при зареждане)' : 'Sequential (Round-Robin on load)'}</option>
-                  <option value="weighted">{isBg ? 'Случайна спрямо приоритет (Weighted Random)' : 'Weighted Random by Priority'}</option>
-                  <option value="timer">{isBg ? 'Таймер карусел (Автоматична ротация)' : 'Timer Carousel (Auto Interval)'}</option>
+                  <option value="sequential">{t('manage_ads.campaign_modal.rotation_sequential')}</option>
+                  <option value="weighted">{t('manage_ads.campaign_modal.rotation_weighted')}</option>
+                  <option value="timer">{t('manage_ads.campaign_modal.rotation_timer')}</option>
                 </select>
               </div>
 
               {campaignFormData.rotationType === 'timer' && (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Интервал на таймера (секунди)' : 'Timer Interval (seconds)'}</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.campaign_modal.timer_label')}</label>
                   <input 
                     type="number" 
                     min="3"
@@ -977,13 +984,13 @@ const ManageAds = () => {
                     onChange={e => setCampaignFormData({...campaignFormData, timerIntervalSeconds: e.target.value})} 
                     className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary"
                   />
-                  <p className="text-[9px] text-slate-500 px-1">{isBg ? 'Банерът автоматично ще сменя рекламата на всеки N секунди.' : 'The banner will cycle ads automatically every N seconds.'}</p>
+                  <p className="text-[9px] text-slate-500 px-1">{t('manage_ads.campaign_modal.timer_desc')}</p>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Максимум Показвания' : 'Max Views'}</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.campaign_modal.max_views')}</label>
                   <input 
                     type="number" 
                     min="0"
@@ -991,10 +998,10 @@ const ManageAds = () => {
                     onChange={e => setCampaignFormData({...campaignFormData, maxViews: e.target.value})} 
                     className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
                   />
-                  <p className="text-[9px] text-slate-500 px-1">{isBg ? '0 = Безкрайно' : '0 = Unlimited'}</p>
+                  <p className="text-[9px] text-slate-500 px-1">{t('manage_ads.campaign_modal.zero_unlimited')}</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Максимум Кликове' : 'Max Clicks'}</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.campaign_modal.max_clicks')}</label>
                   <input 
                     type="number" 
                     min="0"
@@ -1002,12 +1009,12 @@ const ManageAds = () => {
                     onChange={e => setCampaignFormData({...campaignFormData, maxClicks: e.target.value})} 
                     className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
                   />
-                  <p className="text-[9px] text-slate-500 px-1">{isBg ? '0 = Безкрайно' : '0 = Unlimited'}</p>
+                  <p className="text-[9px] text-slate-500 px-1">{t('manage_ads.campaign_modal.zero_unlimited')}</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{isBg ? 'Кампанията е активна?' : 'Is Active?'}</span>
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{t('manage_ads.campaign_modal.is_active')}</span>
                 <button 
                   type="button" 
                   onClick={() => setCampaignFormData({...campaignFormData, isActive: !campaignFormData.isActive})}
@@ -1018,7 +1025,7 @@ const ManageAds = () => {
               </div>
 
               <button type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer">
-                {isBg ? 'Запази Кампанията' : 'Save Campaign'}
+                {t('manage_ads.campaign_modal.save_btn')}
               </button>
             </form>
           </div>
@@ -1031,9 +1038,9 @@ const ManageAds = () => {
           <div className="bg-surface-dark w-full max-w-lg rounded-[2.5rem] border border-primary/30 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-primary/20 flex justify-between items-center bg-gradient-to-r from-primary/5 to-transparent">
               <h2 className="text-primary font-black uppercase tracking-tighter text-xl">
-                {editingAd ? (isBg ? 'Редактирай Реклама' : 'Edit Ad') : (isBg ? 'Нова Реклама' : 'New Ad')}
+                {editingAd ? t('manage_ads.ad_modal.edit_title') : t('manage_ads.ad_modal.new_title')}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer" aria-label={t('common.buttons.close')}>
                 <span className="material-symbols-outlined text-3xl">close</span>
               </button>
             </div>
@@ -1041,23 +1048,23 @@ const ManageAds = () => {
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 no-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Заглавие (BG)' : 'Title (BG)'}</label>
-                  <input required value={formData.title_bg} onChange={e => setFormData({...formData, title_bg: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder={isBg ? "Заглавие на български" : "Title in Bulgarian"} />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.title_bg')}</label>
+                  <input required value={formData.title_bg} onChange={e => setFormData({...formData, title_bg: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder={t('manage_ads.ad_modal.title_bg_placeholder')} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Заглавие (EN)' : 'Title (EN)'}</label>
-                  <input required value={formData.title_en} onChange={e => setFormData({...formData, title_en: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder={isBg ? "Заглавие на английски" : "Title in English"} />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.title_en')}</label>
+                  <input required value={formData.title_en} onChange={e => setFormData({...formData, title_en: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder={t('manage_ads.ad_modal.title_en_placeholder')} />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Присъедини към Кампания' : 'Assign to Campaign'}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.assign_campaign')}</label>
                 <select 
                   value={formData.campaignId} 
                   onChange={e => setFormData({...formData, campaignId: e.target.value})}
                   className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary appearance-none"
                 >
-                  <option value="">{isBg ? '-- Самостоятелна реклама (Без кампания) --' : '-- Standalone (No Campaign) --'}</option>
+                  <option value="">{t('manage_ads.ad_modal.standalone_option')}</option>
                   {campaigns.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -1065,11 +1072,11 @@ const ManageAds = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Тип Реклама' : 'Ad Type'}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.ad_type')}</label>
                 <div className="grid grid-cols-4 gap-2">
-                  {['image', 'video', 'html', 'native'].map(t => (
-                    <button key={t} type="button" onClick={() => setFormData({...formData, type: t})} className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${formData.type === t ? 'bg-primary text-background-dark' : 'bg-background-dark text-slate-500 border border-primary/10'}`}>
-                      {t}
+                  {['image', 'video', 'html', 'native'].map(tType => (
+                    <button key={tType} type="button" onClick={() => setFormData({...formData, type: tType})} className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${formData.type === tType ? 'bg-primary text-background-dark' : 'bg-background-dark text-slate-500 border border-primary/10'}`}>
+                      {tType}
                     </button>
                   ))}
                 </div>
@@ -1080,7 +1087,7 @@ const ManageAds = () => {
                   <div className="flex justify-between items-center">
                     <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-primary text-base">restaurant</span>
-                      {isBg ? 'Целеви съставки (Продукти)' : 'Target Ingredients'}
+                      {t('manage_ads.ad_modal.target_ingredients')}
                     </label>
                     <button
                       type="button"
@@ -1088,7 +1095,7 @@ const ManageAds = () => {
                       className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                     >
                       <span className="material-symbols-outlined text-sm">add_circle</span>
-                      <span>{isBg ? 'Добави съставка' : 'Add Ingredient'}</span>
+                      <span>{t('manage_ads.ad_modal.add_ingredient')}</span>
                     </button>
                   </div>
 
@@ -1105,7 +1112,7 @@ const ManageAds = () => {
                             type="button"
                             onClick={() => handleRemoveKeyword(kw)}
                             className="text-amber-400/60 hover:text-rose-400 font-black cursor-pointer transition-colors"
-                            title={isBg ? 'Премахни' : 'Remove'}
+                            title={t('common.buttons.delete')}
                           >
                             ×
                           </button>
@@ -1113,30 +1120,28 @@ const ManageAds = () => {
                       ))
                     ) : (
                       <span className="text-[11px] italic text-slate-500">
-                        {isBg ? 'Все още няма избрани целеви съставки' : 'No target ingredients selected yet'}
+                        {t('manage_ads.ad_modal.no_ingredients')}
                       </span>
                     )}
                   </div>
 
                   <p className="text-[9px] text-slate-400 px-1">
-                    {isBg 
-                      ? 'Рекламата ще се показва само в рецепти, съдържащи поне един от тези продукти.' 
-                      : 'The ad will only show in recipes containing at least one of these ingredients.'}
+                    {t('manage_ads.ad_modal.ingredients_help')}
                   </p>
                 </div>
               )}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Медия / HTML код' : 'Media / HTML Code'}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.media_html')}</label>
                 <div className="flex gap-2">
                   <input 
                     value={formData.contentUrl} 
                     onChange={e => setFormData({...formData, contentUrl: e.target.value})} 
                     className="flex-1 bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
-                    placeholder={isBg ? "URL или HTML код" : "URL or HTML code"} 
+                    placeholder={t('manage_ads.ad_modal.media_placeholder')} 
                   />
                   {formData.type !== 'html' && (
-                    <label className="bg-primary/10 border border-primary/30 p-3 rounded-xl cursor-pointer text-primary hover:bg-primary/20 transition-all" title={isBg ? "Прикачи файл" : "Upload file"}>
+                    <label className="bg-primary/10 border border-primary/30 p-3 rounded-xl cursor-pointer text-primary hover:bg-primary/20 transition-all" title={t('manage_ads.ad_modal.upload_tooltip')}>
                       <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
                       <span className="material-symbols-outlined">{uploading ? 'sync' : 'upload'}</span>
                     </label>
@@ -1145,11 +1150,11 @@ const ManageAds = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Линк за препращане' : 'Target Link URL'}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.link_url')}</label>
                 <input value={formData.linkUrl} onChange={e => setFormData({...formData, linkUrl: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder="https://..." />
                 
                 <div className="flex items-center justify-between p-3 mt-1 bg-primary/5 rounded-xl border border-primary/10">
-                  <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{isBg ? 'Локален адрес (в същия таб)' : 'Local Route (same tab)'}</span>
+                  <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{t('manage_ads.ad_modal.local_route')}</span>
                   <button 
                     type="button" 
                     onClick={() => setFormData({...formData, isLocalLink: !formData.isLocalLink})}
@@ -1163,16 +1168,16 @@ const ManageAds = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between px-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isBg ? 'Начална Дата' : 'Start Date'}</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('manage_ads.ad_modal.start_date')}</label>
                     {formData.startDate && (
                       <button 
                         type="button" 
                         onClick={() => setFormData({...formData, startDate: ''})}
                         className="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase cursor-pointer flex items-center gap-0.5"
-                        title={isBg ? "Нулирай начална дата" : "Clear start date"}
+                        title={t('manage_ads.buttons.clear')}
                       >
                         <span className="material-symbols-outlined text-[12px]">backspace</span>
-                        <span>{isBg ? 'Нулирай' : 'Clear'}</span>
+                        <span>{t('manage_ads.buttons.clear')}</span>
                       </button>
                     )}
                   </div>
@@ -1180,16 +1185,16 @@ const ManageAds = () => {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between px-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isBg ? 'Крайна Дата' : 'End Date'}</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('manage_ads.ad_modal.end_date')}</label>
                     {formData.endDate && (
                       <button 
                         type="button" 
                         onClick={() => setFormData({...formData, endDate: ''})}
                         className="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase cursor-pointer flex items-center gap-0.5"
-                        title={isBg ? "Нулирай крайна дата" : "Clear end date"}
+                        title={t('manage_ads.buttons.clear')}
                       >
                         <span className="material-symbols-outlined text-[12px]">backspace</span>
-                        <span>{isBg ? 'Нулирай' : 'Clear'}</span>
+                        <span>{t('manage_ads.buttons.clear')}</span>
                       </button>
                     )}
                   </div>
@@ -1199,22 +1204,22 @@ const ManageAds = () => {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Приоритет (1-10: 10=най-висок)' : 'Priority (1-10: 10=highest)'}</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.priority_label')}</label>
                   <input type="number" min="1" max="10" value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Макс Показвания' : 'Max Views'}</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.max_views')}</label>
                   <input type="number" min="0" value={formData.maxViews} onChange={e => setFormData({...formData, maxViews: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Макс Кликове' : 'Max Clicks'}</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.max_clicks')}</label>
                   <input type="number" min="0" value={formData.maxClicks} onChange={e => setFormData({...formData, maxClicks: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" />
                 </div>
               </div>
-              <p className="text-[9px] text-slate-500 px-1">{isBg ? '* 0 означава безкрайно (без лимит)' : '* 0 means unlimited (no limit)'}</p>
+              <p className="text-[9px] text-slate-500 px-1">{t('manage_ads.ad_modal.zero_unlimited')}</p>
 
               <div className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{isBg ? 'Активна веднага?' : 'Active Immediately?'}</span>
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{t('manage_ads.ad_modal.active_immediately')}</span>
                 <button 
                   type="button" 
                   onClick={() => setFormData({...formData, isActive: !formData.isActive})}
@@ -1225,7 +1230,7 @@ const ManageAds = () => {
               </div>
 
               <button disabled={uploading} type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer">
-                {isBg ? 'Запази Рекламата' : 'Save Ad'}
+                {t('manage_ads.ad_modal.save_btn')}
               </button>
             </form>
           </div>
@@ -1238,9 +1243,9 @@ const ManageAds = () => {
           <div className="bg-surface-dark w-full max-w-2xl rounded-[2.5rem] border border-primary/30 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-primary/20 flex justify-between items-center bg-gradient-to-r from-primary/5 to-transparent">
               <h2 className="text-primary font-black uppercase tracking-tighter text-xl">
-                {isBg ? 'Правила за Реклама' : 'Advertising Rules'}
+                {t('manage_ads.settings_modal.title')}
               </h2>
-              <button onClick={() => setIsSettingsModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setIsSettingsModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer" aria-label={t('common.buttons.close')}>
                 <span className="material-symbols-outlined text-3xl">close</span>
               </button>
             </div>
@@ -1248,9 +1253,9 @@ const ManageAds = () => {
             <form onSubmit={handleSaveSettings} className="p-6 overflow-y-auto space-y-5 no-scrollbar">
               <div className="bg-primary/10 border border-primary/30 p-4 rounded-2xl flex flex-col gap-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-primary uppercase tracking-widest">{isBg ? 'Линк към страницата' : 'Page URL'}</span>
+                  <span className="text-xs font-bold text-primary uppercase tracking-widest">{t('manage_ads.settings_modal.page_url')}</span>
                   <button type="button" onClick={copyAdLink} className="text-xs bg-primary text-background-dark px-3 py-1 rounded-full font-bold uppercase hover:scale-105 transition-all cursor-pointer">
-                    {isBg ? 'Копирай' : 'Copy'}
+                    {t('manage_ads.buttons.copy')}
                   </button>
                 </div>
                 <div className="text-sm text-slate-300 font-mono break-all bg-background-dark p-2 rounded-lg border border-primary/20">
@@ -1259,31 +1264,31 @@ const ManageAds = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Съдържание (Български)' : 'Content (Bulgarian)'}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.settings_modal.content_bg')}</label>
                 <textarea 
                   required 
                   rows={8}
                   value={settingsData.content_bg} 
                   onChange={e => setSettingsData({...settingsData, content_bg: e.target.value})} 
                   className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                  placeholder={isBg ? "Въведете текст или HTML тук..." : "Enter text or HTML here..."}
+                  placeholder={t('manage_ads.settings_modal.placeholder')}
                 />
               </div>
               
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{isBg ? 'Съдържание (English)' : 'Content (English)'}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.settings_modal.content_en')}</label>
                 <textarea 
                   required 
                   rows={8}
                   value={settingsData.content_en} 
                   onChange={e => setSettingsData({...settingsData, content_en: e.target.value})} 
                   className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                  placeholder={isBg ? "Въведете текст или HTML тук..." : "Enter text or HTML here..."}
+                  placeholder={t('manage_ads.settings_modal.placeholder')}
                 />
               </div>
 
               <button disabled={loadingSettings} type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer">
-                {isBg ? 'Запази Промените' : 'Save Changes'}
+                {t('manage_ads.settings_modal.save_btn')}
               </button>
             </form>
           </div>
@@ -1297,9 +1302,9 @@ const ManageAds = () => {
             <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-base">search</span>
-                {isBg ? 'Избор на съставка' : 'Select Ingredient'}
+                {t('manage_ads.ing_modal.title')}
               </h3>
-              <button type="button" onClick={() => setIsIngModalOpen(false)} className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer">
+              <button type="button" onClick={() => setIsIngModalOpen(false)} className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer" aria-label={t('common.buttons.close')}>
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
@@ -1307,7 +1312,7 @@ const ManageAds = () => {
             <div className="p-3.5 border-b border-primary/10 bg-background-dark/50">
               <input
                 type="text"
-                placeholder={isBg ? "Търси съставка от базата данни..." : "Search ingredient from database..."}
+                placeholder={t('manage_ads.ing_modal.placeholder')}
                 value={ingSearchTerm}
                 onChange={(e) => setIngSearchTerm(e.target.value)}
                 className="w-full bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-primary"
@@ -1320,7 +1325,7 @@ const ManageAds = () => {
                 filteredMasterIngs.slice(0, 30).map(ing => {
                   const nameBg = ing.name_bg || ing.name_en || ing.id;
                   const nameEn = ing.name_en || ing.name_bg || ing.id;
-                  const displayName = isBg ? nameBg : nameEn;
+                  const displayName = currentLang === 'bg' ? nameBg : (nameEn || nameBg);
                   const isSelected = currentKeywordsList.some(k => k.toLowerCase() === displayName.toLowerCase());
 
                   return (
@@ -1349,7 +1354,7 @@ const ManageAds = () => {
               ) : (
                 <div className="text-center py-6">
                   <p className="text-xs text-slate-400">
-                    {isBg ? 'Няма намерени съставки' : 'No ingredients found'}
+                    {t('manage_ads.ing_modal.empty')}
                   </p>
                 </div>
               )}
