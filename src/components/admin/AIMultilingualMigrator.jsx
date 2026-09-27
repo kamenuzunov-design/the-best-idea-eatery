@@ -33,6 +33,7 @@ const AIMultilingualMigrator = () => {
   // Execution state: 'idle' | 'running' | 'paused' | 'stopped' | 'completed'
   const [executionState, setExecutionState] = useState('idle');
   const [isDryRun, setIsDryRun] = useState(false);
+  const [delayMs, setDelayMs] = useState(4500);
 
   // Progress state
   const [progress, setProgress] = useState({
@@ -152,7 +153,7 @@ const AIMultilingualMigrator = () => {
         onPreview: (item) => setPreviews(prev => [item, ...prev].slice(0, 30)),
         isCancelled: () => isCancelledRef.current,
         isPaused: () => isPausedRef.current,
-        delayMs: 2500
+        delayMs
       });
 
       if (result.success) {
@@ -369,11 +370,30 @@ const AIMultilingualMigrator = () => {
       </div>
 
       {/* Pacing Info & Backup Note */}
-      <div className="p-3 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col gap-1.5 text-[11px] text-slate-400 leading-relaxed">
+      <div className="p-3 bg-primary/5 rounded-2xl border border-primary/10 flex flex-col gap-2 text-[11px] text-slate-400 leading-relaxed">
         <p className="flex items-center gap-1.5 text-primary font-semibold">
           <span className="material-symbols-outlined text-sm">speed</span>
           <span>{t('backup_recovery.ai_migration.batch_info')}</span>
         </p>
+
+        {/* Throttling Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-primary/10">
+          <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-sm text-primary">timer</span>
+            <span>Пауза между заявките (Throttling):</span>
+          </label>
+          <select
+            value={delayMs}
+            onChange={e => setDelayMs(Number(e.target.value))}
+            disabled={executionState === 'running'}
+            className="bg-surface-dark border border-primary/30 rounded-xl px-2.5 py-1 text-xs text-primary font-bold focus:outline-none cursor-pointer"
+          >
+            <option value={4500}>4.5 сек. (Препоръчително за Free Tier / ~12 RPM)</option>
+            <option value={6000}>6.0 сек. (Ултра-безопасно / ~9 RPM)</option>
+            <option value={3000}>3.0 сек. (Бързо / ~16 RPM)</option>
+          </select>
+        </div>
+
         <p className="text-slate-400 italic">
           {t('backup_recovery.ai_migration.auto_backup_recommendation')}
         </p>

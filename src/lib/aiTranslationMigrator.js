@@ -88,14 +88,43 @@ export async function getBestAvailableGeminiModel(apiKey) {
 }
 
 /**
- * Call Gemini API with automatic retry and fallback between flash models
+ * Parses Google's retry delay from error response or error text
+ * E.g.: "Please retry in 6.266027865s." -> returns 8 (seconds)
+ */
+export function parseRetryDelaySeconds(errData, errText) {
+  // 1. Check in error.details
+  if (errData?.error?.details && Array.isArray(errData.error.details)) {
+    for (const d of errData.error.details) {
+      if (d.retryDelay) {
+        const sec = parseFloat(d.retryDelay);
+        if (!isNaN(sec) && sec > 0) return Math.ceil(sec) + 1;
+      }
+    }
+  }
+
+  // 2. Check regex across errText and error.message
+  const combined = `${typeof errText === 'string' ? errText : ''} ${errData?.error?.message || ''}`;
+  const match = combined.match(/retry in\s+([0-9.]+)\s*s/i) || 
+                combined.match(/retry after\s+([0-9.]+)\s*s/i) ||
+                combined.match(/reset in\s+([0-9.]+)\s*s/i);
+  if (match && match[1]) {
+    const sec = parseFloat(match[1]);
+    if (!isNaN(sec) && sec > 0) return Math.ceil(sec) + 1;
+  }
+
+  return null;
+}
+
+/**
+ * Call Gemini API with automatic retry, exponential backoff, and fallback between flash models
  */
 export async function callGeminiTranslation({ 
   apiKey, 
   prompt, 
   systemInstruction = CULINARY_TRANSLATION_SYSTEM_INSTRUCTION, 
   model = null,
-  onLog = () => {}
+  onLog = () => {},
+  isCancelled = () => false
 }) {
   if (!apiKey) {
     throw new Error("Missing Gemini API Key. Please provide an API key in the input field.");
@@ -112,8 +141,12 @@ export async function callGeminiTranslation({
   let lastError = null;
 
   for (const currentModel of modelsToTry) {
-    const maxAttempts = 2;
+    const maxAttempts = 4;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (isCancelled && isCancelled()) {
+        throw new Error("Процесът беше спрян от потребителя.");
+      }
+
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`,
@@ -133,8 +166,9 @@ export async function callGeminiTranslation({
 
         if (!response.ok) {
           let errText = '';
+          let errData = null;
           try {
-            const errData = await response.json();
+            errData = await response.json();
             errText = errData.error?.message || response.statusText;
           } catch {
             errText = `HTTP ${response.status} ${response.statusText}`;
@@ -142,7 +176,8 @@ export async function callGeminiTranslation({
 
           // 1. If 404 or model not available for this key, continue to next candidate model
           if (response.status === 404 || errText.includes('no longer available') || errText.includes('not found')) {
-            lastError = new Error(`Model ${currentModel} not available: ${errText}`);
+            lastError = new Error(`Моделът ${currentModel} не е наличен: ${errText}`);
+            onLog(`Моделът ${currentModel} не е активен за този ключ. Опит със следващия наличен модел...`, "warn");
             break; // break inner loop, try next model
           }
 
@@ -150,23 +185,44 @@ export async function callGeminiTranslation({
           if (response.status === 503 || errText.includes('high demand') || errText.includes('temporarily unavailable')) {
             lastError = new Error(`Google съобщи за натовареност на ${currentModel}: ${errText}`);
             if (attempt < maxAttempts) {
-              onLog(`Google сървърът за ${currentModel} е временно претоварен. Изчакване 3 сек. за повторен опит (${attempt + 1}/${maxAttempts})...`, "warn");
-              await sleep(3000);
+              const backoffSec = attempt * 3;
+              onLog(`Google сървърът за ${currentModel} е временно претоварен (503). Изчакване ${backoffSec} сек. за повторен опит (${attempt + 1}/${maxAttempts})...`, "warn");
+              await sleep(backoffSec * 1000);
               continue; // retry same model
             } else {
-              onLog(`Моделът ${currentModel} остава натоварен. Превключване към резервен модел...`, "warn");
+              onLog(`Моделът ${currentModel} остава натоварен след ${maxAttempts} опита. Превключване към резервен модел...`, "warn");
               break; // break inner attempt loop, try next candidate model
             }
           }
 
-          // 3. If rate limited (429), wait and retry once or throw
-          if (response.status === 429) {
+          // 3. If rate limited (429) or quota exceeded
+          if (response.status === 429 || errText.includes('Quota exceeded') || errText.includes('rate limit') || errText.includes('rate-limit')) {
+            lastError = new Error(`Лимит на квотата (HTTP 429) за ${currentModel}: ${errText}`);
+            
             if (attempt < maxAttempts) {
-              onLog(`Достигнат лимит на заявки (HTTP 429). Пауза от 4 сек. преди повторен опит...`, "warn");
-              await sleep(4000);
-              continue;
+              const delayFromGoogle = parseRetryDelaySeconds(errData, errText);
+              // Either parsed delay from Google (with +1s safety buffer) or exponential backoff (e.g. 7s, 14s, 28s)
+              const waitSec = delayFromGoogle ? delayFromGoogle : Math.max(7, Math.pow(2, attempt) * 4);
+
+              onLog(`Google Free Tier лимит на заявки (HTTP 429 за ${currentModel}). Google изисква пауза от ${waitSec} сек. преди автоматичен опит ${attempt + 1}/${maxAttempts}...`, "warn");
+
+              // Live countdown so the user sees real-time progress instead of a frozen screen
+              for (let s = waitSec; s > 0; s--) {
+                if (isCancelled && isCancelled()) {
+                  throw new Error("Процесът беше спрян от потребителя.");
+                }
+                if (s === waitSec || s <= 3 || (waitSec > 10 && s % 10 === 0)) {
+                  onLog(`Охлаждане на квотата (${currentModel}): остават ${s} сек...`, "info");
+                }
+                await sleep(1000);
+              }
+
+              onLog(`Повторен опит за превод с ${currentModel}...`, "info");
+              continue; // retry same model!
+            } else {
+              onLog(`Моделът ${currentModel} изчерпа минутното си ограничение след ${maxAttempts} опита. Превключване към следващия модел кандидат...`, "warn");
+              break; // break inner attempt loop, try next candidate model!
             }
-            throw new Error(`Rate limit exceeded (HTTP 429). Waiting for cooldown... Details: ${errText}`);
           }
 
           throw new Error(errText);
@@ -181,12 +237,18 @@ export async function callGeminiTranslation({
         return parsed;
       } catch (err) {
         lastError = err;
-        if (err.message && (err.message.includes('not available') || err.message.includes('no longer available') || err.message.includes('not found'))) {
+        if (err.message && (err.message.includes('не е наличен') || err.message.includes('not available') || err.message.includes('no longer available') || err.message.includes('not found'))) {
           break; // try next candidate model
         }
         if (err.message && (err.message.includes('high demand') || err.message.includes('503'))) {
           if (attempt < maxAttempts) {
             await sleep(3000);
+            continue;
+          }
+          break; // try next candidate model
+        }
+        if (err.message && (err.message.includes('Лимит на квотата') || err.message.includes('429') || err.message.includes('Quota exceeded') || err.message.includes('rate limit'))) {
+          if (attempt < maxAttempts) {
             continue;
           }
           break; // try next candidate model
@@ -318,7 +380,7 @@ export async function runBatchTranslation({
   onPreview = () => {},
   isCancelled = () => false,
   isPaused = () => false,
-  delayMs = 2500
+  delayMs = 4500
 }) {
   let totalProcessed = 0;
   const grandTotal = selectedCollections.reduce((acc, c) => acc + (scanResults[c]?.missing || 0), 0);
@@ -361,7 +423,7 @@ export async function runBatchTranslation({
   // 1. INGREDIENT GROUPS
   if (selectedCollections.includes('ingredient_groups') && scanResults.ingredient_groups?.items?.length > 0) {
     const items = scanResults.ingredient_groups.items;
-    const BATCH_SIZE = 15;
+    const BATCH_SIZE = 25; // 25 items per prompt reduces calls by 40%
     const totalBatches = Math.ceil(items.length / BATCH_SIZE);
 
     onLog(`Обработка на Групи Продукти (${items.length} записа, ${totalBatches} партиди)...`, "info");
@@ -394,7 +456,7 @@ Expected JSON schema:
 ]`;
 
       try {
-        const translatedList = await callGeminiTranslation({ apiKey, prompt, model: activeModel, onLog });
+        const translatedList = await callGeminiTranslation({ apiKey, prompt, model: activeModel, onLog, isCancelled });
         const batchOps = [];
 
         for (const res of translatedList) {
@@ -453,7 +515,7 @@ Expected JSON schema:
   // 2. MEASUREMENTS
   if (selectedCollections.includes('measurements') && scanResults.measurements?.items?.length > 0) {
     const items = scanResults.measurements.items;
-    const BATCH_SIZE = 15;
+    const BATCH_SIZE = 25; // 25 items per prompt (translates all measurements in 1 call)
     const totalBatches = Math.ceil(items.length / BATCH_SIZE);
 
     onLog(`Обработка на Мерни Единици (${items.length} записа, ${totalBatches} партиди)...`, "info");
@@ -491,7 +553,7 @@ Expected JSON schema:
 ]`;
 
       try {
-        const translatedList = await callGeminiTranslation({ apiKey, prompt, model: activeModel, onLog });
+        const translatedList = await callGeminiTranslation({ apiKey, prompt, model: activeModel, onLog, isCancelled });
         const batchOps = [];
 
         for (const res of translatedList) {
@@ -550,10 +612,10 @@ Expected JSON schema:
   // 3. INGREDIENTS
   if (selectedCollections.includes('ingredients') && scanResults.ingredients?.items?.length > 0) {
     const items = scanResults.ingredients.items;
-    const BATCH_SIZE = 15; // 15 ingredients per prompt
+    const BATCH_SIZE = 25; // 25 ingredients per prompt (reduces calls from 8 to 5)
     const totalBatches = Math.ceil(items.length / BATCH_SIZE);
 
-    onLog(`Обработка на Продукти (${items.length} записа, ${totalBatches} партиди по 15)...`, "info");
+    onLog(`Обработка на Продукти (${items.length} записа, ${totalBatches} партиди)...`, "info");
 
     for (let b = 0; b < totalBatches; b++) {
       await checkPauseAndCancel();
@@ -583,7 +645,7 @@ Expected JSON schema:
 ]`;
 
       try {
-        const translatedList = await callGeminiTranslation({ apiKey, prompt, model: activeModel, onLog });
+        const translatedList = await callGeminiTranslation({ apiKey, prompt, model: activeModel, onLog, isCancelled });
         const batchOps = [];
 
         for (const res of translatedList) {
@@ -699,7 +761,7 @@ Expected JSON schema:
 ]`;
 
       try {
-        const translatedList = await callGeminiTranslation({ apiKey, prompt, model: activeModel, onLog });
+        const translatedList = await callGeminiTranslation({ apiKey, prompt, model: activeModel, onLog, isCancelled });
         const batchOps = [];
 
         for (const res of translatedList) {
