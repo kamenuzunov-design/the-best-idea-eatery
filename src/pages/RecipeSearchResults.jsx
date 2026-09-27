@@ -204,7 +204,7 @@ const RecipeSearchResults = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-28">
       {/* Top Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-primary/20 bg-surface-dark/90 backdrop-blur-md sticky top-0 z-40 shadow-md">
+      <header className="flex items-center justify-between px-4 py-4 border-b border-primary/20 bg-surface-dark/90 backdrop-blur-md sticky top-0 z-10 shadow-md">
         <button 
           onClick={() => navigate(-1)} 
           className="text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"

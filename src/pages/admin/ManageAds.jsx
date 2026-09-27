@@ -766,7 +766,7 @@ const ManageAds = () => {
 
   return (
     <div className="flex-1 bg-background-dark pb-24 font-display">
-      <header className="p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 sticky top-0 z-20 shadow-md space-y-3">
+      <header className="p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 sticky top-0 z-10 shadow-md space-y-3">
         {/* Row 1: Back Arrow + Title & Subtitle */}
         <div className="flex items-center">
           <button 

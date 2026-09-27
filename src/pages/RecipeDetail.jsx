@@ -926,7 +926,7 @@ const RecipeDetail = () => {
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col bg-background-dark overflow-x-hidden pb-24">
       {/* Header Navigation */}
-      <div className="sticky top-0 z-50 flex items-center bg-surface-dark/80 backdrop-blur-md p-4 justify-between border-b border-primary/10">
+      <div className="sticky top-0 z-10 flex items-center bg-surface-dark/80 backdrop-blur-md p-4 justify-between border-b border-primary/10">
         <div onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors">
           <span className="material-symbols-outlined">arrow_back</span>
         </div>

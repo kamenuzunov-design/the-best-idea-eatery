@@ -562,7 +562,7 @@ const CookingMode = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark overflow-x-hidden font-display pb-10">
       {/* Top Navigation & Progress */}
-      <header className="sticky top-0 z-50 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-lg">
+      <header className="sticky top-0 z-10 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-lg">
         <div className="flex items-center p-4 justify-between w-full max-w-3xl mx-auto">
           <div className="flex items-center gap-3">
             <button 

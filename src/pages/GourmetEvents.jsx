@@ -9,7 +9,7 @@ const GourmetEvents = () => {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32 overflow-x-hidden">
-      <header className="sticky top-0 z-50 flex items-center bg-surface-dark/95 backdrop-blur-md px-4 py-4 justify-between border-b border-primary/20 shadow-sm">
+      <header className="sticky top-0 z-10 flex items-center bg-surface-dark/95 backdrop-blur-md px-4 py-4 justify-between border-b border-primary/20 shadow-sm">
         <button onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center hover:bg-primary/10 rounded-full transition-colors cursor-pointer">
           <span className="material-symbols-outlined text-2xl">arrow_back</span>
         </button>

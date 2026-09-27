@@ -23,6 +23,9 @@
 4. **Успешен деплой и синхронизация**:
    - Firebase Hosting: на живо на [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app).
    - GitHub: клон `feat/dashboard-and-auth` push-нат успешно, чисто работно дърво.
+5. **Корекция на z-index йерархията на езиковия селектор и заглавните ленти**:
+   - В [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx) (`/recipe/:id`) и [CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx) (`/recipe/:id/cooking`) заглавните ленти бяха понижени от `z-50` на `z-10`.
+   - Синхронизирани са и всички останали заглавни ленти на подстраници към `z-10`, елиминирайки проблема с препокриване на езиковото падащо меню от заглавието на рецептата.
 
 ---
 

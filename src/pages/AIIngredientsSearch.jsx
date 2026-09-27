@@ -60,7 +60,7 @@ const AIIngredientsSearch = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-primary/20 bg-surface-dark/90 backdrop-blur-md sticky top-0 z-50 shadow-md">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-primary/20 bg-surface-dark/90 backdrop-blur-md sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
           <div onClick={() => navigate(-1)} className="text-primary cursor-pointer hover:bg-primary/10 rounded-full p-1 transition-colors">
             <span className="material-symbols-outlined text-2xl font-bold">arrow_back</span>

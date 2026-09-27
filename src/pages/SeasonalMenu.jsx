@@ -10,7 +10,7 @@ const SeasonalMenu = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32 overflow-x-hidden">
       {/* Header */}
-      <header className="flex items-center bg-surface-dark/95 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-primary/20 shadow-sm">
+      <header className="flex items-center bg-surface-dark/95 backdrop-blur-md p-4 sticky top-0 z-10 border-b border-primary/20 shadow-sm">
         <div onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center cursor-pointer hover:bg-primary/10 rounded-full transition-colors">
           <span className="material-symbols-outlined text-2xl">arrow_back</span>
         </div>

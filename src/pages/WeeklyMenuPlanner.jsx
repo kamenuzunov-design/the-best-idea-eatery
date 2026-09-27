@@ -32,7 +32,7 @@ const WeeklyMenuPlanner = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark font-display pb-32">
       {/* Header Section */}
-      <header className="sticky top-0 z-50 flex items-center bg-surface-dark/95 backdrop-blur-md p-4 border-b border-primary/20 justify-between shadow-sm">
+      <header className="sticky top-0 z-10 flex items-center bg-surface-dark/95 backdrop-blur-md p-4 border-b border-primary/20 justify-between shadow-sm">
         <div onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors cursor-pointer">
           <span className="material-symbols-outlined">arrow_back</span>
         </div>

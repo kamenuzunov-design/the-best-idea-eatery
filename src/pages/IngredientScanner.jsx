@@ -360,7 +360,7 @@ const IngredientScanner = () => {
       />
 
       {/* Top Navigation Bar */}
-      <div className="flex items-center bg-background-dark/80 backdrop-blur-md p-4 justify-between z-20 border-b border-primary/10 sticky top-0">
+      <div className="flex items-center bg-background-dark/80 backdrop-blur-md p-4 justify-between z-10 border-b border-primary/10 sticky top-0">
         <button onClick={() => navigate(-1)} className="text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>

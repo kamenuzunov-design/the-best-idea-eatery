@@ -48,7 +48,7 @@ const CuisinesExplorer = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark font-display pb-32">
       {/* Header */}
-      <header className="flex items-center bg-surface-dark/95 backdrop-blur-md p-4 sticky top-0 z-50 border-b border-primary/20 shadow-sm">
+      <header className="flex items-center bg-surface-dark/95 backdrop-blur-md p-4 sticky top-0 z-10 border-b border-primary/20 shadow-sm">
         <button onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center hover:bg-primary/10 rounded-full transition-colors">
           <span className="material-symbols-outlined text-2xl">arrow_back</span>
         </button>

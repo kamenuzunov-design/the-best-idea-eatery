@@ -338,7 +338,7 @@ const RecipeCustomization = () => {
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col bg-background-dark overflow-x-hidden pb-32">
       {/* Top App Bar */}
-      <div className="flex items-center p-4 pb-2 justify-between sticky top-0 z-20 bg-surface-dark/90 backdrop-blur-md border-b border-primary/10">
+      <div className="flex items-center p-4 pb-2 justify-between sticky top-0 z-10 bg-surface-dark/90 backdrop-blur-md border-b border-primary/10">
         <div onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center cursor-pointer hover:bg-primary/10 rounded-full transition-colors">
           <span className="material-symbols-outlined">arrow_back</span>
         </div>

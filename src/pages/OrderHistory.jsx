@@ -10,7 +10,7 @@ const OrderHistory = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32 overflow-x-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-sm">
+      <header className="sticky top-0 z-10 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-sm">
         <div className="flex items-center p-4 justify-between">
           <button onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors cursor-pointer">
             <span className="material-symbols-outlined text-2xl">arrow_back</span>

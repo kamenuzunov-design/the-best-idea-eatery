@@ -10,7 +10,7 @@ const WinePairing = () => {
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col bg-background-dark overflow-x-hidden pb-24">
       {/* Header Section */}
-      <header className="sticky top-0 z-50 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
+      <header className="sticky top-0 z-10 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
         <div className="flex items-center justify-between p-4 max-w-2xl mx-auto">
           <button onClick={() => navigate(-1)} className="flex items-center justify-center p-2 hover:bg-primary/10 rounded-full transition-colors">
             <span className="material-symbols-outlined text-primary">arrow_back</span>
