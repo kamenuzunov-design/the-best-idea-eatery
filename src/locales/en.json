@@ -1116,8 +1116,15 @@
       "log_title": "Live Operation Log",
       "clear_log": "Clear",
       "preview_title": "Recent Translated Records",
-      "original": "Original",
-      "auto_backup_recommendation": "Recommendation: Download a full local backup using the button above before starting live migration."
+      "auto_backup_recommendation": "Recommendation: Download a full local backup using the button above before starting live migration.",
+      "model_selector_title": "Select AI Model (Gemini):",
+      "model_auto": "Automatic (Recommended - gemini-3.8-flash)",
+      "model_custom": "Custom Model ID...",
+      "model_custom_placeholder": "e.g. gemini-3.7-flash or gemini-3.6-flash",
+      "throttling_title": "Pacing between requests (Throttling):",
+      "throttle_recommended": "4.5s (Recommended for Free Tier / ~12 RPM)",
+      "throttle_safe": "6.0s (Ultra-Safe / ~9 RPM)",
+      "throttle_fast": "3.0s (Fast / ~16 RPM)"
     }
   },
   "manage_ads": {

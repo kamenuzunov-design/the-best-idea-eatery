@@ -1116,8 +1116,15 @@
       "log_title": "Дневник на операциите в реално време",
       "clear_log": "Изчисти",
       "preview_title": "Последни преведени записи",
-      "original": "Оригинал",
-      "auto_backup_recommendation": "Препоръка: Преди стартиране на реална миграция изтеглете пълен локален бекъп от горния бутон."
+      "auto_backup_recommendation": "Препоръка: Преди стартиране на реална миграция изтеглете пълен локален бекъп от горния бутон.",
+      "model_selector_title": "Избор на AI Модел (Gemini):",
+      "model_auto": "Автоматичен (Препоръчително - gemini-3.8-flash)",
+      "model_custom": "Ръчно въвеждане (Custom Model ID)...",
+      "model_custom_placeholder": "напр. gemini-3.7-flash или gemini-3.6-flash",
+      "throttling_title": "Пауза между заявките (Throttling):",
+      "throttle_recommended": "4.5 сек. (Препоръчително за Free Tier / ~12 RPM)",
+      "throttle_safe": "6.0 сек. (Ултра-безопасно / ~9 RPM)",
+      "throttle_fast": "3.0 сек. (Бързо / ~16 RPM)"
     }
   },
   "manage_ads": {

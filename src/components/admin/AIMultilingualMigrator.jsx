@@ -5,7 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { 
   scanDatabaseForMissingTranslations, 
-  runBatchTranslation 
+  runBatchTranslation,
+  KNOWN_GEMINI_MODELS,
+  fetchAvailableModels
 } from '../../lib/aiTranslationMigrator';
 
 const AIMultilingualMigrator = () => {
@@ -19,6 +21,11 @@ const AIMultilingualMigrator = () => {
   const [showKeyInput, setShowKeyInput] = useState(!apiKey);
   const [showPassword, setShowPassword] = useState(false);
   const [keyInputVal, setKeyInputVal] = useState(apiKey);
+
+  // Model selection state
+  const [selectedModel, setSelectedModel] = useState('auto');
+  const [customModel, setCustomModel] = useState('');
+  const [availableModels, setAvailableModels] = useState([]);
 
   // Scan state
   const [scanning, setScanning] = useState(false);
@@ -60,6 +67,33 @@ const AIMultilingualMigrator = () => {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [logs]);
+
+  // Dynamically query available models if API key is present
+  useEffect(() => {
+    if (apiKey) {
+      fetchAvailableModels(apiKey)
+        .then(models => {
+          if (models && models.length > 0) {
+            setAvailableModels(models);
+          }
+        })
+        .catch(err => {
+          console.warn("Could not fetch available models:", err);
+        });
+    }
+  }, [apiKey]);
+
+  // Combine standard default models with dynamically detected models
+  const allModelOptions = React.useMemo(() => {
+    const map = new Map();
+    KNOWN_GEMINI_MODELS.forEach(m => map.set(m.id, m));
+    availableModels.forEach(m => {
+      if (!map.has(m.id)) {
+        map.set(m.id, m);
+      }
+    });
+    return Array.from(map.values());
+  }, [availableModels]);
 
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
@@ -141,6 +175,10 @@ const AIMultilingualMigrator = () => {
     setExecutionState('running');
     setPreviews([]);
 
+    const activeModelToUse = selectedModel === 'custom' 
+      ? (customModel.trim() || 'auto') 
+      : selectedModel;
+
     try {
       const result = await runBatchTranslation({
         db,
@@ -148,6 +186,7 @@ const AIMultilingualMigrator = () => {
         scanResults: activeScan,
         selectedCollections,
         dryRun,
+        selectedModel: activeModelToUse,
         onProgress: (p) => setProgress(p),
         onLog: (msg, type) => addLog(msg, type),
         onPreview: (item) => setPreviews(prev => [item, ...prev].slice(0, 30)),
@@ -376,22 +415,57 @@ const AIMultilingualMigrator = () => {
           <span>{t('backup_recovery.ai_migration.batch_info')}</span>
         </p>
 
-        {/* Throttling Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-primary/10">
-          <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-sm text-primary">timer</span>
-            <span>Пауза между заявките (Throttling):</span>
-          </label>
-          <select
-            value={delayMs}
-            onChange={e => setDelayMs(Number(e.target.value))}
-            disabled={executionState === 'running'}
-            className="bg-surface-dark border border-primary/30 rounded-xl px-2.5 py-1 text-xs text-primary font-bold focus:outline-none cursor-pointer"
-          >
-            <option value={4500}>4.5 сек. (Препоръчително за Free Tier / ~12 RPM)</option>
-            <option value={6000}>6.0 сек. (Ултра-безопасно / ~9 RPM)</option>
-            <option value={3000}>3.0 сек. (Бързо / ~16 RPM)</option>
-          </select>
+        {/* Model & Throttling Controls - Label on line 1, Selector on line 2 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-primary/10">
+          {/* Gemini AI Model Selection */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm text-primary">psychology</span>
+              <span>{t('backup_recovery.ai_migration.model_selector_title')}</span>
+            </label>
+            <select
+              value={selectedModel}
+              onChange={e => setSelectedModel(e.target.value)}
+              disabled={executionState === 'running'}
+              className="w-full bg-surface-dark border border-primary/30 rounded-xl px-3 py-2 text-xs text-primary font-bold focus:outline-none cursor-pointer"
+            >
+              <option value="auto">{t('backup_recovery.ai_migration.model_auto')}</option>
+              {allModelOptions.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+              <option value="custom">{t('backup_recovery.ai_migration.model_custom')}</option>
+            </select>
+            {selectedModel === 'custom' && (
+              <input
+                type="text"
+                value={customModel}
+                onChange={e => setCustomModel(e.target.value)}
+                placeholder={t('backup_recovery.ai_migration.model_custom_placeholder')}
+                disabled={executionState === 'running'}
+                className="w-full bg-surface-dark border border-primary/30 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary mt-1"
+              />
+            )}
+          </div>
+
+          {/* Throttling Selector */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm text-primary">timer</span>
+              <span>{t('backup_recovery.ai_migration.throttling_title')}</span>
+            </label>
+            <select
+              value={delayMs}
+              onChange={e => setDelayMs(Number(e.target.value))}
+              disabled={executionState === 'running'}
+              className="w-full bg-surface-dark border border-primary/30 rounded-xl px-3 py-2 text-xs text-primary font-bold focus:outline-none cursor-pointer"
+            >
+              <option value={4500}>{t('backup_recovery.ai_migration.throttle_recommended')}</option>
+              <option value={6000}>{t('backup_recovery.ai_migration.throttle_safe')}</option>
+              <option value={3000}>{t('backup_recovery.ai_migration.throttle_fast')}</option>
+            </select>
+          </div>
         </div>
 
         <p className="text-slate-400 italic">

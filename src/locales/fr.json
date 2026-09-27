@@ -1116,8 +1116,15 @@
       "log_title": "Journal des opérations en direct",
       "clear_log": "Effacer",
       "preview_title": "Derniers enregistrements traduits",
-      "original": "Original",
-      "auto_backup_recommendation": "Recommandation : Téléchargez une sauvegarde locale complète via le bouton ci-dessus avant de lancer la migration réelle."
+      "auto_backup_recommendation": "Recommandation : Téléchargez une sauvegarde locale complète via le bouton ci-dessus avant de lancer la migration réelle.",
+      "model_selector_title": "Sélectionner le Modèle AI (Gemini) :",
+      "model_auto": "Automatique (Recommandé - gemini-3.8-flash)",
+      "model_custom": "ID de Modèle Personnalisé...",
+      "model_custom_placeholder": "ex. gemini-3.7-flash ou gemini-3.6-flash",
+      "throttling_title": "Pause entre les requêtes (Throttling) :",
+      "throttle_recommended": "4.5s (Recommandé pour Free Tier / ~12 RPM)",
+      "throttle_safe": "6.0s (Ultra-Sécurisé / ~9 RPM)",
+      "throttle_fast": "3.0s (Rapide / ~16 RPM)"
     }
   },
   "manage_ads": {

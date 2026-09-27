@@ -34,6 +34,41 @@ const DEPRECATED_MODELS = [
   'gemini-1.0-pro'
 ];
 
+export const KNOWN_GEMINI_MODELS = [
+  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
+  { id: 'gemini-3.8-flash-lite', label: 'Gemini 3.8 Flash-Lite' },
+  { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
+  { id: 'gemini-3.7-pro', label: 'Gemini 3.7 Pro' },
+  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash' }
+];
+
+/**
+ * Dynamically queries Google Generative Language API to detect which models
+ * are currently enabled for this API key/project and support generateContent.
+ */
+export async function fetchAvailableModels(apiKey) {
+  if (!apiKey) return [];
+  try {
+    const listRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+    );
+    if (!listRes.ok) return [];
+    const listData = await listRes.json();
+    const models = (listData.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => {
+        const id = (m.name || '').replace('models/', '');
+        const displayName = m.displayName ? `${m.displayName} (${id})` : id;
+        return { id, label: displayName };
+      })
+      .filter(m => !DEPRECATED_MODELS.includes(m.id) && !m.id.includes('2.0') && !m.id.includes('1.5'));
+    return models;
+  } catch (e) {
+    console.warn("Could not list Gemini models dynamically:", e.message);
+    return [];
+  }
+}
+
 /**
  * Dynamically queries Google Generative Language API to detect which flash models
  * are currently enabled for this API key/project.
@@ -45,7 +80,9 @@ export async function getBestAvailableGeminiModel(apiKey) {
 
   const candidateModels = [
     'gemini-3.8-flash',
-    'gemini-3.8-flash-lite'
+    'gemini-3.8-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.6-flash'
   ];
 
   try {
@@ -130,12 +167,14 @@ export async function callGeminiTranslation({
     throw new Error("Missing Gemini API Key. Please provide an API key in the input field.");
   }
 
-  const selectedModel = model || await getBestAvailableGeminiModel(apiKey);
+  const selectedModel = (model && model !== 'auto') ? model : await getBestAvailableGeminiModel(apiKey);
   const modelsToTry = [
     selectedModel,
     'gemini-3.8-flash',
-    'gemini-3.8-flash-lite'
-  ].filter(m => m && !DEPRECATED_MODELS.includes(m) && !m.includes('2.0') && !m.includes('1.5'))
+    'gemini-3.8-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.6-flash'
+  ].filter(m => m && (!DEPRECATED_MODELS.includes(m) || m === selectedModel) && !m.includes('2.0') && !m.includes('1.5'))
    .filter((v, i, a) => a.indexOf(v) === i); // unique candidates
 
   let lastError = null;
@@ -375,6 +414,7 @@ export async function runBatchTranslation({
   scanResults,
   selectedCollections = ['ingredient_groups', 'measurements', 'ingredients', 'recipes'],
   dryRun = false,
+  selectedModel = 'auto',
   onProgress = () => {},
   onLog = () => {},
   onPreview = () => {},
@@ -392,7 +432,9 @@ export async function runBatchTranslation({
 
   onLog(`Стартиране на ${dryRun ? 'СИМУЛАЦИЯ (Dry Run)' : 'РЕАЛЕН AI ПРЕВОД'} за ${grandTotal} записа...`, "info");
 
-  const activeModel = await getBestAvailableGeminiModel(apiKey);
+  const activeModel = (selectedModel && selectedModel !== 'auto') 
+    ? selectedModel 
+    : await getBestAvailableGeminiModel(apiKey);
   onLog(`Използван Gemini AI модел: ${activeModel}`, "info");
 
   // Helper to handle pausing

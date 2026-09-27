@@ -3,6 +3,26 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-09-27] - Интегриране на селектор за Gemini AI модел и двуредов дизайн на настройките
+### Добавено / Коригирано (Added / Fixed)
+- **Интерактивен избор на Gemini AI модел в [AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx)**:
+  - Възможност за директен избор между:
+    - Автоматичен избор (Препоръчително)
+    - `gemini-3.8-flash`
+    - `gemini-3.8-flash-lite`
+    - `gemini-3.7-flash`
+    - `gemini-3.7-pro`
+    - `gemini-3.6-flash`
+    - Ръчно въвеждане (Custom Model ID) с валидирано текстово поле.
+  - Динамично откриване на поддържаните от потребителския Google API ключ модели чрез `fetchAvailableModels(apiKey)` към `https://generativelanguage.googleapis.com/v1beta/models`.
+  - Директно подаване на избрания модел към [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js) (`runBatchTranslation` и `callGeminiTranslation`), позволявайки преодоляване на квоти или сървърно натоварване на определен модел.
+- **Двуредов визуален дизайн на контролите по указание на възложителя**:
+  - Текстът "Пауза между заявките (Throttling):" и неговият падащ списък са реорганизирани на два отделни реда (заглавие на ред 1, селектор на ред 2).
+  - Контролът за "Избор на AI Модел (Gemini):" следва същата подредба на два реда (заглавие на ред 1, падащо меню на ред 2).
+  - Двата елемента са структурирани в адаптивна решетка (`grid grid-cols-1 md:grid-cols-2 gap-4`), изглеждаща организирано и подредено както на мобилни устройства, така и на десктоп екрани.
+- **5-езикова локализация (bg, en, it, fr, de)**:
+  - Добавени всички ключове за модела и новите етикети на настройките в [bg.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/bg.json), [en.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/en.json), [it.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/it.json), [fr.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/fr.json) и [de.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/de.json).
+
 ## [2026-09-27] - Интелигентна защита от претоварване (HTTP 429) & Throttling при AI Превод
 ### Добавено / Коригирано (Added / Fixed)
 - **Автоматично прочитане на времето за изчакване (Retry-After parser) от Google API**:
