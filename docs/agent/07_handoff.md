@@ -2,30 +2,31 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 26 Септември 2026
+## Последна сесия: 27 Септември 2026
 
 ### Извършена работа:
-1. **Пълна многоезичност на административния сектор на 5 езика (BG, EN, IT, FR, DE)**:
-   - [DataDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/DataDashboard.jsx) (`/admin/data`): Главно меню за данни.
-   - [AdminDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AdminDashboard.jsx) (`/admin`): Централно табло за управление на системата.
-   - [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx) (`/admin/moderation`): Опашка за модерация и езикова адаптация на рецепти и съставки.
-   - [ManageUsers.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageUsers.jsx) (`/admin/users`): Управление на потребители, филтри, роли и модален редактор.
-   - [ActivityLog.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ActivityLog.jsx) (`/admin/activity`): Дневник на системните действия, експорт и изчистване.
-   - [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx) (`/admin/backup`): Облачни и локални архиви, възстановяване, персонализиран файлов селектор.
-   - [ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx) (`/admin/ads`): Кампании, реклами, таргетиране по съставки и правила.
-2. **Пълна многоезичност на потребителския профил и кулинарния прогрес на 5 езика**:
-   - [CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx) (`/profile/progress`): Кулинарно ниво, XP, статистика, 16 постижения и модали с преводи в [achievements.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/achievements.js).
-   - Козметичен фикс на z-index йерархията между Header, езиковото падащо меню и заглавната лента на напредъка.
-   - Надежден детерминистичен бутон „Назад“ в административните табла към `/profile`.
-3. **Пълна многоезичност на модул „Килер и Интелигентен AI инструмент“ на 5 езика**:
-   - [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx) (`/pantry`): Банер за диетичен профил, броячи, динамични групи, срокове на годност, модали за добавяне и редакция с многоезично търсене и мерни единици.
-   - [DietaryProfileEdit.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/DietaryProfileEdit.jsx) (`/pantry/diet`): Редакция на диетичен профил, диети, алергени и изключени съставки с многоезичен autocomplete.
-   - [AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx) (`/ai-assistant`): Шеф AI чат, многоезични поздрави и резервни режими (изтичащи храни, кето, веган, заместители), модал за Gemini API настройки с интерактивно 4-стъпково ръководство и FAQ, модал за допълнителни съставки.
-4. **Инструмент за каскадна миграция на ID-та на мерни единици**:
-   - Реализирани [measurementUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/measurementUtils.js) и [MeasurementIdMigrationModal.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/MeasurementIdMigrationModal.jsx) за автоматично разпознаване на автогенерирани Firestore ID-та и каскадно обновяване в `measurements`, `ingredients`, `recipes` и `pantry`.
-   - След успешна миграция, бутонът бе премахнат от интерфейса на [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx), оставяйки екрана чист.
+1. **Пълна многоезична адаптация на потребителските модули за рецепти на 5 езика (BG, EN, IT, FR, DE)**:
+   - [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx) (`/recipe/:id`): Детайли за рецепта, съставки с бележки, калкулатор за порции, нутриенти, нативни реклами, заготовки.
+   - [CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx) (`/recipe/:id/cooking`): Интерактивен режим за готвене с таймери, звук през Web Audio API и многоезичен гласов Text-to-Speech асистент.
+   - [SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx) (`/saved`): Запазени рецепти и списък за пазаруване с категории и редакция.
+   - [RecipeCustomization.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeCustomization.jsx) (`/recipe/:id/customize`): Персонализиране на съставки и порции, парадигма за въвеждане EN/локален език.
+   - [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx) (`/search`): Резултати от търсене с многоезично филтриране и чипове за активни филтри.
+   - [IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx) (`/scanner`): Визуален скенер за съставки (документиран технически дълг за бъдеща AI Vision интеграция).
+2. **Специализиран AI инструмент за пакетен кулинарен превод и миграция**:
+   - Реализирани [AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx) и [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js).
+   - Вграден в панела [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx) (`/admin/backup`) точно след секцията за локално възстановяване.
+   - Динамично откриване на актуалния Gemini модел `gemini-3.8-flash`, с черен списък за стари/спрени модели и автоматична защита от временна натовареност на Google (HTTP 503 / High Demand) чрез Retry с backoff и автоматичен fallback към `gemini-3.8-flash-lite`.
+3. **CSV Експорт и Двустъпков Импорт в основните административни панели**:
+   - Вграден в [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx) (`/admin/ingredient-groups`).
+   - Вграден в [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx) (`/admin/measurements`).
+   - Поддръжка на UTF-8 BOM (`\uFEFF`), валидация, детекция на дубликати, предварителен модален прозорец, пакетен запис с `merge: true` и запис в `logActivity`.
+4. **Успешен деплой и синхронизация**:
+   - Firebase Hosting: на живо на [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app).
+   - GitHub: клон `feat/dashboard-and-auth` push-нат успешно, чисто работно дърво.
 
 ---
+
+## Предишна сесия: 26 Септември 2026
 
 ## Предишна сесия: 20 Септември 2026
 
