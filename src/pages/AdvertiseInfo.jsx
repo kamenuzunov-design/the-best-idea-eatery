@@ -5,8 +5,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const AdvertiseInfo = () => {
-  const { i18n } = useTranslation();
-  const isBg = i18n.language === 'bg';
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'bg';
   const navigate = useNavigate();
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
@@ -17,33 +17,45 @@ const AdvertiseInfo = () => {
         const snap = await getDoc(doc(db, 'settings', 'advertising_page'));
         if (snap.exists()) {
           const data = snap.data();
-          setContent(isBg ? (data.content_bg || '') : (data.content_en || ''));
+          const localized = 
+            data[`content_${currentLang}`] || 
+            data.content?.[currentLang] || 
+            (currentLang === 'bg' ? data.content_bg : '') || 
+            data.content_en || 
+            data.content?.en || 
+            data.content_bg || 
+            '';
+          setContent(localized || `<p>${t('advertise_page.updating')}</p>`);
         } else {
-          setContent(isBg ? '<p>Съдържанието се обновява...</p>' : '<p>Content is being updated...</p>');
+          setContent(`<p>${t('advertise_page.updating')}</p>`);
         }
       } catch (err) {
         console.error(err);
-        setContent(isBg ? '<p>Възникна грешка при зареждане на съдържанието.</p>' : '<p>An error occurred while loading content.</p>');
+        setContent(`<p>${t('advertise_page.error')}</p>`);
       } finally {
         setLoading(false);
       }
     };
 
     fetchContent();
-  }, [isBg]);
+  }, [currentLang, t]);
 
   return (
     <div className="flex-1 bg-background-dark animate-in fade-in duration-500">
       <header className="p-6 bg-surface-dark border-b border-primary/20 sticky top-0 z-20 flex items-center gap-4 shadow-md">
-        <button onClick={() => navigate(-1)} className="text-primary hover:text-white transition-colors bg-primary/10 size-10 rounded-full flex items-center justify-center border border-primary/30">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="text-primary hover:text-white transition-colors bg-primary/10 size-10 rounded-full flex items-center justify-center border border-primary/30 cursor-pointer"
+          aria-label={t('common.buttons.back')}
+        >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <div>
           <h1 className="text-xl font-black text-primary uppercase tracking-tighter">
-            {isBg ? 'Рекламирай при нас' : 'Advertise with Us'}
+            {t('advertise_page.title')}
           </h1>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            {isBg ? 'Правила и Цени' : 'Rules and Pricing'}
+            {t('advertise_page.subtitle')}
           </p>
         </div>
       </header>

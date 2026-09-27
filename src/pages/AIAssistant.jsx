@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
-import { getLocalizedField } from '../lib/localeUtils';
+import { getLocalizedField, getLocalizedRecipeTitle } from '../lib/localeUtils';
 import { useNavigate } from 'react-router-dom';
 
 const getUniqueId = (prefix) => {
@@ -275,22 +275,46 @@ const AIAssistant = () => {
     });
   };
 
+  // Extract all searchable text variations for recipe titles safely
+  const getRecipeSearchTitles = (r) => {
+    if (!r) return [];
+    const titles = new Set();
+    
+    // 1. Flat title properties
+    for (const key of ['title_bg', 'title_en', 'title_it', 'title_fr', 'title_de']) {
+      const val = r[key];
+      if (typeof val === 'string' && val.trim() && val !== '[object Object]') {
+        titles.add(val.toLowerCase().trim());
+      } else if (val && typeof val === 'object') {
+        Object.values(val).forEach(v => {
+          if (typeof v === 'string' && v.trim() && v !== '[object Object]') {
+            titles.add(v.toLowerCase().trim());
+          }
+        });
+      }
+    }
+    
+    // 2. r.title (string or multilingual map { bg, en, ... })
+    if (typeof r.title === 'string' && r.title.trim() && r.title !== '[object Object]') {
+      titles.add(r.title.toLowerCase().trim());
+    } else if (r.title && typeof r.title === 'object') {
+      Object.values(r.title).forEach(v => {
+        if (typeof v === 'string' && v.trim() && v !== '[object Object]') {
+          titles.add(v.toLowerCase().trim());
+        }
+      });
+    }
+
+    return Array.from(titles);
+  };
+
   // Detect which database recipes are named in the text output
   const detectRecommendedRecipes = (text) => {
+    if (!text || typeof text !== 'string') return [];
+    const lower = text.toLowerCase();
     return recipes.filter(r => {
-      const titleBg = (r.title_bg || '').toLowerCase().trim();
-      const titleEn = (r.title_en || '').toLowerCase().trim();
-      const titleIt = (r.title_it || '').toLowerCase().trim();
-      const titleFr = (r.title_fr || '').toLowerCase().trim();
-      const titleDe = (r.title_de || '').toLowerCase().trim();
-      const titleGen = (r.title || '').toLowerCase().trim();
-      const lower = text.toLowerCase();
-      return (titleBg && lower.includes(titleBg)) || 
-             (titleEn && lower.includes(titleEn)) || 
-             (titleIt && lower.includes(titleIt)) || 
-             (titleFr && lower.includes(titleFr)) || 
-             (titleDe && lower.includes(titleDe)) || 
-             (titleGen && lower.includes(titleGen));
+      const titles = getRecipeSearchTitles(r);
+      return titles.some(tStr => tStr.length >= 3 && lower.includes(tStr));
     }).slice(0, 3);
   };
 
@@ -369,7 +393,7 @@ Context of the user's kitchen:
 - Extra custom ingredients specified by user (not in pantry): ${extraNamesStr || 'None'}
 - Dietary profile: Diets: ${diets.join(', ') || 'None'}, Allergies: ${allergies.join(', ') || 'None'}, Excluded Ingredient IDs: ${exclusions.join(', ')}
 - Available recipes in our database:
-${recipes.map(r => `- ${getLocalizedField(r, 'title', currentLang) || r.title_bg || r.title_en || r.title} (Tags: ${getRecipeTags(r, ingredientsDB).join(', ')}, Prep time: ${(r.prep_time || 0) + (r.cook_time || 0)}m, Ingredients: ${r.ingredients?.map(i => getLocalizedField(i, 'name', currentLang) || i.ingredient_bg || i.name_bg || i.ingredient_en || i.name_en).join(', ')})`).join('\n')}
+${recipes.map(r => `- ${getLocalizedRecipeTitle(r, currentLang) || getLocalizedField(r, 'title', currentLang) || (typeof r.title === 'string' ? r.title : '') || 'Recipe'} (Tags: ${getRecipeTags(r, ingredientsDB).join(', ')}, Prep time: ${(r.prep_time || 0) + (r.cook_time || 0)}m, Ingredients: ${r.ingredients?.map(i => getLocalizedField(i, 'name', currentLang) || i.ingredient_bg || i.name_bg || i.ingredient_en || i.name_en).join(', ')})`).join('\n')}
 
 Rules:
 1. Always respond in the user's language (${targetLangName}).
@@ -381,7 +405,7 @@ Rules:
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -594,7 +618,7 @@ Rules:
                     {msg.recipes && msg.recipes.length > 0 && (
                       <div className="grid grid-cols-1 gap-2 mt-1">
                         {msg.recipes.map((recipe) => {
-                          const title = getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || recipe.title;
+                          const title = getLocalizedRecipeTitle(recipe, currentLang) || getLocalizedField(recipe, 'title', currentLang) || (typeof recipe.title === 'string' ? recipe.title : '') || 'Recipe';
                           const calculatedTags = getRecipeTags(recipe, ingredientsDB);
                           const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
                           return (
@@ -801,7 +825,7 @@ Rules:
                   </div>
                 ) : (
                   filteredMatches.map(recipe => {
-                    const title = getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || recipe.title;
+                    const title = getLocalizedRecipeTitle(recipe, currentLang) || getLocalizedField(recipe, 'title', currentLang) || (typeof recipe.title === 'string' ? recipe.title : '') || 'Recipe';
                     const calculatedTags = getRecipeTags(recipe, ingredientsDB);
                     const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
                     

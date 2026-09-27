@@ -23,6 +23,7 @@ import {
 import { db, storage } from '../../lib/firebase';
 import { ROLES } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
+import AIMultilingualMigrator from '../../components/admin/AIMultilingualMigrator';
 
 const BackupRecovery = () => {
   const { t, i18n } = useTranslation();
@@ -493,6 +494,9 @@ const BackupRecovery = () => {
             )}
           </div>
         </section>
+
+        {/* AI Multilingual Batch Translation & Migration Section */}
+        <AIMultilingualMigrator />
 
         {/* Status Indicator */}
         {status && (

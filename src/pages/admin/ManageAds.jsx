@@ -18,12 +18,15 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { logActivity } from '../../lib/activityLogger';
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, getLocalizedField } from '../../lib/localeUtils';
 
 const ManageAds = () => {
   const { isAdmin, isOwner, user } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.language || 'bg';
+  const isEn = currentLang === 'en';
+  const localLangMeta = LANGUAGE_LABELS[currentLang] || LANGUAGE_LABELS.bg;
   
   const [ads, setAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -47,8 +50,8 @@ const ManageAds = () => {
         return list.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
       case 'title':
         return list.sort((a, b) => {
-          const titleA = currentLang === 'bg' ? (a.title_bg || a.title_en || '') : (a.title_en || a.title_bg || '');
-          const titleB = currentLang === 'bg' ? (b.title_bg || b.title_en || '') : (b.title_en || b.title_bg || '');
+          const titleA = getLocalizedField(a, 'title', currentLang) || a.title_bg || a.title_en || '';
+          const titleB = getLocalizedField(b, 'title', currentLang) || b.title_bg || b.title_en || '';
           return titleA.localeCompare(titleB);
         });
       case 'type':
@@ -63,7 +66,11 @@ const ManageAds = () => {
     const list = [...campaigns];
     switch (campaignsSortBy) {
       case 'name-asc':
-        return list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        return list.sort((a, b) => {
+          const nameA = getLocalizedField(a, 'name', currentLang) || a.name_bg || a.name_en || (typeof a.name === 'string' ? a.name : '');
+          const nameB = getLocalizedField(b, 'name', currentLang) || b.name_bg || b.name_en || (typeof b.name === 'string' ? b.name : '');
+          return nameA.localeCompare(nameB);
+        });
       case 'date-desc':
         return list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       case 'active-first':
@@ -77,7 +84,7 @@ const ManageAds = () => {
       default:
         return list;
     }
-  }, [campaigns, campaignsSortBy, ads]);
+  }, [campaigns, campaignsSortBy, ads, currentLang]);
 
   // Quick Priority Adjustment for Ads
   const handleAdjustPriority = async (ad, delta) => {
@@ -99,6 +106,8 @@ const ManageAds = () => {
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [campaignFormData, setCampaignFormData] = useState({
+    name_local: '',
+    name_en: '',
     name: '',
     startDate: '',
     endDate: '',
@@ -111,13 +120,14 @@ const ManageAds = () => {
 
   // Settings Modal State
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [settingsData, setSettingsData] = useState({ content_bg: '', content_en: '' });
+  const [settingsData, setSettingsData] = useState({ content_local: '', content_en: '', rawDoc: null });
   const [loadingSettings, setLoadingSettings] = useState(false);
 
   // Form State for Ads
   const [formData, setFormData] = useState({
-    title_bg: '',
+    title_local: '',
     title_en: '',
+    title_bg: '',
     description_bg: '',
     description_en: '',
     type: 'image', // image, video, html, native
@@ -296,8 +306,25 @@ const ManageAds = () => {
   const handleOpenCampaignModal = (campaign = null) => {
     if (campaign) {
       setEditingCampaign(campaign);
+      const enName = campaign.name_en || (typeof campaign.name === 'object' ? campaign.name?.en : '') || (typeof campaign.name === 'string' ? campaign.name : '') || campaign.name_bg || '';
+
+      let localName = '';
+      if (typeof campaign.name === 'object' && campaign.name?.[currentLang]) {
+        localName = campaign.name[currentLang];
+      } else if (campaign[`name_${currentLang}`]) {
+        localName = campaign[`name_${currentLang}`];
+      } else if (currentLang === 'bg') {
+        localName = campaign.name_bg || (typeof campaign.name === 'string' ? campaign.name : '');
+      }
+
+      if (!localName) {
+        localName = enName || campaign.name_bg || (typeof campaign.name === 'string' ? campaign.name : '');
+      }
+
       setCampaignFormData({
-        name: campaign.name || '',
+        name_local: localName,
+        name_en: enName,
+        name: typeof campaign.name === 'string' ? campaign.name : (enName || localName),
         startDate: campaign.startDate || '',
         endDate: campaign.endDate || '',
         rotationType: campaign.rotationType || 'sequential',
@@ -309,6 +336,8 @@ const ManageAds = () => {
     } else {
       setEditingCampaign(null);
       setCampaignFormData({
+        name_local: '',
+        name_en: '',
         name: '',
         startDate: '',
         endDate: '',
@@ -325,8 +354,59 @@ const ManageAds = () => {
   const handleSaveCampaign = async (e) => {
     e.preventDefault();
     try {
+      const enName = (campaignFormData.name_en || '').trim();
+      const existingCamp = editingCampaign || {};
+      const existingNameMap = typeof existingCamp.name === 'object' && existingCamp.name ? existingCamp.name : {};
+
+      const updatedNameMap = {
+        ...existingNameMap,
+        en: enName
+      };
+
+      const nameUpdates = {
+        name_en: enName
+      };
+
+      if (isEn) {
+        // English user: propagate EN name if other language names are empty
+        for (const lang of SUPPORTED_LANGUAGES) {
+          if (!updatedNameMap[lang]) {
+            updatedNameMap[lang] = enName;
+          }
+          if (!existingCamp[`name_${lang}`]) {
+            nameUpdates[`name_${lang}`] = enName;
+          }
+        }
+        nameUpdates.name_bg = existingCamp.name_bg || enName;
+      } else {
+        // Non-English user (BG, IT, FR, DE):
+        // If local name is empty, fallback to enName
+        const finalLocalName = (campaignFormData.name_local || '').trim() || enName;
+        nameUpdates[`name_${currentLang}`] = finalLocalName;
+        updatedNameMap[currentLang] = finalLocalName;
+
+        if (currentLang === 'bg') {
+          nameUpdates.name_bg = finalLocalName;
+        } else {
+          nameUpdates.name_bg = existingCamp.name_bg || enName;
+        }
+
+        // Preserve other existing languages or fallback to en
+        for (const lang of SUPPORTED_LANGUAGES) {
+          if (lang !== currentLang && lang !== 'en') {
+            if (existingCamp[`name_${lang}`]) {
+              nameUpdates[`name_${lang}`] = existingCamp[`name_${lang}`];
+            } else if (!updatedNameMap[lang]) {
+              updatedNameMap[lang] = enName;
+            }
+          }
+        }
+      }
+
+      nameUpdates.name = updatedNameMap;
+
       const data = {
-        name: campaignFormData.name || '',
+        ...nameUpdates,
         startDate: campaignFormData.startDate || '',
         endDate: campaignFormData.endDate || '',
         rotationType: campaignFormData.rotationType || 'sequential',
@@ -337,9 +417,11 @@ const ManageAds = () => {
         updatedAt: serverTimestamp()
       };
 
+      const logCampName = (isEn ? enName : (campaignFormData.name_local || enName)) || 'Кампания';
+
       if (editingCampaign) {
         await updateDoc(doc(db, 'campaigns', editingCampaign.id), data);
-        await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'UPDATE_CAMPAIGN', `Редактирана кампания: ${data.name}`);
+        await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'UPDATE_CAMPAIGN', `Редактирана кампания: ${logCampName}`);
       } else {
         await addDoc(collection(db, 'campaigns'), {
           ...data,
@@ -347,7 +429,7 @@ const ManageAds = () => {
           clicksCount: 0,
           createdAt: serverTimestamp()
         });
-        await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'CREATE_CAMPAIGN', `Създадена кампания: ${data.name}`);
+        await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'CREATE_CAMPAIGN', `Създадена кампания: ${logCampName}`);
       }
       setIsCampaignModalOpen(false);
       setEditingCampaign(null);
@@ -388,7 +470,8 @@ const ManageAds = () => {
       await updateDoc(doc(db, 'campaigns', campaign.id), {
         isActive: !campaign.isActive
       });
-      await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'TOGGLE_CAMPAIGN_STATUS', `Променен статус на кампания: ${campaign.name}`);
+      const cName = getLocalizedField(campaign, 'name', currentLang) || (typeof campaign.name === 'string' ? campaign.name : '');
+      await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'TOGGLE_CAMPAIGN_STATUS', `Променен статус на кампания: ${cName}`);
     } catch (err) {
       console.error(err);
     }
@@ -403,8 +486,60 @@ const ManageAds = () => {
         keywordsArr = formData.targetKeywords.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
       }
 
+      const enTitle = (formData.title_en || '').trim();
+      const existingAd = editingAd || {};
+      const existingTitleMap = typeof existingAd.title === 'object' && existingAd.title ? existingAd.title : {};
+
+      const updatedTitleMap = {
+        ...existingTitleMap,
+        en: enTitle
+      };
+
+      const titleUpdates = {
+        title_en: enTitle
+      };
+
+      if (isEn) {
+        // English user: propagate EN title if other language titles are empty
+        for (const lang of SUPPORTED_LANGUAGES) {
+          if (!updatedTitleMap[lang]) {
+            updatedTitleMap[lang] = enTitle;
+          }
+          if (!existingAd[`title_${lang}`]) {
+            titleUpdates[`title_${lang}`] = enTitle;
+          }
+        }
+        titleUpdates.title_bg = existingAd.title_bg || enTitle;
+      } else {
+        // Non-English user (BG, IT, FR, DE):
+        // If local title is empty, fallback to enTitle
+        const finalLocalTitle = (formData.title_local || '').trim() || enTitle;
+        titleUpdates[`title_${currentLang}`] = finalLocalTitle;
+        updatedTitleMap[currentLang] = finalLocalTitle;
+
+        if (currentLang === 'bg') {
+          titleUpdates.title_bg = finalLocalTitle;
+        } else {
+          titleUpdates.title_bg = existingAd.title_bg || enTitle;
+        }
+
+        // Preserve other existing languages or fallback to en
+        for (const lang of SUPPORTED_LANGUAGES) {
+          if (lang !== currentLang && lang !== 'en') {
+            if (existingAd[`title_${lang}`]) {
+              titleUpdates[`title_${lang}`] = existingAd[`title_${lang}`];
+            } else if (!updatedTitleMap[lang]) {
+              updatedTitleMap[lang] = enTitle;
+            }
+          }
+        }
+      }
+
+      titleUpdates.title = updatedTitleMap;
+
       const data = {
         ...formData,
+        ...titleUpdates,
         priority: Number(formData.priority) || 1,
         maxViews: Number(formData.maxViews) || 0,
         maxClicks: Number(formData.maxClicks) || 0,
@@ -412,10 +547,13 @@ const ManageAds = () => {
         targetIngredientIds: Array.isArray(formData.targetIngredientIds) ? formData.targetIngredientIds : [],
         updatedAt: serverTimestamp()
       };
+      delete data.title_local;
+
+      const logTitle = (isEn ? enTitle : (formData.title_local || enTitle)) || 'Реклама';
 
       if (editingAd) {
         await updateDoc(doc(db, 'ads', editingAd.id), data);
-        await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'UPDATE_AD', `Редактирана реклама: ${formData.title_bg}`);
+        await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'UPDATE_AD', `Редактирана реклама: ${logTitle}`);
       } else {
         await addDoc(collection(db, 'ads'), {
           ...data,
@@ -423,7 +561,7 @@ const ManageAds = () => {
           viewsCount: 0,
           clicksCount: 0
         });
-        await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'CREATE_AD', `Създадена реклама: ${formData.title_bg}`);
+        await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'CREATE_AD', `Създадена реклама: ${logTitle}`);
       }
       setIsModalOpen(false);
       setEditingAd(null);
@@ -436,8 +574,9 @@ const ManageAds = () => {
 
   const resetForm = () => {
     setFormData({
-      title_bg: '',
+      title_local: '',
       title_en: '',
+      title_bg: '',
       description_bg: '',
       description_en: '',
       type: 'image',
@@ -458,9 +597,25 @@ const ManageAds = () => {
 
   const handleEdit = (ad) => {
     setEditingAd(ad);
+    const enTitle = ad.title_en || (typeof ad.title === 'object' ? ad.title?.en : '') || (typeof ad.title === 'string' ? ad.title : '') || ad.title_bg || '';
+    
+    let localTitle = '';
+    if (typeof ad.title === 'object' && ad.title?.[currentLang]) {
+      localTitle = ad.title[currentLang];
+    } else if (ad[`title_${currentLang}`]) {
+      localTitle = ad[`title_${currentLang}`];
+    } else if (currentLang === 'bg') {
+      localTitle = ad.title_bg || '';
+    }
+
+    if (!localTitle) {
+      localTitle = enTitle || ad.title_bg || '';
+    }
+
     setFormData({
+      title_local: localTitle,
+      title_en: enTitle,
       title_bg: ad.title_bg || '',
-      title_en: ad.title_en || '',
       description_bg: ad.description_bg || '',
       description_en: ad.description_en || '',
       type: ad.type || 'image',
@@ -508,12 +663,24 @@ const ManageAds = () => {
     try {
       const snap = await getDoc(doc(db, 'settings', 'advertising_page'));
       if (snap.exists()) {
+        const data = snap.data();
+        const enContent = data.content_en || data.content?.en || '';
+        
+        // Find content for current user language
+        let localContent = data[`content_${currentLang}`] || data.content?.[currentLang] || (currentLang === 'bg' ? (data.content_bg || '') : '');
+        
+        // If there is no text in current language, fallback to English (or Bulgarian if English is missing)
+        if (!localContent) {
+          localContent = enContent || (data.content_bg || '');
+        }
+
         setSettingsData({
-          content_bg: snap.data().content_bg || '',
-          content_en: snap.data().content_en || ''
+          content_local: localContent,
+          content_en: enContent,
+          rawDoc: data
         });
       } else {
-        setSettingsData({ content_bg: '', content_en: '' });
+        setSettingsData({ content_local: '', content_en: '', rawDoc: null });
       }
     } catch(err) {
       console.error(err);
@@ -524,17 +691,70 @@ const ManageAds = () => {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
+    setLoadingSettings(true);
     try {
-      await setDoc(doc(db, 'settings', 'advertising_page'), {
-        ...settingsData,
+      const existing = settingsData.rawDoc || {};
+      const existingContentMap = typeof existing.content === 'object' && existing.content ? existing.content : {};
+      const enText = (settingsData.content_en || '').trim();
+
+      const updatedContentMap = {
+        ...existingContentMap,
+        en: enText
+      };
+
+      const docUpdates = {
+        ...existing,
+        content_en: enText,
         updatedAt: serverTimestamp()
-      }, { merge: true });
-      await logActivity(user.uid, user.email || 'N/A', 'UPDATE_AD_SETTINGS', `Обновени правила за реклама`);
+      };
+
+      if (isEn) {
+        // If English user: English content propagates as base if other languages missing, preserving existing
+        for (const lang of SUPPORTED_LANGUAGES) {
+          if (!updatedContentMap[lang]) {
+            updatedContentMap[lang] = enText;
+          }
+          if (!docUpdates[`content_${lang}`]) {
+            docUpdates[`content_${lang}`] = enText;
+          }
+        }
+        if (!docUpdates.content_bg) {
+          docUpdates.content_bg = enText;
+        }
+      } else {
+        // Local language user (bg, it, fr, de):
+        const finalLocal = (settingsData.content_local || '').trim() || enText;
+        docUpdates[`content_${currentLang}`] = finalLocal;
+        updatedContentMap[currentLang] = finalLocal;
+
+        if (currentLang === 'bg') {
+          docUpdates.content_bg = finalLocal;
+        }
+
+        // Preserve existing translations for all other languages
+        for (const lang of SUPPORTED_LANGUAGES) {
+          if (lang !== currentLang && lang !== 'en') {
+            if (existing[`content_${lang}`]) {
+              docUpdates[`content_${lang}`] = existing[`content_${lang}`];
+            }
+            if (existingContentMap[lang]) {
+              updatedContentMap[lang] = existingContentMap[lang];
+            }
+          }
+        }
+      }
+
+      docUpdates.content = updatedContentMap;
+
+      await setDoc(doc(db, 'settings', 'advertising_page'), docUpdates, { merge: true });
+      await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'UPDATE_AD_SETTINGS', `Обновени правила за реклама (${currentLang.toUpperCase()})`);
       setIsSettingsModalOpen(false);
       alert(t('manage_ads.alerts.save_settings_success'));
     } catch(err) {
       console.error(err);
       alert(t('manage_ads.alerts.save_settings_error'));
+    } finally {
+      setLoadingSettings(false);
     }
   };
 
@@ -675,7 +895,7 @@ const ManageAds = () => {
                         </span>
                         {assignedCampaign && (
                           <span className="bg-amber-500/20 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-amber-400 border border-amber-500/30 truncate max-w-[200px]">
-                            📁 {assignedCampaign.name}
+                            📁 {getLocalizedField(assignedCampaign, 'name', currentLang) || assignedCampaign.name_bg || assignedCampaign.name_en || (typeof assignedCampaign.name === 'string' ? assignedCampaign.name : '')}
                           </span>
                         )}
                       </div>
@@ -697,7 +917,7 @@ const ManageAds = () => {
                             className="font-bold text-slate-100 text-sm sm:text-base cursor-pointer hover:text-primary transition-colors inline-block"
                             title={t('manage_ads.card.edit_tooltip')}
                           >
-                            {currentLang === 'bg' ? (ad.title_bg || ad.title_en) : (ad.title_en || ad.title_bg)}
+                            {getLocalizedField(ad, 'title', currentLang) || ad.title_bg || ad.title_en}
                           </h3>
                           <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-2 mt-0.5">
                             {currentLang === 'bg' ? (ad.description_bg || ad.description_en) : (ad.description_en || ad.description_bg)}
@@ -743,7 +963,7 @@ const ManageAds = () => {
                             </button>
                           </div>
 
-                          <button onClick={() => handleResetStats(ad.id, ad.title_bg)} className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title={t('manage_ads.card.reset_stats_tooltip')}>
+                          <button onClick={() => handleResetStats(ad.id, getLocalizedField(ad, 'title', currentLang) || ad.title_bg || ad.title_en)} className="p-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title={t('manage_ads.card.reset_stats_tooltip')}>
                             <span className="material-symbols-outlined text-xs">restart_alt</span>
                           </button>
                         </div>
@@ -829,7 +1049,7 @@ const ManageAds = () => {
                             className="cursor-pointer hover:text-amber-400 transition-colors"
                             title={t('manage_ads.card.edit_campaign_tooltip')}
                           >
-                            {c.name}
+                            {getLocalizedField(c, 'name', currentLang) || c.name_bg || c.name_en || (typeof c.name === 'string' ? c.name : '')}
                           </span>
                           <span className="bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-amber-500/20">
                             {assignedAdsCount} {t('manage_ads.campaigns_list.ads_count_label')}
@@ -851,7 +1071,7 @@ const ManageAds = () => {
                         <button onClick={() => handleOpenCampaignModal(c)} className="p-1 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer" title={t('manage_ads.card.edit_campaign_tooltip')}>
                           <span className="material-symbols-outlined text-base">edit</span>
                         </button>
-                        <button onClick={() => handleDeleteCampaign(c.id, c.name)} className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer" title={t('manage_ads.card.delete_campaign_tooltip')}>
+                        <button onClick={() => handleDeleteCampaign(c.id, getLocalizedField(c, 'name', currentLang) || (typeof c.name === 'string' ? c.name : ''))} className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer" title={t('manage_ads.card.delete_campaign_tooltip')}>
                           <span className="material-symbols-outlined text-base">delete</span>
                         </button>
                       </div>
@@ -885,7 +1105,7 @@ const ManageAds = () => {
 
                     <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-amber-500/10">
                       <span>📅 {c.startDate || t('manage_ads.dates.start')} — {c.endDate || t('manage_ads.dates.unlimited')}</span>
-                      <button onClick={() => handleResetCampaignStats(c.id, c.name)} className="text-rose-400 hover:underline cursor-pointer flex items-center gap-0.5">
+                      <button onClick={() => handleResetCampaignStats(c.id, getLocalizedField(c, 'name', currentLang) || (typeof c.name === 'string' ? c.name : ''))} className="text-rose-400 hover:underline cursor-pointer flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-[12px]">restart_alt</span>
                         {t('manage_ads.buttons.reset')}
                       </button>
@@ -912,16 +1132,48 @@ const ManageAds = () => {
             </div>
 
             <form onSubmit={handleSaveCampaign} className="p-6 overflow-y-auto space-y-5 no-scrollbar">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.campaign_modal.name_label')}</label>
-                <input 
-                  required 
-                  value={campaignFormData.name} 
-                  onChange={e => setCampaignFormData({...campaignFormData, name: e.target.value})} 
-                  className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary"
-                  placeholder={t('manage_ads.campaign_modal.name_placeholder')}
-                />
-              </div>
+              {isEn ? (
+                /* Single English name field for English users */
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                    {t('manage_ads.campaign_modal.name_en')}
+                  </label>
+                  <input 
+                    required 
+                    value={campaignFormData.name_en} 
+                    onChange={e => setCampaignFormData({ ...campaignFormData, name_en: e.target.value })} 
+                    className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary"
+                    placeholder={t('manage_ads.campaign_modal.name_en_placeholder')}
+                  />
+                </div>
+              ) : (
+                /* Dual Local + English name fields for other languages */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                      {t('manage_ads.campaign_modal.name_local', { lang: localLangMeta.fullName })}
+                    </label>
+                    <input 
+                      value={campaignFormData.name_local} 
+                      onChange={e => setCampaignFormData({ ...campaignFormData, name_local: e.target.value })} 
+                      className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary"
+                      placeholder={t('manage_ads.campaign_modal.name_local_placeholder', { lang: localLangMeta.fullName })}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                      {t('manage_ads.campaign_modal.name_en')}
+                    </label>
+                    <input 
+                      required 
+                      value={campaignFormData.name_en} 
+                      onChange={e => setCampaignFormData({ ...campaignFormData, name_en: e.target.value })} 
+                      className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary"
+                      placeholder={t('manage_ads.campaign_modal.name_en_placeholder')}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
@@ -1046,16 +1298,48 @@ const ManageAds = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 no-scrollbar">
-              <div className="grid grid-cols-2 gap-4">
+              {isEn ? (
+                /* Single English title field for English users */
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.title_bg')}</label>
-                  <input required value={formData.title_bg} onChange={e => setFormData({...formData, title_bg: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder={t('manage_ads.ad_modal.title_bg_placeholder')} />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                    {t('manage_ads.ad_modal.title_en')}
+                  </label>
+                  <input 
+                    required 
+                    value={formData.title_en} 
+                    onChange={e => setFormData({ ...formData, title_en: e.target.value })} 
+                    className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
+                    placeholder={t('manage_ads.ad_modal.title_en_placeholder')} 
+                  />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.title_en')}</label>
-                  <input required value={formData.title_en} onChange={e => setFormData({...formData, title_en: e.target.value})} className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" placeholder={t('manage_ads.ad_modal.title_en_placeholder')} />
+              ) : (
+                /* Dual Local + English title fields for other languages */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                      {t('manage_ads.ad_modal.title_local', { lang: localLangMeta.fullName })}
+                    </label>
+                    <input 
+                      value={formData.title_local} 
+                      onChange={e => setFormData({ ...formData, title_local: e.target.value })} 
+                      className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
+                      placeholder={t('manage_ads.ad_modal.title_local_placeholder', { lang: localLangMeta.fullName })} 
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                      {t('manage_ads.ad_modal.title_en')}
+                    </label>
+                    <input 
+                      required 
+                      value={formData.title_en} 
+                      onChange={e => setFormData({ ...formData, title_en: e.target.value })} 
+                      className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
+                      placeholder={t('manage_ads.ad_modal.title_en_placeholder')} 
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.assign_campaign')}</label>
@@ -1066,7 +1350,9 @@ const ManageAds = () => {
                 >
                   <option value="">{t('manage_ads.ad_modal.standalone_option')}</option>
                   {campaigns.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>
+                      {getLocalizedField(c, 'name', currentLang) || c.name_bg || c.name_en || (typeof c.name === 'string' ? c.name : '')}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -1263,29 +1549,52 @@ const ManageAds = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.settings_modal.content_bg')}</label>
-                <textarea 
-                  required 
-                  rows={8}
-                  value={settingsData.content_bg} 
-                  onChange={e => setSettingsData({...settingsData, content_bg: e.target.value})} 
-                  className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                  placeholder={t('manage_ads.settings_modal.placeholder')}
-                />
-              </div>
-              
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.settings_modal.content_en')}</label>
-                <textarea 
-                  required 
-                  rows={8}
-                  value={settingsData.content_en} 
-                  onChange={e => setSettingsData({...settingsData, content_en: e.target.value})} 
-                  className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                  placeholder={t('manage_ads.settings_modal.placeholder')}
-                />
-              </div>
+              {isEn ? (
+                /* Single English textarea for English users */
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                    {t('manage_ads.settings_modal.content_en')}
+                  </label>
+                  <textarea 
+                    required 
+                    rows={12}
+                    value={settingsData.content_en} 
+                    onChange={e => setSettingsData(prev => ({ ...prev, content_en: e.target.value }))} 
+                    className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
+                    placeholder={t('manage_ads.settings_modal.placeholder')}
+                  />
+                </div>
+              ) : (
+                /* Dual Local + English textareas for other languages */
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                      {t('manage_ads.settings_modal.content_local', { lang: localLangMeta.fullName })}
+                    </label>
+                    <textarea 
+                      rows={8}
+                      value={settingsData.content_local} 
+                      onChange={e => setSettingsData(prev => ({ ...prev, content_local: e.target.value }))} 
+                      className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
+                      placeholder={t('manage_ads.settings_modal.placeholder')}
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                      {t('manage_ads.settings_modal.content_en')}
+                    </label>
+                    <textarea 
+                      required 
+                      rows={8}
+                      value={settingsData.content_en} 
+                      onChange={e => setSettingsData(prev => ({ ...prev, content_en: e.target.value }))} 
+                      className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
+                      placeholder={t('manage_ads.settings_modal.placeholder')}
+                    />
+                  </div>
+                </>
+              )}
 
               <button disabled={loadingSettings} type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer">
                 {t('manage_ads.settings_modal.save_btn')}

@@ -4,33 +4,90 @@ import { useTranslation } from 'react-i18next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getRecipeImageUrl } from '../lib/imageUtils';
+import { getLocalizedField } from '../lib/localeUtils';
 
 // Default sample steps fallback for templates like shopska-salad-classic
 const DEFAULT_SAMPLE_STEPS = [
   {
+    instruction: {
+      bg: "Измийте и нарежете доматите и краставиците на едри кубчета. Поставете ги в голяма дълбока купа.",
+      en: "Wash and cut the tomatoes and cucumbers into large cubes. Place them into a large salad bowl.",
+      it: "Lavare e tagliare i pomodori e i cetrioli a cubetti grandi. Metterli in una grande insalatiera.",
+      fr: "Lavez et coupez les tomates et les concombres en gros dés. Placez-les dans un grand saladier.",
+      de: "Tomaten und Gurken waschen und in große Würfel schneiden. In eine große Salatschüssel geben."
+    },
     instruction_bg: "Измийте и нарежете доматите и краставиците на едри кубчета. Поставете ги в голяма дълбока купа.",
     instruction_en: "Wash and cut the tomatoes and cucumbers into large cubes. Place them into a large salad bowl.",
+    phase: {
+      bg: "Подготовка и Рязане",
+      en: "Prep & Chopping",
+      it: "Preparazione e Taglio",
+      fr: "Préparation et Découpe",
+      de: "Vorbereitung & Schneiden"
+    },
     phase_bg: "Подготовка и Рязане",
     phase_en: "Prep & Chopping",
     timer_minutes: 5
   },
   {
+    instruction: {
+      bg: "Добавете нарязаните на ситно чушки (зелени или червени) и лук към купата с доматите и краставиците.",
+      en: "Add the finely chopped peppers (green or red) and onions to the bowl with tomatoes and cucumbers.",
+      it: "Aggiungere i peperoni tritati finemente (verdi o rossi) e la cipolla nella ciotola con pomodori e cetrioli.",
+      fr: "Ajoutez les poivrons finement hachés (verts ou rouges) et l'oignon dans le saladier avec les tomates et les concombres.",
+      de: "Die fein gehackten Paprikaschoten (grün oder rot) und die Zwiebeln in die Schüssel zu Tomaten und Gurken geben."
+    },
     instruction_bg: "Добавете нарязаните на ситно чушки (зелени или червени) и лук към купата с доматите и краставиците.",
     instruction_en: "Add the finely chopped peppers (green or red) and onions to the bowl with tomatoes and cucumbers.",
+    phase: {
+      bg: "Смесване",
+      en: "Mixing",
+      it: "Miscelazione",
+      fr: "Mélange",
+      de: "Mischen"
+    },
     phase_bg: "Смесване",
     phase_en: "Mixing",
     timer_minutes: 3
   },
   {
+    instruction: {
+      bg: "Овкусете със зехтин и щипка сол. Разбъркайте внимателно, за да се овкусят зеленчуците равномерно.",
+      en: "Season with olive oil and a pinch of salt. Gently mix to combine the flavors evenly.",
+      it: "Condire con olio d'oliva e un pizzico di sale. Mescolare delicatamente per distribuire i sapori in modo uniforme.",
+      fr: "Assaisonnez d'huile d'olive et d'une pincée de sel. Mélangez délicatement pour bien répartir les saveurs.",
+      de: "Mit Olivenöl und einer Prise Salz abschmecken. Vorsichtig umrühren, um die Aromen gleichmäßig zu verteilen."
+    },
     instruction_bg: "Овкусете със зехтин и щипка сол. Разбъркайте внимателно, за да се овкусят зеленчуците равномерно.",
     instruction_en: "Season with olive oil and a pinch of salt. Gently mix to combine the flavors evenly.",
+    phase: {
+      bg: "Овкусяване",
+      en: "Seasoning",
+      it: "Condimento",
+      fr: "Assaisonnement",
+      de: "Würzen"
+    },
     phase_bg: "Овкусяване",
     phase_en: "Seasoning",
     timer_minutes: 2
   },
   {
+    instruction: {
+      bg: "Накъсайте маслини отгоре и настържете обилно натрошено българско бяло саламурено сирене. Гарнирайте със свеж магданоз.",
+      en: "Top with olives and generously grate Bulgarian white brine cheese over the salad. Garnish with fresh parsley.",
+      it: "Aggiungere le olive e grattugiare abbondante formaggio bianco bulgaro in salamoia. Guarnire con prezzemolo fresco.",
+      fr: "Ajoutez des olives et râpez généreusement du fromage blanc bulgare en saumure. Garnissez de persil frais.",
+      de: "Mit Oliven belegen und reichlich bulgarischen weißen Salzlakenkäse darüber reiben. Mit frischer Petersilie garnieren."
+    },
     instruction_bg: "Накъсайте маслини отгоре и настържете обилно натрошено българско бяло саламурено сирене. Гарнирайте със свеж магданоз.",
     instruction_en: "Top with olives and generously grate Bulgarian white brine cheese over the salad. Garnish with fresh parsley.",
+    phase: {
+      bg: "Сервиране",
+      en: "Serving",
+      it: "Servizio",
+      fr: "Service",
+      de: "Servieren"
+    },
     phase_bg: "Сервиране",
     phase_en: "Serving",
     timer_minutes: 0
@@ -40,8 +97,8 @@ const DEFAULT_SAMPLE_STEPS = [
 const CookingMode = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { i18n } = useTranslation();
-  const isBg = i18n.language === 'bg';
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'bg';
 
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +150,13 @@ const CookingMode = () => {
         if (isMounted) {
           setRecipe({
             id: id || 'shopska-salad-classic',
+            title: {
+              bg: 'Класическа Шопска Салата',
+              en: 'Classic Shopska Salad',
+              it: 'Classica Insalata Šopska',
+              fr: 'Salade Chopska Classique',
+              de: 'Klassischer Schopska-Salat'
+            },
             title_bg: 'Класическа Шопска Салата',
             title_en: 'Classic Shopska Salad',
             media_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=1000',
@@ -122,6 +186,13 @@ const CookingMode = () => {
           if (isMounted) {
             setRecipe({
               id,
+              title: {
+                bg: 'Режим Готвене',
+                en: 'Cooking Mode',
+                it: 'Modalità Cucina',
+                fr: 'Mode Cuisine',
+                de: 'Kochmodus'
+              },
               title_bg: 'Режим Готвене',
               title_en: 'Cooking Mode',
               steps: DEFAULT_SAMPLE_STEPS
@@ -134,6 +205,13 @@ const CookingMode = () => {
         if (isMounted) {
           setRecipe({
             id,
+            title: {
+              bg: 'Режим Готвене',
+              en: 'Cooking Mode',
+              it: 'Modalità Cucina',
+              fr: 'Mode Cuisine',
+              de: 'Kochmodus'
+            },
             title_bg: 'Режим Готвене',
             title_en: 'Cooking Mode',
             steps: DEFAULT_SAMPLE_STEPS
@@ -157,21 +235,43 @@ const CookingMode = () => {
     const mainRecipeImg = getRecipeImageUrl(recipe);
 
     if (recipe && recipe.steps && Array.isArray(recipe.steps) && recipe.steps.length > 0) {
-      return recipe.steps.map((st, idx) => ({
-        instruction_bg: st.instruction_bg || st.bg || st.description || (typeof st === 'string' ? st : `Стъпка ${idx + 1}`),
-        instruction_en: st.instruction_en || st.en || st.description || (typeof st === 'string' ? st : `Step ${idx + 1}`),
-        phase_bg: st.phase_bg || st.phaseBg || `Стъпка ${idx + 1}`,
-        phase_en: st.phase_en || st.phaseEn || `Step ${idx + 1}`,
-        timer_minutes: st.timer_minutes || (st.timer ? parseInt(st.timer) : 0),
-        image: st.image || st.image_url || mainRecipeImg
-      }));
+      return recipe.steps.map((st, idx) => {
+        const defaultStepLabel = t('cooking_mode.step_label', { step: idx + 1 });
+        const localizedInstruction = getLocalizedField(st, 'instruction', currentLang) 
+          || (typeof st === 'string' ? st : '')
+          || st?.description
+          || defaultStepLabel;
+        const localizedPhase = getLocalizedField(st, 'phase', currentLang) 
+          || st?.phase
+          || defaultStepLabel;
+
+        return {
+          ...st,
+          instruction: localizedInstruction,
+          instruction_bg: st.instruction_bg || st.bg || st.description || (typeof st === 'string' ? st : `Стъпка ${idx + 1}`),
+          instruction_en: st.instruction_en || st.en || st.description || (typeof st === 'string' ? st : `Step ${idx + 1}`),
+          phase: localizedPhase,
+          phase_bg: st.phase_bg || st.phaseBg || `Стъпка ${idx + 1}`,
+          phase_en: st.phase_en || st.phaseEn || `Step ${idx + 1}`,
+          timer_minutes: st.timer_minutes || (st.timer ? parseInt(st.timer) : 0),
+          image: st.image || st.image_url || mainRecipeImg
+        };
+      });
     }
 
-    return DEFAULT_SAMPLE_STEPS.map(st => ({
-      ...st,
-      image: mainRecipeImg || st.image
-    }));
-  }, [recipe]);
+    return DEFAULT_SAMPLE_STEPS.map((st, idx) => {
+      const defaultStepLabel = t('cooking_mode.step_label', { step: idx + 1 });
+      const localizedInstruction = getLocalizedField(st, 'instruction', currentLang) || defaultStepLabel;
+      const localizedPhase = getLocalizedField(st, 'phase', currentLang) || defaultStepLabel;
+
+      return {
+        ...st,
+        instruction: localizedInstruction,
+        phase: localizedPhase,
+        image: mainRecipeImg || st.image
+      };
+    });
+  }, [recipe, currentLang, t]);
 
   const currentStep = steps[currentStepIndex] || steps[0];
   const totalSteps = steps.length;
@@ -238,10 +338,8 @@ const CookingMode = () => {
   const triggerNotification = (stepTitle, stepNum) => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       try {
-        const title = isBg ? `⏰ Таймерът приключи!` : `⏰ Timer Finished!`;
-        const body = isBg 
-          ? `Стъпка ${stepNum}: ${stepTitle}`
-          : `Step ${stepNum}: ${stepTitle}`;
+        const title = t('cooking_mode.timer_finished_title');
+        const body = t('cooking_mode.timer_finished_body', { step: stepNum, title: stepTitle });
 
         new Notification(title, {
           body,
@@ -262,7 +360,7 @@ const CookingMode = () => {
         const perm = await Notification.requestPermission();
         setNotificationPerm(perm);
         if (perm === 'granted') {
-          alert(isBg ? 'Системните известия са активирани!' : 'System notifications enabled!');
+          alert(t('cooking_mode.notifications_enabled'));
         }
       } catch (err) {
         console.warn("Error requesting notification permission:", err);
@@ -310,7 +408,7 @@ const CookingMode = () => {
           timerEndTimeRef.current = null;
           playChimeSound();
           triggerNotification(
-            isBg ? currentStep.phase_bg : currentStep.phase_en,
+            currentStep.phase,
             currentStepIndex + 1
           );
         }
@@ -336,7 +434,7 @@ const CookingMode = () => {
           timerEndTimeRef.current = null;
           playChimeSound();
           triggerNotification(
-            isBg ? currentStep.phase_bg : currentStep.phase_en,
+            currentStep.phase,
             currentStepIndex + 1
           );
         }
@@ -382,7 +480,7 @@ const CookingMode = () => {
   // Robust Text to Speech Implementation
   const handleSpeakInstruction = () => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      alert(isBg ? 'Браузърът Ви не поддържа гласови функции.' : 'Speech synthesis not supported in this browser.');
+      alert(t('cooking_mode.speech_not_supported'));
       return;
     }
 
@@ -399,15 +497,15 @@ const CookingMode = () => {
       synth.resume();
     }
 
-    const textToSpeak = isBg ? currentStep.instruction_bg : currentStep.instruction_en;
+    const textToSpeak = currentStep.instruction || currentStep.instruction_bg || currentStep.instruction_en;
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
 
     // Select available voice or best matching fallback
     const vList = availableVoices.length > 0 ? availableVoices : synth.getVoices();
     let selectedVoice = null;
 
-    if (isBg) {
-      selectedVoice = vList.find(v => v.lang.toLowerCase().includes('bg'));
+    if (currentLang) {
+      selectedVoice = vList.find(v => v.lang.toLowerCase().startsWith(currentLang.toLowerCase()));
     }
 
     if (!selectedVoice) {
@@ -418,7 +516,15 @@ const CookingMode = () => {
       utterance.voice = selectedVoice;
     }
 
-    utterance.lang = selectedVoice?.lang || (isBg ? 'bg-BG' : 'en-US');
+    const langCodeMap = {
+      bg: 'bg-BG',
+      en: 'en-US',
+      it: 'it-IT',
+      fr: 'fr-FR',
+      de: 'de-DE'
+    };
+
+    utterance.lang = selectedVoice?.lang || langCodeMap[currentLang] || 'bg-BG';
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
@@ -438,7 +544,7 @@ const CookingMode = () => {
     if (isSpeaking && typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
-    alert(isBg ? 'Поздравления! Вие успешно завършихте готвенето!' : 'Congratulations! You successfully completed cooking!');
+    alert(t('cooking_mode.finish_congratulations'));
     navigate(`/profile/progress`);
   };
 
@@ -446,12 +552,12 @@ const CookingMode = () => {
     return (
       <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center p-6 text-slate-100 font-display">
         <span className="material-symbols-outlined text-primary text-5xl animate-spin mb-3">sync</span>
-        <p className="text-sm font-bold tracking-widest uppercase">{isBg ? 'Зареждане на режима за готвене...' : 'Loading Cooking Mode...'}</p>
+        <p className="text-sm font-bold tracking-widest uppercase">{t('cooking_mode.loading')}</p>
       </div>
     );
   }
 
-  const recipeTitle = isBg ? (recipe?.title_bg || recipe?.title_en) : (recipe?.title_en || recipe?.title_bg);
+  const recipeTitle = getLocalizedField(recipe, 'title', currentLang) || recipe?.title_bg || recipe?.title_en || '';
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark overflow-x-hidden font-display pb-10">
@@ -474,7 +580,7 @@ const CookingMode = () => {
             onClick={handleFinishCooking} 
             className="bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
           >
-            {isBg ? 'Завърши' : 'Finish'}
+            {t('cooking_mode.finish_btn')}
           </button>
         </div>
 
@@ -482,10 +588,10 @@ const CookingMode = () => {
         <div className="px-4 pb-3 w-full max-w-3xl mx-auto">
           <div className="flex justify-between items-center mb-1.5">
             <p className="text-[10px] font-bold text-primary/80 uppercase tracking-widest">
-              {isBg ? 'Фаза: ' : 'Phase: '} <span className="text-slate-200">{isBg ? currentStep.phase_bg : currentStep.phase_en}</span>
+              {t('cooking_mode.phase')}: <span className="text-slate-200">{currentStep.phase}</span>
             </p>
             <p className="text-[10px] font-black text-primary uppercase tracking-wider">
-              {isBg ? `Стъпка ${currentStepIndex + 1} от ${totalSteps}` : `Step ${currentStepIndex + 1} of ${totalSteps}`}
+              {t('cooking_mode.step_progress', { current: currentStepIndex + 1, total: totalSteps })}
             </p>
           </div>
           <div className="w-full h-2 bg-background-dark rounded-full overflow-hidden shadow-inner border border-primary/10">
@@ -510,7 +616,7 @@ const CookingMode = () => {
                   : 'bg-surface-dark/90 text-slate-300 border-primary/35 hover:border-primary hover:text-white hover:bg-primary/10'
               }`}
             >
-              <span className="truncate">{isBg ? st.phase_bg : st.phase_en}</span>
+              <span className="truncate">{st.phase}</span>
               {idx === currentStepIndex ? (
                 <span className="material-symbols-outlined text-sm font-bold shrink-0 ml-1">play_arrow</span>
               ) : idx < currentStepIndex ? (
@@ -529,16 +635,14 @@ const CookingMode = () => {
           <div className="flex items-center gap-2 text-xs">
             <span className="material-symbols-outlined text-primary text-lg shrink-0">notifications_active</span>
             <span className="text-[11px] leading-snug">
-              {isBg 
-                ? 'Активирайте известията за да получавате фонови звукови известявания при изтичане на таймера.'
-                : 'Enable system notifications for background timer alarms when your device screen is locked.'}
+              {t('cooking_mode.notification_banner_desc')}
             </span>
           </div>
           <button 
             onClick={handleRequestNotificationPermission}
             className="text-[10px] font-black uppercase tracking-widest bg-primary text-background-dark px-3 py-1.5 rounded-xl hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer shadow-md"
           >
-            {isBg ? 'Включи' : 'Enable'}
+            {t('cooking_mode.enable_notifications_btn')}
           </button>
         </div>
       )}
@@ -550,7 +654,7 @@ const CookingMode = () => {
             <div className="aspect-video w-full relative overflow-hidden bg-neutral-950">
               <img 
                 src={currentStep.image || getRecipeImageUrl(recipe)} 
-                alt={isBg ? currentStep.phase_bg : currentStep.phase_en}
+                alt={currentStep.phase}
                 className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background-dark/90 via-transparent to-background-dark/40"></div>
@@ -558,7 +662,7 @@ const CookingMode = () => {
               {/* Floating Luxury Timer Overlay */}
               <div className="absolute bottom-4 right-4 bg-background-dark/90 backdrop-blur-xl border border-primary/40 p-3.5 px-4 rounded-2xl flex items-center gap-3.5 shadow-2xl">
                 <div className="flex flex-col items-center">
-                  <span className="text-primary text-[9px] uppercase font-black tracking-widest">{isBg ? 'Таймер' : 'Timer'}</span>
+                  <span className="text-primary text-[9px] uppercase font-black tracking-widest">{t('cooking_mode.timer_label')}</span>
                   <span className={`text-2xl font-black tracking-tight tabular-nums drop-shadow-md ${isTimerRunning ? 'text-amber-400 animate-pulse' : 'text-slate-100'}`}>
                     {formatTime(timerRemaining)}
                   </span>
@@ -569,7 +673,7 @@ const CookingMode = () => {
                   <button 
                     onClick={toggleTimer}
                     className="text-primary hover:text-amber-300 hover:scale-110 active:scale-95 transition-all p-1 cursor-pointer"
-                    title={isTimerRunning ? (isBg ? 'Пауза' : 'Pause') : (isBg ? 'Старт' : 'Start')}
+                    title={isTimerRunning ? t('cooking_mode.timer_pause') : t('cooking_mode.timer_start')}
                   >
                     <span className="material-symbols-outlined text-4xl">
                       {isTimerRunning ? 'pause_circle' : 'play_circle'}
@@ -579,7 +683,7 @@ const CookingMode = () => {
                   <button 
                     onClick={resetTimer}
                     className="text-slate-400 hover:text-rose-400 hover:scale-110 active:scale-95 transition-all p-1 cursor-pointer"
-                    title={isBg ? 'Нулирай таймер' : 'Reset timer'}
+                    title={t('cooking_mode.timer_reset')}
                   >
                     <span className="material-symbols-outlined text-2xl">restart_alt</span>
                   </button>
@@ -593,7 +697,7 @@ const CookingMode = () => {
             <div className="flex justify-between items-center border-b border-primary/10 pb-3">
               <h3 className="text-primary text-xl font-black uppercase tracking-tight flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-2xl">counter_1</span>
-                <span>{isBg ? `Стъпка ${currentStepIndex + 1}` : `Step ${currentStepIndex + 1}`}</span>
+                <span>{t('cooking_mode.step_heading', { step: currentStepIndex + 1 })}</span>
               </h3>
 
               {/* Text to speech voice button */}
@@ -604,17 +708,17 @@ const CookingMode = () => {
                     ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse' 
                     : 'bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20'
                 }`}
-                title={isBg ? 'Прочети стъпката на глас' : 'Read step aloud'}
+                title={t('cooking_mode.read_aloud_tooltip')}
               >
                 <span className="material-symbols-outlined text-base">
                   {isSpeaking ? 'volume_off' : 'volume_up'}
                 </span>
-                <span>{isSpeaking ? (isBg ? 'Спри четенето' : 'Stop Voice') : (isBg ? 'Прочети' : 'Read Aloud')}</span>
+                <span>{isSpeaking ? t('cooking_mode.stop_voice_btn') : t('cooking_mode.read_aloud_btn')}</span>
               </button>
             </div>
             
             <p className="text-base md:text-lg leading-relaxed font-semibold text-slate-100">
-              {isBg ? currentStep.instruction_bg : currentStep.instruction_en}
+              {currentStep.instruction}
             </p>
           </div>
         </div>
@@ -631,7 +735,7 @@ const CookingMode = () => {
             }`}
           >
             <span className="material-symbols-outlined text-xl">arrow_back</span>
-            <span className="font-black text-xs uppercase tracking-widest">{isBg ? 'Предишна' : 'Previous'}</span>
+            <span className="font-black text-xs uppercase tracking-widest">{t('cooking_mode.previous_step_btn')}</span>
           </button>
 
           {currentStepIndex < totalSteps - 1 ? (
@@ -639,7 +743,7 @@ const CookingMode = () => {
               onClick={() => handleGoToStep(currentStepIndex + 1)}
               className="flex-[1.5] flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black text-xs uppercase tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-amber-300/40"
             >
-              <span>{isBg ? 'Следваща стъпка' : 'Next Step'}</span>
+              <span>{t('cooking_mode.next_step_btn')}</span>
               <span className="material-symbols-outlined text-xl font-extrabold">arrow_forward</span>
             </button>
           ) : (
@@ -648,7 +752,7 @@ const CookingMode = () => {
               className="flex-[1.5] flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-background-dark font-black text-xs uppercase tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-emerald-300/40"
             >
               <span className="material-symbols-outlined text-xl font-extrabold">task_alt</span>
-              <span>{isBg ? 'Завърши готвенето' : 'Finish Cooking'}</span>
+              <span>{t('cooking_mode.finish_cooking_btn')}</span>
             </button>
           )}
         </div>

@@ -14,12 +14,13 @@ import { getLocalizedField, extractLocalizedNote } from '../lib/localeUtils';
 const RecipeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'bg';
+  const isBg = currentLang === 'bg';
   const { user, isGuest, isAdmin, isOwner, awardPoints } = useAuth();
   const { pantry, shoppingList, setShoppingList } = useAppContext();
   const isPantryActive = !isGuest && (user?.preferences?.pantry_active !== false);
   const isPowerUser = isAdmin || isOwner;
-  const isBg = i18n.language === 'bg';
 
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -562,6 +563,10 @@ const RecipeDetail = () => {
         const dbIng = ingredientsList.find(i => i.id === reqIng.ingredient_id);
         const nameBg = reqIng.ingredient_bg || reqIng.name_bg || dbIng?.name_bg || reqIng.ingredient_id;
         const nameEn = reqIng.ingredient_en || reqIng.name_en || dbIng?.name_en || reqIng.ingredient_id;
+        const localizedName = getLocalizedField(reqIng, 'ingredient', currentLang) || 
+                              getLocalizedField(reqIng, 'name', currentLang) || 
+                              getLocalizedField(dbIng, 'name', currentLang) || 
+                              (isBg ? nameBg : nameEn) || reqIng.ingredient_id;
         
         const origUnit = reqIng.unit_id || reqIng.unit;
         const unitObj = units[origUnit];
@@ -604,7 +609,7 @@ const RecipeDetail = () => {
           ...reqIng,
           nameBg,
           nameEn,
-          name: isBg ? nameBg : nameEn,
+          name: localizedName,
           quantityToBuy: finalQty,
           unit_id: finalUnit,
           unit: finalUnit
@@ -617,7 +622,7 @@ const RecipeDetail = () => {
 
   const handleVote = async (score) => {
     if (!user) {
-      alert(isBg ? 'Трябва да сте влезли в профила си, за да гласувате.' : 'You must be logged in to vote.');
+      alert(t('recipe_detail.alerts.login_to_vote'));
       return;
     }
     if (isVoting) return;
@@ -698,8 +703,8 @@ const RecipeDetail = () => {
 
   const handleShareRecipe = async () => {
     const url = window.location.href;
-    const shareTitle = isBg ? recipe?.title_bg : recipe?.title_en;
-    const shareText = isBg ? 'Виж тази страхотна рецепта в The Best Idea Eatery!' : 'Check out this awesome recipe at The Best Idea Eatery!';
+    const shareTitle = getLocalizedField(recipe, 'title', currentLang) || recipe?.title_bg || recipe?.title_en;
+    const shareText = t('recipe_detail.share_text');
 
     if (navigator.share) {
       try {
@@ -717,7 +722,7 @@ const RecipeDetail = () => {
       // Fallback to copy to clipboard
       try {
         await navigator.clipboard.writeText(url);
-        alert(isBg ? 'Линкът е копиран в клипборда!' : 'Link copied to clipboard!');
+        alert(t('recipe_detail.alerts.link_copied'));
       } catch (err) {
         console.error("Failed to copy:", err);
       }
@@ -736,7 +741,7 @@ const RecipeDetail = () => {
 
   const handleToggleSave = async () => {
     if (isGuest) {
-      alert(isBg ? 'Моля, влезте в профила си, за да запазвате рецепти.' : 'Please log in to save recipes.');
+      alert(t('recipe_detail.alerts.login_to_save'));
       return;
     }
     const userRef = doc(db, 'users', user.uid);
@@ -756,7 +761,7 @@ const RecipeDetail = () => {
   const getUnitLabel = (unitId) => {
     const unitObj = units[unitId];
     if (unitObj) {
-      return isBg ? (unitObj.name_bg || unitObj.name || unitId) : (unitObj.name_en || unitObj.name || unitId);
+      return getLocalizedField(unitObj, 'name', currentLang) || unitObj.name || unitId;
     }
     return unitId;
   };
@@ -790,9 +795,7 @@ const RecipeDetail = () => {
     } else {
       const updatedList = [...(shoppingList || []), ...missing];
       setShoppingList(updatedList);
-      alert(isBg 
-        ? 'Липсващите съставки бяха добавени в списъка за пазаруване!' 
-        : 'Missing ingredients were added to your shopping list!');
+      alert(t('recipe_detail.alerts.missing_added_to_cart'));
     }
   };
 
@@ -874,9 +877,7 @@ const RecipeDetail = () => {
     updatedList = [...updatedList, ...newItemsToAdd];
     setShoppingList(updatedList);
     setShowRepeatModal(false);
-    alert(isBg 
-      ? 'Липсващите съставки бяха успешно добавени/актуализирани в списъка за пазаруване!' 
-      : 'Missing ingredients were successfully added/updated in your shopping list!');
+    alert(t('recipe_detail.alerts.missing_updated_in_cart'));
   };
 
   if (loading) return (
@@ -888,20 +889,23 @@ const RecipeDetail = () => {
   if (!recipe) return (
     <div className="flex h-screen w-full flex-col items-center justify-center bg-background-dark text-slate-400 gap-4">
       <span className="material-symbols-outlined text-6xl opacity-20">sentiment_very_dissatisfied</span>
-      <p>{isBg ? 'Рецептата не беше намерена.' : 'Recipe not found.'}</p>
-      <button onClick={() => navigate('/')} className="text-primary font-bold uppercase tracking-widest text-xs border-b border-primary pb-1">{isBg ? 'Към начало' : 'Back Home'}</button>
+      <p>{t('recipe_detail.not_found')}</p>
+      <button onClick={() => navigate('/')} className="text-primary font-bold uppercase tracking-widest text-xs border-b border-primary pb-1">
+        {t('recipe_detail.back_home')}
+      </button>
     </div>
   );
 
-  const title = isBg ? recipe.title_bg : recipe.title_en;
-  const difficulty = isBg ? (recipe.difficulty === 'easy' ? 'Лесно' : recipe.difficulty === 'hard' ? 'Трудно' : 'Средно') : recipe.difficulty;
+  const title = getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en;
+  const rawDifficulty = recipe.difficulty ? recipe.difficulty.toLowerCase() : 'medium';
+  const difficulty = t(`recipe_detail.difficulty.${rawDifficulty}`, recipe.difficulty || 'Medium');
   const prepTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
   const placeholderImg = "/images/recipe-placeholder.png";
   const missing = analyzeRecipe();
   const isReady = isPantryActive ? missing.length === 0 : true;
 
   const cuisineObj = recipe?.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
-  const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
+  const cuisineName = cuisineObj ? (cuisineObj.name[currentLang] || cuisineObj.name.en || cuisineObj.name.bg) : t('recipe_detail.global_selection');
   
   const calculatedTags = getRecipeTags(recipe, ingredientsList);
   const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
@@ -931,12 +935,12 @@ const RecipeDetail = () => {
         </h2>
         <div className="flex gap-2 items-center">
           {calculateEstimatedPrice(recipe, ingredientsList) && (
-            <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 h-8 rounded text-[10px] font-bold" title={isBg ? 'Ориентировъчна цена за порция' : 'Estimated price per serving'}>
+            <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 h-8 rounded text-[10px] font-bold" title={t('recipe_detail.estimated_price_tooltip')}>
               <span className="material-symbols-outlined text-[13px]">payments</span>
-              <span>~{calculateEstimatedPrice(recipe, ingredientsList)} {isBg ? 'Евро/порция' : 'EUR/serving'}</span>
+              <span>{t('recipe_detail.per_serving', { price: calculateEstimatedPrice(recipe, ingredientsList) })}</span>
             </span>
           )}
-          <button onClick={handleShareRecipe} className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title={isBg ? 'Сподели' : 'Share'}>
+          <button onClick={handleShareRecipe} className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title={t('recipe_detail.share_tooltip')}>
             <span className="material-symbols-outlined">share</span>
           </button>
         </div>
@@ -995,7 +999,7 @@ const RecipeDetail = () => {
               className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary/30 transition-all shadow-lg"
             >
               <span className="material-symbols-outlined text-[16px]">alt_route</span>
-              {isBg ? 'Базирана на: ' : 'Based on: '} {isBg ? parentRecipe.title_bg : parentRecipe.title_en}
+              {t('recipe_detail.based_on', { title: getLocalizedField(parentRecipe, 'title', currentLang) || parentRecipe.title_bg || parentRecipe.title_en })}
             </button>
           </div>
         )}
@@ -1010,7 +1014,7 @@ const RecipeDetail = () => {
             </span>
             {tags.map(tag => (
               <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md">
-                {translateTag(tag, isBg)}
+                {translateTag(tag, currentLang)}
               </span>
             ))}
           </div>
@@ -1036,7 +1040,7 @@ const RecipeDetail = () => {
                         : 'text-slate-500'
                     } ${(user && !isVoting) ? 'hover:scale-125 cursor-pointer' : 'cursor-default'}`}
                     style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
-                    title={userVote ? (isBg ? `Вашата оценка: ${userVote}★ (Кликнете за промяна)` : `Your rating: ${userVote}★ (Click to change)`) : (isBg ? `Оценете с ${star} звезди` : `Rate ${star} stars`)}
+                    title={userVote ? t('recipe_detail.rating.your_rating_change', { vote: userVote }) : t('recipe_detail.rating.rate_stars', { star })}
                   >
                     star
                   </button>
@@ -1044,10 +1048,10 @@ const RecipeDetail = () => {
               })}
             </div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-              <span>{recipe.rating || 0} / 5 ({recipe.votes_count || 0} {isBg ? 'гласа' : 'votes'})</span>
+              <span>{recipe.rating || 0} / 5 ({recipe.votes_count || 0} {t('recipe_detail.rating.votes')})</span>
               {userVote && (
                 <span className="text-amber-400 font-semibold normal-case">
-                  • {isBg ? `Вашата оценка: ${userVote}★` : `Your rating: ${userVote}★`}
+                  • {t('recipe_detail.rating.your_rating', { vote: userVote })}
                 </span>
               )}
             </p>
@@ -1055,14 +1059,17 @@ const RecipeDetail = () => {
         </div>
 
         <h1 className="text-white text-3xl font-extrabold leading-tight">
-          {isBg ? recipe.title_bg : recipe.title_en}
+          {title}
         </h1>
 
-        {((isBg && recipe.description_bg) || (!isBg && recipe.description_en)) && (
-          <p className="text-slate-300 text-sm leading-relaxed font-medium max-w-3xl">
-            {isBg ? recipe.description_bg : recipe.description_en}
-          </p>
-        )}
+        {(() => {
+          const desc = getLocalizedField(recipe, 'description', currentLang) || recipe.description_bg || recipe.description_en;
+          return desc ? (
+            <p className="text-slate-300 text-sm leading-relaxed font-medium max-w-3xl">
+              {desc}
+            </p>
+          ) : null;
+        })()}
       </div>
 
       {/* Action Bar (My Version / Wine Pairing) */}
@@ -1073,7 +1080,7 @@ const RecipeDetail = () => {
             className="flex-1 flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-500 py-3 rounded-xl hover:bg-amber-500/20 transition-all shadow-md"
           >
             <span className="material-symbols-outlined text-[20px]">edit</span>
-            <span className="text-xs font-bold uppercase tracking-widest">{isBg ? 'Редактирай' : 'Edit'}</span>
+            <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.edit')}</span>
           </button>
         )}
         <button 
@@ -1081,12 +1088,12 @@ const RecipeDetail = () => {
           className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/40 text-primary py-3 rounded-xl hover:from-primary hover:to-[#b8860b] hover:text-background-dark transition-all shadow-md group"
         >
           <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">alt_route</span>
-          <span className="text-xs font-bold uppercase tracking-widest">{isBg ? 'Моя версия' : 'My Version'}</span>
+          <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.my_version')}</span>
         </button>
         {!isPowerUser && (
           <button onClick={() => navigate(`/recipe/${id}/wine`)} className="flex-1 flex items-center justify-center gap-2 bg-surface-dark border border-rose-500/30 text-rose-400 py-3 rounded-xl hover:bg-rose-500/10 transition-colors shadow-sm">
             <span className="material-symbols-outlined text-[18px]">wine_bar</span>
-            <span className="text-xs font-bold uppercase tracking-widest">{isBg ? 'Винено' : 'Wine'}</span>
+            <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.wine')}</span>
           </button>
         )}
         <button 
@@ -1094,7 +1101,7 @@ const RecipeDetail = () => {
           className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl transition-all shadow-md ${isSaved ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30' : 'bg-surface-dark border-slate-500/30 text-slate-400 hover:bg-slate-800'}`}
         >
           <span className={`material-symbols-outlined text-[20px] ${isSaved ? 'font-black' : ''}`}>bookmark</span>
-          <span className="text-xs font-bold uppercase tracking-widest">{isSaved ? (isBg ? 'Запазена' : 'Saved') : (isBg ? 'Запази' : 'Save')}</span>
+          <span className="text-xs font-bold uppercase tracking-widest">{isSaved ? t('recipe_detail.actions.saved') : t('recipe_detail.actions.save')}</span>
         </button>
       </div>
 
@@ -1104,7 +1111,7 @@ const RecipeDetail = () => {
           <div className="flex items-center gap-2 mb-4">
             <span className="material-symbols-outlined text-primary">alt_route</span>
             <h3 className="text-slate-100 font-bold uppercase tracking-widest text-xs">
-              {isBg ? 'Потребителски версии' : 'Community Variations'}
+              {t('recipe_detail.variations.title')}
             </h3>
           </div>
           <div className="flex flex-col gap-2">
@@ -1118,16 +1125,16 @@ const RecipeDetail = () => {
                   <div className="size-10 rounded-lg overflow-hidden shrink-0 bg-background-dark border border-primary/20">
                     <img 
                       src={v.images?.main || recipe.images?.main || "/images/recipe-placeholder.png"} 
-                      alt={isBg ? v.title_bg : v.title_en} 
+                      alt={getLocalizedField(v, 'title', currentLang) || v.title_bg || v.title_en} 
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="flex flex-col text-left min-w-0">
                     <span className="text-slate-200 text-sm font-bold group-hover:text-primary transition-colors truncate">
-                      {isBg ? v.title_bg : v.title_en}
+                      {getLocalizedField(v, 'title', currentLang) || v.title_bg || v.title_en}
                     </span>
                     <span className="text-[10px] text-slate-500 uppercase font-medium">
-                      {isBg ? 'От: ' : 'By: '} {v.publisher_name || 'Chef'}
+                      {t('recipe_detail.variations.by')}{v.publisher_name || 'Chef'}
                     </span>
                   </div>
                 </div>
@@ -1141,15 +1148,15 @@ const RecipeDetail = () => {
       {/* Stats Grid */}
       <div className="flex flex-wrap gap-3 p-4">
         <div className="flex flex-1 flex-col gap-1 rounded-2xl p-4 border border-primary/20 bg-surface-dark/50 backdrop-blur-md shadow-sm text-center">
-          <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest">{isBg ? 'Време' : 'Prep Time'}</p>
+          <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest">{t('recipe_detail.stats.prep_time')}</p>
           <p className="text-slate-100 text-lg font-extrabold">{prepTime}</p>
         </div>
         <div className="flex flex-1 flex-col gap-1 rounded-2xl p-4 border border-primary/20 bg-surface-dark/50 backdrop-blur-md shadow-sm text-center">
-          <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest">{isBg ? 'Трудност' : 'Difficulty'}</p>
+          <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest">{t('recipe_detail.stats.difficulty')}</p>
           <p className="text-slate-100 text-lg font-extrabold">{difficulty}</p>
         </div>
         <div className="flex flex-1 flex-col gap-1 rounded-2xl p-4 border border-primary/20 bg-surface-dark/50 backdrop-blur-md shadow-sm text-center">
-          <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest">{isBg ? 'Порции' : 'Servings'}</p>
+          <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest">{t('recipe_detail.stats.servings')}</p>
           <div className="flex items-center justify-center gap-3">
             <button 
               onClick={() => setCurrentServings(prev => Math.max(1, prev - 1))}
@@ -1173,17 +1180,17 @@ const RecipeDetail = () => {
         <div className="flex justify-between items-center bg-surface-dark/80 backdrop-blur-md rounded-2xl p-4 border border-primary/10 shadow-inner">
           <div className="text-center w-1/3">
             <p className="text-primary text-lg font-extrabold">{Math.round((recipe.calories_per_serving || recipe.calories || 0) * currentServings)}</p>
-            <p className="text-slate-400 text-[10px] uppercase tracking-widest">{isBg ? 'Калории' : 'Calories'}</p>
+            <p className="text-slate-400 text-[10px] uppercase tracking-widest">{t('recipe_detail.nutrition.calories')}</p>
           </div>
           <div className="w-px h-8 bg-primary/20"></div>
           <div className="text-center w-1/3">
             <p className="text-primary text-lg font-extrabold">{Math.round((recipe.protein || 0) * currentServings)}g</p>
-            <p className="text-slate-400 text-[10px] uppercase tracking-widest">{isBg ? 'Протеин' : 'Protein'}</p>
+            <p className="text-slate-400 text-[10px] uppercase tracking-widest">{t('recipe_detail.nutrition.protein')}</p>
           </div>
           <div className="w-px h-8 bg-primary/20"></div>
           <div className="text-center w-1/3">
             <p className="text-primary text-lg font-extrabold">{Math.round((recipe.fat || 0) * currentServings)}g</p>
-            <p className="text-slate-400 text-[10px] uppercase tracking-widest">{isBg ? 'Мазнини' : 'Fat'}</p>
+            <p className="text-slate-400 text-[10px] uppercase tracking-widest">{t('recipe_detail.nutrition.fat')}</p>
           </div>
         </div>
       </div>
@@ -1191,7 +1198,7 @@ const RecipeDetail = () => {
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-slate-100 text-2xl font-extrabold flex flex-col tracking-tight">
-            {isBg ? 'Съставки' : 'Ingredients'}
+            {t('recipe_detail.ingredients.title')}
           </h3>
           <span className="material-symbols-outlined text-primary text-3xl">shopping_bag</span>
         </div>
@@ -1201,10 +1208,10 @@ const RecipeDetail = () => {
             <span className="material-symbols-outlined text-rose-500 text-2xl">warning</span>
             <div>
               <p className="text-slate-200 text-sm font-bold">
-                {isBg ? `Липсват ${missing.length} продукта` : `Missing ${missing.length} ingredients`}
+                {t('recipe_detail.ingredients.missing_count', { count: missing.length })}
               </p>
               <p className="text-slate-400 text-xs mt-0.5">
-                {isBg ? 'Някои продукти липсват или не са в достатъчно количество в килера ви.' : 'Some items are missing or not in sufficient quantity in your pantry.'}
+                {t('recipe_detail.ingredients.missing_desc')}
               </p>
             </div>
           </div>
@@ -1214,16 +1221,16 @@ const RecipeDetail = () => {
           {recipe.ingredients?.map((ing, idx) => {
             const isSubRecipe = ing.type === 'recipe';
             const unit = units[ing.unit_id];
-            const unitName = isBg ? (unit?.name_bg || ing.unit_id) : (unit?.name_en || ing.unit_id);
+            const unitName = getLocalizedField(unit, 'name', currentLang) || unit?.name || ing.unit_id;
             const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id) : null;
             
             const ingName = isSubRecipe
-              ? (getLocalizedField(ing, 'name', isBg ? 'bg' : 'en') || (isBg ? ing.ingredient_bg : ing.ingredient_en) || ing.ingredient_id)
-              : (isBg 
+              ? (getLocalizedField(ing, 'name', currentLang) || (isBg ? ing.ingredient_bg : ing.ingredient_en) || ing.ingredient_id)
+              : (getLocalizedField(ing, 'ingredient', currentLang) || getLocalizedField(ing, 'name', currentLang) || getLocalizedField(dbIng, 'name', currentLang) || (isBg 
                   ? (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id) 
-                  : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id));
+                  : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id)));
 
-            const noteText = extractLocalizedNote(isBg ? ing.notes_bg : ing.notes_en, ing.notes, isBg ? 'bg' : 'en');
+            const noteText = extractLocalizedNote(ing[`notes_${currentLang}`] || (isBg ? ing.notes_bg : ing.notes_en), ing.notes, currentLang);
 
             const isIngMissing = isPantryActive && missing.some(m => 
               (m.ingredient_id || m.id) === (ing.ingredient_id || ing.id)
@@ -1249,9 +1256,9 @@ const RecipeDetail = () => {
                         type="button"
                         onClick={() => handleOpenSubRecipePreview(ing)}
                         className="text-[10px] text-primary hover:text-[#b8860b] underline font-bold inline-flex items-center gap-0.5 cursor-pointer ml-1"
-                        title={isBg ? 'Виж рецептата за заготовката' : 'View sub-recipe'}
+                        title={t('recipe_detail.ingredients.view_sub_recipe_tooltip')}
                       >
-                        <span>{isBg ? 'Виж заготовка' : 'View recipe'}</span>
+                        <span>{t('recipe_detail.ingredients.view_sub_recipe')}</span>
                         <span className="material-symbols-outlined text-[12px]">open_in_new</span>
                       </button>
                     )}
@@ -1260,9 +1267,9 @@ const RecipeDetail = () => {
                     <span className="text-xs font-bold text-primary">{(ing.amount * currentServings).toFixed(1).replace('.0', '')} {unitName}</span>
                     {isPantryActive ? (
                       isIngMissing ? (
-                        <span className="material-symbols-outlined text-rose-500/70 size-6 text-xl drop-shadow-md" title={isBg ? 'Липсва в килера' : 'Missing in pantry'}>remove_circle</span>
+                        <span className="material-symbols-outlined text-rose-500/70 size-6 text-xl drop-shadow-md" title={t('recipe_detail.ingredients.missing_in_pantry')}>remove_circle</span>
                       ) : (
-                        <span className="material-symbols-outlined text-emerald-500 size-6 text-xl drop-shadow-md" title={isBg ? 'Налично в килера' : 'Available in pantry'}>check_circle</span>
+                        <span className="material-symbols-outlined text-emerald-500 size-6 text-xl drop-shadow-md" title={t('recipe_detail.ingredients.available_in_pantry')}>check_circle</span>
                       )
                     ) : (
                       <span className="material-symbols-outlined text-primary/30 size-6 text-xl drop-shadow-md">check_circle</span>
@@ -1273,7 +1280,7 @@ const RecipeDetail = () => {
                 <li className="mt-2 mb-3 bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-xl p-3 flex flex-col gap-2 shadow-sm cursor-pointer hover:bg-primary/10 transition-colors group" onClick={() => handleAdClick(matchedAd)}>
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] font-black uppercase tracking-widest text-primary/70 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-                      {isBg ? 'Спонсорирано' : 'Sponsored'}
+                      {t('recipe_detail.ingredients.sponsored')}
                     </span>
                     <span className="material-symbols-outlined text-[14px] text-primary/50 group-hover:text-primary transition-colors">open_in_new</span>
                   </div>
@@ -1284,12 +1291,15 @@ const RecipeDetail = () => {
                       </div>
                     )}
                     <div className="flex flex-col flex-1">
-                      <h4 className="text-slate-100 font-bold text-sm leading-tight group-hover:text-primary transition-colors">{isBg ? matchedAd.title_bg : matchedAd.title_en}</h4>
-                      {((isBg && matchedAd.description_bg) || (!isBg && matchedAd.description_en)) && (
-                        <p className="text-slate-400 text-xs mt-0.5 line-clamp-2 leading-snug">
-                          {isBg ? matchedAd.description_bg : matchedAd.description_en}
-                        </p>
-                      )}
+                      <h4 className="text-slate-100 font-bold text-sm leading-tight group-hover:text-primary transition-colors">{getLocalizedField(matchedAd, 'title', currentLang) || (isBg ? matchedAd.title_bg : matchedAd.title_en)}</h4>
+                      {(() => {
+                        const adDesc = getLocalizedField(matchedAd, 'description', currentLang) || (isBg ? matchedAd.description_bg : matchedAd.description_en);
+                        return adDesc ? (
+                          <p className="text-slate-400 text-xs mt-0.5 line-clamp-2 leading-snug">
+                            {adDesc}
+                          </p>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                 </li>
@@ -1307,14 +1317,14 @@ const RecipeDetail = () => {
             className="w-full mt-6 flex items-center justify-center gap-2 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/40 text-primary py-3 rounded-xl font-bold uppercase tracking-widest hover:from-primary hover:to-[#b8860b] hover:text-background-dark transition-all shadow-md active:scale-95 cursor-pointer"
           >
             <span className="material-symbols-outlined">add_shopping_cart</span>
-            {isBg ? 'Добави липсващите в списъка' : 'Add missing to list'}
+            {t('recipe_detail.ingredients.add_missing_to_list')}
           </button>
         )}
       </div>
 
       <div className="p-6 bg-surface-dark/50 border-t border-primary/10 mt-2">
         <h3 className="text-slate-100 text-2xl font-extrabold mb-8 flex flex-col tracking-tight">
-          {isBg ? 'Начин на приготвяне' : 'Preparation'}
+          {t('recipe_detail.steps.title')}
         </h3>
         
         <div className="space-y-10 relative">
@@ -1324,7 +1334,7 @@ const RecipeDetail = () => {
               <div className="absolute left-[9px] top-0 size-5 rounded-full bg-primary border-4 border-background-dark shadow-[0_0_10px_rgba(212,175,53,0.5)]"></div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-primary font-extrabold text-xs uppercase tracking-widest">
-                  {isBg ? 'Стъпка' : 'Step'} {idx + 1}
+                  {t('recipe_detail.steps.step')} {idx + 1}
                 </p>
                 {step.timer_minutes && (
                   <div className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
@@ -1334,7 +1344,7 @@ const RecipeDetail = () => {
                 )}
               </div>
               <p className="text-slate-200 text-base leading-relaxed font-medium mb-1">
-                {isBg ? step.instruction_bg : step.instruction_en}
+                {getLocalizedField(step, 'instruction', currentLang) || (isBg ? step.instruction_bg : step.instruction_en)}
               </p>
             </div>
           ))}
@@ -1345,20 +1355,14 @@ const RecipeDetail = () => {
       {authorData && (() => {
         const loc = authorData.profile?.location;
         const isLocationPublic = loc && loc.show_location !== false;
-        const authorCity = isBg 
-          ? (loc?.city_bg || loc?.city_en || loc?.city) 
-          : (loc?.city_en || loc?.city_bg || loc?.city);
-        const authorCountry = isBg 
-          ? (loc?.country_bg || loc?.country_en || loc?.country) 
-          : (loc?.country_en || loc?.country_bg || loc?.country);
+        const authorCity = getLocalizedField(loc, 'city', currentLang) || loc?.city;
+        const authorCountry = getLocalizedField(loc, 'country', currentLang) || loc?.country;
         const authorLocationStr = isLocationPublic ? [authorCity, authorCountry].filter(Boolean).join(', ') : '';
 
-        const authorBio = isBg 
-          ? (authorData.profile?.bio_bg || authorData.profile?.bio_en || authorData.profile?.bio) 
-          : (authorData.profile?.bio_en || authorData.profile?.bio_bg || authorData.profile?.bio);
+        const authorBio = getLocalizedField(authorData.profile, 'bio', currentLang) || authorData.profile?.bio;
 
         const repScore = Number(authorData.reputation?.score) || 0;
-        const repLabel = isBg ? (authorData.reputation?.label || 'Новак') : (authorData.reputation?.label_en || 'Novice');
+        const repLabel = getLocalizedField(authorData.reputation, 'label', currentLang) || (isBg ? (authorData.reputation?.label || t('recipe_detail.author.novice')) : (authorData.reputation?.label_en || t('recipe_detail.author.novice')));
         const xpPct = Math.min(100, Math.max(5, Math.round(((repScore % 1000) / 1000) * 100)));
 
         return (
@@ -1367,7 +1371,7 @@ const RecipeDetail = () => {
               <div 
                 onClick={handleOpenChefModal}
                 className="relative shrink-0 cursor-pointer group/avatar"
-                title={isBg ? 'Преглед на профила и прогреса' : 'View profile and progress'}
+                title={t('recipe_detail.author.view_profile_tooltip')}
               >
                 <div className="size-16 rounded-full border-2 border-primary p-0.5 shadow-[0_0_15px_rgba(212,175,53,0.3)] bg-background-dark overflow-hidden flex items-center justify-center">
                   {authorData.profile?.avatar ? (
@@ -1383,14 +1387,14 @@ const RecipeDetail = () => {
 
               <div className="flex-1 min-w-0">
                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">
-                  {isBg ? 'Готвач & Автор' : 'Chef & Author'}
+                  {t('recipe_detail.author.role')}
                 </p>
                 <h4 
                   onClick={handleOpenChefModal}
                   className="text-slate-100 font-extrabold text-base leading-tight truncate hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1 group/author"
-                  title={isBg ? 'Преглед на профила и прогреса' : 'View profile and progress'}
+                  title={t('recipe_detail.author.view_profile_tooltip')}
                 >
-                  <span>{authorData.profile?.nickname || authorData.name || (isBg ? 'Анонимен' : 'Anonymous')}</span>
+                  <span>{authorData.profile?.nickname || authorData.name || t('recipe_detail.author.anonymous')}</span>
                   <span className="material-symbols-outlined text-xs text-primary/60 group-hover/author:text-primary transition-colors">arrow_forward</span>
                 </h4>
 
@@ -1416,7 +1420,7 @@ const RecipeDetail = () => {
             {/* Level progress preview bar */}
             <div className="space-y-1.5 bg-background-dark/60 p-3 rounded-2xl border border-primary/10">
               <div className="flex justify-between items-center text-[10px] font-bold">
-                <span className="text-slate-300">{isBg ? 'Кулинарно ниво' : 'Culinary Level'}</span>
+                <span className="text-slate-300">{t('recipe_detail.author.culinary_level')}</span>
                 <span className="text-primary">{repScore % 1000} / 1000 XP</span>
               </div>
               <div className="h-1.5 w-full bg-background-dark rounded-full overflow-hidden border border-primary/10">
@@ -1438,7 +1442,7 @@ const RecipeDetail = () => {
                 className="py-2.5 px-3 rounded-xl bg-surface-dark border border-primary/20 hover:border-primary/50 text-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
               >
                 <span className="material-symbols-outlined text-[16px] text-primary">menu_book</span>
-                <span>{isBg ? 'Всички рецепти' : 'All recipes'}</span>
+                <span>{t('recipe_detail.author.all_recipes')}</span>
               </button>
 
               <button
@@ -1446,7 +1450,7 @@ const RecipeDetail = () => {
                 className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-xs font-extrabold transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
               >
                 <span className="material-symbols-outlined text-[16px]">military_tech</span>
-                <span>{isBg ? 'Пълен прогрес' : 'Full Progress'}</span>
+                <span>{t('recipe_detail.author.full_progress')}</span>
               </button>
             </div>
           </div>
@@ -1459,7 +1463,7 @@ const RecipeDetail = () => {
           <div className="flex items-center gap-2 border-b border-primary/10 pb-2">
             <span className="material-symbols-outlined text-primary text-[18px]">emoji_objects</span>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              {isBg ? 'Източник на вдъхновение' : 'Source of Inspiration'}
+              {t('recipe_detail.inspiration.title')}
             </p>
           </div>
           
@@ -1475,7 +1479,7 @@ const RecipeDetail = () => {
                   <span className="material-symbols-outlined text-rose-500 text-xl group-hover:scale-110 transition-transform">play_circle</span>
                   <div className="flex flex-col">
                     <span className="text-slate-200 text-xs font-bold group-hover:text-primary transition-colors">
-                      {isBg ? 'Гледай видео рецептата' : 'Watch Video Recipe'}
+                      {t('recipe_detail.inspiration.watch_video')}
                     </span>
                   </div>
                 </div>
@@ -1489,7 +1493,7 @@ const RecipeDetail = () => {
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-slate-500 text-[16px]">person</span>
                     <p className="text-slate-200 text-xs">
-                      <span className="text-slate-400 mr-1">{isBg ? 'Оригинален автор:' : 'Original Author:'}</span>
+                      <span className="text-slate-400 mr-1">{t('recipe_detail.inspiration.original_author')}</span>
                       <span className="font-bold">{recipe.original_author}</span>
                     </p>
                   </div>
@@ -1503,7 +1507,7 @@ const RecipeDetail = () => {
                       rel="noopener noreferrer"
                       className="text-primary hover:text-primary-light text-xs font-bold flex items-center gap-1 transition-colors group"
                     >
-                      <span>{isBg ? 'Към оригиналния сайт' : 'To Original Website'}</span>
+                      <span>{t('recipe_detail.inspiration.to_website')}</span>
                       <span className="material-symbols-outlined text-xs group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
                     </a>
                   </div>
@@ -1529,13 +1533,13 @@ const RecipeDetail = () => {
             {isSaved ? 'check_circle' : 'bookmark'}
           </span>
           {isSaved 
-            ? (isBg ? 'РЕЦЕПТАТА Е ЗАПАЗЕНА' : 'RECIPE IS SAVED') 
-            : (isBg ? 'ЗАПАЗИ РЕЦЕПТАТА' : 'SAVE TO MY RECIPES')}
+            ? t('recipe_detail.bottom_actions.saved') 
+            : t('recipe_detail.bottom_actions.save')}
         </button>
         
         <button onClick={() => navigate(`/recipe/${id || '1'}/cooking`)} className="w-full mt-4 border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 font-extrabold py-4 rounded-2xl shadow-sm hover:bg-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
           <span className="material-symbols-outlined text-xl">play_circle</span>
-          {isBg ? 'ЗАПОЧНИ ГОТВЕНЕ' : 'START COOKING'}
+          {t('recipe_detail.bottom_actions.start_cooking')}
         </button>
       </div>
 
@@ -1547,25 +1551,24 @@ const RecipeDetail = () => {
               <span className="material-symbols-outlined text-amber-500 text-3xl">shopping_cart_checkout</span>
               <div>
                 <h3 className="text-slate-100 font-extrabold text-base leading-tight">
-                  {isBg ? 'Повтарящи се продукти' : 'Repeating Products'}
+                  {t('recipe_detail.repeating_modal.title')}
                 </h3>
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">
-                  {isBg ? 'Открити в списъка за пазаруване' : 'Detected in your shopping list'}
+                  {t('recipe_detail.repeating_modal.subtitle')}
                 </p>
               </div>
             </div>
 
             <p className="text-xs text-slate-300 mb-4 leading-relaxed font-medium">
-              {isBg 
-                ? 'Някои продукти вече присъстват в списъка за пазаруване. Изберете кои от тях желаете да добавите допълнително към количеството:'
-                : 'Some products are already in your shopping list. Select which ones you want to add additionally to the quantity:'}
+              {t('recipe_detail.repeating_modal.description')}
             </p>
 
             <div className="space-y-3 max-h-60 overflow-y-auto mb-6 pr-1 divide-y divide-primary/5">
               {repeatingItems.map((item, idx) => {
-                const name = isBg 
-                  ? (item.missingItem.ingredient_bg || item.missingItem.name_bg || item.missingItem.name || item.missingItem.ingredient_id)
-                  : (item.missingItem.ingredient_en || item.missingItem.name_en || item.missingItem.name || item.missingItem.ingredient_id);
+                const name = getLocalizedField(item.missingItem, 'ingredient', currentLang) || 
+                             getLocalizedField(item.missingItem, 'name', currentLang) || 
+                             item.missingItem.name || 
+                             item.missingItem.ingredient_id;
                   
                 const existingQty = item.existingItem.quantityToBuy !== undefined ? item.existingItem.quantityToBuy : (item.existingItem.amount || 0);
                 const addedQty = item.missingItem.quantityToBuy !== undefined ? item.missingItem.quantityToBuy : (item.missingItem.amount || 0);
@@ -1616,13 +1619,16 @@ const RecipeDetail = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-slate-200 text-xs font-bold truncate">{name}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5">
-                        {isBg 
-                          ? `В списъка: ${formattedExisting.qty} ${existingLabel} + Добавяне: ${formattedAdded.qty} ${addedLabel}`
-                          : `In list: ${formattedExisting.qty} ${existingLabel} + Add: ${formattedAdded.qty} ${addedLabel}`}
+                        {t('recipe_detail.repeating_modal.item_breakdown', {
+                          inList: `${formattedExisting.qty} ${existingLabel}`,
+                          toAdd: `${formattedAdded.qty} ${addedLabel}`
+                        })}
                       </p>
                       {item.checked && (
                         <p className="text-[9px] text-primary font-semibold uppercase mt-0.5">
-                          {isBg ? `Ново общо количество: ${displayTotalQty} ${totalLabel}` : `New total quantity: ${displayTotalQty} ${totalLabel}`}
+                          {t('recipe_detail.repeating_modal.new_total', {
+                            total: `${displayTotalQty} ${totalLabel}`
+                          })}
                         </p>
                       )}
                     </div>
@@ -1637,14 +1643,14 @@ const RecipeDetail = () => {
                 className="flex-1 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold py-3 rounded-xl hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1 shadow-md"
               >
                 <span className="material-symbols-outlined text-sm">add_shopping_cart</span>
-                {isBg ? 'Добави' : 'Add'}
+                {t('recipe_detail.repeating_modal.add_btn')}
               </button>
               <button 
                 onClick={() => setShowRepeatModal(false)}
                 className="flex-1 bg-surface-dark border border-primary/20 text-slate-400 hover:text-slate-200 font-bold py-3 rounded-xl transition-colors text-xs uppercase tracking-wider flex items-center justify-center gap-1"
               >
                 <span className="material-symbols-outlined text-sm">cancel</span>
-                {isBg ? 'Отказ' : 'Cancel'}
+                {t('recipe_detail.repeating_modal.cancel_btn')}
               </button>
             </div>
           </div>
@@ -1659,7 +1665,7 @@ const RecipeDetail = () => {
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-primary text-lg">restaurant_menu</span>
                 <h3 className="text-sm font-bold text-slate-100 truncate">
-                  {getLocalizedField(previewSubRecipe, 'title', isBg ? 'bg' : 'en')}
+                  {getLocalizedField(previewSubRecipe, 'title', currentLang)}
                 </h3>
               </div>
               <button 
@@ -1678,19 +1684,19 @@ const RecipeDetail = () => {
                 </div>
               )}
 
-              {getLocalizedField(previewSubRecipe, 'description', isBg ? 'bg' : 'en') && (
+              {getLocalizedField(previewSubRecipe, 'description', currentLang) && (
                 <p className="text-xs text-slate-300 leading-relaxed italic">
-                  "{getLocalizedField(previewSubRecipe, 'description', isBg ? 'bg' : 'en')}"
+                  "{getLocalizedField(previewSubRecipe, 'description', currentLang)}"
                 </p>
               )}
 
               <div className="grid grid-cols-2 gap-2 bg-background-dark/50 p-3 rounded-xl border border-primary/10 text-center text-xs">
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">{isBg ? 'Време' : 'Time'}</span>
+                  <span className="text-slate-400 block text-[10px] uppercase">{t('recipe_detail.sub_recipe_modal.time')}</span>
                   <span className="font-bold text-slate-100">{(previewSubRecipe.prep_time || 0) + (previewSubRecipe.cook_time || 0)} min</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">{isBg ? 'Калории / порция' : 'Calories / srv'}</span>
+                  <span className="text-slate-400 block text-[10px] uppercase">{t('recipe_detail.sub_recipe_modal.calories_per_serving')}</span>
                   <span className="font-bold text-primary">{previewSubRecipe.calories_per_serving || 0} kcal</span>
                 </div>
               </div>
@@ -1699,13 +1705,13 @@ const RecipeDetail = () => {
               {previewSubRecipe.ingredients && previewSubRecipe.ingredients.length > 0 && (
                 <div>
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                    {isBg ? 'Съставки на заготовката' : 'Sub-recipe ingredients'}
+                    {t('recipe_detail.sub_recipe_modal.ingredients_title')}
                   </h4>
                   <ul className="space-y-1.5 text-xs text-slate-200">
                     {previewSubRecipe.ingredients.map((subIng, sIdx) => {
                       const subUnit = units[subIng.unit_id];
-                      const sUnitName = isBg ? (subUnit?.name_bg || subIng.unit_id) : (subUnit?.name_en || subIng.unit_id);
-                      const sName = getLocalizedField(subIng, 'name', isBg ? 'bg' : 'en') || (isBg ? subIng.ingredient_bg : subIng.ingredient_en) || subIng.ingredient_id;
+                      const sUnitName = getLocalizedField(subUnit, 'name', currentLang) || subUnit?.name || subIng.unit_id;
+                      const sName = getLocalizedField(subIng, 'name', currentLang) || (isBg ? subIng.ingredient_bg : subIng.ingredient_en) || subIng.ingredient_id;
                       return (
                         <li key={sIdx} className="flex justify-between items-center py-1 border-b border-primary/5">
                           <span>• {sName}</span>
@@ -1727,7 +1733,7 @@ const RecipeDetail = () => {
                   }}
                   className="w-full bg-gradient-to-r from-primary to-[#b8860b] text-background-dark py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md hover:opacity-95 transition-opacity cursor-pointer"
                 >
-                  <span>{isBg ? 'Отвори пълната рецепта' : 'Open Full Recipe'}</span>
+                  <span>{t('recipe_detail.sub_recipe_modal.open_full_recipe')}</span>
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </button>
               </div>

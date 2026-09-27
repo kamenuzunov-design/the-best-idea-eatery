@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
@@ -18,6 +18,11 @@ const ManageIngredientGroups = () => {
 
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // CSV Import / Export State
+  const csvImportRef = useRef(null);
+  const [csvStatus, setCsvStatus] = useState(''); // '' | 'parsing' | 'saving' | 'done' | 'error'
+  const [csvPreview, setCsvPreview] = useState(null); // { newRows, duplicateRows } | null
 
   // Form State
   const [editingId, setEditingId] = useState(null);
@@ -178,18 +183,220 @@ const ManageIngredientGroups = () => {
     }
   };
 
+  // ── CSV Export ──────────────────────────────────────────────────────────────
+  const handleExportCSV = () => {
+    const exportable = groups.filter(g => !g.is_deleted);
+    const headers = [
+      'id', 'name_en', 'name_bg', 'name_it', 'name_fr', 'name_de', 'parentId', 'level'
+    ];
+    const escape = (v) => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+    const rows = exportable.map(g => [
+      escape(g.id),
+      escape(g.name_en || g.name?.en || ''),
+      escape(g.name_bg || g.name?.bg || ''),
+      escape(g.name_it || g.name?.it || ''),
+      escape(g.name_fr || g.name?.fr || ''),
+      escape(g.name_de || g.name?.de || ''),
+      escape(g.parentId || ''),
+      escape(g.level ?? (g.parentId ? 1 : 0))
+    ].join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ingredient_groups_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    logActivity(user.uid, user.email, 'export_ingredient_groups_csv', `Exported ${exportable.length} ingredient groups`);
+  };
+
+  // ── CSV Import: Step 1 — parse & detect duplicates ─────────────────────────
+  const handleImportCSV = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    setCsvStatus('parsing');
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const header = lines[0].replace(/^\uFEFF/, '').split(',');
+      const idx = (name) => header.indexOf(name);
+
+      const parseRow = (line) => {
+        const result = [];
+        let cur = '', inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"' && inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+          else if (ch === '"') { inQuote = !inQuote; }
+          else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
+          else { cur += ch; }
+        }
+        result.push(cur);
+        return result;
+      };
+
+      const existingIds = new Set(groups.map(g => g.id));
+      const existingNamesBg = new Set(groups.map(g => (g.name_bg || g.name?.bg || '').toLowerCase()));
+      const existingNamesEn = new Set(groups.map(g => (g.name_en || g.name?.en || '').toLowerCase()));
+
+      const newRows = [];
+      const duplicateRows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseRow(lines[i]);
+        if (cols.length < 2) continue;
+        const rawId    = cols[idx('id')]?.trim();
+        const name_en  = cols[idx('name_en')]?.trim();
+        const name_bg  = cols[idx('name_bg')]?.trim() || name_en;
+        const name_it  = cols[idx('name_it')]?.trim() || name_en;
+        const name_fr  = cols[idx('name_fr')]?.trim() || name_en;
+        const name_de  = cols[idx('name_de')]?.trim() || name_en;
+        const parentId = cols[idx('parentId')]?.trim() || null;
+
+        const cleanId = (rawId || name_en || name_bg).toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)+/g, '');
+        if (!cleanId || (!name_en && !name_bg)) continue;
+
+        const finalNameEn = name_en || name_bg;
+        const level = parentId ? 1 : (parseInt(cols[idx('level')]) || 0);
+
+        const row = {
+          id: cleanId,
+          name_en: finalNameEn,
+          name_bg,
+          name_it,
+          name_fr,
+          name_de,
+          name: {
+            en: finalNameEn,
+            bg: name_bg,
+            it: name_it,
+            fr: name_fr,
+            de: name_de
+          },
+          parentId,
+          level,
+          is_deleted: false
+        };
+
+        const isDuplicate =
+          existingIds.has(cleanId) ||
+          (finalNameEn && existingNamesEn.has(finalNameEn.toLowerCase())) ||
+          (name_bg && existingNamesBg.has(name_bg.toLowerCase()));
+
+        if (isDuplicate) duplicateRows.push(row);
+        else newRows.push(row);
+      }
+
+      setCsvPreview({ newRows, duplicateRows });
+      setCsvStatus('');
+    } catch (err) {
+      console.error('CSV parse error:', err);
+      setCsvStatus('error');
+      setTimeout(() => setCsvStatus(''), 4000);
+    }
+  };
+
+  // ── CSV Import: Step 2 — execute write ───────────────────────────────────────
+  const executeImport = async (mode) => {
+    if (mode === 'cancel') { setCsvPreview(null); return; }
+    const rows = mode === 'new'
+      ? csvPreview.newRows
+      : [...csvPreview.newRows, ...csvPreview.duplicateRows];
+
+    setCsvPreview(null);
+    setCsvStatus('saving');
+    try {
+      const now = new Date().toISOString();
+      const BATCH_SIZE = 400;
+      for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        rows.slice(offset, offset + BATCH_SIZE).forEach(row => {
+          batch.set(
+            doc(db, 'ingredient_groups', row.id),
+            { ...row, createdAt: now, updatedAt: now },
+            { merge: true }
+          );
+        });
+        await batch.commit();
+      }
+      await logActivity(user.uid, user.email, 'import_ingredient_groups_csv',
+        `Imported ${rows.length} ingredient groups (mode: ${mode})`);
+      setCsvStatus('done');
+      setTimeout(() => setCsvStatus(''), 4000);
+    } catch (err) {
+      console.error('CSV write error:', err);
+      setCsvStatus('error');
+      setTimeout(() => setCsvStatus(''), 4000);
+    }
+  };
+
   const parentGroups = groups.filter(g => g.level === 0);
 
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
-        <div className="flex items-center">
-          <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors cursor-pointer">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-slate-100">{t('ingredient_groups.title')}</h1>
-            <p className="text-xs font-medium text-primary/70">{t('ingredient_groups.count', { count: groups.length })}</p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center">
+            <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors cursor-pointer">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-slate-100">{t('ingredient_groups.title')}</h1>
+              <p className="text-xs font-medium text-primary/70">{t('ingredient_groups.count', { count: groups.length })}</p>
+            </div>
+          </div>
+
+          {/* CSV Export & Import Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              title={t('ingredient_groups.export_csv_title')}
+              className="px-3 py-1.5 rounded-xl border border-primary/20 bg-background-dark/70 hover:bg-primary/10 text-primary text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">download</span>
+              <span className="hidden sm:inline">{t('ingredient_groups.export_csv')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => csvImportRef.current?.click()}
+              disabled={csvStatus === 'parsing' || csvStatus === 'saving'}
+              title={t('ingredient_groups.import_csv_title')}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                csvStatus === 'parsing' || csvStatus === 'saving' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                csvStatus === 'done'   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                csvStatus === 'error'  ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                'border-primary/20 bg-background-dark/70 hover:bg-primary/10 text-primary'
+              }`}
+            >
+              <span className={`material-symbols-outlined text-sm ${csvStatus === 'parsing' || csvStatus === 'saving' ? 'animate-spin' : ''}`}>
+                {csvStatus === 'parsing' || csvStatus === 'saving' ? 'refresh' :
+                 csvStatus === 'done'    ? 'check_circle' :
+                 csvStatus === 'error'   ? 'error' : 'upload'}
+              </span>
+              <span className="hidden sm:inline">
+                {csvStatus === 'parsing' ? t('ingredient_groups.parsing') :
+                 csvStatus === 'saving'   ? t('ingredient_groups.saving') :
+                 csvStatus === 'done'     ? t('ingredient_groups.done') :
+                 csvStatus === 'error'    ? t('ingredient_groups.error') : t('ingredient_groups.import_csv')}
+              </span>
+            </button>
+
+            <input
+              type="file"
+              ref={csvImportRef}
+              className="hidden"
+              accept=".csv,text/csv"
+              onChange={handleImportCSV}
+            />
           </div>
         </div>
       </div>
@@ -346,6 +553,82 @@ const ManageIngredientGroups = () => {
           })}
         </div>
       </div>
+
+      {/* ── CSV Import Confirmation Modal ─────────────────────────────── */}
+      {csvPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-surface-dark border border-primary/30 rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-5">
+            <div className="flex items-center gap-3 border-b border-primary/10 pb-4">
+              <span className="material-symbols-outlined text-primary text-2xl">file_upload</span>
+              <div>
+                <h3 className="font-bold text-slate-100 text-base">
+                  {t('ingredient_groups.csv_modal_title')}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {t('ingredient_groups.csv_modal_desc')}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-background-dark/80 border border-emerald-500/20 rounded-2xl p-3 text-center">
+                <p className="text-2xl font-extrabold text-emerald-400">{csvPreview.newRows.length}</p>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  {t('ingredient_groups.csv_new_count')}
+                </p>
+              </div>
+              <div className="bg-background-dark/80 border border-amber-500/20 rounded-2xl p-3 text-center">
+                <p className="text-2xl font-extrabold text-amber-400">{csvPreview.duplicateRows.length}</p>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  {t('ingredient_groups.csv_duplicate_count')}
+                </p>
+              </div>
+            </div>
+
+            {csvPreview.duplicateRows.length > 0 && (
+              <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
+                <p className="text-xs font-semibold text-slate-400">
+                  {t('ingredient_groups.csv_duplicates_list')}
+                </p>
+                {csvPreview.duplicateRows.map((r, i) => (
+                  <div key={i} className="text-xs font-mono text-slate-300 bg-background-dark/60 rounded-lg px-2.5 py-1.5 flex justify-between">
+                    <span>{r.name_bg || r.name_en}</span>
+                    <span className="text-slate-500 text-[10px]">{r.id}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 pt-2 border-t border-primary/10">
+              {csvPreview.newRows.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => executeImport('new')}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-all cursor-pointer"
+                >
+                  {t('ingredient_groups.csv_import_new', { count: csvPreview.newRows.length })}
+                </button>
+              )}
+              {csvPreview.duplicateRows.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => executeImport('all')}
+                  className="w-full py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 font-bold text-xs transition-all cursor-pointer"
+                >
+                  {t('ingredient_groups.csv_import_all', { count: csvPreview.newRows.length + csvPreview.duplicateRows.length })}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => executeImport('cancel')}
+                className="w-full py-2 rounded-xl bg-background-dark/60 hover:bg-background-dark text-slate-400 font-bold text-xs transition-all cursor-pointer mt-1"
+              >
+                {t('ingredient_groups.csv_cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

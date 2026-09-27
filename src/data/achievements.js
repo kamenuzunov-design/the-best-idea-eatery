@@ -1,10 +1,19 @@
 const matchCategory = (r, catId, bgKeywords, enKeywords) => {
   if (r.category_ids && Array.isArray(r.category_ids) && r.category_ids.includes(catId)) return true;
-  const cat = (r.category_id || r.category || r.category_bg || r.category_en || '').toLowerCase();
-  const subCat = (r.sub_category_id || '').toLowerCase();
-  const title = (r.title_bg || r.title_en || r.title || '').toLowerCase();
 
-  if (cat === catId || subCat.startsWith(catId)) return true;
+  const safeStr = (v) => {
+    if (typeof v === 'string') return v.toLowerCase();
+    if (v && typeof v === 'object') {
+      return Object.values(v).filter(x => typeof x === 'string').join(' ').toLowerCase();
+    }
+    return '';
+  };
+
+  const cat = [r.category_id, r.category, r.category_bg, r.category_en].map(safeStr).join(' ');
+  const subCat = safeStr(r.sub_category_id);
+  const title = [r.title_bg, r.title_en, r.title].map(safeStr).join(' ');
+
+  if (cat.includes(catId) || subCat.startsWith(catId)) return true;
   if (bgKeywords.some(kw => cat.includes(kw) || title.includes(kw))) return true;
   if (enKeywords.some(kw => cat.includes(kw) || title.includes(kw))) return true;
 

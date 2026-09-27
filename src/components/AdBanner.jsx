@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getLocalizedField } from '../lib/localeUtils';
 
 const AdBanner = () => {
   const [currentAd, setCurrentAd] = useState(null);
@@ -215,7 +216,7 @@ const AdBanner = () => {
 
       {currentAd.type !== 'html' && (
         <div className="absolute bottom-0 left-0 p-4 w-full">
-          <h4 className="text-white font-bold text-sm line-clamp-1">{isBg ? currentAd.title_bg : currentAd.title_en}</h4>
+          <h4 className="text-white font-bold text-sm line-clamp-1">{getLocalizedField(currentAd, 'title', i18n.language) || (isBg ? currentAd.title_bg : currentAd.title_en)}</h4>
           <p className="text-slate-300 text-[10px] line-clamp-1 opacity-80">{isBg ? currentAd.description_bg : currentAd.description_en}</p>
         </div>
       )}

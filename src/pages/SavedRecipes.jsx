@@ -8,13 +8,14 @@ import { useNavigate } from 'react-router-dom';
 import { getCuisineById } from '../data/cuisines';
 import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
+import { getLocalizedField } from '../lib/localeUtils';
 
 const SavedRecipes = () => {
   const { shoppingList, setShoppingList } = useAppContext();
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isBg = i18n.language === 'bg';
+  const currentLang = i18n.language || 'bg';
 
   const [savedRecipes, setSavedRecipes] = useState([]);
   const [ingredientsList, setIngredientsList] = useState([]);
@@ -79,24 +80,28 @@ const SavedRecipes = () => {
   const getUnitName = (unitId) => {
     if (!unitId) return '';
     const norm = String(unitId).toLowerCase().trim();
-    if (norm === 'g') return isBg ? 'гр.' : 'g';
-    if (norm === 'kg') return isBg ? 'кг.' : 'kg';
-    if (norm === 'ml') return isBg ? 'мл.' : 'ml';
-    if (norm === 'l') return isBg ? 'л.' : 'l';
-    if (norm === 'pcs') return isBg ? 'бр.' : 'pcs';
+    if (norm === 'g') return t('saved.units.g');
+    if (norm === 'kg') return t('saved.units.kg');
+    if (norm === 'ml') return t('saved.units.ml');
+    if (norm === 'l') return t('saved.units.l');
+    if (norm === 'pcs') return t('saved.units.pcs');
 
     const found = measurementsDB.find(m => (m.unit_id === unitId || m.id === unitId));
     if (found) {
-      return isBg ? (found.name_bg || found.name || unitId) : (found.name_en || found.name || unitId);
+      return getLocalizedField(found, 'name', currentLang) || found.name_en || found.name_bg || found.name || unitId;
     }
     return unitId;
   };
 
   const getItemName = (item) => {
-    if (isBg) {
-      return item.nameBg || item.ingredient_bg || item.name_bg || item.name || item.ingredient_id || '';
-    }
-    return item.nameEn || item.ingredient_en || item.name_en || item.name || item.ingredient_id || '';
+    return getLocalizedField(item, 'name', currentLang)
+      || getLocalizedField(item, 'ingredient', currentLang)
+      || (currentLang === 'bg' ? (item.nameBg || item.ingredient_bg || item.name_bg) : (item.nameEn || item.ingredient_en || item.name_en))
+      || item.nameEn
+      || item.nameBg
+      || item.name
+      || item.ingredient_id
+      || '';
   };
 
   const handleStartEdit = () => {
@@ -104,11 +109,12 @@ const SavedRecipes = () => {
       const qty = item.quantityToBuy !== undefined ? item.quantityToBuy : (item.amount || 0);
       const unit = item.unit || item.unit_id || 'g';
       const formatted = formatMetricItem(qty, unit);
+      const resolvedName = getItemName(item);
       return {
         ...item,
-        name: item.name || '',
-        nameBg: item.nameBg || item.ingredient_bg || item.name_bg || item.name || '',
-        nameEn: item.nameEn || item.ingredient_en || item.name_en || item.name || '',
+        name: resolvedName,
+        nameBg: item.nameBg || item.ingredient_bg || item.name_bg || resolvedName,
+        nameEn: item.nameEn || item.ingredient_en || item.name_en || resolvedName,
         quantityToBuy: formatted.qty,
         unit: formatted.unit,
         checked: checkedItems.has(index)
@@ -242,7 +248,7 @@ const SavedRecipes = () => {
 
   const handleUnsave = async (e, recipeId) => {
     e.stopPropagation();
-    if (window.confirm(isBg ? 'Сигурни ли сте, че искате да премахнете тази рецепта от запазените?' : 'Are you sure you want to remove this recipe from saved?')) {
+    if (window.confirm(t('saved.confirm_unsave'))) {
       try {
         await updateDoc(doc(db, 'users', user.uid), {
           saved_recipes: arrayRemove(recipeId)
@@ -254,14 +260,14 @@ const SavedRecipes = () => {
   };
 
   const handleClearShoppingList = () => {
-    if (window.confirm(isBg ? 'Сигурни ли сте, че искате да изтриете целия списък за пазаруване?' : 'Are you sure you want to clear the entire shopping list?')) {
+    if (window.confirm(t('saved.confirm_clear'))) {
       setShoppingList([]);
       setCheckedItems(new Set());
     }
   };
 
   const handleRemoveShoppingListItem = (idx) => {
-    if (window.confirm(isBg ? 'Сигурни ли сте, че искате да изтриете този продукт от списъка?' : 'Are you sure you want to remove this product from the list?')) {
+    if (window.confirm(t('saved.confirm_remove_item'))) {
       const newList = shoppingList.filter((_, i) => i !== idx);
       setShoppingList(newList);
 
@@ -317,14 +323,14 @@ const SavedRecipes = () => {
                     className="text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-sm">delete_sweep</span>
-                    {isBg ? 'Изтрий' : 'Clear'}
+                    {t('saved.clear_btn')}
                   </button>
                   <button 
                     onClick={handleStartEdit}
                     className="text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-sm">edit</span>
-                    {isBg ? 'Редактирай' : 'Edit'}
+                    {t('saved.edit_btn')}
                   </button>
                 </div>
               ) : (
@@ -334,14 +340,14 @@ const SavedRecipes = () => {
                     className="text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-sm">save</span>
-                    {isBg ? 'Запиши' : 'Save'}
+                    {t('saved.save_btn')}
                   </button>
                   <button 
                     onClick={handleCancelEdit}
                     className="text-xs font-bold uppercase tracking-wider bg-slate-700/50 text-slate-300 border border-white/10 hover:bg-slate-700 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-sm">cancel</span>
-                    {isBg ? 'Отказ' : 'Cancel'}
+                    {t('saved.cancel_btn')}
                   </button>
                 </div>
               )}
@@ -364,7 +370,7 @@ const SavedRecipes = () => {
                     required
                     value={customName}
                     onChange={e => setCustomName(e.target.value)}
-                    placeholder={isBg ? 'Добави друг продукт (напр. Храна за котки)' : 'Add custom product (e.g. Cat food)'}
+                    placeholder={t('saved.add_custom_placeholder')}
                     className="w-full bg-background-dark border border-primary/10 rounded-xl px-3 py-2 text-slate-100 text-sm font-semibold focus:border-primary/50 placeholder:text-slate-500 shadow-inner outline-none"
                   />
                   <div className="flex gap-2 justify-between items-center w-full">
@@ -376,7 +382,7 @@ const SavedRecipes = () => {
                         required
                         value={customQty}
                         onChange={e => setCustomQty(e.target.value)}
-                        placeholder={isBg ? 'Кол.' : 'Qty'}
+                        placeholder={t('saved.qty_placeholder')}
                         className="w-16 bg-background-dark border border-primary/10 rounded-xl px-2 py-2 text-slate-100 text-center text-sm font-semibold focus:border-primary/50 shadow-inner outline-none shrink-0"
                       />
                       <select
@@ -384,11 +390,11 @@ const SavedRecipes = () => {
                         onChange={e => setCustomUnit(e.target.value)}
                         className="flex-1 min-w-[70px] max-w-[120px] bg-background-dark border border-primary/10 rounded-xl px-2 py-2 text-slate-100 text-sm font-semibold focus:border-primary/50 shadow-inner outline-none"
                       >
-                        <option value="pcs">{isBg ? 'бр.' : 'pcs'}</option>
-                        <option value="g">{isBg ? 'гр.' : 'g'}</option>
-                        <option value="kg">{isBg ? 'кг.' : 'kg'}</option>
-                        <option value="ml">{isBg ? 'мл.' : 'ml'}</option>
-                        <option value="l">{isBg ? 'л.' : 'l'}</option>
+                        <option value="pcs">{t('saved.units.pcs')}</option>
+                        <option value="g">{t('saved.units.g')}</option>
+                        <option value="kg">{t('saved.units.kg')}</option>
+                        <option value="ml">{t('saved.units.ml')}</option>
+                        <option value="l">{t('saved.units.l')}</option>
                       </select>
                     </div>
                     <button
@@ -396,7 +402,7 @@ const SavedRecipes = () => {
                       className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-background-dark transition-all px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1 active:scale-95 shrink-0 shadow-sm cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-sm">add</span>
-                      {isBg ? 'Добави' : 'Add'}
+                      {t('saved.add_btn')}
                     </button>
                   </div>
                 </form>
@@ -410,13 +416,13 @@ const SavedRecipes = () => {
                 <div className="w-full">
                   <input 
                     type="text" 
-                    value={isBg ? (item.nameBg || '') : (item.nameEn || '')}
+                    value={item.name || getItemName(item)}
                     onChange={e => {
-                      handleTempItemChange(index, isBg ? 'nameBg' : 'nameEn', e.target.value);
                       handleTempItemChange(index, 'name', e.target.value);
+                      handleTempItemChange(index, currentLang === 'bg' ? 'nameBg' : 'nameEn', e.target.value);
                     }}
                     className="w-full bg-background-dark border border-primary/20 rounded-xl p-2.5 text-slate-100 text-sm font-bold focus:border-primary shadow-inner"
-                    placeholder={isBg ? 'Име на продукт' : 'Product Name'}
+                    placeholder={t('saved.item_name_placeholder')}
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3 w-full">
@@ -427,7 +433,7 @@ const SavedRecipes = () => {
                       value={item.quantityToBuy}
                       onChange={e => handleTempItemChange(index, 'quantityToBuy', e.target.value)}
                       className="w-16 bg-background-dark border border-primary/20 rounded-xl p-2 text-slate-100 text-center text-sm font-bold shadow-inner outline-none shrink-0"
-                      placeholder={isBg ? 'Кол.' : 'Qty'}
+                      placeholder={t('saved.qty_placeholder')}
                     />
                     <select 
                       value={item.unit || item.unit_id || 'g'}
@@ -446,7 +452,7 @@ const SavedRecipes = () => {
                         onClick={() => moveTempListItem(index, 'up')}
                         disabled={index === 0}
                         className="text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:cursor-not-allowed h-5 w-5 flex items-center justify-center cursor-pointer"
-                        title={isBg ? 'Премести нагоре' : 'Move Up'}
+                        title={t('saved.move_up')}
                       >
                         <span className="material-symbols-outlined text-[22px] select-none">arrow_drop_up</span>
                       </button>
@@ -455,7 +461,7 @@ const SavedRecipes = () => {
                         onClick={() => moveTempListItem(index, 'down')}
                         disabled={index === tempList.length - 1}
                         className="text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:cursor-not-allowed h-5 w-5 flex items-center justify-center cursor-pointer"
-                        title={isBg ? 'Премести надолу' : 'Move Down'}
+                        title={t('saved.move_down')}
                       >
                         <span className="material-symbols-outlined text-[22px] select-none">arrow_drop_down</span>
                       </button>
@@ -464,7 +470,7 @@ const SavedRecipes = () => {
                       type="button"
                       onClick={() => handleDeleteTempItem(index)}
                       className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-all shrink-0 cursor-pointer"
-                      title={isBg ? 'Изтрий' : 'Delete'}
+                      title={t('saved.delete_btn')}
                     >
                       <span className="material-symbols-outlined text-lg">delete</span>
                     </button>
@@ -511,7 +517,7 @@ const SavedRecipes = () => {
                         onClick={() => moveShoppingListItem(index, 'up')}
                         disabled={index === 0}
                         className="text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:cursor-not-allowed h-5 w-5 flex items-center justify-center cursor-pointer"
-                        title={isBg ? 'Премести нагоре' : 'Move Up'}
+                        title={t('saved.move_up')}
                       >
                         <span className="material-symbols-outlined text-[22px] select-none">arrow_drop_up</span>
                       </button>
@@ -520,7 +526,7 @@ const SavedRecipes = () => {
                         onClick={() => moveShoppingListItem(index, 'down')}
                         disabled={index === shoppingList.length - 1}
                         className="text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:cursor-not-allowed h-5 w-5 flex items-center justify-center cursor-pointer"
-                        title={isBg ? 'Премести надолу' : 'Move Down'}
+                        title={t('saved.move_down')}
                       >
                         <span className="material-symbols-outlined text-[22px] select-none">arrow_drop_down</span>
                       </button>
@@ -530,7 +536,7 @@ const SavedRecipes = () => {
                       type="button"
                       onClick={() => handleRemoveShoppingListItem(index)}
                       className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/30 rounded-lg shrink-0 cursor-pointer"
-                      title={isBg ? 'Изтрий' : 'Delete'}
+                      title={t('saved.delete_btn')}
                     >
                       <span className="material-symbols-outlined text-[18px]">delete</span>
                     </button>
@@ -546,7 +552,7 @@ const SavedRecipes = () => {
                   required
                   value={customName}
                   onChange={e => setCustomName(e.target.value)}
-                  placeholder={isBg ? 'Добави друг продукт (напр. Храна за котки)' : 'Add custom product (e.g. Cat food)'}
+                  placeholder={t('saved.add_custom_placeholder')}
                   className="w-full bg-background-dark border border-primary/10 rounded-xl px-3 py-2 text-slate-100 text-sm font-semibold focus:border-primary/50 placeholder:text-slate-500 shadow-inner outline-none"
                 />
                 <div className="flex gap-2 justify-between items-center w-full">
@@ -558,7 +564,7 @@ const SavedRecipes = () => {
                       required
                       value={customQty}
                       onChange={e => setCustomQty(e.target.value)}
-                      placeholder={isBg ? 'Кол.' : 'Qty'}
+                      placeholder={t('saved.qty_placeholder')}
                       className="w-16 bg-background-dark border border-primary/10 rounded-xl px-2 py-2 text-slate-100 text-center text-sm font-semibold focus:border-primary/50 shadow-inner outline-none shrink-0"
                     />
                     <select
@@ -566,11 +572,11 @@ const SavedRecipes = () => {
                       onChange={e => setCustomUnit(e.target.value)}
                       className="flex-1 min-w-[70px] max-w-[120px] bg-background-dark border border-primary/10 rounded-xl px-2 py-2 text-slate-100 text-sm font-semibold focus:border-primary/50 shadow-inner outline-none"
                     >
-                      <option value="pcs">{isBg ? 'бр.' : 'pcs'}</option>
-                      <option value="g">{isBg ? 'гр.' : 'g'}</option>
-                      <option value="kg">{isBg ? 'кг.' : 'kg'}</option>
-                      <option value="ml">{isBg ? 'мл.' : 'ml'}</option>
-                      <option value="l">{isBg ? 'л.' : 'l'}</option>
+                      <option value="pcs">{t('saved.units.pcs')}</option>
+                      <option value="g">{t('saved.units.g')}</option>
+                      <option value="kg">{t('saved.units.kg')}</option>
+                      <option value="ml">{t('saved.units.ml')}</option>
+                      <option value="l">{t('saved.units.l')}</option>
                     </select>
                   </div>
                   <button
@@ -578,7 +584,7 @@ const SavedRecipes = () => {
                     className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-background-dark transition-all px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1 active:scale-95 shrink-0 shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
-                    {isBg ? 'Добави' : 'Add'}
+                    {t('saved.add_btn')}
                   </button>
                 </div>
               </form>
@@ -601,25 +607,30 @@ const SavedRecipes = () => {
         ) : savedRecipes.length === 0 ? (
           <div className="bg-surface-dark/50 backdrop-blur-sm border border-dashed border-primary/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center space-y-4 shadow-lg">
             <span className="material-symbols-outlined text-5xl text-primary/40">bookmark_border</span>
-            <p className="text-slate-400 text-sm font-medium">{isBg ? 'Нямате запазени рецепти.' : 'No saved recipes yet.'}</p>
+            <p className="text-slate-400 text-sm font-medium">{t('saved.empty_recipes')}</p>
             <button
               onClick={() => navigate('/')}
               className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg active:scale-95 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm font-black">explore</span>
-              <span>{isBg ? 'Открий рецепти' : 'Discover recipes'}</span>
+              <span>{t('saved.discover_recipes')}</span>
             </button>
           </div>
         ) : (
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-5">
               {savedRecipes.map(recipe => {
-                const title = isBg ? recipe.title_bg : recipe.title_en;
+                const title = getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || '';
                 const prepTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
-                const difficulty = isBg ? (recipe.difficulty === 'easy' ? 'Лесно' : recipe.difficulty === 'hard' ? 'Трудно' : 'Средно') : (recipe.difficulty || 'medium');
+                const difficultyMap = {
+                  easy: t('saved.difficulty.easy', 'Лесно'),
+                  medium: t('saved.difficulty.medium', 'Средно'),
+                  hard: t('saved.difficulty.hard', 'Трудно')
+                };
+                const difficulty = difficultyMap[recipe.difficulty] || difficultyMap.medium;
                 const imageUrl = recipe.images?.main || "/placeholder.jpg";
                 const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
-                const cuisineName = cuisineObj ? (isBg ? cuisineObj.name.bg : cuisineObj.name.en) : (isBg ? 'Световна Селекция' : 'Global Selection');
+                const cuisineName = cuisineObj ? (cuisineObj.name[currentLang] || cuisineObj.name.en || cuisineObj.name.bg) : t('saved.global_selection');
                 const calculatedTags = getRecipeTags(recipe, ingredientsList);
                 const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
 
@@ -650,7 +661,7 @@ const SavedRecipes = () => {
                             </span>
                             {tags.map(tag => (
                               <span key={tag} className="px-1.5 py-0.5 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[9px] font-bold uppercase tracking-tighter shadow-md">
-                                {translateTag(tag, isBg)}
+                                {translateTag(tag, currentLang)}
                               </span>
                             ))}
                           </div>
@@ -666,13 +677,13 @@ const SavedRecipes = () => {
                             {calculateEstimatedPrice(recipe, ingredientsList) && (
                               <span className="flex items-center gap-1 bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded">
                                 <span className="material-symbols-outlined text-[13px]">payments</span>
-                                <span>~{calculateEstimatedPrice(recipe, ingredientsList)} {isBg ? 'Евро' : 'EUR'}</span>
+                                <span>~{calculateEstimatedPrice(recipe, ingredientsList)} {t('saved.currency_eur')}</span>
                               </span>
                             )}
                             {recipe.video_url && (
                               <span className="flex items-center gap-1 bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded">
                                 <span className="material-symbols-outlined text-[13px]">play_circle</span>
-                                <span>{isBg ? 'Видео' : 'Video'}</span>
+                                <span>{t('saved.video_badge')}</span>
                               </span>
                             )}
                           </div>
@@ -682,7 +693,7 @@ const SavedRecipes = () => {
                           <button 
                             onClick={(e) => handleUnsave(e, recipe.id)}
                             className="size-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-lg shadow-rose-500/10 hover:bg-rose-500 hover:text-white active:scale-95 transition-all"
-                            title={isBg ? 'Премахни от запазени' : 'Remove from saved'}
+                            title={t('saved.remove_from_saved')}
                           >
                             <span className="material-symbols-outlined text-sm font-bold">delete</span>
                           </button>
@@ -701,7 +712,7 @@ const SavedRecipes = () => {
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-base font-black">explore</span>
-                <span>{isBg ? 'Открий още рецепти' : 'Discover More Recipes'}</span>
+                <span>{t('saved.discover_more_recipes')}</span>
               </button>
 
               <button
@@ -709,7 +720,7 @@ const SavedRecipes = () => {
                 className="w-full py-3 px-4 rounded-xl bg-surface-dark border border-primary/30 text-primary font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:bg-primary/10 transition-all cursor-pointer active:scale-[0.98]"
               >
                 <span className="material-symbols-outlined text-base">smart_toy</span>
-                <span>{isBg ? 'Попитай Chef AI' : 'Ask Chef AI'}</span>
+                <span>{t('saved.ask_chef_ai')}</span>
               </button>
             </div>
           </div>

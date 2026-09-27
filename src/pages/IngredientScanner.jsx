@@ -5,11 +5,12 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
+import { getLocalizedField } from '../lib/localeUtils';
 
 const IngredientScanner = () => {
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
-  const isBg = i18n.language === 'bg';
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'bg';
   const { addPantryItem } = useAppContext();
   const { user } = useAuth();
   
@@ -39,7 +40,11 @@ const IngredientScanner = () => {
       n.includes('говеж') || n.includes('свинс') || n.includes('риба') || n.includes('сьомга') ||
       n.includes('филе') || n.includes('колбас') || n.includes('кайма') || n.includes('бекон') ||
       n.includes('мясо') || n.includes('steak') || n.includes('chicken') || n.includes('beef') ||
-      n.includes('pork') || n.includes('fish') || n.includes('salmon') || n.includes('meat')
+      n.includes('pork') || n.includes('fish') || n.includes('salmon') || n.includes('meat') ||
+      n.includes('carne') || n.includes('pollo') || n.includes('manzo') || n.includes('pesce') ||
+      n.includes('salmone') || n.includes('viande') || n.includes('poulet') || n.includes('boeuf') ||
+      n.includes('poisson') || n.includes('saumon') || n.includes('fleisch') || n.includes('huhn') ||
+      n.includes('rind') || n.includes('fisch') || n.includes('lachs')
     ) {
       return 1;
     }
@@ -47,7 +52,9 @@ const IngredientScanner = () => {
     if (
       n.includes('сирене') || n.includes('кашкавал') || n.includes('моцарела') || n.includes('извара') ||
       n.includes('мляко') || n.includes('сметана') || n.includes('яйц') ||
-      n.includes('cheese') || n.includes('mozzarella') || n.includes('milk') || n.includes('egg') || n.includes('cream')
+      n.includes('cheese') || n.includes('mozzarella') || n.includes('milk') || n.includes('egg') || n.includes('cream') ||
+      n.includes('formaggio') || n.includes('latte') || n.includes('uova') || n.includes('fromage') || n.includes('lait') ||
+      n.includes('oeuf') || n.includes('käse') || n.includes('milch') || n.includes('eier')
     ) {
       return 2;
     }
@@ -55,7 +62,9 @@ const IngredientScanner = () => {
     if (
       n.includes('хляб') || n.includes('питка') || n.includes('паста') || n.includes('ориз') ||
       n.includes('картоф') || n.includes('тесто') || n.includes('тост') ||
-      n.includes('bread') || n.includes('pasta') || n.includes('rice') || n.includes('potato') || n.includes('toast')
+      n.includes('bread') || n.includes('pasta') || n.includes('rice') || n.includes('potato') || n.includes('toast') ||
+      n.includes('pane') || n.includes('patate') || n.includes('riso') || n.includes('pain') || n.includes('pâtes') ||
+      n.includes('riz') || n.includes('pomme de terre') || n.includes('brot') || n.includes('kartoffel') || n.includes('reis')
     ) {
       return 3;
     }
@@ -64,7 +73,10 @@ const IngredientScanner = () => {
       n.includes('домат') || n.includes('краставиц') || n.includes('гъби') || n.includes('морков') ||
       n.includes('чушк') || n.includes('салат') || n.includes('лук') || n.includes('зеле') ||
       n.includes('tomato') || n.includes('cucumber') || n.includes('mushroom') || n.includes('carrot') ||
-      n.includes('pepper') || n.includes('salad') || n.includes('onion')
+      n.includes('pepper') || n.includes('salad') || n.includes('onion') ||
+      n.includes('pomodoro') || n.includes('cetriolo') || n.includes('funghi') || n.includes('carota') || n.includes('cipolla') ||
+      n.includes('tomate') || n.includes('concombre') || n.includes('champignon') || n.includes('carotte') || n.includes('oignon') ||
+      n.includes('gurke') || n.includes('pilz') || n.includes('karotte') || n.includes('zwiebel')
     ) {
       return 4;
     }
@@ -127,53 +139,90 @@ const IngredientScanner = () => {
       const lowerName = fileName.toLowerCase();
 
       // Keywords matching
-      const isChicken = lowerName.includes('chicken') || lowerName.includes('пиле') || lowerName.includes('poultry') || lowerName.includes('печено');
-      const isSteak = lowerName.includes('steak') || lowerName.includes('beef') || lowerName.includes('телешко') || lowerName.includes('говеждо') || lowerName.includes('миньон') || lowerName.includes('meat');
-      const isFish = lowerName.includes('fish') || lowerName.includes('salmon') || lowerName.includes('риба') || lowerName.includes('сьомга');
-      const isSalad = lowerName.includes('salad') || lowerName.includes('салата') || lowerName.includes('tomato') || lowerName.includes('cucumber') || lowerName.includes('домати');
-      const isSandwich = lowerName.includes('sandwich') || lowerName.includes('сандвич') || lowerName.includes('bread') || lowerName.includes('хляб') || lowerName.includes('toast') || lowerName.includes('тост') || lowerName.includes('сирене') || lowerName.includes('cheese');
+      const isChicken = lowerName.includes('chicken') || lowerName.includes('пиле') || lowerName.includes('poultry') || lowerName.includes('печено') || lowerName.includes('pollo') || lowerName.includes('poulet') || lowerName.includes('huhn');
+      const isSteak = lowerName.includes('steak') || lowerName.includes('beef') || lowerName.includes('телешко') || lowerName.includes('говеждо') || lowerName.includes('миньон') || lowerName.includes('meat') || lowerName.includes('bistecca') || lowerName.includes('boeuf') || lowerName.includes('rind');
+      const isFish = lowerName.includes('fish') || lowerName.includes('salmon') || lowerName.includes('риба') || lowerName.includes('сьомга') || lowerName.includes('pesce') || lowerName.includes('poisson') || lowerName.includes('fisch') || lowerName.includes('lachs');
+      const isSalad = lowerName.includes('salad') || lowerName.includes('салата') || lowerName.includes('tomato') || lowerName.includes('cucumber') || lowerName.includes('домати') || lowerName.includes('insalata') || lowerName.includes('salade');
+      const isSandwich = lowerName.includes('sandwich') || lowerName.includes('сандвич') || lowerName.includes('bread') || lowerName.includes('хляб') || lowerName.includes('toast') || lowerName.includes('тост') || lowerName.includes('сирене') || lowerName.includes('cheese') || lowerName.includes('panino');
 
-      let targetKeywords = [];
+      const samples = {
+        sandwich: [
+          { en: 'Bread', bg: 'Хляб', it: 'Pane', fr: 'Pain', de: 'Brot' },
+          { en: 'Cheese', bg: 'Сирене', it: 'Formaggio', fr: 'Fromage', de: 'Käse' },
+          { en: 'Tomatoes', bg: 'Домати', it: 'Pomodori', fr: 'Tomates', de: 'Tomaten' },
+          { en: 'Cucumbers', bg: 'Краставици', it: 'Cetrioli', fr: 'Concombres', de: 'Gurken' },
+          { en: 'Butter', bg: 'Масло', it: 'Burro', fr: 'Beurre', de: 'Butter' }
+        ],
+        chicken: [
+          { en: 'Chicken Meat', bg: 'Пилешко месо', it: 'Carne di pollo', fr: 'Viande de poulet', de: 'Hähnchenfleisch' },
+          { en: 'Carrots', bg: 'Моркови', it: 'Carote', fr: 'Carottes', de: 'Karotten' },
+          { en: 'Potatoes', bg: 'Картофи', it: 'Patate', fr: 'Pommes de terre', de: 'Kartoffeln' },
+          { en: 'Garlic', bg: 'Чесън', it: 'Aglio', fr: 'Ail', de: 'Knoblauch' },
+          { en: 'Paprika', bg: 'Червен пипер', it: 'Paprika', fr: 'Paprika', de: 'Paprika' },
+          { en: 'Butter', bg: 'Масло', it: 'Burro', fr: 'Beurre', de: 'Butter' }
+        ],
+        steak: [
+          { en: 'Beef Steak', bg: 'Телешки стек', it: 'Bistecca di manzo', fr: 'Steak de boeuf', de: 'Rindersteak' },
+          { en: 'Carrots', bg: 'Моркови', it: 'Carote', fr: 'Carottes', de: 'Karotten' },
+          { en: 'Mushrooms', bg: 'Гъби', it: 'Funghi', fr: 'Champignons', de: 'Pilze' },
+          { en: 'Garlic', bg: 'Чесън', it: 'Aglio', fr: 'Ail', de: 'Knoblauch' },
+          { en: 'Olive Oil', bg: 'Зехтин', it: 'Olio d\'oliva', fr: 'Huile d\'olive', de: 'Olivenöl' },
+          { en: 'Paprika', bg: 'Червен пипер', it: 'Paprika', fr: 'Paprika', de: 'Paprika' }
+        ],
+        fish: [
+          { en: 'Salmon Filet', bg: 'Филе от сьомга', it: 'Filetto di salmone', fr: 'Pavé de saumon', de: 'Lachsfilet' },
+          { en: 'Lemon', bg: 'Лимон', it: 'Limone', fr: 'Citron', de: 'Zitrone' },
+          { en: 'Dill', bg: 'Копър', it: 'Aneto', fr: 'Aneth', de: 'Dill' },
+          { en: 'Olive Oil', bg: 'Зехтин', it: 'Olio d\'oliva', fr: 'Huile d\'olive', de: 'Olivenöl' },
+          { en: 'Black Pepper', bg: 'Черен пипер', it: 'Pepe nero', fr: 'Poivre noir', de: 'Schwarzer Pfeffer' }
+        ],
+        salad: [
+          { en: 'Tomatoes', bg: 'Домати', it: 'Pomodori', fr: 'Tomates', de: 'Tomaten' },
+          { en: 'Cucumbers', bg: 'Краставици', it: 'Cetrioli', fr: 'Concombres', de: 'Gurken' },
+          { en: 'Cheese', bg: 'Сирене', it: 'Formaggio', fr: 'Fromage', de: 'Käse' },
+          { en: 'Olives', bg: 'Маслини', it: 'Olive', fr: 'Olives', de: 'Oliven' },
+          { en: 'Olive Oil', bg: 'Зехтин', it: 'Olio d\'oliva', fr: 'Huile d\'olive', de: 'Olivenöl' }
+        ],
+        default: [
+          { en: 'Beef Steak', bg: 'Телешки стек', it: 'Bistecca di manzo', fr: 'Steak de boeuf', de: 'Rindersteak' },
+          { en: 'Carrots', bg: 'Моркови', it: 'Carote', fr: 'Carottes', de: 'Karotten' },
+          { en: 'Mushrooms', bg: 'Гъби', it: 'Funghi', fr: 'Champignons', de: 'Pilze' },
+          { en: 'Garlic', bg: 'Чесън', it: 'Aglio', fr: 'Ail', de: 'Knoblauch' },
+          { en: 'Olive Oil', bg: 'Зехтин', it: 'Olio d\'oliva', fr: 'Huile d\'olive', de: 'Olivenöl' }
+        ]
+      };
 
-      if (isSandwich) {
-        targetKeywords = isBg 
-          ? ['Хляб', 'Сирене', 'Домати', 'Краставици', 'Масло']
-          : ['Bread', 'Cheese', 'Tomatoes', 'Cucumbers', 'Butter'];
-      } else if (isChicken) {
-        targetKeywords = isBg 
-          ? ['Пилешко месо', 'Моркови', 'Картофи', 'Чесън', 'Червен пипер', 'Масло']
-          : ['Chicken Meat', 'Carrots', 'Potatoes', 'Garlic', 'Paprika', 'Butter'];
-      } else if (isSteak) {
-        targetKeywords = isBg 
-          ? ['Телешки стек', 'Моркови', 'Гъби', 'Чесън', 'Зехтин', 'Червен пипер']
-          : ['Beef Steak', 'Carrots', 'Mushrooms', 'Garlic', 'Olive Oil', 'Paprika'];
-      } else if (isFish) {
-        targetKeywords = isBg 
-          ? ['Филе от сьомга', 'Лимон', 'Копър', 'Зехтин', 'Чер пипер']
-          : ['Salmon Filet', 'Lemon', 'Dill', 'Olive Oil', 'Black Pepper'];
-      } else if (isSalad) {
-        targetKeywords = isBg 
-          ? ['Домати', 'Краставици', 'Сирене', 'Маслини', 'Зехтин']
-          : ['Tomatoes', 'Cucumbers', 'Cheese', 'Olives', 'Olive Oil'];
-      } else {
-        // High quality default sample (matches default sample photo in camera viewfinder - Steak with Carrots & Veggies)
-        targetKeywords = isBg 
-          ? ['Телешки стек', 'Моркови', 'Гъби', 'Чесън', 'Зехтин']
-          : ['Beef Steak', 'Carrots', 'Mushrooms', 'Garlic', 'Olive Oil'];
-      }
+      const targetItems = isSandwich ? samples.sandwich
+        : isChicken ? samples.chicken
+        : isSteak ? samples.steak
+        : isFish ? samples.fish
+        : isSalad ? samples.salad
+        : samples.default;
 
       // Map to DB items if available, or create clean formatted items
-      const formatted = targetKeywords.map((kwName, idx) => {
+      const formatted = targetItems.map((itemObj, idx) => {
+        const kwName = itemObj[currentLang] || itemObj.en || itemObj.bg;
         const dbMatch = list && list.find(ing => {
           const bg = (ing.name_bg || '').toLowerCase();
           const en = (ing.name_en || '').toLowerCase();
-          const kw = kwName.toLowerCase();
-          return bg.includes(kw) || kw.includes(bg) || en.includes(kw) || kw.includes(en);
+          const local = (getLocalizedField(ing, 'name', currentLang) || '').toLowerCase();
+          const kwEn = (itemObj.en || '').toLowerCase();
+          const kwBg = (itemObj.bg || '').toLowerCase();
+          const kwLocal = kwName.toLowerCase();
+          return (
+            (bg && (bg.includes(kwBg) || kwBg.includes(bg))) ||
+            (en && (en.includes(kwEn) || kwEn.includes(en))) ||
+            (local && (local.includes(kwLocal) || kwLocal.includes(local)))
+          );
         });
+
+        const localizedName = dbMatch 
+          ? (getLocalizedField(dbMatch, 'name', currentLang) || dbMatch.name_en || dbMatch.name_bg) 
+          : kwName;
 
         return {
           id: dbMatch ? dbMatch.id : `detected_${idx}_${Date.now()}`,
-          name: dbMatch ? (isBg ? dbMatch.name_bg || dbMatch.name_en : dbMatch.name_en || dbMatch.name_bg) : kwName,
+          name: localizedName,
           quantity: 1,
           unit: 'бр',
           checked: true
@@ -223,7 +272,7 @@ const IngredientScanner = () => {
   };
 
   const handleAddCustomIngredient = (ing) => {
-    const ingName = isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg);
+    const ingName = getLocalizedField(ing, 'name', currentLang) || ing.name_en || ing.name_bg || '';
     if (!detectedItems.some(item => item.id === ing.id)) {
       setDetectedItems(prev => [
         ...prev,
@@ -242,14 +291,14 @@ const IngredientScanner = () => {
 
   const handleAddToPantry = async () => {
     if (!user || user.role === 'guest') {
-      alert(isBg ? 'Моля влезте в профила си, за да добавяте продукти в Килера.' : 'Please log in to add products to your Pantry.');
+      alert(t('ingredient_scanner.login_required_alert'));
       navigate('/login');
       return;
     }
 
     const selected = detectedItems.filter(i => i.checked);
     if (selected.length === 0) {
-      alert(isBg ? 'Моля изберете поне един продукт.' : 'Please select at least one item.');
+      alert(t('ingredient_scanner.select_at_least_one'));
       return;
     }
 
@@ -263,11 +312,11 @@ const IngredientScanner = () => {
           unit: item.unit
         });
       }
-      alert(isBg ? `Успешно добавихте ${selected.length} продукта в Килера!` : `Successfully added ${selected.length} items to Pantry!`);
+      alert(t('ingredient_scanner.added_success', { count: selected.length }));
       navigate('/pantry');
     } catch (err) {
       console.error("Error adding scanned items to pantry:", err);
-      alert(isBg ? 'Грешка при добавяне в килера.' : 'Error adding to pantry.');
+      alert(t('ingredient_scanner.error_adding'));
     } finally {
       setAddingToPantry(false);
     }
@@ -280,7 +329,7 @@ const IngredientScanner = () => {
     } else {
       const selected = detectedItems.filter(i => i.checked);
       if (selected.length === 0) {
-        alert(isBg ? 'Моля изберете поне една съставка.' : 'Please select at least one ingredient.');
+        alert(t('ingredient_scanner.select_at_least_one_ingredient'));
         return;
       }
       searchTarget = selected[0].name;
@@ -294,7 +343,8 @@ const IngredientScanner = () => {
     const term = searchTerm.toLowerCase();
     const bg = (ing.name_bg || '').toLowerCase();
     const en = (ing.name_en || '').toLowerCase();
-    return bg.includes(term) || en.includes(term);
+    const local = (getLocalizedField(ing, 'name', currentLang) || '').toLowerCase();
+    return bg.includes(term) || en.includes(term) || local.includes(term);
   });
 
   return (
@@ -315,7 +365,7 @@ const IngredientScanner = () => {
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h2 className="text-slate-100 text-sm font-extrabold tracking-widest uppercase flex-1 text-center">
-          {isBg ? 'Сканиране на продукти' : 'Food & Ingredient Scanner'}
+          {t('ingredient_scanner.title')}
         </h2>
         <div className="w-10"></div>
       </div>
@@ -327,7 +377,7 @@ const IngredientScanner = () => {
           className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-primary/30"
         >
           <span className="material-symbols-outlined text-[20px]">photo_camera</span>
-          <span>{isBg ? 'Направи нова снимка / Сканирай отново' : 'Take New Photo / Rescan'}</span>
+          <span>{t('ingredient_scanner.rescan_btn')}</span>
         </button>
       </div>
 
@@ -363,8 +413,8 @@ const IngredientScanner = () => {
             </span>
             <span>
               {scanning 
-                ? (isBg ? 'Сканиране на снимката...' : 'Scanning Photo...') 
-                : (isBg ? 'Снимката е сканирана' : 'Photo Scanned')}
+                ? t('ingredient_scanner.scanning_photo') 
+                : t('ingredient_scanner.photo_scanned')}
             </span>
           </span>
         </div>
@@ -375,12 +425,10 @@ const IngredientScanner = () => {
         <span className="material-symbols-outlined text-amber-400 text-lg shrink-0 mt-0.5">info</span>
         <div className="text-[11px] leading-relaxed">
           <span className="font-bold text-amber-400 block mb-0.5 uppercase tracking-wide">
-            {isBg ? 'Забележка относно точността на скенера:' : 'Scanner Accuracy Notice:'}
+            {t('ingredient_scanner.notice_title')}
           </span>
           <span>
-            {isBg 
-              ? 'Скенерът използва автоматична AI система за визуален анализ и е възможно да не открива всички продукти с пълна точност. Можете да премахвате грешни съставки (чрез ×) или да добавяте липсващи ръчно чрез бутона "Добави съставка".'
-              : 'The scanner uses automated AI visual recognition and may not always detect products with 100% accuracy. You can remove incorrect ingredients (via ×) or add missing ones manually using the "Add ingredient" button.'}
+            {t('ingredient_scanner.notice_desc')}
           </span>
         </div>
       </div>
@@ -390,7 +438,7 @@ const IngredientScanner = () => {
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
             <span className="material-symbols-outlined text-primary text-base">auto_awesome</span>
-            <span>{isBg ? 'Открити съставки:' : 'Found Ingredients:'}</span>
+            <span>{t('ingredient_scanner.found_ingredients')}</span>
           </h3>
           {!scanning && (
             <button 
@@ -398,7 +446,7 @@ const IngredientScanner = () => {
               className="text-xs font-extrabold text-primary hover:underline flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20 cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm">add</span>
-              <span>{isBg ? 'Добави съставка' : 'Add ingredient'}</span>
+              <span>{t('ingredient_scanner.add_ingredient_btn')}</span>
             </button>
           )}
         </div>
@@ -407,13 +455,13 @@ const IngredientScanner = () => {
           <div className="p-8 text-center bg-surface-dark border border-primary/10 rounded-2xl animate-pulse">
             <span className="material-symbols-outlined text-primary text-3xl animate-spin mb-2">sync</span>
             <p className="text-xs font-bold text-slate-300">
-              {isBg ? 'AI Анализ на съставките...' : 'AI Analyzing ingredients...'}
+              {t('ingredient_scanner.analyzing')}
             </p>
           </div>
         ) : detectedItems.length === 0 ? (
           <div className="p-4 bg-surface-dark border border-primary/20 rounded-2xl text-center">
             <p className="text-xs text-slate-400 italic">
-              {isBg ? 'Няма намерени съставки. Натиснете "Добави съставка" за ръчно въвеждане.' : 'No ingredients found. Press "Add ingredient" to add manually.'}
+              {t('ingredient_scanner.empty_detected')}
             </p>
           </div>
         ) : (
@@ -424,10 +472,10 @@ const IngredientScanner = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm text-primary">star</span>
-                    {isBg ? 'Основен продукт' : 'Main Product'}
+                    {t('ingredient_scanner.main_product')}
                   </span>
                   <span className="text-[9px] text-slate-400 italic">
-                    {isBg ? '(Автоматичен / Приоритетен)' : '(Priority Pick)'}
+                    {t('ingredient_scanner.priority_pick')}
                   </span>
                 </div>
 
@@ -447,7 +495,7 @@ const IngredientScanner = () => {
                     <button 
                       onClick={(e) => handleRemoveItem(mainItem.id, e)}
                       className="ml-1 text-sm font-bold opacity-70 hover:opacity-100 hover:text-rose-500 transition-opacity p-0.5"
-                      title={isBg ? 'Премахни' : 'Remove'}
+                      title={t('ingredient_scanner.remove_tooltip')}
                     >
                       ×
                     </button>
@@ -461,16 +509,16 @@ const IngredientScanner = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm text-slate-400">widgets</span>
-                  {isBg ? 'Спомагателни продукти' : 'Secondary Products'} ({secondaryItems.length})
+                  {t('ingredient_scanner.secondary_products')} ({secondaryItems.length})
                 </span>
                 <span className="text-[9px] text-slate-400 italic">
-                  {isBg ? 'Натиснете ⭐ за избор на основен' : 'Click ⭐ to set as main'}
+                  {t('ingredient_scanner.set_as_main_tip')}
                 </span>
               </div>
 
               {secondaryItems.length === 0 ? (
                 <p className="text-[11px] text-slate-500 italic py-1">
-                  {isBg ? 'Няма допълнителни спомагателни продукти.' : 'No secondary products.'}
+                  {t('ingredient_scanner.no_secondary')}
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -493,7 +541,7 @@ const IngredientScanner = () => {
                       <button
                         onClick={(e) => handleSetMainProduct(item.id, e)}
                         className="ml-1 text-slate-400 hover:text-amber-400 transition-colors p-0.5"
-                        title={isBg ? 'Избери като основен продукт' : 'Set as main product'}
+                        title={t('ingredient_scanner.set_as_main_tooltip')}
                       >
                         <span className="material-symbols-outlined text-[13px]">star</span>
                       </button>
@@ -501,7 +549,7 @@ const IngredientScanner = () => {
                       <button 
                         onClick={(e) => handleRemoveItem(item.id, e)}
                         className="text-sm font-bold opacity-60 hover:opacity-100 hover:text-rose-500 transition-opacity p-0.5"
-                        title={isBg ? 'Премахни' : 'Remove'}
+                        title={t('ingredient_scanner.remove_tooltip')}
                       >
                         ×
                       </button>
@@ -515,7 +563,7 @@ const IngredientScanner = () => {
                 type="button"
                 onClick={() => setShowSearchModal(true)}
                 className="absolute bottom-2.5 right-2.5 size-8 rounded-full bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer border border-amber-300/40"
-                title={isBg ? 'Добави съставка' : 'Add ingredient'}
+                title={t('ingredient_scanner.add_ingredient_tooltip')}
               >
                 <span className="material-symbols-outlined text-lg font-extrabold">add</span>
               </button>
@@ -533,7 +581,7 @@ const IngredientScanner = () => {
             className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 border border-primary/30"
           >
             <span className="material-symbols-outlined text-[18px]">kitchen</span>
-            <span>{addingToPantry ? (isBg ? 'Запазване...' : 'Saving...') : (isBg ? 'Добави в Килера' : 'Add to Pantry')}</span>
+            <span>{addingToPantry ? t('ingredient_scanner.saving') : t('ingredient_scanner.add_to_pantry_btn')}</span>
           </button>
 
           <button 
@@ -542,7 +590,7 @@ const IngredientScanner = () => {
             className="w-full py-3.5 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[18px]">search</span>
-            <span>{isBg ? 'Търси рецепти' : 'Search Recipes'}</span>
+            <span>{t('ingredient_scanner.search_recipes_btn')}</span>
           </button>
         </div>
       </div>
@@ -554,7 +602,7 @@ const IngredientScanner = () => {
             <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-base">search</span>
-                {isBg ? 'Добавяне на съставка' : 'Add Ingredient'}
+                {t('ingredient_scanner.modal_title')}
               </h3>
               <button onClick={() => setShowSearchModal(false)} className="text-slate-400 hover:text-rose-500 p-1">
                 <span className="material-symbols-outlined text-[18px]">close</span>
@@ -564,7 +612,7 @@ const IngredientScanner = () => {
             <div className="p-4 border-b border-primary/10">
               <input
                 type="text"
-                placeholder={isBg ? "Търси съставка от базата данни..." : "Search ingredient from database..."}
+                placeholder={t('ingredient_scanner.search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-primary"
@@ -580,13 +628,13 @@ const IngredientScanner = () => {
                     onClick={() => handleAddCustomIngredient(ing)}
                     className="w-full text-left px-3 py-2 rounded-xl bg-background-dark/50 hover:bg-primary/10 border border-primary/10 text-xs font-bold text-slate-200 flex items-center justify-between transition-colors"
                   >
-                    <span>{isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg)}</span>
+                    <span>{getLocalizedField(ing, 'name', currentLang) || ing.name_en || ing.name_bg}</span>
                     <span className="material-symbols-outlined text-primary text-sm">add_circle</span>
                   </button>
                 ))
               ) : (
                 <p className="text-xs text-slate-400 text-center py-4">
-                  {isBg ? 'Няма намерени съставки' : 'No ingredients found'}
+                  {t('ingredient_scanner.no_ingredients_found')}
                 </p>
               )}
             </div>

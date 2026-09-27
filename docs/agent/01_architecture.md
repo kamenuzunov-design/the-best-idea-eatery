@@ -111,7 +111,16 @@ src/
 
 4. **Обхват на парадигмата:**
    * Профил: [EditProfile.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/EditProfile.jsx), [ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx)
-   * Администрация: [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx), [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx).
+   * Администрация: [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx), [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx), [ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx).
+
+5. **AI Автоматична пакетна миграция и превод (AI Batch Translation Migrator):**
+   * **Разположение:** Вграден в панела „Бекъп и Сигурност“ ([BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx)) чрез [AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx) и модула [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js).
+   * **Безопасен ритъм и квоти (Pacing):** Използва се Gemini API с автоматично превключване между Flash модели (`gemini-2.5-flash`, `gemini-1.5-flash`, `gemini-2.0-flash`). За да не се превишава безплатният лимит от 15 RPM, заявките се изпълняват на порции с 2500ms задължителна пауза:
+     * Групи продукти и Мерни единици: по 15 записа на заявка.
+     * Продукти / Съставки: по 15 продукта на заявка.
+     * Рецепти: по 2 рецепти на заявка (заглавие, описание, бележки към съставки и стъпки).
+   * **Двойно персистиране:** Записва както вложените езикови карти `{ bg, en, it, fr, de }`, така и обратните плоски полета (`name_it`, `title_fr` и др.), и изчиства флага `needs_translation: false`.
+   * **Атомарност:** Записът във Firestore се извършва пакетирано чрез `writeBatch` (до 400 записа на транзакция). Поддържа се симулация (Dry Run), пауза, продължаване и аварийно спиране.
 
 ## Модел на потока на данните (Data Flow)
 

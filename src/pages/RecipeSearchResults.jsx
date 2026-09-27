@@ -5,12 +5,13 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { getRecipeImageUrl } from '../lib/imageUtils';
+import { getLocalizedField } from '../lib/localeUtils';
 
 const RecipeSearchResults = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { i18n } = useTranslation();
-  const isBg = i18n.language === 'bg';
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language || 'bg';
   const { ingredientsList } = useAppContext();
 
   const queryFromUrl = searchParams.get('q') || searchParams.get('search') || '';
@@ -64,7 +65,7 @@ const RecipeSearchResults = () => {
   }, []);
 
   const getRecipeAuthorName = (recipe) => {
-    if (!recipe) return isBg ? 'Шеф Готвач' : 'Chef Cook';
+    if (!recipe) return t('recipe_search.chef_cook');
 
     if (recipe.publisher_id && usersMap[recipe.publisher_id]) {
       return usersMap[recipe.publisher_id];
@@ -81,7 +82,7 @@ const RecipeSearchResults = () => {
 
     if (name && name.trim()) return name.trim();
 
-    return isBg ? 'Шеф Готвач' : 'Chef Cook';
+    return t('recipe_search.chef_cook');
   };
 
   const getRecipeTotalTime = (recipe) => {
@@ -131,31 +132,67 @@ const RecipeSearchResults = () => {
   const filteredRecipes = recipes.filter(r => {
     if (activeKeywords.length === 0) return true;
 
-    const titleBg = (r.title_bg || '').toLowerCase();
-    const titleEn = (r.title_en || '').toLowerCase();
-    const descBg = (r.description_bg || '').toLowerCase();
-    const descEn = (r.description_en || '').toLowerCase();
+    // Collect all titles and descriptions across languages and formats
+    const titleCandidates = [];
+    if (typeof r.title === 'object' && r.title !== null) {
+      Object.values(r.title).forEach(val => {
+        if (typeof val === 'string') titleCandidates.push(val.toLowerCase());
+      });
+    } else if (typeof r.title === 'string') {
+      titleCandidates.push(r.title.toLowerCase());
+    }
+    if (r.title_bg) titleCandidates.push(r.title_bg.toLowerCase());
+    if (r.title_en) titleCandidates.push(r.title_en.toLowerCase());
+
+    const descCandidates = [];
+    if (typeof r.description === 'object' && r.description !== null) {
+      Object.values(r.description).forEach(val => {
+        if (typeof val === 'string') descCandidates.push(val.toLowerCase());
+      });
+    } else if (typeof r.description === 'string') {
+      descCandidates.push(r.description.toLowerCase());
+    }
+    if (r.description_bg) descCandidates.push(r.description_bg.toLowerCase());
+    if (r.description_en) descCandidates.push(r.description_en.toLowerCase());
 
     return activeKeywords.every(kw => {
       const term = kw.toLowerCase().trim();
       if (!term) return true;
 
-      if (titleBg.includes(term) || titleEn.includes(term) || descBg.includes(term) || descEn.includes(term)) {
-        return true;
-      }
+      if (titleCandidates.some(t => t.includes(term))) return true;
+      if (descCandidates.some(d => d.includes(term))) return true;
 
       if (r.ingredients && Array.isArray(r.ingredients)) {
         for (const ing of r.ingredients) {
-          const ingBg = (ing.ingredient_bg || ing.name_bg || ing.name || '').toLowerCase();
-          const ingEn = (ing.ingredient_en || ing.name_en || ing.name || '').toLowerCase();
-          if (ingBg.includes(term) || ingEn.includes(term)) return true;
+          const ingCandidates = [];
+          if (typeof ing.name === 'object' && ing.name !== null) {
+            Object.values(ing.name).forEach(v => {
+              if (typeof v === 'string') ingCandidates.push(v.toLowerCase());
+            });
+          } else if (typeof ing.name === 'string') {
+            ingCandidates.push(ing.name.toLowerCase());
+          }
+          if (ing.ingredient_bg) ingCandidates.push(ing.ingredient_bg.toLowerCase());
+          if (ing.ingredient_en) ingCandidates.push(ing.ingredient_en.toLowerCase());
+          if (ing.name_bg) ingCandidates.push(ing.name_bg.toLowerCase());
+          if (ing.name_en) ingCandidates.push(ing.name_en.toLowerCase());
+
+          if (ingCandidates.some(ic => ic.includes(term))) return true;
 
           if (ingredientsList && Array.isArray(ingredientsList)) {
             const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
             if (dbIng) {
-              const dbNameBg = (dbIng.name_bg || '').toLowerCase();
-              const dbNameEn = (dbIng.name_en || '').toLowerCase();
-              if (dbNameBg.includes(term) || dbNameEn.includes(term)) return true;
+              const dbCandidates = [];
+              if (typeof dbIng.name === 'object' && dbIng.name !== null) {
+                Object.values(dbIng.name).forEach(v => {
+                  if (typeof v === 'string') dbCandidates.push(v.toLowerCase());
+                });
+              } else if (typeof dbIng.name === 'string') {
+                dbCandidates.push(dbIng.name.toLowerCase());
+              }
+              if (dbIng.name_bg) dbCandidates.push(dbIng.name_bg.toLowerCase());
+              if (dbIng.name_en) dbCandidates.push(dbIng.name_en.toLowerCase());
+              if (dbCandidates.some(dc => dc.includes(term))) return true;
             }
           }
         }
@@ -175,7 +212,7 @@ const RecipeSearchResults = () => {
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h1 className="text-slate-100 text-sm font-extrabold tracking-widest uppercase flex-1 text-center">
-          {isBg ? 'Резултати от търсенето' : 'Search Results'}
+          {t('recipe_search.title')}
         </h1>
         <div className="size-10"></div>
       </header>
@@ -185,7 +222,7 @@ const RecipeSearchResults = () => {
         <form onSubmit={handleSearchSubmit} className="relative group">
           <input 
             type="text"
-            placeholder={isBg ? "Търси по съставки или име..." : "Search ingredients or recipe name..."}
+            placeholder={t('recipe_search.placeholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-surface-dark border-2 border-primary/30 rounded-2xl py-3.5 pl-11 pr-10 text-slate-100 placeholder:text-slate-500 focus:border-primary focus:outline-none transition-all shadow-inner text-sm font-medium"
@@ -195,6 +232,7 @@ const RecipeSearchResults = () => {
             <button 
               type="button"
               onClick={() => { setSearchTerm(''); setSearchParams({}); }} 
+              title={t('recipe_search.clear_tooltip')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-rose-400 p-1"
             >
               <span className="material-symbols-outlined text-lg">close</span>
@@ -206,7 +244,7 @@ const RecipeSearchResults = () => {
         {activeKeywords.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 p-3 bg-surface-dark/60 rounded-2xl border border-primary/10 shadow-sm">
             <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-              {isBg ? 'Филтър съставки:' : 'Filtered ingredients:'}
+              {t('recipe_search.filter_label')}
             </span>
             {activeKeywords.map((kw, idx) => (
               <div 
@@ -217,7 +255,7 @@ const RecipeSearchResults = () => {
                 <button 
                   onClick={() => handleRemoveKeyword(kw)}
                   className="hover:text-rose-400 transition-colors text-xs font-bold"
-                  title={isBg ? 'Премахни' : 'Remove'}
+                  title={t('recipe_search.remove_keyword')}
                 >
                   ×
                 </button>
@@ -230,10 +268,10 @@ const RecipeSearchResults = () => {
         <div className="flex justify-between items-center px-1 border-b border-primary/10 pb-2">
           <span className="text-xs font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5">
             <span className="material-symbols-outlined text-base">restaurant_menu</span>
-            <span>{isBg ? 'Намерени рецепти' : 'Found Recipes'}</span>
+            <span>{t('recipe_search.found_recipes')}</span>
           </span>
           <span className="text-xs font-bold text-slate-400">
-            {loading ? '...' : `${filteredRecipes.length} ${isBg ? 'рецепти' : 'recipes'}`}
+            {loading ? '...' : (filteredRecipes.length === 1 ? t('recipe_search.recipes_count_one', { count: filteredRecipes.length }) : t('recipe_search.recipes_count_other', { count: filteredRecipes.length }))}
           </span>
         </div>
 
@@ -255,13 +293,13 @@ const RecipeSearchResults = () => {
                 <div className="relative h-44 w-full overflow-hidden bg-neutral-900">
                   <img 
                     src={getRecipeImageUrl(recipe)} 
-                    alt={isBg ? recipe.title_bg : recipe.title_en}
+                    alt={getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || ''}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   {/* Top Right Prep Time Badge */}
                   <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-background-dark/80 backdrop-blur-md border border-primary/30 text-primary text-[10px] font-extrabold shadow-md flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs">schedule</span>
-                    <span>{getRecipeTotalTime(recipe)} {isBg ? 'мин' : 'min'}</span>
+                    <span>{getRecipeTotalTime(recipe)} {t('recipe_search.min_suffix')}</span>
                   </div>
 
                   {/* Bottom Left Rating Badge ON PHOTO */}
@@ -277,10 +315,10 @@ const RecipeSearchResults = () => {
                 <div className="p-4 flex-1 flex flex-col justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-extrabold text-slate-100 group-hover:text-primary transition-colors line-clamp-2">
-                      {isBg ? (recipe.title_bg || recipe.title_en) : (recipe.title_en || recipe.title_bg)}
+                      {getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || ''}
                     </h3>
                     <p className="text-xs text-slate-400 line-clamp-2 mt-1">
-                      {isBg ? recipe.description_bg : recipe.description_en}
+                      {getLocalizedField(recipe, 'description', currentLang) || recipe.description_bg || recipe.description_en || ''}
                     </p>
                   </div>
 
@@ -298,16 +336,16 @@ const RecipeSearchResults = () => {
           <div className="p-8 text-center bg-surface-dark border border-primary/20 rounded-3xl flex flex-col items-center gap-3">
             <span className="material-symbols-outlined text-amber-400 text-4xl">search_off</span>
             <p className="text-sm font-bold text-slate-200">
-              {isBg ? 'Няма намерени рецепти за тези съставки' : 'No recipes found for these ingredients'}
+              {t('recipe_search.empty_title')}
             </p>
             <p className="text-xs text-slate-400">
-              {isBg ? 'Опитайте с други съставки или премахнете част от филтрите.' : 'Try different ingredients or clear some filters.'}
+              {t('recipe_search.empty_desc')}
             </p>
             <button 
               onClick={() => { setSearchTerm(''); setSearchParams({}); }}
               className="mt-2 px-4 py-2 bg-primary/20 border border-primary/40 text-primary text-xs font-bold rounded-xl hover:bg-primary/30 transition-colors"
             >
-              {isBg ? 'Изчисти търсенето' : 'Clear Search'}
+              {t('recipe_search.clear_search_btn')}
             </button>
           </div>
         )}
