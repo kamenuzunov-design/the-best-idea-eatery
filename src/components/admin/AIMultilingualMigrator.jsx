@@ -415,8 +415,8 @@ const AIMultilingualMigrator = () => {
           <span>{t('backup_recovery.ai_migration.batch_info')}</span>
         </p>
 
-        {/* Model & Throttling Controls - Label on line 1, Selector on line 2 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-primary/10">
+        {/* Model & Throttling Controls - Stacked vertically (Label on line 1, Selector on line 2) */}
+        <div className="flex flex-col gap-3.5 pt-2 border-t border-primary/10">
           {/* Gemini AI Model Selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">

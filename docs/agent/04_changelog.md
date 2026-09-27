@@ -19,7 +19,7 @@
 - **Двуредов визуален дизайн на контролите по указание на възложителя**:
   - Текстът "Пауза между заявките (Throttling):" и неговият падащ списък са реорганизирани на два отделни реда (заглавие на ред 1, селектор на ред 2).
   - Контролът за "Избор на AI Модел (Gemini):" следва същата подредба на два реда (заглавие на ред 1, падащо меню на ред 2).
-  - Двата елемента са структурирани в адаптивна решетка (`grid grid-cols-1 md:grid-cols-2 gap-4`), изглеждаща организирано и подредено както на мобилни устройства, така и на десктоп екрани.
+  - Двата контрола са подредени изцяло вертикално един под друг (`flex flex-col gap-3.5`), като за всеки от тях заглавието/етикетът е на първия ред, а падащото меню е на втория ред.
 - **5-езикова локализация (bg, en, it, fr, de)**:
   - Добавени всички ключове за модела и новите етикети на настройките в [bg.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/bg.json), [en.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/en.json), [it.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/it.json), [fr.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/fr.json) и [de.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/de.json).
 
