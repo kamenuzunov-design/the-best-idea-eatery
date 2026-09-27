@@ -17,6 +17,7 @@ import ManageMeasurements from './pages/admin/ManageMeasurements';
 import ManageIngredients from './pages/admin/ManageIngredients';
 import ManageRecipes from './pages/admin/ManageRecipes';
 import ManageIngredientGroups from './pages/admin/ManageIngredientGroups';
+import ManageCuisines from './pages/admin/ManageCuisines';
 import DataDashboard from './pages/admin/DataDashboard';
 import Moderation from './pages/admin/Moderation';
 import BackupRecovery from './pages/admin/BackupRecovery';
@@ -163,6 +164,11 @@ function App() {
           <Route path="/admin/ingredient-groups" element={
             <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <ManageIngredientGroups />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/cuisines" element={
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
+              <ManageCuisines />
             </ProtectedRoute>
           } />
           <Route path="/admin/recipes" element={

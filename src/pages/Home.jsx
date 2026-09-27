@@ -6,7 +6,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
-import { getCuisineById } from '../data/cuisines';
+import { getLocalizedCuisine } from '../data/cuisines';
 import { translateTag, getRecipeTags, normalizeMainGroup, passesDietaryProfile } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
 import { getRecipeImageUrl } from '../lib/imageUtils';
@@ -344,10 +344,7 @@ const Home = () => {
     );
     return () => unsubFeatured();
   }, []);
-  const featuredCuisineObj = featuredRecipe?.cuisine_id ? getCuisineById(featuredRecipe.cuisine_id) : null;
-  const featuredCuisineName = featuredCuisineObj 
-    ? (featuredCuisineObj.name?.[i18n.language] || (isBg ? featuredCuisineObj.name?.bg : featuredCuisineObj.name?.en) || featuredCuisineObj.name?.en || featuredCuisineObj.name?.bg) 
-    : t('home.global_selection');
+  const featuredCuisineName = getLocalizedCuisine(featuredRecipe?.cuisine_id || featuredRecipe?.cuisine_bg, i18n.language) || t('home.global_selection');
   const calculatedFeaturedTags = getRecipeTags(featuredRecipe, ingredientsList);
   const featuredTags = calculatedFeaturedTags.length > 0 ? calculatedFeaturedTags : (featuredRecipe?.tags || []);
 
@@ -614,10 +611,7 @@ const Home = () => {
             const difficulty = t(`home.difficulty.${recipe.difficulty || 'medium'}`);
             const imageUrl = getRecipeImageUrl(recipe);
 
-            const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
-            const cuisineName = cuisineObj 
-              ? (cuisineObj.name?.[i18n.language] || (isBg ? cuisineObj.name?.bg : cuisineObj.name?.en) || cuisineObj.name?.en || cuisineObj.name?.bg) 
-              : t('home.global_selection');
+            const cuisineName = getLocalizedCuisine(recipe.cuisine_id || recipe.cuisine_bg, i18n.language) || t('home.global_selection');
             const calculatedTags = getRecipeTags(recipe, ingredientsList);
             const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
 

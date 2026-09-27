@@ -3,6 +3,80 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-09-27] - Реформа на базата с рецепти: 70 рецепти на 5 езика, нормализация на мерни единици и категории, реактивна редакция
+### Добавено / Коригирано (Added / Fixed)
+- **Пълна нормализация на базата данни за рецепти (70 рецепти на 5 езика)**:
+  - Обработени и съгласувани данните от потребителските CSV файлове в [recipes_clean_70_5lang.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_70_5lang.json) и [recipes_clean_70_5lang.csv](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_70_5lang.csv).
+  - 100% покритие на заглавия (`title`), описания (`description`), стъпки за приготвяне (`steps`), съставки (`ingredients`) и кулинарни бележки (`notes`) на всички 5 езика: BG, EN, IT, FR, DE.
+  - Нормализирани стари Firestore ID-та за мерни единици: `ZDtENplb6u2d0z9jsMrq` -> `teaspoon`, `7gptZ2tnjuPYbV6q6RJl` -> `pinch`, `6vZdWbDqaNSRnoamZ1kq` -> `teacup`.
+  - Нормализирани категории към валидните таксономични ключове: `desserts` -> `dessert`, `meat_dishes` -> `main_meat`, `cold_appetizers` -> `appetizer_cold`.
+  - Коригирана аномалия в `fitness-salad-with-potatoes-tuna-and-chickpeas`, където в полето за бележка на риба тон бе копирано цялото описание на рецептата.
+  - Подготвено премахване на счупени фантомни записи във Firestore (`Serve warm with (bulgarian) yogurt` и `Сервирайте топло с кисело мляко`), причинени от пренасяния на нов ред в стари файлове.
+- **Добавени 3 липсващи съставки в базата (общо 337 съставки)**:
+  - Добавени `pork-liver` (Свински черен дроб), `calf-brain` (Телешки мозък) и `crayfish-tails` (Опашки от раци) на 5 езика с пълни класификации, калории и мерни единици в [ingredients_seed_all.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/ingredients_seed_all.json) и [ingredients_clean_5lang.csv](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/ingredients_clean_5lang.csv).
+- **Обновен помощен панел и миграция в [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) и [recipeMigration.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMigration.js)**:
+  - Създаден помощен банер с 1 клик и прогрес бар за качване на 70-те рецепти и 3-те нови продукта директно през браузърната сесия на администратора.
+  - Вградена реактивна многоезична структура `titlesByLang` и `descsByLang` в редактора за рецепти. При смяна на езика съответният езиков превод се зарежда автоматично в полето за локализиран текст без опасност от омазване.
+  - CSV експортът и импортът вече изцяло четат и записват 5-те езика (`title_bg`, `title_en`, `title_it`, `title_fr`, `title_de`, `description_bg`, и т.н.) с автоматична нормализация на мерни единици и категории.
+
+## [2026-09-27] - Корекция на подгрупите и реактивна многоезична редакция при смяна на езика
+### Добавено / Коригирано (Added / Fixed)
+- **Отстраняване на дефекта при визуализиране и запис на "Подгрупа" в [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx)**:
+  - Премахнато погрешното извикване на `normalizeMainGroup` върху подгрупите (`sub_group`) в `handleEditClick` и `getSubGroupName`. Преди това функцията конвертираше `pulses` в главната група `pulses_and_starches` (ниво 0), поради което падащото меню за подгрупи (което филтрира само ниво 1) оставаше празно и стойността се губеше.
+  - Осигурено пълно съответствие между различните формати на идентификаторите на главните групи във Firestore (`Pulses-and-Starches`, `Sweeteners`, `Drinks`, `Pasta products`) и подгрупите чрез казус-инвариантно и нормализирано сравняване на родителя (`availableSubgroups`).
+  - Добавено разпознаване на исторически алиаси на подгрупи (`zachary` <-> `sugars`, `spicces_canned` <-> `spices_canned`).
+  - Добавена резервна `<option value={subGroup}>{subGroup}</option>` в падащото меню, гарантираща че стойността на подгрупата никога няма да изчезне визуално.
+- **Реактивно зареждане на локализираното име при смяна на езика по време на редакция**:
+  - Въведено централизирано многоезично състояние `namesByLang` (`bg`, `en`, `it`, `fr`, `de`) в [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx) и [ManageCuisines.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageCuisines.jsx).
+  - При превключване на езика в интерфейса по време на редакция полето за локализирано име мигновено зарежда превода за новоизбрания език от базата данни, вместо да задържа стария текст (напр. българското име в италианското поле).
+  - При запазване преводите на останалите 4 езика се съхраняват прецизно и никога не се презаписват с чужд език.
+- **Премахване на временния помощен банер за обновяване на базата**:
+  - След успешното качване на 334-те съставки във Firestore и потвърждение от потребителя, секцията и бутонът „Обновяване на базата с 334 продукта на 5 езика“ са изцяло премахнати от [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), оставяйки интерфейса чист и оптимизиран за продукционна работа.
+
+## [2026-09-27] - Реформа на базата с продукти: 334 съставки на 5 езика, нормализация на мерки, кухни и групи
+### Добавено / Коригирано (Added / Fixed)
+- **Пълна нормализация на базата данни за продукти (334 съставки на 5 езика)**:
+  - Обработен и нормализиран набор от данни за 334 продукта ([ingredients_seed_all.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/ingredients_seed_all.json) и [ingredients_clean_5lang.csv](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/ingredients_clean_5lang.csv)), съдържащ всички 147 съществуващи досега плюс 187 чисто нови продукта.
+  - Пълни преводи на 5 езика: `name_en`, `name_bg`, `name_it`, `name_fr`, `name_de` в обекта `name`.
+  - Коригирана печатна грешка в българското име на `zucchini` (`Тиквичкi` -> `Тиквички`).
+  - **Автоматична нормализация на кухни**: Всички 24 традиционни български стринга за кухни (`Европейска`, `Средиземноморска` и т.н.) са преобразувани към чистите Slug ID-та (`european`, `mediterranean`, `bulgarian` и т.н.) чрез новия модул `cuisines.js`.
+  - **Нормализация на мерни единици**:
+    - Коригирано старо автогенерирано Firestore ID `ZDtENplb6u2d0z9jsMrq` към стандартната мерна единица `teaspoon`.
+    - Уеднаквена мерна единица `drops` към `drop`.
+  - **Нормализация на групи и подгрупи**:
+    - Приведени към стандартен snake_case: `pulses_and_starches`, `pasta_products`, `drinks`, `sweeteners`, `canned_vegetables`, `frozen_vegetables` и др.
+    - Коригиран AI буквален превод на подгрупа `Zachary` към `sugars` („Захари“).
+    - Коригирана правописна грешка `spicces_canned` -> `spices_canned`.
+  - **Нормализация на тагове и алергени**:
+    - Обединени дублиращи се и вариращи тагове: `koto`, `ket`, `ketо`, `кето` -> `keto`; `suprfood`, `superfoof` -> `superfood`; `hight proteins`, `hight protein` -> `high-protein`; `omega 3` -> `omega-3`; `веган` -> `vegan`; `пескатерианска` -> `pescatarian`; премахнати празни стойности `"none"`.
+- **Обновен CSV Импорт и Експорт в [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx)**:
+  - Експортът и импортът вече изцяло четат и записват 5-те езикови колони (`name_en`, `name_bg`, `name_it`, `name_fr`, `name_de`).
+  - Вградено интелигентно почистване при импорт от произволен CSV файл (автоматично разпознаване на кухни през `getCuisineById`, коригиране на стари мерни единици и нормализиране на тагове).
+- **Инструмент за миграция и 1-клик качване във Firestore**:
+  - Създаден модул [ingredientMigration.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/ingredientMigration.js) (`seedAllIngredientsToFirestore`) с chunking по 100 записа през `writeBatch`.
+  - Добавен визуален банер за обновяване на базата с живо проследяване на прогреса за администратори в [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx).
+
+## [2026-09-27] - Реформа на базата с кухни: 5-езикова таксономия, кратки Slug ID-та и Административен панел
+### Добавено / Коригирано (Added / Fixed)
+- **Пълна 5-езикова таксономия и кратки Slug ID-та за Кухните ([cuisines.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/cuisines.js))**:
+  - Всички 80 кухни са дефинирани с чисти, кратки и семантични Slug ID-та (напр. `italian`, `french`, `bulgarian`, `greek`, `balkan`, `mediterranean`, `asian`, `global_fusion`).
+  - Добавени са пълни преводи на 5 езика (BG, EN, IT, FR, DE) за всяка отделна кухня.
+  - Изграден е интелигентен речник за съвместимост `CUISINE_ALIASES` и универсална функция `getCuisineById(idOrName)` / `getLocalizedCuisine(idOrName, lang)`, поддържащи както стари йерархични ID-та (`european_mediterranean_italian`), така и исторически стрингове на български ("Италианска", "Световна", "Френска" и др.).
+- **Нов административен модул за Управление на Кухни ([ManageCuisines.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageCuisines.jsx), `/admin/cuisines`)**:
+  - Интегриран в таблото с данни [DataDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/DataDashboard.jsx) и защитен с роли `OWNER` и `ADMIN`.
+  - Пълно CRUD управление: добавяне и редакция на кухни на 5 езика, автоматично генериране на Slug ID от английското име, избор на родителски регион/кухня.
+  - Дървовиден изглед с родителски и подкухни (ниво 0, ниво 1, ниво 2, ниво 3) и бързо търсене по slug или локализирано име.
+  - CSV Експорт и двустъпков Интелигентен CSV Импорт с откриване на дубликати и предварителен преглед.
+  - Вградени инструменти за поддръжка:
+    - **Инициализация в Firestore (Seeding)**: качване на 80-те кухни на 5 езика в колекция `cuisines` чрез `seedCuisinesToFirestore`.
+    - **Нормализация на старите данни**: автоматично сканиране на съществуващите продукти и рецепти във Firestore и подмяна на българските текстове с чисти Slug IDs чрез `normalizeCuisinesInDatabase`.
+- **Корекция при въвеждане и четене в Продукти и Рецепти**:
+  - В [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx) селекторът за кухня вече записва стриктно Slug ID (`value={c.id}`), отстранявайки стария дефект на записване на български стринг.
+  - В [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx) и [CuisinesExplorer.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CuisinesExplorer.jsx) имената на кухните се зареждат динамично според активния език на потребителя.
+  - В [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx) колекцията `cuisines` е включена в пълния системен архив и възстановяване.
+- **5-езикова локализация на новия панел**:
+  - Добавено пространство `cuisines_admin` и ключове в `data_dashboard` във всички речници ([bg.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/bg.json), [en.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/en.json), [it.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/it.json), [fr.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/fr.json), [de.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/de.json)).
+
 ## [2026-09-27] - Интегриране на селектор за Gemini AI модел и двуредов дизайн на настройките
 ### Добавено / Коригирано (Added / Fixed)
 - **Интерактивен избор на Gemini AI модел в [AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx)**:

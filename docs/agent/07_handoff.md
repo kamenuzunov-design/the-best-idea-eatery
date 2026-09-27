@@ -40,6 +40,13 @@
    - Пълна 5-езикова локализация (bg, en, it, fr, de).
 8. **Въведено и документирано проектно споразумение за качване и деплой**:
    - Вписано в `AGENTS.md`, `02_commands_and_env.md` и `07_handoff.md`, че проектът **НЕ** се качва в GitHub и Firebase Hosting след всяка отделна заявка, а единствено при изрично поискване или при обявяване на край на сесията.
+9. **Пълна реформа на базата с Кухни: 5-езикова таксономия, кратки Slug ID-та, панел за управление и нормализация**:
+   - **80 Кухни на 5 езика (BG, EN, IT, FR, DE)** с чисти семантични slugs (`italian`, `french`, `bulgarian`, `balkan`, `mediterranean`, `asian` и т.н.) в [cuisines.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/cuisines.js).
+   - Интелигентен alias mapping речник за обратна съвместимост със стари йерархични IDs и български текстове.
+   - Нов административен модул [ManageCuisines.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageCuisines.jsx) на `/admin/cuisines` с пълен CRUD, йерархично дърво, CSV експорт и импорт, бутон за Seeding в Firestore и инструмент за автоматична нормализация на старите български текстове в съществуващите продукти и рецепти.
+   - Коригиран селектор в [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx) за записване на Slug ID.
+   - Многоезично извличане на имената на кухните в [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) и [CuisinesExplorer.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CuisinesExplorer.jsx).
+   - Колекцията `cuisines` е включена в системния бекъп в [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx).
 
 ---
 

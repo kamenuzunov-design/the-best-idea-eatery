@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getLocalizedCuisine } from '../data/cuisines';
 
 const CuisinesExplorer = () => {
   const navigate = useNavigate();
@@ -89,14 +90,20 @@ const CuisinesExplorer = () => {
       {/* Cuisine Grid */}
       <main className="grid grid-cols-1 md:grid-cols-2 gap-5 px-4">
         {cuisines.map(cuisine => (
-          <div key={cuisine.id} className="relative overflow-hidden rounded-2xl aspect-[16/9] group cursor-pointer border border-primary/20 shadow-lg hover:shadow-primary/20 transition-all">
+          <div 
+            key={cuisine.id} 
+            onClick={() => navigate(`/search?cuisine=${cuisine.id}`)}
+            className="relative overflow-hidden rounded-2xl aspect-[16/9] group cursor-pointer border border-primary/20 shadow-lg hover:shadow-primary/20 transition-all"
+          >
             <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{backgroundImage: cuisine.image}}>
               <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/50 to-transparent opacity-90 group-hover:opacity-70 transition-opacity duration-500"></div>
             </div>
             <div className="absolute bottom-0 left-0 p-5 w-full">
               <div className="flex justify-between items-end">
                 <div>
-                  <h3 className="text-white text-2xl font-extrabold drop-shadow-md tracking-tight">{isBg ? cuisine.nameBg : cuisine.nameEn}</h3>
+                  <h3 className="text-white text-2xl font-extrabold drop-shadow-md tracking-tight">
+                    {getLocalizedCuisine(cuisine.id, i18n.language) || (isBg ? cuisine.nameBg : cuisine.nameEn)}
+                  </h3>
                 </div>
                 <span className="bg-background-dark/50 backdrop-blur-md text-primary text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-primary/30 shadow-md">
                   {cuisine.recipesCount} {isBg ? 'Рецепти' : 'Recipes'}

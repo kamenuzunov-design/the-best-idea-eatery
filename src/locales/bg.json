@@ -839,7 +839,29 @@
     "ingredient_groups_title": "Групи Продукти",
     "ingredient_groups_desc": "Категории и подкатегории",
     "measurements_title": "Мерни Единици",
-    "measurements_desc": "Конфигурация на мерките"
+    "measurements_desc": "Конфигурация на мерките",
+    "cuisines_title": "Кухни (Произход)",
+    "cuisines_desc": "Световни региони и стилове"
+  },
+  "cuisines_admin": {
+    "title": "Управление на Кухни",
+    "subtitle": "Таксономия и световни кулинарни региони на 5 езика",
+    "total_count": "Въведени кухни",
+    "export_csv": "Експорт CSV",
+    "import_csv": "Импорт CSV",
+    "add_title": "Добави нова кухня",
+    "edit_title": "Редакция на кухня",
+    "slug_id": "Slug ID (Идентификатор)",
+    "slug_placeholder": "напр. italian, bulgarian",
+    "parent_cuisine": "Родителска кухня / Регион",
+    "none_parent": "Няма (Основно ниво 0)",
+    "name_en": "Име (EN) *",
+    "name_local": "Име ({{lang}}) *",
+    "search_placeholder": "Търсене по име или Slug...",
+    "seed_btn": "Инициализирай начални кухни (80 бр. на 5 езика)",
+    "normalize_btn": "Нормализирай старите данни в Продукти и Рецепти",
+    "empty_hint": "Все още няма въведени кухни в Firestore.",
+    "confirm_delete": "Сигурни ли сте, че искате да изтриете тази кухня?"
   },
   "admin_dashboard": {
     "title": "Администрация",

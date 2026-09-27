@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { doc, onSnapshot, getDoc, updateDoc, arrayRemove, collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
-import { getCuisineById } from '../data/cuisines';
+import { getLocalizedCuisine } from '../data/cuisines';
 import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getLocalizedField } from '../lib/localeUtils';
@@ -629,8 +629,7 @@ const SavedRecipes = () => {
                 };
                 const difficulty = difficultyMap[recipe.difficulty] || difficultyMap.medium;
                 const imageUrl = recipe.images?.main || "/placeholder.jpg";
-                const cuisineObj = recipe.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
-                const cuisineName = cuisineObj ? (cuisineObj.name[currentLang] || cuisineObj.name.en || cuisineObj.name.bg) : t('saved.global_selection');
+                const cuisineName = getLocalizedCuisine(recipe.cuisine_id || recipe.cuisine_bg, currentLang) || t('saved.global_selection');
                 const calculatedTags = getRecipeTags(recipe, ingredientsList);
                 const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
 

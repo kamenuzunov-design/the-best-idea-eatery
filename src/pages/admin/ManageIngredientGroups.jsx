@@ -27,9 +27,17 @@ const ManageIngredientGroups = () => {
   // Form State
   const [editingId, setEditingId] = useState(null);
   const [groupId, setGroupId] = useState('');
-  const [nameLocal, setNameLocal] = useState('');
-  const [nameEn, setNameEn] = useState('');
+  const [namesByLang, setNamesByLang] = useState({
+    bg: '',
+    en: '',
+    it: '',
+    fr: '',
+    de: ''
+  });
   const [parentId, setParentId] = useState('');
+
+  const currentLocalName = isEn ? (namesByLang.en || '') : (namesByLang[currentLang] || '');
+  const currentEnName = namesByLang.en || '';
 
   useEffect(() => {
     const q = query(collection(db, 'ingredient_groups'));
@@ -51,73 +59,42 @@ const ManageIngredientGroups = () => {
 
   const handleSaveGroup = async (e) => {
     e.preventDefault();
-    const finalNameEn = nameEn.trim() || nameLocal.trim();
+    const finalNameEn = currentEnName.trim() || currentLocalName.trim();
     if (!finalNameEn) return;
 
-    const finalNameLocal = nameLocal.trim() || finalNameEn;
+    const finalNameLocal = currentLocalName.trim() || finalNameEn;
     const cleanId = (editingId ? groupId : (groupId || finalNameEn)).toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)+/g, '');
     if (!cleanId) return;
 
     try {
+      const existingGroup = editingId ? groups.find(g => g.id === editingId) : null;
       const groupData = {
-        name: {},
+        name: {
+          en: finalNameEn,
+          bg: isEn ? (namesByLang.bg?.trim() || existingGroup?.name?.bg || existingGroup?.name_bg || finalNameEn)
+                   : (currentLang === 'bg' ? finalNameLocal : (namesByLang.bg?.trim() || existingGroup?.name?.bg || existingGroup?.name_bg || finalNameEn)),
+          it: isEn ? (namesByLang.it?.trim() || existingGroup?.name?.it || existingGroup?.name_it || finalNameEn)
+                   : (currentLang === 'it' ? finalNameLocal : (namesByLang.it?.trim() || existingGroup?.name?.it || existingGroup?.name_it || finalNameEn)),
+          fr: isEn ? (namesByLang.fr?.trim() || existingGroup?.name?.fr || existingGroup?.name_fr || finalNameEn)
+                   : (currentLang === 'fr' ? finalNameLocal : (namesByLang.fr?.trim() || existingGroup?.name?.fr || existingGroup?.name_fr || finalNameEn)),
+          de: isEn ? (namesByLang.de?.trim() || existingGroup?.name?.de || existingGroup?.name_de || finalNameEn)
+                   : (currentLang === 'de' ? finalNameLocal : (namesByLang.de?.trim() || existingGroup?.name?.de || existingGroup?.name_de || finalNameEn)),
+        },
+        name_en: finalNameEn,
+        name_bg: isEn ? (namesByLang.bg?.trim() || existingGroup?.name?.bg || existingGroup?.name_bg || finalNameEn)
+                      : (currentLang === 'bg' ? finalNameLocal : (namesByLang.bg?.trim() || existingGroup?.name?.bg || existingGroup?.name_bg || finalNameEn)),
+        name_it: isEn ? (namesByLang.it?.trim() || existingGroup?.name?.it || existingGroup?.name_it || finalNameEn)
+                      : (currentLang === 'it' ? finalNameLocal : (namesByLang.it?.trim() || existingGroup?.name?.it || existingGroup?.name_it || finalNameEn)),
+        name_fr: isEn ? (namesByLang.fr?.trim() || existingGroup?.name?.fr || existingGroup?.name_fr || finalNameEn)
+                      : (currentLang === 'fr' ? finalNameLocal : (namesByLang.fr?.trim() || existingGroup?.name?.fr || existingGroup?.name_fr || finalNameEn)),
+        name_de: isEn ? (namesByLang.de?.trim() || existingGroup?.name?.de || existingGroup?.name_de || finalNameEn)
+                      : (currentLang === 'de' ? finalNameLocal : (namesByLang.de?.trim() || existingGroup?.name?.de || existingGroup?.name_de || finalNameEn)),
         parentId: parentId || null,
         level: parentId ? 1 : 0,
         updatedAt: new Date().toISOString()
       };
 
-      // Multilingual Data Entry Paradigm
-      if (isEn) {
-        groupData.name.en = finalNameEn;
-        groupData.name_en = finalNameEn;
-
-        // Auto-fallback for all supported languages
-        for (const lang of SUPPORTED_LANGUAGES) {
-          groupData.name[lang] = finalNameEn;
-          groupData[`name_${lang}`] = finalNameEn;
-        }
-        groupData.name.bg = finalNameEn;
-        groupData.name_bg = finalNameEn;
-      } else {
-        groupData.name.en = finalNameEn;
-        groupData.name_en = finalNameEn;
-        groupData.name[currentLang] = finalNameLocal;
-        groupData[`name_${currentLang}`] = finalNameLocal;
-
-        if (currentLang === 'bg') {
-          groupData.name.bg = finalNameLocal;
-          groupData.name_bg = finalNameLocal;
-        }
-
-        // Auto-fallback to EN for other languages
-        for (const lang of SUPPORTED_LANGUAGES) {
-          if (!groupData.name[lang]) {
-            groupData.name[lang] = finalNameEn;
-          }
-          if (!groupData[`name_${lang}`]) {
-            groupData[`name_${lang}`] = finalNameEn;
-          }
-        }
-        if (!groupData.name.bg) groupData.name.bg = finalNameEn;
-        if (!groupData.name_bg) groupData.name_bg = finalNameEn;
-      }
-
       if (editingId) {
-        // When editing, preserve existing translations for other languages from existing group
-        const existingGroup = groups.find(g => g.id === editingId);
-        if (existingGroup) {
-          for (const lang of SUPPORTED_LANGUAGES) {
-            if (lang !== currentLang && lang !== 'en') {
-              if (existingGroup.name?.[lang]) groupData.name[lang] = existingGroup.name[lang];
-              if (existingGroup[`name_${lang}`]) groupData[`name_${lang}`] = existingGroup[`name_${lang}`];
-            }
-          }
-          if (currentLang !== 'bg') {
-            if (existingGroup.name?.bg) groupData.name.bg = existingGroup.name.bg;
-            if (existingGroup.name_bg) groupData.name_bg = existingGroup.name_bg;
-          }
-        }
-
         await updateDoc(doc(db, 'ingredient_groups', editingId), groupData);
         await logActivity(user.uid, user.email, 'edit_ingredient_group', `Edited group: ${finalNameEn}`);
       } else {
@@ -136,9 +113,18 @@ const ManageIngredientGroups = () => {
 
   const handleNameEnChange = (e) => {
     const val = e.target.value;
-    setNameEn(val);
+    setNamesByLang(prev => ({ ...prev, en: val }));
     if (!editingId && (isEn || !groupId)) {
       setGroupId(val.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)+/g, ''));
+    }
+  };
+
+  const handleNameLocalChange = (e) => {
+    const val = e.target.value;
+    if (isEn) {
+      handleNameEnChange(e);
+    } else {
+      setNamesByLang(prev => ({ ...prev, [currentLang]: val }));
     }
   };
 
@@ -147,10 +133,13 @@ const ManageIngredientGroups = () => {
     setGroupId(g.id);
     
     // Multilingual names
-    const currentLocalName = g.name?.[currentLang] || g[`name_${currentLang}`] || (currentLang === 'bg' ? (g.name?.bg || g.name_bg) : '');
-    const currentEnName = g.name?.en || g.name_en || (isEn ? (g.name?.bg || g.name_bg) : '');
-    setNameLocal(currentLocalName || '');
-    setNameEn(currentEnName || '');
+    setNamesByLang({
+      en: g.name?.en || g.name_en || '',
+      bg: g.name?.bg || g.name_bg || '',
+      it: g.name?.it || g.name_it || '',
+      fr: g.name?.fr || g.name_fr || '',
+      de: g.name?.de || g.name_de || ''
+    });
 
     setParentId(g.parentId || '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -159,8 +148,7 @@ const ManageIngredientGroups = () => {
   const handleCancelEdit = () => {
     setEditingId(null);
     setGroupId('');
-    setNameLocal('');
-    setNameEn('');
+    setNamesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
     setParentId('');
   };
 
@@ -435,7 +423,7 @@ const ManageIngredientGroups = () => {
               <div className="col-span-2">
                 <label className="text-xs text-slate-400">{t('ingredient_groups.name_en')}</label>
                 <input 
-                  value={nameEn} 
+                  value={currentEnName} 
                   onChange={handleNameEnChange} 
                   required 
                   className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 
@@ -448,8 +436,8 @@ const ManageIngredientGroups = () => {
                 <div>
                   <label className="text-xs text-slate-400">{t('ingredient_groups.name_local', { lang: localLangMeta.name })}</label>
                   <input 
-                    value={nameLocal} 
-                    onChange={(e) => setNameLocal(e.target.value)} 
+                    value={currentLocalName} 
+                    onChange={handleNameLocalChange} 
                     className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 
                     placeholder={t('ingredient_groups.name_placeholder')} 
                   />
@@ -457,7 +445,7 @@ const ManageIngredientGroups = () => {
                 <div>
                   <label className="text-xs text-slate-400">{t('ingredient_groups.name_en')}</label>
                   <input 
-                    value={nameEn} 
+                    value={currentEnName} 
                     onChange={handleNameEnChange} 
                     required 
                     className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-primary outline-none" 

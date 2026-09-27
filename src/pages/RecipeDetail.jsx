@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
-import { getCuisineById } from '../data/cuisines';
+import { getLocalizedCuisine } from '../data/cuisines';
 import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -904,8 +904,7 @@ const RecipeDetail = () => {
   const missing = analyzeRecipe();
   const isReady = isPantryActive ? missing.length === 0 : true;
 
-  const cuisineObj = recipe?.cuisine_id ? getCuisineById(recipe.cuisine_id) : null;
-  const cuisineName = cuisineObj ? (cuisineObj.name[currentLang] || cuisineObj.name.en || cuisineObj.name.bg) : t('recipe_detail.global_selection');
+  const cuisineName = getLocalizedCuisine(recipe?.cuisine_id || recipe?.cuisine_bg || recipe?.cuisine_en, currentLang) || t('recipe_detail.global_selection');
   
   const calculatedTags = getRecipeTags(recipe, ingredientsList);
   const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);

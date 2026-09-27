@@ -82,6 +82,20 @@ const DataDashboard = () => {
           </Link>
         )}
 
+        {/* Cuisines */}
+        {(user?.role === ROLES.OWNER || user?.role === ROLES.ADMIN) && (
+          <Link to="/admin/cuisines" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-primary/20 shadow-lg hover:shadow-primary/10 transition-all cursor-pointer group flex items-center gap-4">
+            <div className="size-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0">
+              <span className="material-symbols-outlined text-2xl font-bold">public</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-slate-100">{t('data_dashboard.cuisines_title')}</h3>
+              <p className="text-xs text-slate-400">{t('data_dashboard.cuisines_desc')}</p>
+            </div>
+            <span className="material-symbols-outlined text-slate-500">chevron_right</span>
+          </Link>
+        )}
+
       </div>
     </div>
   );

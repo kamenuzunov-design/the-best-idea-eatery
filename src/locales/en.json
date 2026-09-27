@@ -839,7 +839,29 @@
     "ingredient_groups_title": "Ingredient Groups",
     "ingredient_groups_desc": "Categories and subcategories",
     "measurements_title": "Measurement Units",
-    "measurements_desc": "Measurement configuration"
+    "measurements_desc": "Measurement configuration",
+    "cuisines_title": "Cuisines (Origin)",
+    "cuisines_desc": "World regions and styles"
+  },
+  "cuisines_admin": {
+    "title": "Manage Cuisines",
+    "subtitle": "Taxonomy and global culinary regions in 5 languages",
+    "total_count": "Total Cuisines",
+    "export_csv": "Export CSV",
+    "import_csv": "Import CSV",
+    "add_title": "Add New Cuisine",
+    "edit_title": "Edit Cuisine",
+    "slug_id": "Slug ID (Identifier)",
+    "slug_placeholder": "e.g. italian, bulgarian",
+    "parent_cuisine": "Parent Cuisine / Region",
+    "none_parent": "None (Main level 0)",
+    "name_en": "Name (EN) *",
+    "name_local": "Name ({{lang}}) *",
+    "search_placeholder": "Search by name or slug...",
+    "seed_btn": "Initialize Default Cuisines (80 items in 5 languages)",
+    "normalize_btn": "Normalize Legacy Data in Products & Recipes",
+    "empty_hint": "No cuisines in Firestore yet.",
+    "confirm_delete": "Are you sure you want to delete this cuisine?"
   },
   "admin_dashboard": {
     "title": "Administration",

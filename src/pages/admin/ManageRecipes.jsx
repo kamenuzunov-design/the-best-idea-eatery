@@ -9,12 +9,13 @@ import { resizeImage } from '../../lib/imageUtils';
 import { logActivity } from '../../lib/activityLogger';
 import { archiveVersion } from '../../lib/archiveUtils';
 import { checkImageSafety } from '../../lib/moderationUtils';
-import { CUISINES } from '../../data/cuisines';
+import { CUISINES, getCuisineById, getLocalizedCuisine } from '../../data/cuisines';
 import { ROLES } from '../../constants/roles';
 import { getRootCategories, getSubCategories } from '../../data/recipe_categories';
 import { REPUTATION_POINTS } from '../../lib/reputationUtils';
 import { getRecipeTags } from '../../lib/recipeMetaUtils';
 import { getLocalizedText, getLocalizedField, extractLocalizedNote } from '../../lib/localeUtils';
+import { seedCleanRecipesToFirestore } from '../../lib/recipeMigration';
 
 const ManageRecipes = () => {
   const { t, i18n } = useTranslation();
@@ -52,12 +53,20 @@ const ManageRecipes = () => {
   const [editingId, setEditingId] = useState(null);
   const [activeTab, setActiveTab] = useState('basic'); // basic, media, ingredients, steps
 
-  // Basic Info
-  const [titleLocal, setTitleLocal] = useState('');
-  const [titleEn, setTitleEn] = useState('');
+  // Basic Info - Reactive 5-language map
+  const [titlesByLang, setTitlesByLang] = useState({ bg: '', en: '', it: '', fr: '', de: '' });
+  const [descsByLang, setDescsByLang] = useState({ bg: '', en: '', it: '', fr: '', de: '' });
+  const currentLocalTitle = isEn ? titlesByLang.en : (titlesByLang[currentLang] || '');
+  const currentEnTitle = titlesByLang.en || '';
+  const currentLocalDesc = isEn ? descsByLang.en : (descsByLang[currentLang] || '');
+  const currentEnDesc = descsByLang.en || '';
+
+  // Seed / Migration State
+  const [seedStatus, setSeedStatus] = useState('idle'); // 'idle' | 'running' | 'done' | 'error'
+  const [seedProgress, setSeedProgress] = useState({ current: 0, total: 0, percentage: 0, currentItem: '' });
+  const [showSeedBanner, setShowSeedBanner] = useState(true);
+
   const [slug, setSlug] = useState('');
-  const [descLocal, setDescLocal] = useState('');
-  const [descEn, setDescEn] = useState('');
   const [cuisineId, setCuisineId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [categoryIds, setCategoryIds] = useState([]);
@@ -143,10 +152,36 @@ const ManageRecipes = () => {
 
   const handleTitleEnChange = (e) => {
     const val = e.target.value;
-    setTitleEn(val);
+    setTitlesByLang(prev => ({
+      ...prev,
+      en: val,
+      ...(!editingId ? { bg: prev.bg || val, it: prev.it || val, fr: prev.fr || val, de: prev.de || val } : {})
+    }));
     if (!editingId) {
       setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
     }
+  };
+
+  const handleLocalTitleChange = (e) => {
+    const val = e.target.value;
+    setTitlesByLang(prev => ({ ...prev, [currentLang]: val }));
+    if (!editingId && !titlesByLang.en) {
+      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
+    }
+  };
+
+  const handleDescEnChange = (e) => {
+    const val = e.target.value;
+    setDescsByLang(prev => ({
+      ...prev,
+      en: val,
+      ...(!editingId ? { bg: prev.bg || val, it: prev.it || val, fr: prev.fr || val, de: prev.de || val } : {})
+    }));
+  };
+
+  const handleLocalDescChange = (e) => {
+    const val = e.target.value;
+    setDescsByLang(prev => ({ ...prev, [currentLang]: val }));
   };
 
   // --- Dynamic Ingredients ---
@@ -332,9 +367,9 @@ const ManageRecipes = () => {
   const handleSaveRecipe = async (e) => {
     e.preventDefault();
     if (isEn) {
-      if (!titleEn || !slug) return;
+      if (!titlesByLang.en?.trim() || !slug) return;
     } else {
-      if ((!titleLocal && !titleEn) || !slug) return;
+      if ((!titlesByLang[currentLang]?.trim() && !titlesByLang.en?.trim()) || !slug) return;
     }
 
     try {
@@ -380,8 +415,8 @@ const ManageRecipes = () => {
       let needsTranslation = false;
       let translationReason = null;
 
-      const effectiveEnTitle = (titleEn || (isEn ? '' : titleLocal) || '').trim();
-      const effectiveLocalTitle = (titleLocal || titleEn || '').trim();
+      const effectiveEnTitle = (titlesByLang.en || titlesByLang[currentLang] || '').trim();
+      const effectiveLocalTitle = (titlesByLang[currentLang] || titlesByLang.en || '').trim();
 
       const existingTitle = (typeof originalRecipe?.title === 'object' && originalRecipe?.title !== null) ? originalRecipe.title : {};
       const existingDesc = (typeof originalRecipe?.description === 'object' && originalRecipe?.description !== null) ? originalRecipe.description : {};
@@ -392,17 +427,17 @@ const ManageRecipes = () => {
       if (isEn) {
         finalTitleObj = {
           en: effectiveEnTitle,
-          bg: existingTitle.bg || originalRecipe?.title_bg || effectiveEnTitle,
-          it: existingTitle.it || effectiveEnTitle,
-          fr: existingTitle.fr || effectiveEnTitle,
-          de: existingTitle.de || effectiveEnTitle
+          bg: titlesByLang.bg || existingTitle.bg || originalRecipe?.title_bg || effectiveEnTitle,
+          it: titlesByLang.it || existingTitle.it || effectiveEnTitle,
+          fr: titlesByLang.fr || existingTitle.fr || effectiveEnTitle,
+          de: titlesByLang.de || existingTitle.de || effectiveEnTitle
         };
         finalDescObj = {
-          en: (descEn || '').trim(),
-          bg: existingDesc.bg || originalRecipe?.description_bg || (descEn || '').trim(),
-          it: existingDesc.it || (descEn || '').trim(),
-          fr: existingDesc.fr || (descEn || '').trim(),
-          de: existingDesc.de || (descEn || '').trim()
+          en: (descsByLang.en || '').trim(),
+          bg: descsByLang.bg || existingDesc.bg || originalRecipe?.description_bg || (descsByLang.en || '').trim(),
+          it: descsByLang.it || existingDesc.it || (descsByLang.en || '').trim(),
+          fr: descsByLang.fr || existingDesc.fr || (descsByLang.en || '').trim(),
+          de: descsByLang.de || existingDesc.de || (descsByLang.en || '').trim()
         };
         if (!editingId) {
           needsTranslation = true;
@@ -411,7 +446,7 @@ const ManageRecipes = () => {
           const origEnTitle = originalRecipe?.title_en || originalRecipe?.title?.en || '';
           const origEnDesc = originalRecipe?.description_en || originalRecipe?.description?.en || '';
           const enTitleChanged = origEnTitle !== effectiveEnTitle;
-          const enDescChanged = origEnDesc !== (descEn || '');
+          const enDescChanged = origEnDesc !== (descsByLang.en || '');
           const enStepsChanged = originalRecipe && JSON.stringify(originalRecipe.steps?.map(s => s.instruction_en || s.instruction?.en)) !== JSON.stringify(recipeSteps.map(s => s.instruction_en));
 
           if (enTitleChanged || enDescChanged || enStepsChanged || originalRecipe?.needs_translation) {
@@ -423,17 +458,17 @@ const ManageRecipes = () => {
         // Non-English user (BG, IT, FR, DE)
         finalTitleObj = {
           en: effectiveEnTitle,
-          bg: currentLang === 'bg' ? effectiveLocalTitle : (existingTitle.bg || originalRecipe?.title_bg || effectiveEnTitle),
-          it: currentLang === 'it' ? effectiveLocalTitle : (existingTitle.it || effectiveEnTitle),
-          fr: currentLang === 'fr' ? effectiveLocalTitle : (existingTitle.fr || effectiveEnTitle),
-          de: currentLang === 'de' ? effectiveLocalTitle : (existingTitle.de || effectiveEnTitle)
+          bg: currentLang === 'bg' ? effectiveLocalTitle : (titlesByLang.bg || existingTitle.bg || originalRecipe?.title_bg || effectiveEnTitle),
+          it: currentLang === 'it' ? effectiveLocalTitle : (titlesByLang.it || existingTitle.it || effectiveEnTitle),
+          fr: currentLang === 'fr' ? effectiveLocalTitle : (titlesByLang.fr || existingTitle.fr || effectiveEnTitle),
+          de: currentLang === 'de' ? effectiveLocalTitle : (titlesByLang.de || existingTitle.de || effectiveEnTitle)
         };
         finalDescObj = {
-          en: (descEn || (isEn ? '' : descLocal) || '').trim(),
-          bg: currentLang === 'bg' ? (descLocal || descEn || '').trim() : (existingDesc.bg || originalRecipe?.description_bg || (descEn || '').trim()),
-          it: currentLang === 'it' ? (descLocal || descEn || '').trim() : (existingDesc.it || (descEn || '').trim()),
-          fr: currentLang === 'fr' ? (descLocal || descEn || '').trim() : (existingDesc.fr || (descEn || '').trim()),
-          de: currentLang === 'de' ? (descLocal || descEn || '').trim() : (existingDesc.de || (descEn || '').trim())
+          en: (descsByLang.en || (isEn ? '' : descsByLang[currentLang]) || '').trim(),
+          bg: currentLang === 'bg' ? (descsByLang.bg || descsByLang.en || '').trim() : (existingDesc.bg || originalRecipe?.description_bg || (descsByLang.en || '').trim()),
+          it: currentLang === 'it' ? (descsByLang.it || descsByLang.en || '').trim() : (existingDesc.it || (descsByLang.en || '').trim()),
+          fr: currentLang === 'fr' ? (descsByLang.fr || descsByLang.en || '').trim() : (existingDesc.fr || (descsByLang.en || '').trim()),
+          de: currentLang === 'de' ? (descsByLang.de || descsByLang.en || '').trim() : (existingDesc.de || (descsByLang.en || '').trim())
         };
 
         const hasUnfinished = 
@@ -608,12 +643,23 @@ const ManageRecipes = () => {
 
   const handleEditClick = (recipe) => {
     setEditingId(recipe.id);
-    setTitleLocal(getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || '');
-    setTitleEn(recipe.title_en || recipe.title?.en || '');
+    setTitlesByLang({
+      bg: recipe.title?.bg || recipe.title_bg || '',
+      en: recipe.title?.en || recipe.title_en || '',
+      it: recipe.title?.it || recipe.title_it || '',
+      fr: recipe.title?.fr || recipe.title_fr || '',
+      de: recipe.title?.de || recipe.title_de || ''
+    });
+    setDescsByLang({
+      bg: recipe.description?.bg || recipe.description_bg || '',
+      en: recipe.description?.en || recipe.description_en || '',
+      it: recipe.description?.it || recipe.description_it || '',
+      fr: recipe.description?.fr || recipe.description_fr || '',
+      de: recipe.description?.de || recipe.description_de || ''
+    });
     setSlug(recipe.slug || recipe.id);
-    setDescLocal(getLocalizedField(recipe, 'description', currentLang) || recipe.description_bg || '');
-    setDescEn(recipe.description_en || recipe.description?.en || '');
-    setCuisineId(recipe.cuisine_id || '');
+    const cMatch = getCuisineById(recipe.cuisine_id || recipe.cuisine_bg || recipe.cuisine_en);
+    setCuisineId(cMatch ? cMatch.id : (recipe.cuisine_id || ''));
     const loadedCats = Array.isArray(recipe.category_ids) && recipe.category_ids.length > 0
       ? recipe.category_ids
       : (recipe.category_id ? [recipe.category_id] : []);
@@ -690,7 +736,8 @@ const ManageRecipes = () => {
   const handleExportCSV = () => {
     const exportable = recipes.filter(r => !r.is_deleted);
     const headers = [
-      'slug','title_bg','title_en','description_bg','description_en',
+      'slug','title_bg','title_en','title_it','title_fr','title_de',
+      'description_bg','description_en','description_it','description_fr','description_de',
       'cuisine_id','category_id','category_ids','sub_category_id','prep_time','cook_time',
       'servings','difficulty','video_url','original_author','source_link',
       'ingredients','steps'
@@ -705,21 +752,27 @@ const ManageRecipes = () => {
 
     const rows = exportable.map(r => [
       escape(r.slug || r.id),
-      escape(r.title_bg),
-      escape(r.title_en),
-      escape(r.description_bg),
-      escape(r.description_en),
-      escape(r.cuisine_id),
-      escape(r.category_id),
+      escape(r.title_bg || r.title?.bg || ''),
+      escape(r.title_en || r.title?.en || ''),
+      escape(r.title_it || r.title?.it || ''),
+      escape(r.title_fr || r.title?.fr || ''),
+      escape(r.title_de || r.title?.de || ''),
+      escape(r.description_bg || r.description?.bg || ''),
+      escape(r.description_en || r.description?.en || ''),
+      escape(r.description_it || r.description?.it || ''),
+      escape(r.description_fr || r.description?.fr || ''),
+      escape(r.description_de || r.description?.de || ''),
+      escape(r.cuisine_id || ''),
+      escape(r.category_id || ''),
       escape(Array.isArray(r.category_ids) ? r.category_ids.join(';') : (r.category_id || '')),
-      escape(r.sub_category_id),
-      escape(r.prep_time),
-      escape(r.cook_time),
-      escape(r.servings),
-      escape(r.difficulty),
-      escape(r.video_url),
-      escape(r.original_author),
-      escape(r.source_link),
+      escape(r.sub_category_id || ''),
+      escape(r.prep_time || 0),
+      escape(r.cook_time || 0),
+      escape(r.servings || 1),
+      escape(r.difficulty || 'medium'),
+      escape(r.video_url || ''),
+      escape(r.original_author || ''),
+      escape(r.source_link || ''),
       escape(JSON.stringify(r.ingredients || [])),
       escape(JSON.stringify(r.steps || [])),
     ].join(','));
@@ -729,10 +782,32 @@ const ManageRecipes = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `recipes_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `recipes_5lang_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    logActivity(user.uid, user.email, 'export_recipes_csv', `Exported ${exportable.length} recipes`);
+    logActivity(user.uid, user.email, 'export_recipes_csv', `Exported ${exportable.length} recipes in 5 languages`);
+  };
+
+  // --- Seed / Normalize 70 Recipes ---
+  const handleSeedRecipes = async () => {
+    if (!window.confirm(t('recipes.confirm_seed_70', { defaultValue: 'Сигурни ли сте, че искате да обновите базата данни със 70-те рецепти на 5 езика и да изчистите невалидните записи?' }))) {
+      return;
+    }
+    setSeedStatus('running');
+    try {
+      const res = await seedCleanRecipesToFirestore(db, (p) => {
+        setSeedProgress(p);
+      });
+      if (res.success) {
+        setSeedStatus('done');
+        await logActivity(user.uid, user.email, 'seed_recipes_5lang', `Seeded/normalized 70 recipes across 5 languages`);
+      } else {
+        setSeedStatus('error');
+      }
+    } catch (err) {
+      console.error("Seed recipes error:", err);
+      setSeedStatus('error');
+    }
   };
 
   // --- CSV Import ---
@@ -774,27 +849,55 @@ const ManageRecipes = () => {
         const slug = cols[idx('slug')]?.trim();
         const title_bg = cols[idx('title_bg')]?.trim();
         const title_en = cols[idx('title_en')]?.trim();
-        if (!slug || !title_bg || !title_en) continue;
+        const title_it = cols[idx('title_it')]?.trim() || title_en;
+        const title_fr = cols[idx('title_fr')]?.trim() || title_en;
+        const title_de = cols[idx('title_de')]?.trim() || title_en;
+        if (!slug || (!title_bg && !title_en)) continue;
+
+        const description_bg = cols[idx('description_bg')] || '';
+        const description_en = cols[idx('description_en')] || '';
+        const description_it = cols[idx('description_it')] || description_en;
+        const description_fr = cols[idx('description_fr')] || description_en;
+        const description_de = cols[idx('description_de')] || description_en;
 
         let ingredients = [];
         let steps = [];
         try { ingredients = JSON.parse(cols[idx('ingredients')] || '[]'); } catch (err) { console.warn('JSON parsing error:', err); }
         try { steps = JSON.parse(cols[idx('steps')] || '[]'); } catch (err) { console.warn('JSON parsing error:', err); }
 
+        // Normalize units in ingredients
+        ingredients = ingredients.map(ing => {
+          let u = ing.unit_id;
+          if (u === 'ZDtENplb6u2d0z9jsMrq') u = 'teaspoon';
+          else if (u === '7gptZ2tnjuPYbV6q6RJl') u = 'pinch';
+          else if (u === '6vZdWbDqaNSRnoamZ1kq') u = 'teacup';
+          return { ...ing, unit_id: u || 'piece' };
+        });
+
         const catIdsRaw = cols[idx('category_ids')]?.trim();
         const primaryCat = cols[idx('category_id')]?.trim() || '';
-        const parsedCatIds = catIdsRaw 
-          ? catIdsRaw.split(';').map(s => s.trim()).filter(Boolean)
-          : (primaryCat ? [primaryCat] : []);
+        let parsedCatIds = catIdsRaw 
+          ? catIdsRaw.split(';').map(s => s.trim().toLowerCase()).filter(Boolean)
+          : (primaryCat ? [primaryCat.toLowerCase()] : []);
+        parsedCatIds = parsedCatIds.map(c => c === 'desserts' ? 'dessert' : c);
+        const normPrimaryCat = primaryCat === 'desserts' ? 'dessert' : (primaryCat || parsedCatIds[0] || 'main');
+
+        let rawSubCat = cols[idx('sub_category_id')]?.trim() || '';
+        if (rawSubCat === 'meat_dishes') rawSubCat = 'main_meat';
+        if (rawSubCat === 'cold_appetizers') rawSubCat = 'appetizer_cold';
 
         const row = {
-          slug, title_bg, title_en,
-          description_bg: cols[idx('description_bg')] || '',
-          description_en: cols[idx('description_en')] || '',
-          cuisine_id: cols[idx('cuisine_id')] || '',
-          category_id: parsedCatIds[0] || primaryCat || '',
+          slug, 
+          title: { bg: title_bg || title_en, en: title_en || title_bg, it: title_it, fr: title_fr, de: title_de },
+          title_bg: title_bg || title_en, 
+          title_en: title_en || title_bg,
+          title_it, title_fr, title_de,
+          description: { bg: description_bg, en: description_en, it: description_it, fr: description_fr, de: description_de },
+          description_bg, description_en, description_it, description_fr, description_de,
+          cuisine_id: getCuisineById(cols[idx('cuisine_id')])?.id || cols[idx('cuisine_id')] || '',
+          category_id: normPrimaryCat,
           category_ids: parsedCatIds,
-          sub_category_id: cols[idx('sub_category_id')] || '',
+          sub_category_id: rawSubCat,
           prep_time: parseInt(cols[idx('prep_time')]) || 0,
           cook_time: parseInt(cols[idx('cook_time')]) || 0,
           servings: parseInt(cols[idx('servings')]) || 1,
@@ -809,8 +912,8 @@ const ManageRecipes = () => {
         };
 
         const isDuplicate = existingSlugs.has(slug) || 
-                          existingTitlesBg.has(title_bg.toLowerCase()) || 
-                          existingTitlesEn.has(title_en.toLowerCase());
+                          existingTitlesBg.has((title_bg || '').toLowerCase()) || 
+                          existingTitlesEn.has((title_en || '').toLowerCase());
         
         if (isDuplicate) duplicateRows.push(row);
         else newRows.push(row);
@@ -938,8 +1041,9 @@ const ManageRecipes = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setTitleLocal(''); setTitleEn(''); setSlug('');
-    setDescLocal(''); setDescEn('');
+    setTitlesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
+    setDescsByLang({ bg: '', en: '', it: '', fr: '', de: '' });
+    setSlug('');
     setCuisineId('');
     setCategoryId('');
     setCategoryIds([]);
@@ -1222,6 +1326,79 @@ const ManageRecipes = () => {
       </div>
 
       <div className="p-4 overflow-y-auto">
+        {/* Seed & Normalization Banner for 70 recipes with 5 languages */}
+        {isPowerUser && showSeedBanner && (
+          <div className="mb-6 p-4 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-500 text-xl">auto_fix_high</span>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-100">
+                    {t('recipes.seed_banner_title', { defaultValue: 'Обновяване на базата със 70 рецепти на 5 езика' })}
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    {t('recipes.seed_banner_desc', { defaultValue: 'Пълни 5-езикови преводи (BG, EN, IT, FR, DE), коригирани мерни единици, нормализирани категории и изчистване на невалидните записи.' })}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSeedBanner(false)}
+                className="text-slate-400 hover:text-slate-200 p-1"
+                title={t('common.buttons.close', { defaultValue: 'Затвори' })}
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {seedStatus === 'running' && (
+              <div className="w-full space-y-1">
+                <div className="flex justify-between text-xs text-slate-300">
+                  <span>{seedProgress.currentItem}</span>
+                  <span>{seedProgress.percentage}% ({seedProgress.current}/{seedProgress.total})</span>
+                </div>
+                <div className="w-full h-2 bg-background-dark rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-500 transition-all duration-200"
+                    style={{ width: `${seedProgress.percentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {seedStatus === 'done' && (
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+                <span className="material-symbols-outlined text-base">check_circle</span>
+                {t('recipes.seed_success', { defaultValue: 'Базата данни беше успешно обновена и нормализирана!' })}
+              </div>
+            )}
+
+            {seedStatus === 'error' && (
+              <div className="flex items-center gap-2 text-xs font-bold text-rose-400 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+                <span className="material-symbols-outlined text-base">error</span>
+                {t('recipes.seed_error', { defaultValue: 'Възникна грешка при обновяване на базата данни.' })}
+              </div>
+            )}
+
+            {seedStatus !== 'done' && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSeedRecipes}
+                  disabled={seedStatus === 'running'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-background-dark font-bold text-xs shadow-md transition-colors"
+                >
+                  <span className="material-symbols-outlined text-base">
+                    {seedStatus === 'running' ? 'sync' : 'cloud_upload'}
+                  </span>
+                  {seedStatus === 'running'
+                    ? t('recipes.seed_running', { defaultValue: 'Обновяване...' })
+                    : t('recipes.seed_button', { defaultValue: 'Обнови базата сега' })}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {!showForm && !editingId ? (
           <button onClick={() => setShowForm(true)} className="w-full border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 p-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-colors mb-6">
             <span className="material-symbols-outlined">add</span>
@@ -1250,12 +1427,12 @@ const ManageRecipes = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className={isEn ? "col-span-2" : ""}>
                   <label className="text-xs text-slate-400">{t('recipes.title_en')}</label>
-                  <input value={titleEn} onChange={handleTitleEnChange} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" />
+                  <input value={currentEnTitle} onChange={handleTitleEnChange} required className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" />
                 </div>
                 {!isEn && (
                   <div>
                     <label className="text-xs text-slate-400">{localLangMeta.flag} {t('recipes.title_local', { lang: localLangMeta.code.toUpperCase() })}</label>
-                    <input value={titleLocal} onChange={(e) => setTitleLocal(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" />
+                    <input value={currentLocalTitle} onChange={handleLocalTitleChange} className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" />
                   </div>
                 )}
                 <div className="col-span-2">
@@ -1267,12 +1444,12 @@ const ManageRecipes = () => {
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="text-xs text-slate-400">{t('recipes.desc_en')}</label>
-                  <textarea value={descEn} onChange={(e) => setDescEn(e.target.value)} rows="4" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
+                  <textarea value={currentEnDesc} onChange={handleDescEnChange} rows="4" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
                 </div>
                 {!isEn && (
                   <div>
                     <label className="text-xs text-slate-400">{localLangMeta.flag} {t('recipes.desc_local', { lang: localLangMeta.code.toUpperCase() })}</label>
-                    <textarea value={descLocal} onChange={(e) => setDescLocal(e.target.value)} rows="4" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
+                    <textarea value={currentLocalDesc} onChange={handleLocalDescChange} rows="4" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
                   </div>
                 )}
               </div>
@@ -1810,12 +1987,9 @@ const ManageRecipes = () => {
                               )}
                               {rName}
                             </button>
-                            <div className="text-[10px] text-slate-500">
-                              {(() => {
-                                const cObj = CUISINES.find(c => c.id === r.cuisine_id);
-                                return cObj ? getLocalizedText(cObj.name, currentLang) : (r.cuisine_bg || r.cuisine_en || '-');
-                              })()}
-                            </div>
+                              <div className="text-[10px] text-slate-500">
+                                {getLocalizedCuisine(r.cuisine_id || r.cuisine_bg || r.cuisine_en, currentLang) || '-'}
+                              </div>
                           </td>
                           <td className="px-3 py-2 text-[10px] text-center whitespace-nowrap">
                             <div className="flex items-center justify-center gap-1 text-[#b8860b]"><span className="material-symbols-outlined text-[12px]">star</span>{r.rating || 0}</div>

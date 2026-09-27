@@ -6,7 +6,7 @@ import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { archiveVersion } from '../../lib/archiveUtils';
-import { CUISINES } from '../../data/cuisines';
+import { CUISINES, getCuisineById } from '../../data/cuisines';
 import { normalizeMainGroup, getMainGroupLabel } from '../../lib/recipeMetaUtils';
 import { getLocalizedText, getLocalizedField, LANGUAGE_LABELS } from '../../lib/localeUtils';
 
@@ -39,9 +39,17 @@ const ManageIngredients = () => {
   const [editingId, setEditingId] = useState(null);
   
   // Identity (Multilingual Data Entry Paradigm)
-  const [nameLocal, setNameLocal] = useState('');
-  const [nameEn, setNameEn] = useState('');
   const [slug, setSlug] = useState('');
+  const [namesByLang, setNamesByLang] = useState({
+    bg: '',
+    en: '',
+    it: '',
+    fr: '',
+    de: ''
+  });
+
+  const currentLocalName = isEn ? (namesByLang.en || '') : (namesByLang[currentLang] || '');
+  const currentEnName = namesByLang.en || '';
   
   // Classification
   const [mainGroup, setMainGroup] = useState('');
@@ -95,9 +103,18 @@ const ManageIngredients = () => {
 
   const handleNameEnChange = (e) => {
     const val = e.target.value;
-    setNameEn(val);
+    setNamesByLang(prev => ({ ...prev, en: val }));
     if (!editingId) {
       setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
+    }
+  };
+
+  const handleNameLocalChange = (e) => {
+    const val = e.target.value;
+    if (isEn) {
+      handleNameEnChange(e);
+    } else {
+      setNamesByLang(prev => ({ ...prev, [currentLang]: val }));
     }
   };
 
@@ -117,19 +134,19 @@ const ManageIngredients = () => {
 
   const handleSaveIngredient = async (e) => {
     e.preventDefault();
+    const finalNameEn = currentEnName.trim();
+    const finalNameLocal = currentLocalName.trim() || finalNameEn;
+
     if (isEn) {
-      if (!nameEn.trim() || !slug.trim()) return;
+      if (!finalNameEn || !slug.trim()) return;
     } else {
-      if (!nameEn.trim() && !nameLocal.trim()) return;
+      if (!finalNameEn && !finalNameLocal) return;
       if (!slug.trim()) return;
     }
 
     try {
       const originalIng = editingId ? ingredients.find(i => i.id === editingId) : null;
       const originalNameMap = (originalIng && typeof originalIng.name === 'object') ? originalIng.name : {};
-
-      const finalNameEn = nameEn.trim() || nameLocal.trim();
-      const finalNameLocal = nameLocal.trim() || finalNameEn;
 
       let needsTranslation = false;
       let translationReason = null;
@@ -138,17 +155,17 @@ const ManageIngredients = () => {
       const updatedNameMap = {
         en: finalNameEn,
         bg: isEn
-          ? (originalNameMap.bg || (editingId ? originalIng?.name_bg : '') || finalNameEn)
-          : (currentLang === 'bg' ? finalNameLocal : (originalNameMap.bg || originalIng?.name_bg || finalNameEn)),
+          ? (namesByLang.bg?.trim() || originalNameMap.bg || (editingId ? originalIng?.name_bg : '') || finalNameEn)
+          : (currentLang === 'bg' ? finalNameLocal : (namesByLang.bg?.trim() || originalNameMap.bg || originalIng?.name_bg || finalNameEn)),
         it: isEn
-          ? (originalNameMap.it || (editingId ? originalIng?.name_it : '') || finalNameEn)
-          : (currentLang === 'it' ? finalNameLocal : (originalNameMap.it || originalIng?.name_it || finalNameEn)),
+          ? (namesByLang.it?.trim() || originalNameMap.it || (editingId ? originalIng?.name_it : '') || finalNameEn)
+          : (currentLang === 'it' ? finalNameLocal : (namesByLang.it?.trim() || originalNameMap.it || originalIng?.name_it || finalNameEn)),
         fr: isEn
-          ? (originalNameMap.fr || (editingId ? originalIng?.name_fr : '') || finalNameEn)
-          : (currentLang === 'fr' ? finalNameLocal : (originalNameMap.fr || originalIng?.name_fr || finalNameEn)),
+          ? (namesByLang.fr?.trim() || originalNameMap.fr || (editingId ? originalIng?.name_fr : '') || finalNameEn)
+          : (currentLang === 'fr' ? finalNameLocal : (namesByLang.fr?.trim() || originalNameMap.fr || originalIng?.name_fr || finalNameEn)),
         de: isEn
-          ? (originalNameMap.de || (editingId ? originalIng?.name_de : '') || finalNameEn)
-          : (currentLang === 'de' ? finalNameLocal : (originalNameMap.de || originalIng?.name_de || finalNameEn))
+          ? (namesByLang.de?.trim() || originalNameMap.de || (editingId ? originalIng?.name_de : '') || finalNameEn)
+          : (currentLang === 'de' ? finalNameLocal : (namesByLang.de?.trim() || originalNameMap.de || originalIng?.name_de || finalNameEn))
       };
 
       if (isEn) {
@@ -163,7 +180,7 @@ const ManageIngredients = () => {
           }
         }
       } else {
-        if (!nameLocal.trim() || nameLocal.includes('[за превод]')) {
+        if (!finalNameLocal || finalNameLocal.includes('[за превод]')) {
           needsTranslation = true;
           translationReason = originalIng?.translation_reason || 'pending';
         } else {
@@ -227,33 +244,54 @@ const ManageIngredients = () => {
 
   const handleEditClick = (ing) => {
     setEditingId(ing.id);
-    setNameEn(ing.name_en || (typeof ing.name === 'object' ? ing.name.en : '') || '');
-    setNameLocal(ing[`name_${currentLang}`] || (typeof ing.name === 'object' ? ing.name[currentLang] : '') || (currentLang === 'bg' ? ing.name_bg : '') || '');
+
+    const nameMap = typeof ing.name === 'object' && ing.name !== null ? ing.name : {};
+    const loadedNames = {
+      en: ing.name_en || nameMap.en || '',
+      bg: ing.name_bg || nameMap.bg || '',
+      it: ing.name_it || nameMap.it || '',
+      fr: ing.name_fr || nameMap.fr || '',
+      de: ing.name_de || nameMap.de || ''
+    };
+    setNamesByLang(loadedNames);
     setSlug(ing.slug || ing.id);
 
+    // 1. Resolve Main Group (level: 0 or no parentId)
     const mg = ing.classification?.main_group || '';
     const normMg = normalizeMainGroup(mg);
     const mainGroupObj = ingredientGroups.find(g => {
+      if (g.level !== 0 && g.parentId) return false;
       const gId = String(g.id || '').toLowerCase();
       const gBg = String(g.name?.bg || '').toLowerCase();
       const gEn = String(g.name?.en || '').toLowerCase();
-      return gId === mg.toLowerCase() || gBg === mg.toLowerCase() || gEn === mg.toLowerCase() ||
-             normalizeMainGroup(gId) === normMg || normalizeMainGroup(gBg) === normMg || normalizeMainGroup(gEn) === normMg;
+      return gId === mg.toLowerCase() ||
+             normalizeMainGroup(g.id) === normMg ||
+             gBg === mg.toLowerCase() || gEn === mg.toLowerCase() ||
+             normalizeMainGroup(gBg) === normMg || normalizeMainGroup(gEn) === normMg;
     });
-    setMainGroup(mainGroupObj ? mainGroupObj.id : mg);
+    const resolvedMainGroupId = mainGroupObj ? mainGroupObj.id : (normMg || mg);
+    setMainGroup(resolvedMainGroupId);
 
+    // 2. Resolve Sub Group (level: 1 - do NOT use normalizeMainGroup as it maps pulses -> pulses_and_starches!)
     const sg = ing.classification?.sub_group || '';
-    const normSg = normalizeMainGroup(sg);
-    const subGroupObj = ingredientGroups.find(g => {
-      const gId = String(g.id || '').toLowerCase();
-      const gBg = String(g.name?.bg || '').toLowerCase();
-      const gEn = String(g.name?.en || '').toLowerCase();
-      return gId === sg.toLowerCase() || gBg === sg.toLowerCase() || gEn === sg.toLowerCase() ||
-             normalizeMainGroup(gId) === normSg || normalizeMainGroup(gBg) === normSg || normalizeMainGroup(gEn) === normSg;
-    });
-    setSubGroup(subGroupObj ? subGroupObj.id : sg);
+    if (!sg) {
+      setSubGroup('');
+    } else {
+      const cleanSg = sg.toLowerCase().trim().replace(/[\s-]+/g, '_');
+      const subGroupObj = ingredientGroups.find(g => {
+        if (g.level !== 1) return false;
+        const gId = String(g.id || '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+        const gBg = String(g.name?.bg || '').toLowerCase().trim();
+        const gEn = String(g.name?.en || '').toLowerCase().trim();
+        const isSugars = (cleanSg === 'sugars' || cleanSg === 'zachary') && (gId === 'zachary' || gId === 'sugars');
+        const isCannedSpices = (cleanSg === 'spices_canned' || cleanSg === 'spicces_canned') && (gId === 'spicces_canned' || gId === 'spices_canned');
+        return gId === cleanSg || gBg === cleanSg || gEn === cleanSg || isSugars || isCannedSpices;
+      });
+      setSubGroup(subGroupObj ? subGroupObj.id : sg);
+    }
 
-    setCuisineOrigin(ing.classification?.cuisine_origin || '');
+    const cMatch = getCuisineById(ing.classification?.cuisine_origin);
+    setCuisineOrigin(cMatch ? cMatch.id : (ing.classification?.cuisine_origin || ''));
     setCalories(ing.nutrition_per_100?.calories ?? '');
     setProteins(ing.nutrition_per_100?.proteins ?? '');
     setCarbs(ing.nutrition_per_100?.carbs ?? '');
@@ -283,8 +321,7 @@ const ManageIngredients = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setNameLocal('');
-    setNameEn('');
+    setNamesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
     setSlug('');
     setMainGroup('');
     setSubGroup('');
@@ -344,7 +381,7 @@ const ManageIngredients = () => {
     if (!val) return '-';
     const normVal = normalizeMainGroup(val);
     const group = ingredientGroups.find(g => {
-      if (!g) return false;
+      if (!g || (g.level !== 0 && g.parentId)) return false;
       const gId = String(g.id || '').toLowerCase();
       const gBg = String(g.name?.bg || '').toLowerCase();
       const gEn = String(g.name?.en || '').toLowerCase();
@@ -357,17 +394,18 @@ const ManageIngredients = () => {
 
   const getSubGroupName = (val) => {
     if (!val) return '-';
-    const normVal = normalizeMainGroup(val);
+    const cleanVal = String(val).toLowerCase().trim().replace(/[\s-]+/g, '_');
     const group = ingredientGroups.find(g => {
-      if (!g) return false;
-      const gId = String(g.id || '').toLowerCase();
-      const gBg = String(g.name?.bg || '').toLowerCase();
-      const gEn = String(g.name?.en || '').toLowerCase();
-      return gId === String(val).toLowerCase() || gBg === String(val).toLowerCase() || gEn === String(val).toLowerCase() ||
-             normalizeMainGroup(gId) === normVal || normalizeMainGroup(gBg) === normVal || normalizeMainGroup(gEn) === normVal;
+      if (!g || g.level !== 1) return false;
+      const gId = String(g.id || '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+      const gBg = String(g.name?.bg || '').toLowerCase().trim();
+      const gEn = String(g.name?.en || '').toLowerCase().trim();
+      const isSugars = (cleanVal === 'sugars' || cleanVal === 'zachary') && (gId === 'zachary' || gId === 'sugars');
+      const isCannedSpices = (cleanVal === 'spices_canned' || cleanVal === 'spicces_canned') && (gId === 'spicces_canned' || gId === 'spices_canned');
+      return gId === cleanVal || gBg === cleanVal || gEn === cleanVal || isSugars || isCannedSpices;
     });
     if (group) return getLocalizedText(group.name, currentLang);
-    return getMainGroupLabel(val, currentLang);
+    return val;
   };
 
   const getGroupIcon = (val) => {
@@ -430,7 +468,8 @@ const ManageIngredients = () => {
   const handleExportCSV = () => {
     const exportable = ingredients.filter(i => !i.is_deleted);
     const headers = [
-      'slug','name_en','name_bg','main_group','sub_group','cuisine_origin',
+      'slug','name_en','name_bg','name_it','name_fr','name_de',
+      'main_group','sub_group','cuisine_origin',
       'calories','proteins','carbs','fats',
       'allergens','tags','shelf_life_days','is_liquid','price_per_100',
       'units_mapping'
@@ -445,6 +484,9 @@ const ManageIngredients = () => {
       escape(ing.slug || ing.id),
       escape(ing.name_en || ing.name?.en || ''),
       escape(ing.name_bg || ing.name?.bg || ''),
+      escape(ing.name_it || ing.name?.it || ''),
+      escape(ing.name_fr || ing.name?.fr || ''),
+      escape(ing.name_de || ing.name?.de || ''),
       escape(ing.classification?.main_group),
       escape(ing.classification?.sub_group),
       escape(ing.classification?.cuisine_origin),
@@ -508,27 +550,80 @@ const ManageIngredients = () => {
         if (cols.length < 3) continue;
         const slug    = cols[idx('slug')]?.trim();
         const name_en = cols[idx('name_en')]?.trim();
-        const name_bg = cols[idx('name_bg')]?.trim();
+        let name_bg = cols[idx('name_bg')]?.trim();
+        if (slug === 'zucchini' && name_bg === 'Тиквичкi') {
+          name_bg = 'Тиквички';
+        }
+        const name_it = (idx('name_it') !== -1 && cols[idx('name_it')]?.trim()) || name_en;
+        const name_fr = (idx('name_fr') !== -1 && cols[idx('name_fr')]?.trim()) || name_en;
+        const name_de = (idx('name_de') !== -1 && cols[idx('name_de')]?.trim()) || name_en;
         if (!slug || !name_en || !name_bg) continue;
 
         let units_mapping = [];
-        try { units_mapping = JSON.parse(cols[idx('units_mapping')] || '[]'); } catch { /* ignore parse error */ }
+        try {
+          const parsed = JSON.parse(cols[idx('units_mapping')] || '[]');
+          units_mapping = parsed.map(u => {
+            let uId = u.unit_id ? String(u.unit_id).trim() : '';
+            if (uId === 'ZDtENplb6u2d0z9jsMrq') uId = 'teaspoon';
+            else if (uId === 'drops') uId = 'drop';
+            return {
+              unit_id: uId,
+              weight_grams: Number(u.weight_grams) || 0
+            };
+          }).filter(u => u.unit_id && u.weight_grams > 0);
+        } catch { /* ignore parse error */ }
+
+        // Normalize group names
+        const rawMain = cols[idx('main_group')] || '';
+        const normMain = rawMain === 'Pulses-and-Starches' ? 'pulses_and_starches'
+          : rawMain === 'Pasta products' ? 'pasta_products'
+          : rawMain.toLowerCase().replace(/[\s-]+/g, '_');
+
+        const rawSub = cols[idx('sub_group')] || '';
+        const normSub = rawSub === 'Zachary' ? 'sugars'
+          : rawSub === 'spicces_canned' ? 'spices_canned'
+          : rawSub.toLowerCase().replace(/[\s-]+/g, '_');
+
+        // Normalize tags & allergens
+        const rawTags = cols[idx('tags')]?.split(/[;,]/).map(t => {
+          const s = t.trim().toLowerCase();
+          if (!s || s === 'none') return null;
+          if (s === 'koto' || s === 'ket' || s === 'ketо' || s === 'кето') return 'keto';
+          if (s === 'suprfood' || s === 'superfoof') return 'superfood';
+          if (s === 'hight proteins' || s === 'hight protein' || s === 'high proteins') return 'high-protein';
+          if (s === 'omega 3') return 'omega-3';
+          if (s === 'веган') return 'vegan';
+          if (s === 'вегетарианска') return 'vegetarian';
+          if (s === 'пескатерианска') return 'pescatarian';
+          if (s === 'диетично') return 'dietary';
+          if (s === 'low calorie') return 'low-calorie';
+          if (s === 'delicates') return 'delicacy';
+          return s;
+        }).filter(Boolean) || [];
+
+        const rawAllergens = cols[idx('allergens')]?.split(/[;,]/).map(a => {
+          const s = a.trim().toLowerCase();
+          return (!s || s === 'none') ? null : s;
+        }).filter(Boolean) || [];
 
         const row = {
           slug,
           name_en,
           name_bg,
+          name_it,
+          name_fr,
+          name_de,
           name: {
             en: name_en,
             bg: name_bg,
-            it: name_en,
-            fr: name_en,
-            de: name_en
+            it: name_it,
+            fr: name_fr,
+            de: name_de
           },
           classification: {
-            main_group: cols[idx('main_group')] || '',
-            sub_group: cols[idx('sub_group')] || '',
-            cuisine_origin: cols[idx('cuisine_origin')] || ''
+            main_group: normMain,
+            sub_group: normSub,
+            cuisine_origin: getCuisineById(cols[idx('cuisine_origin')])?.id || cols[idx('cuisine_origin')] || ''
           },
           nutrition_per_100: {
             calories: parseFloat(cols[idx('calories')]) || 0,
@@ -537,16 +632,18 @@ const ManageIngredients = () => {
             fats:     parseFloat(cols[idx('fats')]) || 0,
           },
           meta: {
-            allergens: cols[idx('allergens')]?.split(';').map(s=>s.trim()).filter(Boolean) || [],
-            tags:      cols[idx('tags')]?.split(';').map(s=>s.trim()).filter(Boolean) || [],
+            allergens: [...new Set(rawAllergens)],
+            tags:      [...new Set(rawTags)],
             average_shelf_life_days: parseInt(cols[idx('shelf_life_days')]) || 0,
-            is_liquid: cols[idx('is_liquid')] === '1',
+            is_liquid: cols[idx('is_liquid')] === '1' || cols[idx('is_liquid')] === 'true',
           },
           price_per_100: parseFloat(cols[idx('price_per_100')]) || 0,
           currency: 'EUR',
           units_mapping,
           is_active: true,
-          is_deleted: false
+          is_deleted: false,
+          needs_translation: false,
+          translation_reason: null
         };
 
         const isDuplicate =
@@ -813,6 +910,29 @@ const ManageIngredients = () => {
     );
   };
 
+  // Available subgroups for the currently selected mainGroup
+  const availableSubgroups = ingredientGroups.filter(g => {
+    if (g.level !== 1) return false;
+    if (!mainGroup) return false;
+
+    // 1. Direct parentId match
+    if (g.parentId === mainGroup) return true;
+
+    // 2. Case-insensitive or normalized match
+    if (String(g.parentId).toLowerCase() === String(mainGroup).toLowerCase()) return true;
+    if (normalizeMainGroup(g.parentId) === normalizeMainGroup(mainGroup)) return true;
+
+    // 3. Match by parent group object
+    const parentObj = ingredientGroups.find(p => p.id === g.parentId);
+    if (parentObj) {
+      if (normalizeMainGroup(parentObj.id) === normalizeMainGroup(mainGroup)) return true;
+      if (parentObj.name?.bg && parentObj.name.bg.toLowerCase() === mainGroup.toLowerCase()) return true;
+      if (parentObj.name?.en && parentObj.name.en.toLowerCase() === mainGroup.toLowerCase()) return true;
+    }
+
+    return false;
+  });
+
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 space-y-3">
@@ -955,7 +1075,7 @@ const ManageIngredients = () => {
                   <span>{t('ingredients.name_en')}</span>
                 </label>
                 <input 
-                  value={nameEn} 
+                  value={currentEnName} 
                   onChange={handleNameEnChange} 
                   required 
                   className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50" 
@@ -970,8 +1090,8 @@ const ManageIngredients = () => {
                     <span>{t('ingredients.name_local', { lang: localLangMeta.name })}</span>
                   </label>
                   <input 
-                    value={nameLocal} 
-                    onChange={(e) => setNameLocal(e.target.value)} 
+                    value={currentLocalName} 
+                    onChange={handleNameLocalChange} 
                     className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50" 
                     placeholder={currentLang === 'bg' ? 'напр. Домат' : '...'} 
                   />
@@ -982,7 +1102,7 @@ const ManageIngredients = () => {
                     <span>{t('ingredients.name_en')}</span>
                   </label>
                   <input 
-                    value={nameEn} 
+                    value={currentEnName} 
                     onChange={handleNameEnChange} 
                     required 
                     className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:outline-none focus:border-primary/50" 
@@ -1018,18 +1138,26 @@ const ManageIngredients = () => {
                 setSubGroup('');
               }} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50">
                 <option value="">{t('ingredients.select_placeholder')}</option>
-                {ingredientGroups.filter(g => g.level === 0).map(g => (
+                {ingredientGroups.filter(g => g.level === 0 || !g.parentId).map(g => (
                   <option key={g.id} value={g.id}>{getLocalizedText(g.name, currentLang)}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="text-[10px] text-slate-400 uppercase font-medium">{t('ingredients.sub_group')}</label>
-              <select value={subGroup} onChange={(e) => setSubGroup(e.target.value)} disabled={!mainGroup} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50 disabled:opacity-50">
+              <select 
+                value={subGroup} 
+                onChange={(e) => setSubGroup(e.target.value)} 
+                disabled={!mainGroup} 
+                className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50 disabled:opacity-50"
+              >
                 <option value="">{t('ingredients.select_placeholder')}</option>
-                {ingredientGroups.filter(g => g.level === 1 && (g.parentId === mainGroup || ingredientGroups.find(p => p.name?.bg === mainGroup || p.name?.en === mainGroup || p.id === mainGroup)?.id === g.parentId)).map(g => (
+                {availableSubgroups.map(g => (
                   <option key={g.id} value={g.id}>{getLocalizedText(g.name, currentLang)}</option>
                 ))}
+                {subGroup && !availableSubgroups.some(g => g.id === subGroup) && (
+                  <option value={subGroup}>{subGroup}</option>
+                )}
               </select>
             </div>
             <div>
@@ -1037,7 +1165,7 @@ const ManageIngredients = () => {
               <select value={cuisineOrigin} onChange={(e) => setCuisineOrigin(e.target.value)} className="w-full bg-background-dark border border-primary/20 rounded p-1.5 text-slate-100 text-sm focus:outline-none focus:border-primary/50">
                 <option value="">{t('ingredients.select_placeholder')}</option>
                 {CUISINES.map(c => (
-                  <option key={c.id} value={c.name?.en || c.name?.bg || c.id}>{getLocalizedText(c.name, currentLang)}</option>
+                  <option key={c.id} value={c.id}>{getLocalizedText(c.name, currentLang)}</option>
                 ))}
               </select>
             </div>

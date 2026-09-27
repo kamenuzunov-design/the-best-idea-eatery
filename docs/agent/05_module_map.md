@@ -24,6 +24,7 @@
     *   `admin/ManageMeasurements.jsx`: Управление на мерни единици [✅ Напълно локализиран: EN, IT, FR, DE, BG + Многоезичен модел за въвеждане на данни]
     *   `admin/ManageIngredientGroups.jsx`: Управление на групи продукти [✅ Напълно локализиран: EN, IT, FR, DE, BG + Многоезичен модел за въвеждане на данни]
     *   `admin/ManageIngredients.jsx`: Управление на продукти и съставки [✅ Напълно локализиран: EN, IT, FR, DE, BG + Многоезичен модел за въвеждане на данни]
+    *   `admin/ManageCuisines.jsx`: Управление на кухни [✅ Напълно локализиран: EN, IT, FR, DE, BG + Многоезичен модел за въвеждане на данни + CSV + Миграция]
     *   `admin/ManageRecipes.jsx`: Управление на рецепти [✅ Напълно локализиран: EN, IT, FR, DE, BG + Многоезичен модел за въвеждане на данни]
     *   `CookingProgress.jsx`, `DietaryProfileEdit.jsx`, `OrderHistory.jsx`: Прогрес, диетичен профил, поръчки [⏳ Предстоящи]
     *   `RecipeDetail.jsx`, `RecipeCustomization.jsx`, `CookingMode.jsx`, `SavedRecipes.jsx`, `RecipeSearchResults.jsx`, `WinePairing.jsx`: Рецепти и кулинарни изгледи [⏳ Предстоящи]

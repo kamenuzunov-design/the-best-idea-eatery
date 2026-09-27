@@ -55,6 +55,7 @@ const BackupRecovery = () => {
     'users',
     'activity_logs',
     'ingredient_groups',
+    'cuisines',
     'system_history',
     'ads',
     'settings'
