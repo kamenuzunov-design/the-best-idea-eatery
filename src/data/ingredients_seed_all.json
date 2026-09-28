@@ -20117,5 +20117,63 @@
     "needs_translation": false,
     "translation_reason": null,
     "updatedAt": "2026-09-27T17:58:58.318Z"
+  },
+  {
+    "id": "meat-trimmings",
+    "slug": "meat-trimmings",
+    "name": {
+      "en": "Meat trimmings",
+      "bg": "Месни обрезки",
+      "it": "Rifilature di carne",
+      "fr": "Parures de viande",
+      "de": "Fleischabschnitte"
+    },
+    "name_en": "Meat trimmings",
+    "name_bg": "Месни обрезки",
+    "name_it": "Rifilature di carne",
+    "name_fr": "Parures de viande",
+    "name_de": "Fleischabschnitte",
+    "classification": {
+      "main_group": "meat",
+      "sub_group": "meat_pork",
+      "cuisine_origin": "european"
+    },
+    "nutrition_per_100": {
+      "calories": 210,
+      "proteins": 18,
+      "carbs": 0,
+      "fats": 15
+    },
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "gluten-free",
+        "high-protein",
+        "keto"
+      ],
+      "average_shelf_life_days": 3,
+      "is_liquid": false
+    },
+    "price_per_100": 0.5,
+    "currency": "EUR",
+    "units_mapping": [
+      {
+        "unit_id": "gram",
+        "weight_grams": 1
+      },
+      {
+        "unit_id": "portion",
+        "weight_grams": 200
+      },
+      {
+        "unit_id": "kilogram",
+        "weight_grams": 1000
+      }
+    ],
+    "is_active": true,
+    "is_deleted": false,
+    "needs_translation": false,
+    "translation_reason": null,
+    "updatedAt": "2026-09-28T04:04:57.251Z"
   }
 ]

@@ -9,6 +9,7 @@ import { archiveVersion } from '../../lib/archiveUtils';
 import { CUISINES, getCuisineById } from '../../data/cuisines';
 import { normalizeMainGroup, getMainGroupLabel } from '../../lib/recipeMetaUtils';
 import { getLocalizedText, getLocalizedField, LANGUAGE_LABELS } from '../../lib/localeUtils';
+import { parseCSV, formatCSV, downloadCSV } from '../../lib/csvUtils';
 
 const ManageIngredients = () => {
   const { t, i18n } = useTranslation();
@@ -474,41 +475,29 @@ const ManageIngredients = () => {
       'allergens','tags','shelf_life_days','is_liquid','price_per_100',
       'units_mapping'
     ];
-    const escape = (v) => {
-      const s = String(v ?? '');
-      return s.includes(',') || s.includes('"') || s.includes('\n')
-        ? `"${s.replace(/"/g, '""')}"`
-        : s;
-    };
     const rows = exportable.map(ing => [
-      escape(ing.slug || ing.id),
-      escape(ing.name_en || ing.name?.en || ''),
-      escape(ing.name_bg || ing.name?.bg || ''),
-      escape(ing.name_it || ing.name?.it || ''),
-      escape(ing.name_fr || ing.name?.fr || ''),
-      escape(ing.name_de || ing.name?.de || ''),
-      escape(ing.classification?.main_group),
-      escape(ing.classification?.sub_group),
-      escape(ing.classification?.cuisine_origin),
-      escape(ing.nutrition_per_100?.calories ?? 0),
-      escape(ing.nutrition_per_100?.proteins ?? 0),
-      escape(ing.nutrition_per_100?.carbs ?? 0),
-      escape(ing.nutrition_per_100?.fats ?? 0),
-      escape((ing.meta?.allergens || []).join(';')),
-      escape((ing.meta?.tags || []).join(';')),
-      escape(ing.meta?.average_shelf_life_days ?? 0),
-      escape(ing.meta?.is_liquid ? '1' : '0'),
-      escape(ing.price_per_100 ?? 0),
-      escape(JSON.stringify(ing.units_mapping || [])),
-    ].join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ingredients_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      ing.slug || ing.id,
+      ing.name_en || ing.name?.en || '',
+      ing.name_bg || ing.name?.bg || '',
+      ing.name_it || ing.name?.it || '',
+      ing.name_fr || ing.name?.fr || '',
+      ing.name_de || ing.name?.de || '',
+      ing.classification?.main_group || '',
+      ing.classification?.sub_group || '',
+      ing.classification?.cuisine_origin || '',
+      ing.nutrition_per_100?.calories ?? 0,
+      ing.nutrition_per_100?.proteins ?? 0,
+      ing.nutrition_per_100?.carbs ?? 0,
+      ing.nutrition_per_100?.fats ?? 0,
+      (ing.meta?.allergens || []).join(';'),
+      (ing.meta?.tags || []).join(';'),
+      ing.meta?.average_shelf_life_days ?? 0,
+      ing.meta?.is_liquid ? '1' : '0',
+      ing.price_per_100 ?? 0,
+      JSON.stringify(ing.units_mapping || [])
+    ]);
+    const csvContent = formatCSV(headers, rows);
+    downloadCSV(`ingredients_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
     logActivity(user.uid, user.email, 'export_ingredients_csv', `Exported ${exportable.length} ingredients`);
   };
 
@@ -520,23 +509,13 @@ const ManageIngredients = () => {
     setCsvStatus('parsing');
     try {
       const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const header = lines[0].replace(/^\uFEFF/, '').split(',');
+      const parsedRows = parseCSV(text);
+      if (parsedRows.length < 2) {
+        setCsvStatus('');
+        return;
+      }
+      const header = parsedRows[0];
       const idx = (name) => header.indexOf(name);
-
-      const parseRow = (line) => {
-        const result = [];
-        let cur = '', inQuote = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (ch === '"' && inQuote && line[i+1] === '"') { cur += '"'; i++; }
-          else if (ch === '"') { inQuote = !inQuote; }
-          else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
-          else { cur += ch; }
-        }
-        result.push(cur);
-        return result;
-      };
 
       const existingSlugs = new Set(ingredients.map(i => i.slug || i.id));
       const existingNamesBg = new Set(ingredients.map(i => (i.name_bg || i.name?.bg || '').toLowerCase()));
@@ -545,8 +524,8 @@ const ManageIngredients = () => {
       const newRows = [];
       const duplicateRows = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseRow(lines[i]);
+      for (let i = 1; i < parsedRows.length; i++) {
+        const cols = parsedRows[i];
         if (cols.length < 3) continue;
         const slug    = cols[idx('slug')]?.trim();
         const name_en = cols[idx('name_en')]?.trim();

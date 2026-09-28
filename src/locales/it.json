@@ -827,7 +827,14 @@
     "moderator_no_delete": "I moderatori non possono eliminare le ricette.",
     "owner_only_physical_delete": "Solo il proprietario può eliminare definitivamente le ricette.",
     "no_permission_restore": "Non hai i permessi per ripristinare.",
-    "no_permission_status": "Non hai i permessi per cambiare lo stato."
+    "no_permission_status": "Non hai i permessi per cambiare lo stato.",
+    "seed_banner_title": "Aggiornamento del database con ricette in 5 lingue (138 ricette)",
+    "seed_banner_desc": "Traduzioni complete in 5 lingue (BG, EN, IT, FR, DE), unità di misura corrette, categorie normalizzate e pulizia dei record non validi.",
+    "confirm_seed_all": "Sei sicuro di voler aggiornare il database con le ricette normalizzate in 5 lingue e ripulire i record non validi?",
+    "seed_button": "Aggiorna database ora",
+    "seed_running": "Aggiornamento in corso...",
+    "seed_success": "Il database è stato aggiornato e normalizzato con successo!",
+    "seed_error": "Si è verificato un errore durante l'aggiornamento del database."
   },
   "data_dashboard": {
     "title": "Gestione Dati",

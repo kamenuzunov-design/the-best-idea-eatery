@@ -50,12 +50,12 @@ const SystemHistory = () => {
       const targetRef = doc(db, historyDoc.collection, historyDoc.originalId);
       await setDoc(targetRef, historyDoc.snapshot);
       
-      await logActivity('version_restore', {
-        restoredFrom: historyDoc.id,
-        collection: historyDoc.collection,
-        docId: historyDoc.originalId,
-        itemName: historyDoc.snapshot.name || historyDoc.snapshot.nameBg || 'Unnamed'
-      });
+      await logActivity(
+        user?.uid || 'unknown',
+        user?.email || 'unknown',
+        'version_restore',
+        `Restored ${historyDoc.collection}/${historyDoc.originalId} from snapshot ${historyDoc.id}`
+      );
 
       alert(isBg ? 'Възстановяването завърши успешно!' : 'Restoration completed successfully!');
     } catch (error) {

@@ -2,7 +2,43 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 27 Септември 2026
+## Последна сесия: 28 Септември 2026
+
+### Извършена работа:
+1. **Пълна нормализация на всички партиди рецепти на 5 езика (BG, EN, IT, FR, DE)**:
+   - Анализирани и почистени данните от качените от потребителя CSV файлове в [recipes_clean_batch2_5lang.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_batch2_5lang.json) (68 рецепти), [recipes_clean_batch3_5lang.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_batch3_5lang.json) (36 рецепти) и [recipes_clean_batch4_5lang.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_batch4_5lang.json) (37 рецепти).
+   - Обединени в общ набор от **211 чисти рецепти на 5 езика** (70 първоначални + 141 нови) в [recipes_clean_all_5lang.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_all_5lang.json) и [recipes_clean_all_5lang.csv](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_all_5lang.csv).
+   - 100% покритие на заглавия, описания, съставки и стъпки на 5-те езика (BG, EN, IT, FR, DE) без липсващи стойности.
+   - Нормализирани 73 остатъчни стари Firestore ID-та за мерни единици: `ZDtENplb6u2d0z9jsMrq` -> `teaspoon`, `7gptZ2tnjuPYbV6q6RJl` -> `pinch`, `6vZdWbDqaNSRnoamZ1kq` -> `teacup`.
+   - Нормализирани категории и подкатегории (`side_dish` -> `main_side`, `fish_salads` -> `salad_seafood`, `fresh_salads` -> `salad_green`, `cold_sauce` -> `sauce_dressing`, `hot_appetizers` -> `appetizer_hot`, `baked_appetizers` -> `appetizer_hot`, `cold_appetizers` -> `appetizer_cold`, `fish_and_seafood` -> `main_seafood`, `egg_dishes` -> `breakfast_eggs`, `cakes` -> `dessert_cake`, `main_veggie`).
+   - Нормализирани всички световни кухни към чистите 80-езикови таксономични slugs.
+   - Изчистен тестов запис: рецепта `proba` е преименувана на `beef-steak`, а старият ключ `proba` се изтрива автоматично от Firestore.
+2. **Добавена нова съставка в базата с продукти (общо 338)**:
+   - Добавена `meat-trimmings` („Месни обрезки“) в [ingredients_seed_all.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/ingredients_seed_all.json) и [ingredients_clean_5lang.csv](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/ingredients_clean_5lang.csv).
+   - Нормализирани продуктови референции: `potatoes` -> `potato`, `sparkling-water` -> `carbonated-water`, `polenta` -> `corn-grits`.
+3. **Обновен помощен панел и модул за миграция**:
+   - [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) и [recipeMigration.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMigration.js) са настроени за атомарно пакетно качване на всички 211 рецепти и 4 нови съставки (`pork-liver`, `calf-brain`, `crayfish-tails`, `meat-trimmings`) с динамичен брояч `CLEAN_RECIPES_COUNT` с 1 клик през браузъра. По изрично указание на потребителя бутонът се запазва активен в интерфейса.
+   - Актуализирани преводи за банера и потвържденията в 5-те езика (`bg.json`, `en.json`, `it.json`, `fr.json`, `de.json`).
+4. **Проверка и надграждане на CSV Експорт/Импорт функциите в 5-те административни модула**:
+   - Създаден помощен инструмент [csvUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/csvUtils.js) (`parseCSV`, `formatCSV`, `downloadCSV`), който заменя наивното разделяне по нови редове (`text.split(/\r?\n/)`) с краен автомат, коректно запазващ символите за нов ред вътре в кавички, двойно ескейпнати кавички и UTF-8 BOM.
+   - Синхронизирани и обновени всички 5 панела:
+     1. [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) (24 колони на 5 езика, автоматична нормализация на мерни единици и съставки)
+     2. [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx) (19 колони на 5 езика)
+     3. [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx) (8 колони на 5 езика)
+     4. [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx) (17 колони на 5 езика)
+     5. [ManageCuisines.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageCuisines.jsx) (8 колони на 5 езика)
+   - Решен въпросът за разликата между 211 и 216: точно 4 рецепти имаха вградени нови редове в инструкциите за готвене. Това водеше до 216 реда в обикновен текстов брояч, но след прецизно CSV парсване всички 211 рецепти са 100% цели и ненарушени.
+5. **Одит и оптимизация на функциите за Бакъп и Възстановяване**:
+   - [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx): Добавена `campaigns` в списъка `COLLECTIONS` (вече 11 от 11 Firestore колекции са обхванати), надградено облачното възстановяване с нативния метод `getBytes` от Firebase SDK срещу евентуални CORS проблеми с публични линкове, добавена защита при възстановяване срещу невалидни записи и освобождаване на паметта с `URL.revokeObjectURL`.
+   - [ActivityLog.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ActivityLog.jsx): Експортът е мигриран към Blob и Object URL срещу лимити в размера на URL низовете.
+   - [SystemHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/SystemHistory.jsx): Поправена сигнатурата на `logActivity`.
+6. **Валидация**:
+   - `pnpm run lint` премина със статус 0 (без грешки).
+   - `pnpm run build` изгради продукционния билд без грешки.
+
+---
+
+## Предишна сесия: 27 Септември 2026
 
 ### Извършена работа:
 1. **Пълна многоезична адаптация на потребителските модули за рецепти на 5 езика (BG, EN, IT, FR, DE)**:

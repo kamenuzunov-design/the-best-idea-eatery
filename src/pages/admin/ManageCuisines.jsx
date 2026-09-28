@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, getLocalizedText } from '../../lib/localeUtils';
 import { CUISINES } from '../../data/cuisines';
+import { parseCSV, formatCSV, downloadCSV } from '../../lib/csvUtils';
 
 const ManageCuisines = () => {
   const { t, i18n } = useTranslation();
@@ -192,26 +193,19 @@ const ManageCuisines = () => {
   // ── CSV Export ────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
     const headers = ['id', 'name_en', 'name_bg', 'name_it', 'name_fr', 'name_de', 'parentId', 'level'];
-    const escape = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
     const rows = cuisines.map(c => [
-      escape(c.id),
-      escape(c.name_en || c.name?.en || ''),
-      escape(c.name_bg || c.name?.bg || ''),
-      escape(c.name_it || c.name?.it || ''),
-      escape(c.name_fr || c.name?.fr || ''),
-      escape(c.name_de || c.name?.de || ''),
-      escape(c.parentId || ''),
-      escape(c.level ?? 0)
-    ].join(','));
+      c.id,
+      c.name_en || c.name?.en || '',
+      c.name_bg || c.name?.bg || '',
+      c.name_it || c.name?.it || '',
+      c.name_fr || c.name?.fr || '',
+      c.name_de || c.name?.de || '',
+      c.parentId || '',
+      c.level ?? 0
+    ]);
 
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cuisines_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const csvContent = formatCSV(headers, rows);
+    downloadCSV(`cuisines_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
     logActivity(user?.uid || 'admin', user?.email || 'admin@example.com', 'export_cuisines_csv', `Exported ${cuisines.length} cuisines`);
   };
 
@@ -223,30 +217,23 @@ const ManageCuisines = () => {
     setCsvStatus('parsing');
     try {
       const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const header = lines[0].replace(/^\uFEFF/, '').split(',');
+      const parsedRows = parseCSV(text);
+      if (parsedRows.length < 2) {
+        setCsvStatus('');
+        return;
+      }
+      const header = parsedRows[0];
       const idx = (name) => header.indexOf(name);
 
-      const parseRow = (line) => {
-        const result = [];
-        let cur = '', inQuote = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (ch === '"' && inQuote && line[i + 1] === '"') { cur += '"'; i++; }
-          else if (ch === '"') { inQuote = !inQuote; }
-          else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
-          else { cur += ch; }
-        }
-        result.push(cur);
-        return result;
-      };
-
       const existingIds = new Set(cuisines.map(c => c.id));
+      const existingNamesBg = new Set(cuisines.map(c => (c.name_bg || c.name?.bg || '').toLowerCase()));
+      const existingNamesEn = new Set(cuisines.map(c => (c.name_en || c.name?.en || '').toLowerCase()));
+
       const newRows = [];
       const duplicateRows = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseRow(lines[i]);
+      for (let i = 1; i < parsedRows.length; i++) {
+        const cols = parsedRows[i];
         if (cols.length < 2) continue;
         const rawId = cols[idx('id')]?.trim();
         const name_en = cols[idx('name_en')]?.trim();
@@ -274,7 +261,11 @@ const ManageCuisines = () => {
           level
         };
 
-        if (existingIds.has(cleanId)) duplicateRows.push(row);
+        const isDuplicate = existingIds.has(cleanId) ||
+          (finalNameEn && existingNamesEn.has(finalNameEn.toLowerCase())) ||
+          (name_bg && existingNamesBg.has(name_bg.toLowerCase()));
+
+        if (isDuplicate) duplicateRows.push(row);
         else newRows.push(row);
       }
 

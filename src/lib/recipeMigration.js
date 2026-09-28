@@ -1,11 +1,13 @@
 import { doc, writeBatch, deleteDoc } from 'firebase/firestore';
-import recipesData from '../data/recipes_clean_70_5lang.json';
+import recipesData from '../data/recipes_clean_all_5lang.json';
 import ingredientsData from '../data/ingredients_seed_all.json';
 import { getRecipeTags } from './recipeMetaUtils';
 
+export const CLEAN_RECIPES_COUNT = recipesData.length;
+
 /**
- * Seeds and normalizes 70 recipes with 5-language data into Firestore 'recipes' collection,
- * removes phantom/broken documents, and ensures newly added ingredients exist in Firestore.
+ * Seeds and normalizes recipes with 5-language data into Firestore 'recipes' collection,
+ * removes phantom/broken documents (including 'proba'), and ensures newly added ingredients exist in Firestore.
  * 
  * @param {import('firebase/firestore').Firestore} db 
  * @param {(progress: { current: number, total: number, percentage: number, currentItem: string }) => void} onProgress 
@@ -13,10 +15,11 @@ import { getRecipeTags } from './recipeMetaUtils';
  */
 export async function seedCleanRecipesToFirestore(db, onProgress) {
   try {
-    // 1. Delete corrupted phantom documents from previous split imports
+    // 1. Delete corrupted phantom documents from previous split imports and legacy tests
     const phantomIds = [
       'Serve warm with (bulgarian) yogurt',
-      'Сервирайте топло с кисело мляко'
+      'Сервирайте топло с кисело мляко',
+      'proba'
     ];
     for (const pid of phantomIds) {
       try {
@@ -26,9 +29,9 @@ export async function seedCleanRecipesToFirestore(db, onProgress) {
       }
     }
 
-    // 2. Ensure the 3 new ingredients exist in Firestore
+    // 2. Ensure the 4 new ingredients exist in Firestore
     const newIngs = ingredientsData.filter(i => 
-      ['pork-liver', 'calf-brain', 'crayfish-tails'].includes(i.id)
+      ['pork-liver', 'calf-brain', 'crayfish-tails', 'meat-trimmings'].includes(i.id)
     );
     if (newIngs.length > 0) {
       const ingBatch = writeBatch(db);

@@ -827,7 +827,14 @@
     "moderator_no_delete": "Moderators cannot delete recipes.",
     "owner_only_physical_delete": "Only the owner can delete recipes permanently.",
     "no_permission_restore": "You do not have permission to restore.",
-    "no_permission_status": "You do not have permission to change status."
+    "no_permission_status": "You do not have permission to change status.",
+    "seed_banner_title": "Database update with recipes in 5 languages (138 recipes)",
+    "seed_banner_desc": "Full 5-language translations (BG, EN, IT, FR, DE), corrected measurement units, normalized categories, and removal of invalid records.",
+    "confirm_seed_all": "Are you sure you want to update the database with the normalized recipes in 5 languages and clean up invalid records?",
+    "seed_button": "Update database now",
+    "seed_running": "Updating...",
+    "seed_success": "Database was successfully updated and normalized!",
+    "seed_error": "An error occurred while updating the database."
   },
   "data_dashboard": {
     "title": "Manage Data",

@@ -15,7 +15,8 @@ import { getRootCategories, getSubCategories } from '../../data/recipe_categorie
 import { REPUTATION_POINTS } from '../../lib/reputationUtils';
 import { getRecipeTags } from '../../lib/recipeMetaUtils';
 import { getLocalizedText, getLocalizedField, extractLocalizedNote } from '../../lib/localeUtils';
-import { seedCleanRecipesToFirestore } from '../../lib/recipeMigration';
+import { seedCleanRecipesToFirestore, CLEAN_RECIPES_COUNT } from '../../lib/recipeMigration';
+import { parseCSV, formatCSV, downloadCSV } from '../../lib/csvUtils';
 
 const ManageRecipes = () => {
   const { t, i18n } = useTranslation();
@@ -742,55 +743,42 @@ const ManageRecipes = () => {
       'servings','difficulty','video_url','original_author','source_link',
       'ingredients','steps'
     ];
-    
-    const escape = (v) => {
-      const s = String(v ?? '');
-      return s.includes(',') || s.includes('"') || s.includes('\n')
-        ? `"${s.replace(/"/g, '""')}"`
-        : s;
-    };
 
     const rows = exportable.map(r => [
-      escape(r.slug || r.id),
-      escape(r.title_bg || r.title?.bg || ''),
-      escape(r.title_en || r.title?.en || ''),
-      escape(r.title_it || r.title?.it || ''),
-      escape(r.title_fr || r.title?.fr || ''),
-      escape(r.title_de || r.title?.de || ''),
-      escape(r.description_bg || r.description?.bg || ''),
-      escape(r.description_en || r.description?.en || ''),
-      escape(r.description_it || r.description?.it || ''),
-      escape(r.description_fr || r.description?.fr || ''),
-      escape(r.description_de || r.description?.de || ''),
-      escape(r.cuisine_id || ''),
-      escape(r.category_id || ''),
-      escape(Array.isArray(r.category_ids) ? r.category_ids.join(';') : (r.category_id || '')),
-      escape(r.sub_category_id || ''),
-      escape(r.prep_time || 0),
-      escape(r.cook_time || 0),
-      escape(r.servings || 1),
-      escape(r.difficulty || 'medium'),
-      escape(r.video_url || ''),
-      escape(r.original_author || ''),
-      escape(r.source_link || ''),
-      escape(JSON.stringify(r.ingredients || [])),
-      escape(JSON.stringify(r.steps || [])),
-    ].join(','));
+      r.slug || r.id,
+      r.title_bg || r.title?.bg || '',
+      r.title_en || r.title?.en || '',
+      r.title_it || r.title?.it || '',
+      r.title_fr || r.title?.fr || '',
+      r.title_de || r.title?.de || '',
+      r.description_bg || r.description?.bg || '',
+      r.description_en || r.description?.en || '',
+      r.description_it || r.description?.it || '',
+      r.description_fr || r.description?.fr || '',
+      r.description_de || r.description?.de || '',
+      r.cuisine_id || '',
+      r.category_id || '',
+      Array.isArray(r.category_ids) ? r.category_ids.join(';') : (r.category_id || ''),
+      r.sub_category_id || '',
+      r.prep_time || 0,
+      r.cook_time || 0,
+      r.servings || 1,
+      r.difficulty || 'medium',
+      r.video_url || '',
+      r.original_author || '',
+      r.source_link || '',
+      JSON.stringify(r.ingredients || []),
+      JSON.stringify(r.steps || [])
+    ]);
 
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `recipes_5lang_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const csvContent = formatCSV(headers, rows);
+    downloadCSV(`recipes_5lang_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
     logActivity(user.uid, user.email, 'export_recipes_csv', `Exported ${exportable.length} recipes in 5 languages`);
   };
 
-  // --- Seed / Normalize 70 Recipes ---
+  // --- Seed / Normalize Clean Recipes ---
   const handleSeedRecipes = async () => {
-    if (!window.confirm(t('recipes.confirm_seed_70', { defaultValue: 'Сигурни ли сте, че искате да обновите базата данни със 70-те рецепти на 5 езика и да изчистите невалидните записи?' }))) {
+    if (!window.confirm(t('recipes.confirm_seed_all', { defaultValue: 'Сигурни ли сте, че искате да обновите базата данни с нормализираните рецепти на 5 езика и да изчистите невалидните записи?' }))) {
       return;
     }
     setSeedStatus('running');
@@ -800,7 +788,7 @@ const ManageRecipes = () => {
       });
       if (res.success) {
         setSeedStatus('done');
-        await logActivity(user.uid, user.email, 'seed_recipes_5lang', `Seeded/normalized 70 recipes across 5 languages`);
+        await logActivity(user.uid, user.email, 'seed_recipes_5lang', `Seeded/normalized ${res.count} recipes across 5 languages`);
       } else {
         setSeedStatus('error');
       }
@@ -818,33 +806,23 @@ const ManageRecipes = () => {
     setCsvStatus('parsing');
     try {
       const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const header = lines[0].replace(/^\uFEFF/, '').split(',');
+      const parsedRows = parseCSV(text);
+      if (parsedRows.length < 2) {
+        setCsvStatus('');
+        return;
+      }
+      const header = parsedRows[0];
       const idx = (name) => header.indexOf(name);
 
-      const parseRow = (line) => {
-        const result = [];
-        let cur = '', inQuote = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (ch === '"' && inQuote && line[i+1] === '"') { cur += '"'; i++; }
-          else if (ch === '"') { inQuote = !inQuote; }
-          else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
-          else { cur += ch; }
-        }
-        result.push(cur);
-        return result;
-      };
-
       const existingSlugs = new Set(recipes.map(r => r.slug || r.id));
-      const existingTitlesBg = new Set(recipes.map(r => (r.title_bg || '').toLowerCase()));
-      const existingTitlesEn = new Set(recipes.map(r => (r.title_en || '').toLowerCase()));
+      const existingTitlesBg = new Set(recipes.map(r => (r.title_bg || r.title?.bg || '').toLowerCase()));
+      const existingTitlesEn = new Set(recipes.map(r => (r.title_en || r.title?.en || '').toLowerCase()));
 
       const newRows = [];
       const duplicateRows = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseRow(lines[i]);
+      for (let i = 1; i < parsedRows.length; i++) {
+        const cols = parsedRows[i];
         if (cols.length < 3) continue;
         const slug = cols[idx('slug')]?.trim();
         const title_bg = cols[idx('title_bg')]?.trim();
@@ -865,13 +843,19 @@ const ManageRecipes = () => {
         try { ingredients = JSON.parse(cols[idx('ingredients')] || '[]'); } catch (err) { console.warn('JSON parsing error:', err); }
         try { steps = JSON.parse(cols[idx('steps')] || '[]'); } catch (err) { console.warn('JSON parsing error:', err); }
 
-        // Normalize units in ingredients
+        // Normalize units and ingredient aliases in ingredients
         ingredients = ingredients.map(ing => {
           let u = ing.unit_id;
           if (u === 'ZDtENplb6u2d0z9jsMrq') u = 'teaspoon';
           else if (u === '7gptZ2tnjuPYbV6q6RJl') u = 'pinch';
           else if (u === '6vZdWbDqaNSRnoamZ1kq') u = 'teacup';
-          return { ...ing, unit_id: u || 'piece' };
+
+          let ingId = ing.ingredient_id;
+          if (ingId === 'potatoes') ingId = 'potato';
+          else if (ingId === 'sparkling-water') ingId = 'carbonated-water';
+          else if (ingId === 'polenta') ingId = 'corn-grits';
+
+          return { ...ing, ingredient_id: ingId, unit_id: u || 'piece' };
         });
 
         const catIdsRaw = cols[idx('category_ids')]?.trim();
@@ -1334,7 +1318,7 @@ const ManageRecipes = () => {
                 <span className="material-symbols-outlined text-amber-500 text-xl">auto_fix_high</span>
                 <div>
                   <h4 className="text-sm font-bold text-slate-100">
-                    {t('recipes.seed_banner_title', { defaultValue: 'Обновяване на базата със 70 рецепти на 5 езика' })}
+                    {t('recipes.seed_banner_title', { count: CLEAN_RECIPES_COUNT, defaultValue: `Обновяване на базата с рецепти на 5 езика (${CLEAN_RECIPES_COUNT} рецепти)` })}
                   </h4>
                   <p className="text-xs text-slate-400">
                     {t('recipes.seed_banner_desc', { defaultValue: 'Пълни 5-езикови преводи (BG, EN, IT, FR, DE), коригирани мерни единици, нормализирани категории и изчистване на невалидните записи.' })}

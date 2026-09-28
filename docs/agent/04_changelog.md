@@ -3,6 +3,38 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-09-28] - Реформа на базата с рецепти: Пълна 5-езикова нормализация на 211 рецепти
+### Добавено / Коригирано (Added / Fixed)
+- **Пълна нормализация на всички качени партиди рецепти на 5 езика (BG, EN, IT, FR, DE)**:
+  - Обработени 4 последователни партиди от данни: 70 първоначални + 68 от партида 2 + 36 от партида 3 + 37 от финалната партида 4 = **211 уникални рецепти на 5 езика** в [recipes_clean_all_5lang.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_all_5lang.json) и [recipes_clean_all_5lang.csv](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipes_clean_all_5lang.csv).
+  - 100% покритие на заглавия (`title`), описания (`description`), стъпки за приготвяне (`steps`), съставки (`ingredients`) и кулинарни бележки (`notes`) на всички 5 езика: BG, EN, IT, FR, DE (0 липсващи превода, 0 празни стъпки).
+  - Нормализирани общо 73 остатъчни стари Firestore ID-та за мерни единици: `ZDtENplb6u2d0z9jsMrq` -> `teaspoon`, `7gptZ2tnjuPYbV6q6RJl` -> `pinch`, `6vZdWbDqaNSRnoamZ1kq` -> `teacup`.
+  - Нормализирани категории и подкатегории (`side_dish` -> `main_side`, `fish_salads` -> `salad_seafood`, `fresh_salads` -> `salad_green`, `cold_sauce` -> `sauce_dressing`, `hot_appetizers` -> `appetizer_hot`, `baked_appetizers` -> `appetizer_hot`, `cold_appetizers` -> `appetizer_cold`, `fish_and_seafood` -> `main_seafood`, `egg_dishes` -> `breakfast_eggs`, `cakes` -> `dessert_cake`, `main_veggie`).
+  - Всички кухни са съгласувани с чистата 80-езикова таксономия (`french`, `italian`, `balkan`, `greek`, `arabic`, `south_asian`, `latin_american`, `german`, `spanish`, `nordic`, `mediterranean`, `bulgarian`, `american`, `asian`, `global_fusion`).
+  - Изчистен тестов запис: рецепта `proba` е преименувана на чист семантичен slug `beef-steak` („Телешки стек“ / „Beef steak“), а старият идентификатор `proba` е добавен в списъка за изчистване (`phantomIds`) във Firestore.
+- **Добавена нова съставка в базата с продукти (общо 338 съставки)**:
+  - Добавена `meat-trimmings` („Месни обрезки“ / „Meat trimmings“) на 5 езика в [ingredients_seed_all.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/ingredients_seed_all.json) и [ingredients_clean_5lang.csv](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/ingredients_clean_5lang.csv).
+  - Нормализирани продуктови референции: `potatoes` -> `potato`, `sparkling-water` -> `carbonated-water`, `polenta` -> `corn-grits`.
+- **Обновен помощен панел и модул за миграция в [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) и [recipeMigration.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMigration.js)**:
+  - Динамичен брояч `CLEAN_RECIPES_COUNT` (211 рецепти) в заглавието на банера и потвържденията.
+  - 1-клик качване във Firestore на всички 211 рецепти и 4 нови съставки (`pork-liver`, `calf-brain`, `crayfish-tails`, `meat-trimmings`) с жив прогрес бар.
+- **Унифициран и устойчив на многоредови полета CSV Експорт/Импорт модул ([csvUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/csvUtils.js))**:
+  - Създадени общи помощни функции `parseCSV`, `escapeCSVField`, `formatCSV` и `downloadCSV`, коректно поддържащи UTF-8 BOM (`\uFEFF`), двойни кавички `""` и многоредови низове (`\n`, `\r\n`) вътре в клетките.
+  - Интегриран общият парсер във всички 5 административни модула:
+    1. [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) (24 колони на 5 езика, автоматична нормализация на мерни единици и съставки-синоними)
+    2. [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx) (19 колони на 5 езика, хранителни стойности, мерни съответствия)
+    3. [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx) (8 колони на 5 езика, йерархия и нива)
+    4. [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx) (17 колони на 5 езика, синхронизиране на плоски полета и обекти `name` и `short_name`)
+    5. [ManageCuisines.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageCuisines.jsx) (8 колони на 5 езика, родителски региони и подкухни)
+  - Открита и обяснена причината за броенето от 216 реда: 4 рецепти съдържат символ за нов ред `\n` в стъпките за приготвяне, което при наивно броене по редове дава 216 реда в суровия файл, но съдържа точно 211 пълни и непокътнати рецепти.
+- **Одит и надграждане на системните функции за Бакъп и Възстановяване**:
+  - В [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx) списъкът `COLLECTIONS` е допълнен с липсващата колекция `campaigns`. Всички 11 колекции от системата (`recipes`, `ingredients`, `measurements`, `users` + подколекция `pantry`, `activity_logs`, `ingredient_groups`, `cuisines`, `system_history`, `ads`, `campaigns`, `settings`) са 100% обхванати.
+  - Възстановяването от Firebase Storage облака (`handleRestoreFromCloud`) вече използва директния защитен метод `getBytes` от Firebase SDK, елиминирайки потенциални CORS блокажи при публични URLs.
+  - Добавена строга валидация за съществуване на идентификатори и масиви в `performRestore` срещу невалидни или повредени архиви.
+  - В [ActivityLog.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ActivityLog.jsx) експортът е пренаписан от data URL към `Blob` и `createObjectURL` за поддръжка на неограничен брой записи.
+  - В [SystemHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/SystemHistory.jsx) е коригирано подаването на потребителски данни към `logActivity`.
+  - Потвърдена валидността на [firestore.rules](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/firestore.rules) и [storage.rules](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/storage.rules) за правата върху бекъпите.
+
 ## [2026-09-27] - Реформа на базата с рецепти: 70 рецепти на 5 езика, нормализация на мерни единици и категории, реактивна редакция
 ### Добавено / Коригирано (Added / Fixed)
 - **Пълна нормализация на базата данни за рецепти (70 рецепти на 5 езика)**:

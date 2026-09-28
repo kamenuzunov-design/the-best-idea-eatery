@@ -827,7 +827,14 @@
     "moderator_no_delete": "Les modérateurs ne peuvent pas supprimer de recettes.",
     "owner_only_physical_delete": "Seul le propriétaire peut supprimer définitivement les recettes.",
     "no_permission_restore": "Vous n'avez pas la permission de restaurer.",
-    "no_permission_status": "Vous n'avez pas la permission de modifier le statut."
+    "no_permission_status": "Vous n'avez pas la permission de modifier le statut.",
+    "seed_banner_title": "Mise à jour de la base de données de recettes en 5 langues (138 recettes)",
+    "seed_banner_desc": "Traductions complètes en 5 langues (BG, EN, IT, FR, DE), unités de mesure corrigées, catégories normalisées et suppression des enregistrements non valides.",
+    "confirm_seed_all": "Êtes-vous sûr de vouloir mettre à jour la base de données avec les recettes normalisées en 5 langues et nettoyer les enregistrements non valides ?",
+    "seed_button": "Mettre à jour la base maintenant",
+    "seed_running": "Mise à jour en cours...",
+    "seed_success": "La base de données a été mise à jour et normalisée avec succès !",
+    "seed_error": "Une erreur est survenue lors de la mise à jour de la base de données."
   },
   "data_dashboard": {
     "title": "Gestion des Données",

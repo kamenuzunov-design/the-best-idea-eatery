@@ -1,11 +1,29 @@
 # Активен План
 
 ## Текуща задача
-Успешно завършена пълната реформа на базата с рецепти (70 рецепти на 5 езика):
-1. **Нормализация на рецептите**: 70 рецепти с 100% заглавия, описания, стъпки, съставки и кулинарни бележки на 5 езика (BG, EN, IT, FR, DE).
-2. **Корекция на мерни единици и категории**: Заменени стари Firestore ID-та (`ZDtEN...` -> `teaspoon`, `7gpt...` -> `pinch`, `6vZd...` -> `teacup`), стандартизирани категории (`dessert`, `main_meat`, `appetizer_cold`).
-3. **Разширение на продуктите**: Добавени 3 липсващи съставки (`pork-liver`, `calf-brain`, `crayfish-tails`) към базата с продукти (общо 337).
-4. **Реактивна редакция и 1-клик миграция**: Вградена реактивна смяна на езика в [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), 5-езиков CSV импорт/експорт и помощен банер за запис във Firestore през браузъра. Очаква се изпълнение от потребителя.
+Успешно завършена пълната реформа на базата с рецепти (всички **211 рецепти** на 5 езика: 70 от партида 1 + 68 от партида 2 + 36 от партида 3 + 37 от партида 4):
+1. **Нормализация на рецептите (211 рецепти)**: 211 уникални рецепти със 100% покритие на заглавия, описания, стъпки, съставки и кулинарни бележки на 5 езика (BG, EN, IT, FR, DE).
+2. **Корекция на мерни единици и категории**: Заменени всички 73 стари Firestore ID-та (`ZDtEN...` -> `teaspoon`, `7gpt...` -> `pinch`, `6vZd...` -> `teacup`), стандартизирани категории и подкатегории (`dessert`, `main_meat`, `appetizer_cold`, `main_side`, `salad_seafood`, `salad_green`, `sauce_dressing`, `appetizer_hot`, `main_veggie`, `main_seafood`, `breakfast_eggs`, `dessert_cake`).
+3. **Разширение на продуктите**: Добавени 4 липсващи съставки (`pork-liver`, `calf-brain`, `crayfish-tails`, `meat-trimmings`) към базата с продукти (общо 338). Нормализирани референции: `potatoes` -> `potato`, `sparkling-water` -> `carbonated-water`, `polenta` -> `corn-grits`.
+4. **Реактивна редакция и 1-клик миграция**: Вградена реактивна смяна на езика в [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), 5-езиков CSV импорт/експорт и помощен банер за запис на всички 211 рецепти във Firestore през браузъра с динамичен брояч `CLEAN_RECIPES_COUNT`. Базата е напълно готова за изпълнение от потребителя.
+5. **Надграждане и верификация на CSV Експорт/Импорт функциите в 5-те модула**:
+   - Създаден общ помощен модул [csvUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/csvUtils.js) (`parseCSV`, `formatCSV`, `downloadCSV`), който правилно обработва UTF-8 BOM, ескейпнати кавички `""` и многоредови низове (`\n`, `\r\n`) вътре в клетките.
+   - Изцяло преработен импортът и експортът в:
+     1. [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx) (24 колони на 5 езика, корекция на вложени нови редове в инструкции и автоматично изчистване на съставки-алиаси)
+     2. [ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx) (19 колони на 5 езика)
+     3. [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx) (8 колони на 5 езика)
+     4. [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx) (17 колони на 5 езика, синхронизирани и като плоски ключове, и като обекти `name` и `short_name`)
+     5. [ManageCuisines.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageCuisines.jsx) (8 колони на 5 езика)
+   - Разкрита е причината за разликата от "216 срещу 211": точно 4 рецепти съдържаха нови редове `\n` в инструкциите, което при обикновено броене на редове в текстов редактор генерираше 216 реда (1 заглавен + 211 записа + 4 счупени реда), докато реално всички 211 рецепти са 100% налице и коректни.
+6. **Пълна проверка и оптимизация на Бакъп и Рекавъри системата**:
+   - [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx):
+     - Добавена липсващата колекция `campaigns` в списъка за архивиране `COLLECTIONS` (вече включва абсолютно всички 11 Firestore колекции: `recipes`, `ingredients`, `measurements`, `users` + подколекция `pantry`, `activity_logs`, `ingredient_groups`, `cuisines`, `system_history`, `ads`, `campaigns`, `settings`).
+     - Надградено възстановяването от облака (`handleRestoreFromCloud`) с нативния метод `getBytes` от Firebase Storage SDK (с резервен fallback към `fetch(url)`), елиминирайки всякакъв риск от CORS блокажи или изтекли токени.
+     - Защитено парсването при възстановяване (`performRestore`) с валидация за масиви и съществуващи ID-та за всяка колекция и подколекция.
+     - Добавено освобождаване на паметта с `URL.revokeObjectURL(url)` при локален експорт.
+   - [ActivityLog.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ActivityLog.jsx): Заменено експортирането през data URI с Blob и Object URL, гарантиращо безпроблемен експорт при голям обем записи.
+   - [SystemHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/SystemHistory.jsx): Коригирана сигнатурата на `logActivity` при възстановяване на отделни версии от архива.
+   - Проверени правилата за сигурност в [firestore.rules](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/firestore.rules) и [storage.rules](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/storage.rules) – правата за достъп са стриктно ограничени само до Admin и Owner.
 
 ### Статус на локализацията в проекта (i18n Tracking)
 

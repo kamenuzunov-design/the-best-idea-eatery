@@ -56,13 +56,15 @@ const ActivityLog = () => {
   }, []);
 
   const handleExport = (exportLogs = logs) => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportLogs, null, 2));
+    const blob = new Blob([JSON.stringify(exportLogs, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `activity_logs${filterKey ? '_' + filterKey : ''}.json`);
+    downloadAnchorNode.href = url;
+    downloadAnchorNode.download = `activity_logs${filterKey ? '_' + filterKey : ''}.json`;
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
+    URL.revokeObjectURL(url);
     logActivity(user.uid, user.email || 'N/A', 'export_logs', `Exported ${exportLogs.length} activity logs to JSON`);
   };
 

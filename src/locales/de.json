@@ -827,7 +827,14 @@
     "moderator_no_delete": "Moderatoren können keine Rezepte löschen.",
     "owner_only_physical_delete": "Nur der Eigentümer kann Rezepte endgültig löschen.",
     "no_permission_restore": "Sie haben keine Berechtigung zum Wiederherstellen.",
-    "no_permission_status": "Sie haben keine Berechtigung zum Ändern des Status."
+    "no_permission_status": "Sie haben keine Berechtigung zum Ändern des Status.",
+    "seed_banner_title": "Datenbank-Update mit Rezepten in 5 Sprachen (138 Rezepte)",
+    "seed_banner_desc": "Vollständige 5-sprachige Übersetzungen (BG, EN, IT, FR, DE), korrigierte Maßeinheiten, standardisierte Kategorien und Bereinigung ungültiger Einträge.",
+    "confirm_seed_all": "Sind Sie sicher, dass Sie die Datenbank mit den standardisierten Rezepten in 5 Sprachen aktualisieren und ungültige Einträge bereinigen möchten?",
+    "seed_button": "Datenbank jetzt aktualisieren",
+    "seed_running": "Aktualisierung läuft...",
+    "seed_success": "Die Datenbank wurde erfolgreich aktualisiert und normalisiert!",
+    "seed_error": "Beim Aktualisieren der Datenbank ist ein Fehler aufgetreten."
   },
   "data_dashboard": {
     "title": "Datenverwaltung",

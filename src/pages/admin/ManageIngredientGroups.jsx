@@ -6,6 +6,7 @@ import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, getLocalizedText } from '../../lib/localeUtils';
+import { parseCSV, formatCSV, downloadCSV } from '../../lib/csvUtils';
 
 const ManageIngredientGroups = () => {
   const { t, i18n } = useTranslation();
@@ -177,30 +178,18 @@ const ManageIngredientGroups = () => {
     const headers = [
       'id', 'name_en', 'name_bg', 'name_it', 'name_fr', 'name_de', 'parentId', 'level'
     ];
-    const escape = (v) => {
-      const s = String(v ?? '');
-      return s.includes(',') || s.includes('"') || s.includes('\n')
-        ? `"${s.replace(/"/g, '""')}"`
-        : s;
-    };
     const rows = exportable.map(g => [
-      escape(g.id),
-      escape(g.name_en || g.name?.en || ''),
-      escape(g.name_bg || g.name?.bg || ''),
-      escape(g.name_it || g.name?.it || ''),
-      escape(g.name_fr || g.name?.fr || ''),
-      escape(g.name_de || g.name?.de || ''),
-      escape(g.parentId || ''),
-      escape(g.level ?? (g.parentId ? 1 : 0))
-    ].join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ingredient_groups_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      g.id,
+      g.name_en || g.name?.en || '',
+      g.name_bg || g.name?.bg || '',
+      g.name_it || g.name?.it || '',
+      g.name_fr || g.name?.fr || '',
+      g.name_de || g.name?.de || '',
+      g.parentId || '',
+      g.level ?? (g.parentId ? 1 : 0)
+    ]);
+    const csvContent = formatCSV(headers, rows);
+    downloadCSV(`ingredient_groups_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
     logActivity(user.uid, user.email, 'export_ingredient_groups_csv', `Exported ${exportable.length} ingredient groups`);
   };
 
@@ -212,23 +201,13 @@ const ManageIngredientGroups = () => {
     setCsvStatus('parsing');
     try {
       const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const header = lines[0].replace(/^\uFEFF/, '').split(',');
+      const parsedRows = parseCSV(text);
+      if (parsedRows.length < 2) {
+        setCsvStatus('');
+        return;
+      }
+      const header = parsedRows[0];
       const idx = (name) => header.indexOf(name);
-
-      const parseRow = (line) => {
-        const result = [];
-        let cur = '', inQuote = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (ch === '"' && inQuote && line[i + 1] === '"') { cur += '"'; i++; }
-          else if (ch === '"') { inQuote = !inQuote; }
-          else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
-          else { cur += ch; }
-        }
-        result.push(cur);
-        return result;
-      };
 
       const existingIds = new Set(groups.map(g => g.id));
       const existingNamesBg = new Set(groups.map(g => (g.name_bg || g.name?.bg || '').toLowerCase()));
@@ -237,8 +216,8 @@ const ManageIngredientGroups = () => {
       const newRows = [];
       const duplicateRows = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseRow(lines[i]);
+      for (let i = 1; i < parsedRows.length; i++) {
+        const cols = parsedRows[i];
         if (cols.length < 2) continue;
         const rawId    = cols[idx('id')]?.trim();
         const name_en  = cols[idx('name_en')]?.trim();

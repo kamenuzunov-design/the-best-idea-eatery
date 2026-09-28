@@ -18,7 +18,8 @@ import {
   ref, 
   uploadBytes, 
   getDownloadURL, 
-  deleteObject 
+  deleteObject,
+  getBytes
 } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { ROLES } from '../../constants/roles';
@@ -58,6 +59,7 @@ const BackupRecovery = () => {
     'cuisines',
     'system_history',
     'ads',
+    'campaigns',
     'settings'
   ];
 
@@ -105,6 +107,7 @@ const BackupRecovery = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
       await logActivity(user?.uid || 'unknown', user?.email || 'unknown', 'backup_export', `Exported database on ${date}`);
       setStatus(t('backup_recovery.status.export_success'));
@@ -165,20 +168,23 @@ const BackupRecovery = () => {
       if (!COLLECTIONS.includes(collName)) continue;
       
       const docsToRestore = data[collName];
+      if (!Array.isArray(docsToRestore)) continue;
       
       docsToRestore.forEach(docData => {
+        if (!docData || typeof docData !== 'object' || !docData.id) return;
         const { id, _pantry, ...cleanData } = docData;
         
         operations.push({
-          ref: doc(db, collName, id),
+          ref: doc(db, collName, String(id)),
           data: cleanData
         });
         
         if (collName === 'users' && Array.isArray(_pantry)) {
           _pantry.forEach(pantryItem => {
+            if (!pantryItem || typeof pantryItem !== 'object' || !pantryItem.id) return;
             const { id: pantryItemId, ...cleanPantryData } = pantryItem;
             operations.push({
-              ref: doc(db, 'users', id, 'pantry', pantryItemId),
+              ref: doc(db, 'users', String(id), 'pantry', String(pantryItemId)),
               data: cleanPantryData
             });
           });
@@ -264,8 +270,16 @@ const BackupRecovery = () => {
     setStatus(t('backup_recovery.status.downloading_backup'));
     
     try {
-      const response = await fetch(backup.url);
-      const data = await response.json();
+      let data;
+      try {
+        const bytes = await getBytes(ref(storage, backup.storagePath));
+        const text = new TextDecoder().decode(bytes);
+        data = JSON.parse(text);
+      } catch (storageErr) {
+        console.warn("Storage getBytes error, falling back to fetch url:", storageErr);
+        const response = await fetch(backup.url);
+        data = await response.json();
+      }
       await performRestore(data, backup.name);
     } catch (error) {
       console.error("Cloud restore error:", error);

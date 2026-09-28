@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { archiveVersion } from '../../lib/archiveUtils';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, getLocalizedField } from '../../lib/localeUtils';
+import { parseCSV, formatCSV, downloadCSV } from '../../lib/csvUtils';
 
 const ManageMeasurements = () => {
   const { t, i18n } = useTranslation();
@@ -229,39 +230,27 @@ const ManageMeasurements = () => {
       'category', 'is_standard',
       'to_ml', 'to_g_average', 'imperial_equivalent', 'conversion_factor'
     ];
-    const escape = (v) => {
-      const s = String(v ?? '');
-      return s.includes(',') || s.includes('"') || s.includes('\n')
-        ? `"${s.replace(/"/g, '""')}"`
-        : s;
-    };
     const rows = exportable.map(m => [
-      escape(m.unit_id || m.id),
-      escape(m.name_en || m[`name_${currentLang}`] || ''),
-      escape(m.name_bg || ''),
-      escape(m.name_it || ''),
-      escape(m.name_fr || ''),
-      escape(m.name_de || ''),
-      escape(m.short_en || ''),
-      escape(m.short_bg || ''),
-      escape(m.short_it || ''),
-      escape(m.short_fr || ''),
-      escape(m.short_de || ''),
-      escape(m.category || 'mass'),
-      escape(m.is_standard ? '1' : '0'),
-      escape(m.conversions?.metric?.to_ml ?? ''),
-      escape(m.conversions?.metric?.to_g_average ?? ''),
-      escape(m.conversions?.imperial?.imperial_equivalent ?? ''),
-      escape(m.conversions?.imperial?.conversion_factor ?? '')
-    ].join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `measurements_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      m.unit_id || m.id,
+      m.name_en || m.name?.en || m[`name_${currentLang}`] || '',
+      m.name_bg || m.name?.bg || '',
+      m.name_it || m.name?.it || '',
+      m.name_fr || m.name?.fr || '',
+      m.name_de || m.name?.de || '',
+      m.short_en || m.short_name?.en || m.short?.en || '',
+      m.short_bg || m.short_name?.bg || m.short?.bg || '',
+      m.short_it || m.short_name?.it || m.short?.it || '',
+      m.short_fr || m.short_name?.fr || m.short?.fr || '',
+      m.short_de || m.short_name?.de || m.short?.de || '',
+      m.category || 'mass',
+      m.is_standard ? '1' : '0',
+      m.conversions?.metric?.to_ml ?? '',
+      m.conversions?.metric?.to_g_average ?? '',
+      m.conversions?.imperial?.imperial_equivalent ?? '',
+      m.conversions?.imperial?.conversion_factor ?? ''
+    ]);
+    const csvContent = formatCSV(headers, rows);
+    downloadCSV(`measurements_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
     logActivity(user.uid, user.email, 'export_measurements_csv', `Exported ${exportable.length} measurement units`);
   };
 
@@ -273,33 +262,23 @@ const ManageMeasurements = () => {
     setCsvStatus('parsing');
     try {
       const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const header = lines[0].replace(/^\uFEFF/, '').split(',');
+      const parsedRows = parseCSV(text);
+      if (parsedRows.length < 2) {
+        setCsvStatus('');
+        return;
+      }
+      const header = parsedRows[0];
       const idx = (name) => header.indexOf(name);
 
-      const parseRow = (line) => {
-        const result = [];
-        let cur = '', inQuote = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (ch === '"' && inQuote && line[i + 1] === '"') { cur += '"'; i++; }
-          else if (ch === '"') { inQuote = !inQuote; }
-          else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
-          else { cur += ch; }
-        }
-        result.push(cur);
-        return result;
-      };
-
       const existingIds = new Set(measurements.map(m => m.unit_id || m.id));
-      const existingNamesBg = new Set(measurements.map(m => (m.name_bg || '').toLowerCase()));
-      const existingNamesEn = new Set(measurements.map(m => (m.name_en || '').toLowerCase()));
+      const existingNamesBg = new Set(measurements.map(m => (m.name_bg || m.name?.bg || '').toLowerCase()));
+      const existingNamesEn = new Set(measurements.map(m => (m.name_en || m.name?.en || '').toLowerCase()));
 
       const newRows = [];
       const duplicateRows = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseRow(lines[i]);
+      for (let i = 1; i < parsedRows.length; i++) {
+        const cols = parsedRows[i];
         if (cols.length < 2) continue;
         const rawId    = cols[idx('unit_id')]?.trim();
         const name_en  = cols[idx('name_en')]?.trim();
@@ -329,11 +308,25 @@ const ManageMeasurements = () => {
         const row = {
           unit_id: cleanId,
           id: cleanId,
+          name: {
+            en: finalNameEn,
+            bg: name_bg,
+            it: name_it,
+            fr: name_fr,
+            de: name_de
+          },
           name_en: finalNameEn,
           name_bg,
           name_it,
           name_fr,
           name_de,
+          short_name: {
+            en: short_en,
+            bg: short_bg,
+            it: short_it,
+            fr: short_fr,
+            de: short_de
+          },
           short_en,
           short_bg,
           short_it,
