@@ -7,6 +7,7 @@ import { db } from '../lib/firebase';
 import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
 import { getLocalizedField, getLocalizedRecipeTitle } from '../lib/localeUtils';
 import { useNavigate } from 'react-router-dom';
+import { callGemini, getGeminiApiKey } from '../lib/geminiClient';
 
 const getUniqueId = (prefix) => {
   return `${prefix}-${Math.random().toString(36).substring(2, 11)}`;
@@ -375,7 +376,7 @@ const AIAssistant = () => {
 
   // Call Gemini API or fallback
   const sendToGemini = async (userMessage) => {
-    const apiKey = customApiKey || import.meta.env.VITE_GEMINI_API_KEY;
+    const apiKey = customApiKey || getGeminiApiKey();
     
     if (!apiKey) {
       // No key, run local fallback directly
@@ -404,43 +405,13 @@ Rules:
 6. If the user asks for generic advice or ingredients substitution, answer with professional chef expertise.`;
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: `${systemPrompt}\n\nUser Question: ${userMessage}` }
-                ]
-              }
-            ],
-            systemInstruction: {
-              parts: [{ text: "You are Chef AI, a world-class gourmet culinary assistant. Respond in the user's language. Recommend real database recipes by name where appropriate." }]
-            }
-          })
-        }
-      );
+      const response = await callGemini({
+        apiKey,
+        prompt: `${systemPrompt}\n\nUser Question: ${userMessage}`,
+        systemInstruction: "You are Chef AI, a world-class gourmet culinary assistant. Respond in the user's language. Recommend real database recipes by name where appropriate."
+      });
 
-      if (!response.ok) {
-        let errMessage = `HTTP ${response.status} ${response.statusText || ''}`;
-        try {
-          const errData = await response.json();
-          if (errData.error?.message) {
-            errMessage = `${errMessage}: ${errData.error.message}`;
-          }
-        } catch {
-          // Response not JSON
-        }
-        console.warn("Gemini API error. Falling back to local gourmet rule engine. Error:", errMessage);
-        return handleLocalFallbackResponse(userMessage, errMessage.trim());
-      }
-
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
+      const text = response?.text;
       if (!text) {
         return handleLocalFallbackResponse(userMessage, "No response text candidate returned from Gemini API");
       }
@@ -449,7 +420,7 @@ Rules:
       return { text, recipes: recommended };
 
     } catch (err) {
-      console.error("Gemini API request failed:", err);
+      console.warn("Gemini API call failed, falling back to local gourmet rule engine. Error:", err);
       return handleLocalFallbackResponse(userMessage, err.message || String(err));
     }
   };

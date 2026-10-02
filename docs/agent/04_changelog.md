@@ -3,6 +3,65 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-10-02] - Архивиране на временния раздел „AI Автоматичен Превод & Миграция“ в резервни копия (/admin/backup)
+### Добавено / Коригирано (Added / Fixed)
+- **Скриване и архивиране на модула [AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx) в [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx)**:
+  - Всички рецепти в базата са напълно актуализирани на 5 езика (211 рецепти), поради което масивният ремонтен блок вече не заема екранно пространство в стандартния административен изглед.
+  - По подразбиране панелът е скрит (`showMigrator = false`).
+  - Запазена е пълната функционалност и достъпност при необходимост чрез:
+    1. Дискретен бутон с иконка `auto_fix_high` в горната навигационна лента на `/admin/backup`.
+    2. URL параметър `?ai_migrator=true` (или `?migrator=true`).
+    3. Бутон „Затвори“ непосредствено над мигратора за лесно прибиране след преглед.
+
+## [2026-10-02] - Унифициран AI клиент с динамичен избор на модели и защита от претоварване (geminiClient.js)
+### Добавено / Коригирано (Added / Fixed)
+- **Създаден унифициран клиент [geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js)**:
+  - `fetchAvailableGeminiModels(apiKey)`: Динамично извличане на активните Google Gemini модели, поддържащи `generateContent`.
+  - `getBestGeminiModel(apiKey)`: Избор на най-ефективния активен Flash модел с кеширане в паметта.
+  - `callGemini`: Универсална функция за извикване на модела с верига от кандидати (`gemini-3.8-flash`, `gemini-3.8-flash-lite`, `gemini-3.7-flash`, `gemini-3.6-flash`).
+  - Пълна защита от грешки:
+    - При **HTTP 429 (Rate Limit)** автоматично разчитане на `retryDelay` от отговора на Google и експоненциален backoff с пауза преди повторен опит.
+    - При **HTTP 500, 502, 503, 504 (Server Overload)** автоматичен кратък backoff и превключване към следващия модел от списъка.
+    - При **HTTP 404 (Deprecated / Not Found)** или **HTTP 403 (Permission)** незабавно ротиране към алтернативен кандидат.
+  - Поддръжка на текст и мултимодални изображения (Vision) чрез Base64 `inlineData`.
+- **Интеграция в Chef AI ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+  - Премахнат твърдо кодираният модел; заявките се управляват през `callGemini` с автоматичен fallback и превенция от грешки 503/429.
+- **Интеграция в Скенера на съставки ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Вградено реално визуално разпознаване на хранителни съставки от снимка през Gemini Vision.
+  - Автоматично съпоставяне на разпознатите съставки с базата `masterIngredients` на всички 5 езика (BG, EN, IT, FR, DE).
+  - Пълен плавен fallback към локалните евристики при липса на API ключ или интернет връзка.
+- **5-езикова съвместимост в [AIIngredientsSearch.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIIngredientsSearch.jsx)**:
+  - Добавено многоезично филтриране и извличане на имена чрез `getLocalizedField(ing, 'name', i18n.language)`.
+
+## [2026-10-02] - Добавени филтри за подреждане и категории при редактиране на рецепти (/admin/recipes)
+### Добавено / Коригирано (Added / Fixed)
+- **Филтри за подреждане и категории в [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx)**:
+  - **Панел за подреждане (Сортиране)**: Позициониран над лентата за търсене (между бутона „+ Добави рецепта“ / формата за редакция и търсачката):
+    - Падащо меню с опции за сортиране: „Най-нови първо“ (`newest`), „Най-стари първо“ (`oldest`), „Без собствена снимка (най-отгоре)“ (`no_image_first`), „Само без снимка“ (`only_no_image`), „Азбучен ред (А-Я / A-Z)“ (`alphabetical`), „За превод първо“ (`needs_translation`), „Най-оценявани“ (`top_rated`).
+    - Динамичен брояч: показва „Показани: X от Y“ рецепти с бутон за бързо нулиране/изчистване на филтрите.
+  - **Лента за търсене**: Добавен бутон за бързо изчистване `×` и многоезично търсене чрез `matchesRecipeSearch`.
+  - **Категории в падащо меню под филтъра за подреждане**:
+    - Позиционирано непосредствено под менюто за подреждане (над лентата за търсене).
+    - Опции: „🍽️ Всички“ (`All`) + 10-те основни категории от `getRootCategories()` с техните иконки (Салати, Супи, Предястия, Основни, Десерти, Тестени, Напитки, Сос/Марината, Закуска, Специален повод).
+    - Премахнати са отделните бутони под търсачката, осигурявайки по-чист и ергономичен интерфейс.
+  - **Скриване / Архивиране на временния банер за миграция на рецепти**:
+    - Временният панел „Обновяване на базата с рецепти на 5 езика“ вече е скрит по подразбиране (`showSeedBanner = false`), освобождавайки екранно пространство.
+    - Функционалността остава архивирана и достъпна за администратори при нужда чрез добавяне на параметър `?seed=true` в URL адреса.
+  - **Локализация**: Добавени всички съответстващи ключове (`sort_*`, `category_label`, `all_categories`, `showing_count`) в 5-те езикови файла: [bg.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/bg.json), [en.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/en.json), [it.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/it.json), [fr.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/fr.json) и [de.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/de.json).
+
+## [2026-10-02] - Корекция на търсенето по съставки и заглавия на 5 езика (IT, FR, DE, BG, EN) в „Рецепти“ и „Резултати от търсенето“
+### Добавено / Коригирано (Added / Fixed)
+- **Пълна 5-езикова съвместимост при търсене по съставки от „Най-използвани 12 продукта“ ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js), [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx))**:
+  - Отстранен дефектът, при който клик върху съставка от „Най-използвани 12 продукта“ (или търсене) работеше само за български и английски, а за италиански, френски и немски връщаше 0 рецепти или грешни съвпадения.
+  - Причина: филтърът на [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx) обхождаше само `title_bg`, `title_en`, `ing.ingredient_bg`, `ing.ingredient_en`, `dbIng.name_bg` и `dbIng.name_en`, пропускайки напълно езиците IT, FR, DE и многоезичните обекти `name`, `title` и `notes`.
+  - В [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js) са създадени и експортирани общите функции `matchesSearchTerm` и `matchesRecipeSearch`:
+    1. Пълно покритие на заглавия, описания, съставки, бележки и идентификатори за всички 5 езика (`bg`, `en`, `it`, `fr`, `de`), обхващащо плоските полета и вложените езикови обекти.
+    2. Защита за кратки думи (<= 3 символа) чрез Unicode граници на думите (`\p{L}`, `\p{N}`), елиминираща фалшивите съвпадения (напр. френската дума за чесън *Ail* вече не съвпада с *Cocktail*, *Mocktail*, *Sailor*).
+    3. Автоматична нормализация на лигатури (*œ* -> *oe*, *æ* -> *ae*), гарантираща че френското *Œufs* (яйца) намира рецептите независимо дали потребителят пише *œufs* или *oeufs*.
+    4. Прецизно извличане на локализираното име на съставката в банера на [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx) чрез `getLocalizedField(ing, 'name', i18n.language)`.
+    5. Синхронизирано изчистване на URL параметрите при затваряне на търсенето в [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx).
+    6. Интегриран `matchesRecipeSearch` с режим `'every'` и в [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx) за консистентно търсене в цялото приложение.
+
 ## [2026-09-28] - Реформа на базата с рецепти: Пълна 5-езикова нормализация на 211 рецепти
 ### Добавено / Коригирано (Added / Fixed)
 - **Пълна нормализация на всички качени партиди рецепти на 5 езика (BG, EN, IT, FR, DE)**:

@@ -14,7 +14,7 @@ import { ROLES } from '../../constants/roles';
 import { getRootCategories, getSubCategories } from '../../data/recipe_categories';
 import { REPUTATION_POINTS } from '../../lib/reputationUtils';
 import { getRecipeTags } from '../../lib/recipeMetaUtils';
-import { getLocalizedText, getLocalizedField, extractLocalizedNote } from '../../lib/localeUtils';
+import { getLocalizedText, getLocalizedField, extractLocalizedNote, matchesRecipeSearch } from '../../lib/localeUtils';
 import { seedCleanRecipesToFirestore, CLEAN_RECIPES_COUNT } from '../../lib/recipeMigration';
 import { parseCSV, formatCSV, downloadCSV } from '../../lib/csvUtils';
 
@@ -48,6 +48,8 @@ const ManageRecipes = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [statusFilter, setStatusFilter] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'oldest' | 'no_image_first' | 'only_no_image' | 'alphabetical' | 'needs_translation' | 'top_rated'
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   // Form State
   const [showForm, setShowForm] = useState(false);
@@ -62,10 +64,10 @@ const ManageRecipes = () => {
   const currentLocalDesc = isEn ? descsByLang.en : (descsByLang[currentLang] || '');
   const currentEnDesc = descsByLang.en || '';
 
-  // Seed / Migration State
+  // Seed / Migration State (Archived/Hidden by default; accessible via ?seed=true if needed)
   const [seedStatus, setSeedStatus] = useState('idle'); // 'idle' | 'running' | 'done' | 'error'
   const [seedProgress, setSeedProgress] = useState({ current: 0, total: 0, percentage: 0, currentItem: '' });
-  const [showSeedBanner, setShowSeedBanner] = useState(true);
+  const [showSeedBanner, setShowSeedBanner] = useState(() => searchParams.get('seed') === 'true');
 
   const [slug, setSlug] = useState('');
   const [cuisineId, setCuisineId] = useState('');
@@ -1125,6 +1127,24 @@ const ManageRecipes = () => {
     }
   };
 
+  const getTime = (val) => {
+    if (!val) return 0;
+    if (val.seconds) return val.seconds * 1000;
+    if (typeof val.toDate === 'function') return val.toDate().getTime();
+    return new Date(val).getTime() || 0;
+  };
+
+  const getRecipeDate = (r) => {
+    return getTime(r.createdAt) || getTime(r.updatedAt) || 0;
+  };
+
+  const hasOwnImage = (r) => {
+    const img = r?.images?.main || r?.image;
+    if (!img || typeof img !== 'string') return false;
+    const trimmed = img.trim();
+    return trimmed !== '' && !trimmed.includes('recipe-placeholder') && !trimmed.includes('placeholder');
+  };
+
   const filteredRecipes = recipes.filter(r => {
     if (user?.role === ROLES.USER && r.publisher_id !== user.uid) return false;
 
@@ -1133,35 +1153,82 @@ const ManageRecipes = () => {
     // Regular users see all their non-deleted recipes (both active and pending)
     if (user?.role === ROLES.USER) {
       if (isDeleted) return false;
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        const tBg = (r.title_bg || '').toLowerCase();
-        const tEn = (r.title_en || '').toLowerCase();
-        const tLoc = (getLocalizedField(r, 'title', currentLang) || '').toLowerCase();
-        if (!tBg.includes(term) && !tEn.includes(term) && !tLoc.includes(term)) {
-          return false;
-        }
-      }
-      return true;
+    } else {
+      const isActive = r.is_active !== false && !isDeleted;
+      const isDeactivated = r.is_active === false && !isDeleted;
+      
+      if (statusFilter === 'active' && !isActive) return false;
+      if (statusFilter === 'deactivated' && !isDeactivated) return false;
+      if (statusFilter === 'deleted' && !isDeleted) return false;
     }
 
-    const isActive = r.is_active !== false && !isDeleted;
-    const isDeactivated = r.is_active === false && !isDeleted;
-    
-    if (statusFilter === 'active' && !isActive) return false;
-    if (statusFilter === 'deactivated' && !isDeactivated) return false;
-    if (statusFilter === 'deleted' && !isDeleted) return false;
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const tBg = (r.title_bg || '').toLowerCase();
-      const tEn = (r.title_en || '').toLowerCase();
-      const tLoc = (getLocalizedField(r, 'title', currentLang) || '').toLowerCase();
-      if (!tBg.includes(term) && !tEn.includes(term) && !tLoc.includes(term)) {
-        return false;
-      }
+    // Category filter
+    if (selectedCategory) {
+      const matchesCat = r.category_id === selectedCategory ||
+        r.category === selectedCategory ||
+        (Array.isArray(r.category_ids) && r.category_ids.includes(selectedCategory));
+      if (!matchesCat) return false;
     }
+
+    // "Only without image" filter mode
+    if (sortBy === 'only_no_image' && hasOwnImage(r)) {
+      return false;
+    }
+
+    // Multilingual & ingredient search
+    if (searchTerm && searchTerm.trim()) {
+      const trimmed = searchTerm.trim();
+      const matches = matchesRecipeSearch(r, [trimmed], ingredientsList, 'some');
+      if (!matches) return false;
+    }
+
     return true;
+  }).sort((a, b) => {
+    if (sortBy === 'newest') {
+      const dateDiff = getRecipeDate(b) - getRecipeDate(a);
+      if (dateDiff !== 0) return dateDiff;
+      return (a.slug || a.id || '').localeCompare(b.slug || b.id || '');
+    }
+    if (sortBy === 'oldest') {
+      const dateDiff = getRecipeDate(a) - getRecipeDate(b);
+      if (dateDiff !== 0) return dateDiff;
+      return (a.slug || a.id || '').localeCompare(b.slug || b.id || '');
+    }
+    if (sortBy === 'no_image_first') {
+      const imgA = hasOwnImage(a) ? 1 : 0;
+      const imgB = hasOwnImage(b) ? 1 : 0;
+      if (imgA !== imgB) return imgA - imgB;
+      const dateDiff = getRecipeDate(b) - getRecipeDate(a);
+      if (dateDiff !== 0) return dateDiff;
+      return (a.slug || a.id || '').localeCompare(b.slug || b.id || '');
+    }
+    if (sortBy === 'only_no_image') {
+      const dateDiff = getRecipeDate(b) - getRecipeDate(a);
+      if (dateDiff !== 0) return dateDiff;
+      return (a.slug || a.id || '').localeCompare(b.slug || b.id || '');
+    }
+    if (sortBy === 'alphabetical') {
+      const titleA = (getLocalizedField(a, 'title', currentLang) || a.title_bg || a.title_en || '').toLowerCase();
+      const titleB = (getLocalizedField(b, 'title', currentLang) || b.title_bg || b.title_en || '').toLowerCase();
+      return titleA.localeCompare(titleB, currentLang);
+    }
+    if (sortBy === 'needs_translation') {
+      const transA = a.needs_translation ? 1 : 0;
+      const transB = b.needs_translation ? 1 : 0;
+      if (transA !== transB) return transB - transA;
+      const dateDiff = getRecipeDate(b) - getRecipeDate(a);
+      if (dateDiff !== 0) return dateDiff;
+      return (a.slug || a.id || '').localeCompare(b.slug || b.id || '');
+    }
+    if (sortBy === 'top_rated') {
+      const ratingA = Number(a.rating) || 0;
+      const ratingB = Number(b.rating) || 0;
+      if (ratingB !== ratingA) return ratingB - ratingA;
+      const dateDiff = getRecipeDate(b) - getRecipeDate(a);
+      if (dateDiff !== 0) return dateDiff;
+      return (a.slug || a.id || '').localeCompare(b.slug || b.id || '');
+    }
+    return 0;
   });
 
   const renderManageButtons = (r, isActive, rName) => {
@@ -1885,9 +1952,92 @@ const ManageRecipes = () => {
         </form>
         )}
 
+        {/* Sorting & Category Controls (Above Search Bar) */}
+        <div className="mb-3 bg-surface-dark/70 backdrop-blur-md border border-primary/15 rounded-xl p-3 space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            {/* Filter 1: Sorting */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs text-primary font-bold">
+                <span className="material-symbols-outlined text-[18px]">sort</span>
+                <span>{t('recipes.sort_label')}:</span>
+              </div>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-surface-dark border border-primary/25 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-200 outline-none focus:border-[#b8860b] transition-colors cursor-pointer"
+              >
+                <option value="newest">{t('recipes.sort_newest')}</option>
+                <option value="oldest">{t('recipes.sort_oldest')}</option>
+                <option value="no_image_first">{t('recipes.sort_no_image_first')}</option>
+                <option value="only_no_image">{t('recipes.sort_only_no_image')}</option>
+                <option value="alphabetical">{t('recipes.sort_alphabetical')}</option>
+                <option value="needs_translation">{t('recipes.sort_needs_translation')}</option>
+                <option value="top_rated">{t('recipes.sort_top_rated')}</option>
+              </select>
+            </div>
+
+            {/* Counter & Reset */}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-400 font-medium">
+                {t('recipes.showing_count', { count: filteredRecipes.length, total: recipes.length })}
+              </span>
+              {(selectedCategory !== null || sortBy !== 'newest' || searchTerm !== '') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setSortBy('newest');
+                    setSearchTerm('');
+                  }}
+                  className="text-[11px] font-bold text-amber-500 hover:text-amber-400 underline transition-colors cursor-pointer ml-1"
+                  title={t('recipes.clear_filter', { defaultValue: 'Изчисти' })}
+                >
+                  {t('recipes.clear_filter', { defaultValue: 'Изчисти' })}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filter 2: Category Dropdown (Under Sorting) */}
+          <div className="flex items-center gap-2 pt-2 border-t border-primary/10">
+            <div className="flex items-center gap-1.5 text-xs text-primary font-bold">
+              <span className="material-symbols-outlined text-[18px]">category</span>
+              <span>{t('recipes.category_label', { defaultValue: 'Категория' })}:</span>
+            </div>
+            <select
+              value={selectedCategory || ''}
+              onChange={(e) => setSelectedCategory(e.target.value || null)}
+              className="bg-surface-dark border border-primary/25 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-200 outline-none focus:border-[#b8860b] transition-colors cursor-pointer"
+            >
+              <option value="">🍽️ {t('recipes.all_categories')}</option>
+              {getRootCategories().map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icon} {t(`categories.${cat.id}`, { defaultValue: cat.id })}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Search Bar */}
         <div className="mb-4 relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-          <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder={t('recipes.search_placeholder')} className="w-full bg-surface-dark/80 backdrop-blur-md border border-primary/20 rounded-xl py-3 pl-10 pr-4 text-slate-100 focus:outline-none focus:border-[#b8860b]" />
+          <input 
+            type="text" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            placeholder={t('recipes.search_placeholder')} 
+            className="w-full bg-surface-dark/80 backdrop-blur-md border border-primary/20 rounded-xl py-3 pl-10 pr-10 text-slate-100 focus:outline-none focus:border-[#b8860b] text-sm" 
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          )}
         </div>
 
         <div className="space-y-3">

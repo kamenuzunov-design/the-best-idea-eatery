@@ -5,7 +5,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { getRecipeImageUrl } from '../lib/imageUtils';
-import { getLocalizedField } from '../lib/localeUtils';
+import { getLocalizedField, matchesRecipeSearch } from '../lib/localeUtils';
 
 const RecipeSearchResults = () => {
   const navigate = useNavigate();
@@ -128,77 +128,9 @@ const RecipeSearchResults = () => {
     setSearchParams({ q: searchTerm });
   };
 
-  // Filter recipes according to activeKeywords (EVERY keyword must match to avoid excess/irrelevant results)
+  // Filter recipes according to activeKeywords (EVERY keyword must match across all 5 languages)
   const filteredRecipes = recipes.filter(r => {
-    if (activeKeywords.length === 0) return true;
-
-    // Collect all titles and descriptions across languages and formats
-    const titleCandidates = [];
-    if (typeof r.title === 'object' && r.title !== null) {
-      Object.values(r.title).forEach(val => {
-        if (typeof val === 'string') titleCandidates.push(val.toLowerCase());
-      });
-    } else if (typeof r.title === 'string') {
-      titleCandidates.push(r.title.toLowerCase());
-    }
-    if (r.title_bg) titleCandidates.push(r.title_bg.toLowerCase());
-    if (r.title_en) titleCandidates.push(r.title_en.toLowerCase());
-
-    const descCandidates = [];
-    if (typeof r.description === 'object' && r.description !== null) {
-      Object.values(r.description).forEach(val => {
-        if (typeof val === 'string') descCandidates.push(val.toLowerCase());
-      });
-    } else if (typeof r.description === 'string') {
-      descCandidates.push(r.description.toLowerCase());
-    }
-    if (r.description_bg) descCandidates.push(r.description_bg.toLowerCase());
-    if (r.description_en) descCandidates.push(r.description_en.toLowerCase());
-
-    return activeKeywords.every(kw => {
-      const term = kw.toLowerCase().trim();
-      if (!term) return true;
-
-      if (titleCandidates.some(t => t.includes(term))) return true;
-      if (descCandidates.some(d => d.includes(term))) return true;
-
-      if (r.ingredients && Array.isArray(r.ingredients)) {
-        for (const ing of r.ingredients) {
-          const ingCandidates = [];
-          if (typeof ing.name === 'object' && ing.name !== null) {
-            Object.values(ing.name).forEach(v => {
-              if (typeof v === 'string') ingCandidates.push(v.toLowerCase());
-            });
-          } else if (typeof ing.name === 'string') {
-            ingCandidates.push(ing.name.toLowerCase());
-          }
-          if (ing.ingredient_bg) ingCandidates.push(ing.ingredient_bg.toLowerCase());
-          if (ing.ingredient_en) ingCandidates.push(ing.ingredient_en.toLowerCase());
-          if (ing.name_bg) ingCandidates.push(ing.name_bg.toLowerCase());
-          if (ing.name_en) ingCandidates.push(ing.name_en.toLowerCase());
-
-          if (ingCandidates.some(ic => ic.includes(term))) return true;
-
-          if (ingredientsList && Array.isArray(ingredientsList)) {
-            const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
-            if (dbIng) {
-              const dbCandidates = [];
-              if (typeof dbIng.name === 'object' && dbIng.name !== null) {
-                Object.values(dbIng.name).forEach(v => {
-                  if (typeof v === 'string') dbCandidates.push(v.toLowerCase());
-                });
-              } else if (typeof dbIng.name === 'string') {
-                dbCandidates.push(dbIng.name.toLowerCase());
-              }
-              if (dbIng.name_bg) dbCandidates.push(dbIng.name_bg.toLowerCase());
-              if (dbIng.name_en) dbCandidates.push(dbIng.name_en.toLowerCase());
-              if (dbCandidates.some(dc => dc.includes(term))) return true;
-            }
-          }
-        }
-      }
-      return false;
-    });
+    return matchesRecipeSearch(r, activeKeywords, ingredientsList, 'every');
   });
 
   return (

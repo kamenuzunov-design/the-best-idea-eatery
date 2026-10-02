@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   collection, 
@@ -29,6 +29,7 @@ import AIMultilingualMigrator from '../../components/admin/AIMultilingualMigrato
 const BackupRecovery = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const currentLang = i18n.language || 'bg';
   
@@ -38,6 +39,9 @@ const BackupRecovery = () => {
   const [showConfirmRestore, setShowConfirmRestore] = useState(false);
   const [cloudBackups, setCloudBackups] = useState([]);
   const [cloudLoading, setCloudLoading] = useState(false);
+  const [showMigrator, setShowMigrator] = useState(
+    () => searchParams.get('ai_migrator') === 'true' || searchParams.get('migrator') === 'true'
+  );
 
   // Fetch Cloud Backups
   React.useEffect(() => {
@@ -331,6 +335,20 @@ const BackupRecovery = () => {
           <h1 className="text-xl font-bold text-slate-100">{t('backup_recovery.title')}</h1>
           <p className="text-xs font-medium text-amber-500">{t('backup_recovery.security_zone')}</p>
         </div>
+        <div className="ml-auto">
+          <button
+            type="button"
+            onClick={() => setShowMigrator(prev => !prev)}
+            title={showMigrator ? t('common.buttons.close', { defaultValue: 'Затвори' }) : 'AI Мигратор (Архив)'}
+            className={`p-2 rounded-xl transition-all cursor-pointer border ${
+              showMigrator
+                ? 'bg-amber-500/20 text-amber-500 border-amber-500/40 shadow-sm'
+                : 'text-slate-500 hover:text-slate-300 border-transparent hover:border-primary/20'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">auto_fix_high</span>
+          </button>
+        </div>
       </div>
 
       <div className="p-6 flex flex-col gap-8 overflow-y-auto">
@@ -510,8 +528,22 @@ const BackupRecovery = () => {
           </div>
         </section>
 
-        {/* AI Multilingual Batch Translation & Migration Section */}
-        <AIMultilingualMigrator />
+        {/* Archived AI Multilingual Batch Translation & Migration Section */}
+        {showMigrator && (
+          <div className="relative">
+            <div className="flex justify-end mb-2">
+              <button
+                type="button"
+                onClick={() => setShowMigrator(false)}
+                className="text-xs text-slate-400 hover:text-slate-200 bg-surface-dark px-3 py-1 rounded-lg border border-primary/20 flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+                {t('common.buttons.close', { defaultValue: 'Затвори' })}
+              </button>
+            </div>
+            <AIMultilingualMigrator />
+          </div>
+        )}
 
         {/* Status Indicator */}
         {status && (

@@ -6,6 +6,7 @@ import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { getLocalizedField } from '../lib/localeUtils';
+import { callGemini, getGeminiApiKey } from '../lib/geminiClient';
 
 const IngredientScanner = () => {
   const navigate = useNavigate();
@@ -130,13 +131,86 @@ const IngredientScanner = () => {
     fetchIngredients();
   }, []);
 
-  // Run smart AI ingredient detection logic
-  const runAIDetection = (fileName = '', list = masterIngredients) => {
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  // Run smart AI ingredient detection logic (Gemini Vision with local fallback)
+  const runAIDetection = async (fileOrName = '', list = masterIngredients) => {
     setScanning(true);
     setDetectedItems([]); // Wipes previous items
 
+    const apiKey = getGeminiApiKey();
+
+    // 1. If a real image File/Blob was selected and Gemini API Key is available, use Gemini Vision
+    if ((fileOrName instanceof File || fileOrName instanceof Blob) && apiKey) {
+      try {
+        const base64Data = await fileToBase64(fileOrName);
+        const prompt = `Inspect this food / pantry image. Identify all food ingredients visible in the photo.
+Respond ONLY with a JSON array of objects, with keys:
+- "name_en": ingredient name in English
+- "name_bg": ingredient name in Bulgarian
+- "name_it": ingredient name in Italian
+- "name_fr": ingredient name in French
+- "name_de": ingredient name in German
+Only include raw or culinary ingredients (vegetables, meat, dairy, pantry items, spices, etc.). No utensils, plates, or generic dish names.
+Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", "name_fr": "Tomate", "name_de": "Tomate"}]`;
+
+        const res = await callGemini({
+          apiKey,
+          images: [{ mimeType: fileOrName.type || 'image/jpeg', data: base64Data }],
+          prompt,
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        });
+
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          const formatted = res.data.map((itemObj, idx) => {
+            const kwName = itemObj[`name_${currentLang}`] || itemObj.name_en || itemObj.name_bg || itemObj.name;
+            const dbMatch = list && list.find(ing => {
+              const bg = (ing.name_bg || '').toLowerCase();
+              const en = (ing.name_en || '').toLowerCase();
+              const local = (getLocalizedField(ing, 'name', currentLang) || '').toLowerCase();
+              const kwEn = (itemObj.name_en || '').toLowerCase();
+              const kwBg = (itemObj.name_bg || '').toLowerCase();
+              const kwLocal = (kwName || '').toLowerCase();
+              return (
+                (bg && (bg === kwBg || bg.includes(kwBg) || kwBg.includes(bg))) ||
+                (en && (en === kwEn || en.includes(kwEn) || kwEn.includes(en))) ||
+                (local && (local === kwLocal || local.includes(kwLocal) || kwLocal.includes(local)))
+              );
+            });
+
+            const localizedName = dbMatch 
+              ? (getLocalizedField(dbMatch, 'name', currentLang) || dbMatch.name_en || dbMatch.name_bg) 
+              : kwName;
+
+            return {
+              id: dbMatch ? dbMatch.id : `gemini_${idx}_${Date.now()}`,
+              name: localizedName,
+              quantity: 1,
+              unit: 'бр',
+              checked: true
+            };
+          });
+
+          setDetectedItems(formatted);
+          setScanning(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Gemini vision scan failed, switching to smart local heuristic:", err.message);
+      }
+    }
+
+    // 2. Local Fallback Heuristics
     setTimeout(() => {
-      const lowerName = fileName.toLowerCase();
+      const fileNameStr = typeof fileOrName === 'string' ? fileOrName : (fileOrName?.name || '');
+      const lowerName = fileNameStr.toLowerCase();
 
       // Keywords matching
       const isChicken = lowerName.includes('chicken') || lowerName.includes('пиле') || lowerName.includes('poultry') || lowerName.includes('печено') || lowerName.includes('pollo') || lowerName.includes('poulet') || lowerName.includes('huhn');
@@ -231,7 +305,7 @@ const IngredientScanner = () => {
 
       setDetectedItems(formatted);
       setScanning(false);
-    }, 2000);
+    }, 1500);
   };
 
   // Initial detection when masterIngredients is loaded
@@ -249,7 +323,7 @@ const IngredientScanner = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     } else {
-      runAIDetection();
+      runAIDetection('', masterIngredients);
     }
   };
 
@@ -258,7 +332,7 @@ const IngredientScanner = () => {
     if (file) {
       const url = URL.createObjectURL(file);
       setCapturedImage(url);
-      runAIDetection(file.name);
+      runAIDetection(file, masterIngredients);
     }
   };
 

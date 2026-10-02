@@ -1,6 +1,40 @@
 # Активен План
 
 ## Текуща задача
+Успешно завършени козметични подобрения и филтриране:
+1. **Проблем с търсенето по съставки от „Рецепти“ секция „Най-използвани 12 продукта“ (отстранен)**:
+   - В [localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js) са създадени общи функции `matchesSearchTerm` и `matchesRecipeSearch`, които търсят по заглавия, описания, съставки и бележки на всички 5 езика (BG, EN, IT, FR, DE).
+   - Защита от фалшиви съвпадения за кратки думи (<= 3 символа) с Unicode word boundary регулярен израз (напр. френското *Ail* не съвпада с *Cocktail*).
+   - Автоматична нормализация на лигатури (*œ* -> *oe*, *æ* -> *ae*), поддържаща търсене на *Œufs* / *oeufs*.
+   - Локализирано извличане на имената на съставките в банера на [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx) с `getLocalizedField`.
+   - Синхронизирано изчистване на URL параметрите при затваряне на търсенето.
+2. **Филтри за подреждане и категории при редактиране на рецепти ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+   - **Подреждане (Сортиране) над лентата за търсене**: Позиционирано между бутона „+ Добави рецепта“ / формата и лентата за търсене. Включва падащо меню с критерии:
+     - „Най-нови първо“ (newest, по подразбиране)
+     - „Най-стари първо“ (oldest)
+     - „Без собствена снимка (най-отгоре)“ (no_image_first)
+     - „Само без снимка“ (only_no_image)
+     - „Азбучен ред (А-Я / A-Z)“ (alphabetical)
+     - „За превод първо“ (needs_translation)
+     - „Най-оценявани“ (top_rated)
+     - Брояч на резултатите („Показани: X от Y“) с бутон за бързо изчистване/нулиране на филтрите.
+   - **Лента за търсене**: С бутон за бързо изчистване `×` и умна многоезична проверка чрез `matchesRecipeSearch`.
+   - **Категории в падащо меню под филтъра за подреждане**: Позиционирани непосредствено под падащото меню за подреждане/сортиране в контролния панел над лентата за търсене. Включва: „🍽️ Всички“ + 10-те основни категории от `getRootCategories()` с техните иконки (Салати, Супи, Предястия, Основни, Десерти, Тестени, Напитки, Сос/Марината, Закуска, Специален повод). Премахнати са разпилените бутони под лентата за търсене за чист и компактен изглед.
+   - Пълна локализация на всички нови етикети на 5 езика (BG, EN, IT, FR, DE).
+3. **Скриване / Архивиране на временния банер за миграция на рецепти в [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx)**:
+   - Временният раздел „Обновяване на базата с рецепти на 5 езика“ е скрит по подразбиране (`showSeedBanner = false`), освобождавайки горната част на административния екран.
+   - Запазена е пълна възможност за активиране при нужда чрез URL параметър `?seed=true` (напр. `/admin/recipes?seed=true`).
+4. **Унифициран AI клиент с динамичен избор на модели и защита от претоварване ([geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js))**:
+   - Създаден централизиран модул `geminiClient.js` за надеждна комуникация с Google Gemini API.
+   - Динамично откриване на наличните модели чрез `fetchAvailableGeminiModels(apiKey)` и приоритетен избор с кеширане чрез `getBestGeminiModel(apiKey)`.
+   - Защита от претоварване и грешки: автоматичен exponential backoff и извличане на `retryDelay` при HTTP 429 (Rate Limit), както и автоматично превключване към резервни Flash модели (`gemini-3.8-flash`, `gemini-3.8-flash-lite`, `gemini-3.7-flash`, `gemini-3.6-flash`) при грешки 500, 502, 503, 504, 404 или 403.
+   - Интегриран в [AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx) (Chef AI) на мястото на твърдо кодирания модел.
+   - Интегриран в [IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx) за мултимодално визуално разпознаване на съставки от заснета снимка (Gemini Vision) с плавен локален fallback.
+   - Добавена 5-езикова съвместимост в [AIIngredientsSearch.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIIngredientsSearch.jsx) чрез `getLocalizedField`.
+5. **Скриване / Архивиране на временния раздел „AI Автоматичен Превод & Миграция“ в [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx)**:
+   - Временният раздел за масов превод и миграция е скрит по подразбиране (`showMigrator = false`), тъй като всички 211 рецепти и съпътстващи номенклатури вече са напълно актуализирани.
+   - Добавен е дискретен бутон в хедъра на екрана, както и поддръжка за URL параметър `?ai_migrator=true` (напр. `/admin/backup?ai_migrator=true`) за мигновен достъп при бъдеща нужда.
+
 Успешно завършена пълната реформа на базата с рецепти (всички **211 рецепти** на 5 езика: 70 от партида 1 + 68 от партида 2 + 36 от партида 3 + 37 от партида 4):
 1. **Нормализация на рецептите (211 рецепти)**: 211 уникални рецепти със 100% покритие на заглавия, описания, стъпки, съставки и кулинарни бележки на 5 езика (BG, EN, IT, FR, DE).
 2. **Корекция на мерни единици и категории**: Заменени всички 73 стари Firestore ID-та (`ZDtEN...` -> `teaspoon`, `7gpt...` -> `pinch`, `6vZd...` -> `teacup`), стандартизирани категории и подкатегории (`dessert`, `main_meat`, `appetizer_cold`, `main_side`, `salad_seafood`, `salad_green`, `sauce_dressing`, `appetizer_hot`, `main_veggie`, `main_seafood`, `breakfast_eggs`, `dessert_cake`).
@@ -61,8 +95,14 @@
 - [x] **Визуален скенер за съставки**: [IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx) (`/scanner`) (5 езика: EN, IT, FR, DE, BG чрез `ingredient_scanner`, интерфейс за сканиране, статуси, предупреждения за точност, преведени основни и спомагателни съставки, търсене в базата данни и добавяне в килера. *Технически дълг: отбелязан в `06_known_issues.md` за цялостна преработка с реална AI Vision интеграция към края на проекта*)
 - [x] **AI Автоматичен Пакетен Превод & Миграция на Данни (AI Batch Translation Migrator)**: [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx), [AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx), [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js) (5 езика: EN, IT, FR, DE, BG чрез `backup_recovery.ai_migration`, вграден точно под експорта в Бекъп панела; сканиране на Firestore колекции `ingredient_groups`, `measurements`, `ingredients`, `recipes`; безопасен ритъм с 2.5 сек. интервал: 15 съставки / 2 рецепти на партида; управление на Gemini API ключ; Dry Run симулация, пауза, продължаване, спиране, живи прегледи и атомарен `writeBatch` запис с изчистване на `needs_translation`).
 
-#### 🔄 2. В процес на работа (Следваща стъпка)
-- [ ] Изпълнение на AI Пакетната миграция в административния панел (`/admin/backup`) за запълване на липсващите италиански, френски и немски кулинарни преводи в базата данни.
+#### 🔄 2. В процес на работа (Първа задача за следващата сесия)
+- [ ] **Поддръжка на имперски мерни единици (Imperial Unit System) - Грам <-> Ounce и Милилитър <-> Fluid Ounce според флага `is_liquid`**:
+  - [ ] **Стъпка 1**: Създаване на единен помощен модул [unitConverter.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/unitConverter.js) с чисти функции (`convertMetricToImperial`, `convertImperialToMetric`, `normalizeToCanonicalGramsOrMl`, `formatQuantity`) и кулинарно закръгляване.
+  - [ ] **Стъпка 2**: Допълване на Firestore колекцията `measurements` със самостоятелни единици `ounce` (`oz`, mass) и `pound` (`lb`, mass); актуализация на 5-езиковите речници (`bg.json`, `en.json`, `it.json`, `fr.json`, `de.json`).
+  - [ ] **Стъпка 3**: Интеграция в Рецептите ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx)) - динамично преизчисляване според `user.preferences.unit_system` и бърз превключвател (тогъл) `[ g/ml | oz/fl oz ]` над съставките.
+  - [ ] **Стъпка 4**: Долап ([Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx)) и съпоставяне на наличностите ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx)) - нормализиране на съставките към канонични стойности за коректно засичане на наличност независимо от мерната система.
+  - [ ] **Стъпка 5**: Списък за пазаруване ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx) и [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx)) - автоматично записване на липсващите продукти в `oz`/`fl oz` за имперски потребители и разширение на `formatMetricItem` към общо форматиране.
+  - [ ] **Стъпка 6**: Chef AI ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx)) - предаване на предпочитаната мерна система в системния промпт.
 
 #### ⏳ 3. Предстоящи за превод страници (Pending Roadmap)
 - **Свързани с потребителския профил:**
@@ -70,7 +110,7 @@
 - **Рецепти и готвене:**
   - [ ] `WinePairing.jsx` (`/recipe/:id/wine`)
 - **Интелигентни кулинарни инструменти:**
-  - [ ] `AIIngredientsSearch.jsx` (`/ai-search`)
+  - [x] `AIIngredientsSearch.jsx` (`/ai-search`) (адаптиран на 5 езика)
   - [ ] `WeeklyMenuPlanner.jsx` (`/planner`)
 - **Общност, Сезонни и Кухни:**
   - [ ] `CuisinesExplorer.jsx` (`/cuisines`)

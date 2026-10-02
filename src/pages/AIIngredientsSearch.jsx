@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { getLocalizedField } from '../lib/localeUtils';
 
 const AIIngredientsSearch = () => {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ const AIIngredientsSearch = () => {
   };
 
   const addIngredient = (ing) => {
-    const ingName = isBg ? (ing.name_bg || ing.name_en) : (ing.name_en || ing.name_bg);
+    const ingName = getLocalizedField(ing, 'name', i18n.language) || ing.name_en || ing.name_bg;
     if (!selectedItems.some(i => i.name.toLowerCase() === ingName.toLowerCase())) {
       setSelectedItems(prev => [...prev, { id: ing.id, name: ingName }]);
     }
@@ -54,7 +55,8 @@ const AIIngredientsSearch = () => {
     const term = searchTerm.toLowerCase();
     const bg = (ing.name_bg || '').toLowerCase();
     const en = (ing.name_en || '').toLowerCase();
-    return bg.includes(term) || en.includes(term);
+    const loc = (getLocalizedField(ing, 'name', i18n.language) || '').toLowerCase();
+    return bg.includes(term) || en.includes(term) || loc.includes(term);
   });
 
   return (

@@ -10,7 +10,7 @@ import { getLocalizedCuisine } from '../data/cuisines';
 import { translateTag, getRecipeTags, normalizeMainGroup, passesDietaryProfile } from '../lib/recipeMetaUtils';
 import { getRootCategories } from '../data/recipe_categories';
 import { getRecipeImageUrl } from '../lib/imageUtils';
-import { getLocalizedRecipeTitle } from '../lib/localeUtils';
+import { getLocalizedRecipeTitle, getLocalizedField, matchesRecipeSearch } from '../lib/localeUtils';
 
 const getPluralCategoryName = (id, t) => {
   return t ? t(`categories.${id}`, { defaultValue: id }) : id;
@@ -190,30 +190,7 @@ const Home = () => {
         if (searchQuery) {
           const searchTerms = searchQuery.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
           if (searchTerms.length > 0) {
-            filtered = filtered.filter(r => {
-              const titleBg = (r.title_bg || '').toLowerCase();
-              const titleEn = (r.title_en || '').toLowerCase();
-
-              return searchTerms.some(term => {
-                if (titleBg.includes(term) || titleEn.includes(term)) return true;
-
-                if (r.ingredients && Array.isArray(r.ingredients)) {
-                  for (const ing of r.ingredients) {
-                    const ingBg = (ing.ingredient_bg || ing.name_bg || '').toLowerCase();
-                    const ingEn = (ing.ingredient_en || ing.name_en || '').toLowerCase();
-                    if (ingBg.includes(term) || ingEn.includes(term)) return true;
-
-                    const dbIng = ingredientsList.find(dbI => dbI.id === ing.ingredient_id);
-                    if (dbIng) {
-                      const dbNameBg = (dbIng.name_bg || '').toLowerCase();
-                      const dbNameEn = (dbIng.name_en || '').toLowerCase();
-                      if (dbNameBg.includes(term) || dbNameEn.includes(term)) return true;
-                    }
-                  }
-                }
-                return false;
-              });
-            });
+            filtered = filtered.filter(r => matchesRecipeSearch(r, searchTerms, ingredientsList, 'some'));
           }
         }
 
@@ -384,7 +361,7 @@ const Home = () => {
         id,
         count: usageCount[id]
       } : null;
-    }).filter(i => i && (i.name_bg || i.name_en));
+    }).filter(i => i && (i.name_bg || i.name_en || i.name));
 
     // 2. Filter out basic staples (water, salt, sugar, flour, vinegar, spices, fats)
     const filtered = allCounted.filter(i => {
@@ -487,7 +464,7 @@ const Home = () => {
           />
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">search</span>
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+            <button onClick={() => { setSearchQuery(''); setSearchParams({}); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
               <span className="material-symbols-outlined text-xl">close</span>
             </button>
           )}
@@ -687,7 +664,7 @@ const Home = () => {
             {showTop10 && (
               <div className="mt-4 grid grid-cols-3 gap-3 pb-4">
                 {top10Ingredients.map((ing, idx) => {
-                  const ingName = ing[`name_${i18n.language}`] || (isBg ? ing.name_bg : ing.name_en) || ing.name_en || ing.name_bg;
+                  const ingName = getLocalizedField(ing, 'name', i18n.language) || ing[`name_${i18n.language}`] || (isBg ? ing.name_bg : ing.name_en) || ing.name_en || ing.name_bg || ing.id;
                   return (
                     <button
                       key={ing.id}
