@@ -11,6 +11,13 @@ import { translateTag, getRecipeTags, normalizeMainGroup, passesDietaryProfile }
 import { getRootCategories } from '../data/recipe_categories';
 import { getRecipeImageUrl } from '../lib/imageUtils';
 import { getLocalizedRecipeTitle, getLocalizedField, matchesRecipeSearch } from '../lib/localeUtils';
+import { 
+  normalizeUnitId, 
+  normalizeToCanonical, 
+  GRAMS_PER_OZ, 
+  ML_PER_FL_OZ, 
+  OZ_PER_LB 
+} from '../lib/unitConverter';
 
 const getPluralCategoryName = (id, t) => {
   return t ? t(`categories.${id}`, { defaultValue: id }) : id;
@@ -71,8 +78,19 @@ const Home = () => {
   }, [authorFilter]);
 
   const convertToGrams = useCallback((amount, unitId) => {
-    if (!unitId) return amount;
-    const unit = measurementsList.find(m => m.id === unitId || m.unit_id === unitId);
+    if (!unitId || !amount) return amount || 0;
+    const norm = normalizeUnitId(unitId);
+
+    const canonical = normalizeToCanonical({ amount, unitId: norm });
+    if (canonical.unit === 'g' || canonical.unit === 'ml') {
+      return canonical.amount;
+    }
+
+    const unit = measurementsList.find(m => 
+      m.id === unitId || 
+      m.unit_id === unitId || 
+      normalizeUnitId(m.id || m.unit_id || m.slug) === norm
+    );
     if (!unit) return amount;
     
     const toG = unit.conversions?.metric?.to_g_average || unit.base_weight_grams;
@@ -89,8 +107,20 @@ const Home = () => {
   }, [measurementsList]);
 
   const convertFromGrams = useCallback((amountInGrams, unitId) => {
-    if (!unitId) return amountInGrams;
-    const unit = measurementsList.find(m => m.id === unitId || m.unit_id === unitId);
+    if (!unitId || !amountInGrams) return amountInGrams || 0;
+    const norm = normalizeUnitId(unitId);
+
+    if (norm === 'g' || norm === 'ml') return amountInGrams;
+    if (norm === 'kg' || norm === 'l') return amountInGrams / 1000;
+    if (norm === 'oz') return amountInGrams / GRAMS_PER_OZ;
+    if (norm === 'lb') return amountInGrams / (OZ_PER_LB * GRAMS_PER_OZ);
+    if (norm === 'fl_oz') return amountInGrams / ML_PER_FL_OZ;
+
+    const unit = measurementsList.find(m => 
+      m.id === unitId || 
+      m.unit_id === unitId || 
+      normalizeUnitId(m.id || m.unit_id || m.slug) === norm
+    );
     if (!unit) return amountInGrams;
     
     const toG = unit.conversions?.metric?.to_g_average || unit.base_weight_grams;

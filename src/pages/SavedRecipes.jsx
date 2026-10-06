@@ -9,6 +9,12 @@ import { getLocalizedCuisine } from '../data/cuisines';
 import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getLocalizedField } from '../lib/localeUtils';
+import { 
+  normalizeUnitId, 
+  convertQuantityToSystem, 
+  formatQuantity, 
+  roundCulinary 
+} from '../lib/unitConverter';
 
 const SavedRecipes = () => {
   const { shoppingList, setShoppingList } = useAppContext();
@@ -79,16 +85,21 @@ const SavedRecipes = () => {
 
   const getUnitName = (unitId) => {
     if (!unitId) return '';
-    const norm = String(unitId).toLowerCase().trim();
-    if (norm === 'g') return t('saved.units.g');
-    if (norm === 'kg') return t('saved.units.kg');
-    if (norm === 'ml') return t('saved.units.ml');
-    if (norm === 'l') return t('saved.units.l');
-    if (norm === 'pcs') return t('saved.units.pcs');
+    const norm = normalizeUnitId(unitId);
+    const key = `saved.units.${norm}`;
+    if (i18n.exists(key)) {
+      return t(key);
+    }
 
-    const found = measurementsDB.find(m => (m.unit_id === unitId || m.id === unitId));
+    const found = measurementsDB.find(m => (
+      m.unit_id === unitId || 
+      m.id === unitId || 
+      normalizeUnitId(m.unit_id || m.id || m.slug) === norm
+    ));
     if (found) {
-      return getLocalizedField(found, 'name', currentLang) || found.name_en || found.name_bg || found.name || unitId;
+      return getLocalizedField(found, 'short_name', currentLang) || 
+             getLocalizedField(found, 'name', currentLang) || 
+             found.name_en || found.name_bg || found.name || norm;
     }
     return unitId;
   };
@@ -108,14 +119,16 @@ const SavedRecipes = () => {
     setTempList(shoppingList.map((item, index) => {
       const qty = item.quantityToBuy !== undefined ? item.quantityToBuy : (item.amount || 0);
       const unit = item.unit || item.unit_id || 'g';
-      const formatted = formatMetricItem(qty, unit);
+      const dbIng = ingredientsList.find(i => i.id === item.ingredient_id || i.id === item.id);
+      const isLiquid = dbIng?.meta?.is_liquid === true || ['ml', 'l', 'fl_oz'].includes(normalizeUnitId(unit));
+      const formatted = formatShoppingItem(qty, unit, isLiquid);
       const resolvedName = getItemName(item);
       return {
         ...item,
         name: resolvedName,
         nameBg: item.nameBg || item.ingredient_bg || item.name_bg || resolvedName,
         nameEn: item.nameEn || item.ingredient_en || item.name_en || resolvedName,
-        quantityToBuy: formatted.qty,
+        quantityToBuy: Number(formatted.qty) || formatted.qty,
         unit: formatted.unit,
         checked: checkedItems.has(index)
       };
@@ -217,8 +230,8 @@ const SavedRecipes = () => {
   };
 
   const getUnitOptions = (item) => {
-    const standard = ['g', 'kg', 'ml', 'pcs'];
-    const ing = ingredientsList.find(i => i.id === item.ingredient_id);
+    const standard = ['g', 'kg', 'ml', 'pcs', 'oz', 'fl_oz', 'lb'];
+    const ing = ingredientsList.find(i => i.id === item.ingredient_id || i.id === item.id);
     const mapped = ing?.units_mapping?.map(u => u.unit_id) || [];
     const all = Array.from(new Set([
       ...mapped,
@@ -228,22 +241,57 @@ const SavedRecipes = () => {
     return all;
   };
 
-  const formatMetricItem = (qty, unit) => {
-    if (unit === 'g' || unit === 'kg') {
-      const baseG = unit === 'kg' ? qty * 1000 : qty;
-      if (baseG > 500) {
-        return { qty: Number((baseG / 1000).toFixed(2)), unit: 'kg' };
+  const formatShoppingItem = (rawQty, rawUnit, isLiquid = false) => {
+    const qty = Number(rawQty) || 0;
+    const norm = normalizeUnitId(rawUnit);
+    const userSystem = user?.preferences?.unit_system || 'metric';
+
+    if (userSystem === 'imperial') {
+      const converted = convertQuantityToSystem({
+        amount: qty,
+        unitId: norm,
+        targetSystem: 'imperial',
+        isLiquid,
+        preferLargeUnits: true
+      });
+      if (converted.unit === 'oz' && converted.amount >= 16) {
+        return {
+          qty: formatQuantity(roundCulinary(converted.amount / 16, 2)),
+          unit: 'lb'
+        };
       }
-      return { qty: Number(baseG.toFixed(0)), unit: 'g' };
+      return {
+        qty: formatQuantity(converted.amount),
+        unit: converted.unit
+      };
     }
-    if (unit === 'ml' || unit === 'l') {
-      const baseMl = unit === 'l' ? qty * 1000 : qty;
-      if (baseMl > 500) {
-        return { qty: Number((baseMl / 1000).toFixed(2)), unit: 'l' };
-      }
-      return { qty: Number(baseMl.toFixed(0)), unit: 'ml' };
+
+    // Target system is Metric:
+    const converted = convertQuantityToSystem({
+      amount: qty,
+      unitId: norm,
+      targetSystem: 'metric',
+      isLiquid,
+      preferLargeUnits: true
+    });
+
+    if (converted.unit === 'g' && converted.amount >= 1000) {
+      return {
+        qty: formatQuantity(roundCulinary(converted.amount / 1000, 2)),
+        unit: 'kg'
+      };
     }
-    return { qty, unit };
+    if (converted.unit === 'ml' && converted.amount >= 1000) {
+      return {
+        qty: formatQuantity(roundCulinary(converted.amount / 1000, 2)),
+        unit: 'l'
+      };
+    }
+
+    return {
+      qty: formatQuantity(converted.amount),
+      unit: converted.unit
+    };
   };
 
   const handleUnsave = async (e, recipeId) => {
@@ -395,6 +443,9 @@ const SavedRecipes = () => {
                         <option value="kg">{t('saved.units.kg')}</option>
                         <option value="ml">{t('saved.units.ml')}</option>
                         <option value="l">{t('saved.units.l')}</option>
+                        <option value="oz">{t('saved.units.oz')}</option>
+                        <option value="fl_oz">{t('saved.units.fl_oz')}</option>
+                        <option value="lb">{t('saved.units.lb')}</option>
                       </select>
                     </div>
                     <button
@@ -486,7 +537,9 @@ const SavedRecipes = () => {
               const isChecked = checkedItems.has(index);
               const rawQty = item.quantityToBuy !== undefined ? item.quantityToBuy : (item.amount || 0);
               const rawUnit = item.unit || item.unit_id || 'g';
-              const { qty, unit } = formatMetricItem(rawQty, rawUnit);
+              const dbIng = ingredientsList.find(i => i.id === item.ingredient_id || i.id === item.id);
+              const isLiquid = dbIng?.meta?.is_liquid === true || ['ml', 'l', 'fl_oz'].includes(normalizeUnitId(rawUnit));
+              const { qty, unit } = formatShoppingItem(rawQty, rawUnit, isLiquid);
               return (
                 <div key={index} className="flex items-center justify-between border-b border-primary/10 p-3 last:border-0 hover:bg-white/5 rounded-xl transition-colors group">
                   <div className="flex items-center gap-4 min-w-0">

@@ -142,6 +142,20 @@ const AdminDashboard = () => {
           </Link>
         )}
 
+        {/* AI Configuration */}
+        {(user.role === ROLES.OWNER || user.role === ROLES.ADMIN) && (
+          <Link to="/admin/ai-config" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.1)] hover:shadow-[0_0_30px_rgba(168,85,247,0.2)] transition-all cursor-pointer group flex items-center gap-4">
+            <div className="size-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform shrink-0">
+              <span className="material-symbols-outlined text-2xl font-bold">psychology</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-slate-100">{t('admin_dashboard.ai_config_title')}</h3>
+              <p className="text-xs text-slate-400">{t('admin_dashboard.ai_config_desc')}</p>
+            </div>
+            <span className="material-symbols-outlined text-slate-500">chevron_right</span>
+          </Link>
+        )}
+
       </div>
     </div>
   );

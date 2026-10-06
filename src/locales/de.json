@@ -215,7 +215,10 @@
       "kg": "kg",
       "ml": "ml",
       "l": "l",
-      "pcs": "Stk."
+      "pcs": "Stk.",
+      "oz": "oz",
+      "fl_oz": "fl. oz.",
+      "lb": "lb"
     },
     "diet_edit_title": "Ernährungsprofil bearbeiten",
     "diet_edit_subtitle": "Passen Sie Ihre Vorlieben und Allergien an",
@@ -362,7 +365,10 @@
       "kg": "kg",
       "ml": "ml",
       "l": "l",
-      "pcs": "Stk."
+      "pcs": "Stk.",
+      "oz": "oz",
+      "fl_oz": "fl. oz.",
+      "lb": "lb"
     }
   },
   "gdpr": {
@@ -574,6 +580,8 @@
     "export_csv_title": "CSV exportieren",
     "import_csv": "CSV",
     "import_csv_title": "CSV importieren",
+    "add_imperial_units": "+ Imperiale Einheiten",
+    "add_imperial_units_title": "Fehlende imperiale Einheiten hinzufügen (oz, lb)",
     "parsing": "Wird analysiert...",
     "saving": "Wird gespeichert...",
     "done": "Fertig!",
@@ -897,7 +905,47 @@
     "backup_title": "Sicherung & Sicherheit",
     "backup_desc": "Cloud-Backups und lokaler Export",
     "ads_title": "Werbung",
-    "ads_desc": "Kampagnen und Aktionen"
+    "ads_desc": "Kampagnen und Aktionen",
+    "ai_config_title": "KI-Konfiguration & Modelle",
+    "ai_config_desc": "Google Gemini-Modelle und API-Einstellungen verwalten"
+  },
+  "ai_config": {
+    "title": "KI-Konfiguration & Modelle",
+    "subtitle": "Aktive Google Gemini-Modelle für die gesamte Anwendung verwalten",
+    "current_status_title": "Aktueller Systemstatus",
+    "active_primary_label": "Aktives primäres Modell",
+    "active_fallback_label": "Ausweichmodell (Fallback)",
+    "last_updated_by": "Zuletzt aktualisiert am {{date}} von {{user}}",
+    "edit_heading": "Modellkonfiguration",
+    "primary_model_field": "Primäres Modell",
+    "primary_model_hint": "Standardmodell für Chef AI und Zutatenscanner",
+    "fallback_model_field": "Ausweichmodell (Fallback)",
+    "fallback_model_hint": "Wird sofort aktiviert, falls das primäre Modell nicht erreichbar ist",
+    "option_custom": "Benutzerdefinierte ID eingeben...",
+    "custom_input_placeholder": "z. B. gemini-4.0-flash",
+    "custom_input_hint": "Geben Sie die genaue ID des neu veröffentlichten Google Gemini-Modells ein",
+    "test_section_title": "Live-Modellüberprüfung",
+    "test_section_desc": "Senden Sie eine kurze Testanfrage an {{model}}, um die Verfügbarkeit zu prüfen",
+    "test_btn": "Modell testen",
+    "testing_btn": "Wird getestet...",
+    "test_success_msg": "Modell {{model}} hat erfolgreich in {{ms}} ms geantwortet!",
+    "test_error_msg": "Testfehler: {{error}}",
+    "save_btn": "Systemkonfiguration speichern",
+    "saving_btn": "Wird gespeichert...",
+    "save_success_msg": "Konfiguration erfolgreich in Firestore gespeichert!",
+    "discovery_heading": "Modelle bei Google suchen",
+    "discovery_desc": "Verfügbare generateContent-Modelle für Ihr Google-Projekt in Echtzeit abfragen",
+    "api_key_label": "Gemini-API-Schlüssel für die Prüfung",
+    "discover_btn": "Suchen",
+    "discovering_btn": "Wird geprüft...",
+    "found_models_count": "Gefundene Modelle: {{count}}",
+    "no_models_found": "Keine Modelle mit generateContent-Fähigkeit für diesen Schlüssel gefunden.",
+    "selected_badge": "Ausgewählt",
+    "btn_current_active": "Aktuell",
+    "btn_use_as_primary": "Als primär verwenden",
+    "error_no_model": "Bitte wählen oder geben Sie ein primäres Modell ein.",
+    "error_key_required": "Bitte geben Sie einen gültigen Gemini-API-Schlüssel an.",
+    "error_saving": "Fehler beim Speichern der Konfiguration"
   },
   "moderation": {
     "title": "Moderation",
@@ -1397,6 +1445,10 @@
     },
     "ingredients": {
       "title": "Zutaten",
+      "unit_toggle_metric": "g / ml",
+      "unit_toggle_imperial": "oz / fl oz",
+      "unit_system_metric": "Metrische Einheiten (g, ml)",
+      "unit_system_imperial": "Imperiale Einheiten (oz, fl oz, lb)",
       "missing_count": "{{count}} Zutaten fehlen",
       "missing_desc": "Einige Zutaten fehlen oder sind in Ihrer Speisekammer nicht in ausreichender Menge vorhanden.",
       "view_sub_recipe": "Zubereitung ansehen",
@@ -1565,6 +1617,15 @@
     "select_at_least_one": "Bitte wählen Sie mindestens ein Produkt aus.",
     "added_success": "{{count}} Produkte erfolgreich zur Speisekammer hinzugefügt!",
     "error_adding": "Fehler beim Hinzufügen zur Speisekammer.",
-    "select_at_least_one_ingredient": "Bitte wählen Sie mindestens eine Zutat aus."
+    "select_at_least_one_ingredient": "Bitte wählen Sie mindestens eine Zutat aus.",
+    "take_photo_prompt": "Foto von Gerichten / Zutaten aufnehmen oder hochladen",
+    "take_photo_sub": "Die KI analysiert sichtbare Zutaten und gleicht sie mit Rezepten ab",
+    "missing_api_key_desc": "Für die visuelle KI-Analyse ist ein Google Gemini-API-Schlüssel erforderlich. Sie können hier einen Schlüssel eingeben oder der Admin kann ihn im Dashboard konfigurieren.",
+    "enter_api_key_btn": "API-Schlüssel eingeben",
+    "scan_failed": "Fehler bei der Bilderkennung aufgetreten. Bitte versuchen Sie es erneut.",
+    "retry_btn": "Erneut versuchen",
+    "api_key_modal_title": "Google Gemini-API-Schlüssel",
+    "api_key_modal_desc": "Geben Sie Ihren Gemini-API-Schlüssel für das automatische Fotoscannen ein.",
+    "api_key_saved_success": "API-Schlüssel erfolgreich gespeichert!"
   }
 }

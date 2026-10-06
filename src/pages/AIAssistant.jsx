@@ -386,29 +386,38 @@ const AIAssistant = () => {
     const langNames = { bg: 'Bulgarian', en: 'English', it: 'Italian', fr: 'French', de: 'German' };
     const targetLangName = langNames[currentLang] || 'Bulgarian';
     const extraNamesStr = extraIngredients.map(i => getItemName(i)).join(', ');
+    const userUnitSystem = user?.preferences?.unit_system || 'metric';
+
+    // Prioritize top 40 relevant/matching recipes to keep prompt fast and compact
+    const relevantRecipes = getFilteredRecipes().slice(0, 40);
 
     const systemPrompt = `You are Chef AI, a world-class gourmet chef culinary assistant.
 Context of the user's kitchen:
 - User selected language: ${targetLangName}. Respond ONLY in this language!
+- User preferred measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (ounces/oz, fluid ounces/fl oz, pounds/lb, cups, tbsp, tsp)' : 'Metric (grams/g, kilograms/kg, milliliters/ml, liters/l, tbsp, tsp)'}.
 - Pantry items: ${pantry.map(p => `${getItemName(p)} (${p.quantity} ${p.unit}, expires: ${p.expirationDate})`).join(', ')}
 - Extra custom ingredients specified by user (not in pantry): ${extraNamesStr || 'None'}
 - Dietary profile: Diets: ${diets.join(', ') || 'None'}, Allergies: ${allergies.join(', ') || 'None'}, Excluded Ingredient IDs: ${exclusions.join(', ')}
 - Available recipes in our database:
-${recipes.map(r => `- ${getLocalizedRecipeTitle(r, currentLang) || getLocalizedField(r, 'title', currentLang) || (typeof r.title === 'string' ? r.title : '') || 'Recipe'} (Tags: ${getRecipeTags(r, ingredientsDB).join(', ')}, Prep time: ${(r.prep_time || 0) + (r.cook_time || 0)}m, Ingredients: ${r.ingredients?.map(i => getLocalizedField(i, 'name', currentLang) || i.ingredient_bg || i.name_bg || i.ingredient_en || i.name_en).join(', ')})`).join('\n')}
+${relevantRecipes.map(r => `- ${getLocalizedRecipeTitle(r, currentLang) || getLocalizedField(r, 'title', currentLang) || (typeof r.title === 'string' ? r.title : '') || 'Recipe'} (Tags: ${getRecipeTags(r, ingredientsDB).join(', ')}, Prep time: ${(r.prep_time || 0) + (r.cook_time || 0)}m, Ingredients: ${r.ingredients?.map(i => getLocalizedField(i, 'name', currentLang) || i.ingredient_bg || i.name_bg || i.ingredient_en || i.name_en).join(', ')})`).join('\n')}
 
 Rules:
 1. Always respond in the user's language (${targetLangName}).
 2. Keep answers concise, helpful and full of gourmet chef wisdom.
-3. Recommend recipes from the list above when possible. Refer to them by their exact titles so the system can display clickable cards for them.
-4. If a recipe from the list does not fit the user's diets/allergies/exclusions, do NOT recommend it.
-5. If extra custom ingredients are provided, take them into account alongside pantry items when suggesting recipes.
-6. If the user asks for generic advice or ingredients substitution, answer with professional chef expertise.`;
+3. Measurement units: ${userUnitSystem === 'imperial'
+  ? 'IMPORTANT: The user uses the Imperial measurement system. Always provide ingredient quantities in ounces (oz) for weight/mass, fluid ounces (fl oz) for liquids, pounds (lb) for large weights (>= 16 oz), or count units (e.g. pcs, tbsp, tsp). Do NOT default to grams (g) or milliliters (ml) unless explicitly requested.'
+  : 'IMPORTANT: The user uses the Metric measurement system. Always provide ingredient quantities in grams (g), milliliters (ml), kilograms (kg), liters (l), or count units (e.g. pcs, tbsp, tsp).'}
+4. Recommend recipes from the list above when possible. Refer to them by their exact titles so the system can display clickable cards for them.
+5. If a recipe from the list does not fit the user's diets/allergies/exclusions, do NOT recommend it.
+6. If extra custom ingredients are provided, take them into account alongside pantry items when suggesting recipes.
+7. If the user asks for generic advice or ingredients substitution, answer with professional chef expertise.`;
 
     try {
       const response = await callGemini({
         apiKey,
         prompt: `${systemPrompt}\n\nUser Question: ${userMessage}`,
-        systemInstruction: "You are Chef AI, a world-class gourmet culinary assistant. Respond in the user's language. Recommend real database recipes by name where appropriate."
+        systemInstruction: `You are Chef AI, a world-class gourmet culinary assistant. Respond in the user's language (${targetLangName}). Always specify ingredient quantities in the user's preferred measurement system (${userUnitSystem === 'imperial' ? 'Imperial: oz, fl oz, lb, tbsp, tsp' : 'Metric: g, ml, kg, l, tbsp, tsp'}). Recommend real database recipes by name where appropriate.`,
+        timeoutMs: 10000
       });
 
       const text = response?.text;

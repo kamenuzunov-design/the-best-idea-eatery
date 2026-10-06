@@ -71,7 +71,16 @@ export const BULGARIAN_UNIT_DICTIONARY = {
   'милилитър': 'ml',
   'милилитра': 'ml',
   'литър': 'l',
-  'литра': 'l'
+  'литра': 'l',
+  'унция': 'ounce',
+  'унции': 'ounce',
+  'унц.': 'ounce',
+  'паунд': 'pound',
+  'паунда': 'pound',
+  'течна унция': 'fluid_ounce',
+  'течни унции': 'fluid_ounce',
+  'фл. оз.': 'fluid_ounce',
+  'фл.оз.': 'fluid_ounce'
 };
 
 /**

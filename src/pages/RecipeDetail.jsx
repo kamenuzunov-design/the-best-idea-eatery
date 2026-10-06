@@ -10,6 +10,15 @@ import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { REPUTATION_POINTS, getPointsForRating } from '../lib/reputationUtils';
 import { getLocalizedField, extractLocalizedNote } from '../lib/localeUtils';
+import { 
+  convertQuantityToSystem, 
+  normalizeUnitId, 
+  formatQuantity, 
+  normalizeToCanonical,
+  GRAMS_PER_OZ,
+  ML_PER_FL_OZ,
+  OZ_PER_LB
+} from '../lib/unitConverter';
 
 const RecipeDetail = () => {
   const { id } = useParams();
@@ -36,6 +45,9 @@ const RecipeDetail = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const [previewSubRecipe, setPreviewSubRecipe] = useState(null);
+  const [localUnitSystem, setLocalUnitSystem] = useState(null);
+  const unitSystem = localUnitSystem || user?.preferences?.unit_system || 'metric';
+  const setUnitSystem = setLocalUnitSystem;
   
   // Native Ads & Campaign State
   const [nativeAds, setNativeAds] = useState([]);
@@ -500,37 +512,90 @@ const RecipeDetail = () => {
   }, [id, user, awardPoints]);
 
 
-  const convertToGrams = (amount, unitId) => {
-    if (!unitId) return amount;
-    const unit = units[unitId];
-    if (!unit) return amount;
-    
-    const toG = unit.conversions?.metric?.to_g_average || unit.base_weight_grams;
-    if (toG !== undefined && toG !== null && toG > 0) {
-      return amount * toG;
+  const getDisplayUnitLabel = (unitId) => {
+    if (!unitId) return '';
+    const norm = normalizeUnitId(unitId);
+    const pantryKey = `pantry.units.${norm}`;
+    if (i18n.exists && i18n.exists(pantryKey)) {
+      return t(pantryKey);
     }
-    
-    const toMl = unit.conversions?.metric?.to_ml;
-    if (toMl !== undefined && toMl !== null && toMl > 0) {
-      return amount * toMl;
+    const dbUnit = units[unitId] || units[norm] || Object.values(units).find(u => normalizeUnitId(u.id || u.slug) === norm);
+    if (dbUnit) {
+      return getLocalizedField(dbUnit, 'short_name', currentLang) || 
+             getLocalizedField(dbUnit, 'name', currentLang) || 
+             dbUnit.name || norm;
+    }
+    return unitId;
+  };
+
+  const formatIngredientDisplay = (ing, dbIng) => {
+    const rawAmount = (parseFloat(ing.amount) || 0) * currentServings;
+    const rawUnit = ing.unit_id || ing.unit;
+    if (!ing.amount && ing.amount !== 0) {
+      return { amountStr: '', unitStr: getDisplayUnitLabel(rawUnit) };
+    }
+    const isLiquid = dbIng?.meta?.is_liquid === true;
+
+    const converted = convertQuantityToSystem({
+      amount: rawAmount,
+      unitId: rawUnit,
+      targetSystem: unitSystem,
+      isLiquid,
+      preferLargeUnits: true
+    });
+
+    return {
+      amountStr: formatQuantity(converted.amount),
+      unitStr: getDisplayUnitLabel(converted.unit)
+    };
+  };
+
+  const convertToGrams = (amount, unitId) => {
+    if (!unitId || !amount) return amount || 0;
+    const norm = normalizeUnitId(unitId);
+
+    const canonical = normalizeToCanonical({ amount, unitId: norm });
+    if (canonical.unit === 'g' || canonical.unit === 'ml') {
+      return canonical.amount;
+    }
+
+    const unit = units[unitId] || units[norm];
+    if (unit) {
+      const toG = unit.conversions?.metric?.to_g_average || unit.base_weight_grams;
+      if (toG !== undefined && toG !== null && toG > 0) {
+        return amount * toG;
+      }
+      
+      const toMl = unit.conversions?.metric?.to_ml;
+      if (toMl !== undefined && toMl !== null && toMl > 0) {
+        return amount * toMl;
+      }
     }
     
     return amount;
   };
 
   const convertFromGrams = (amountInGrams, unitId) => {
-    if (!unitId) return amountInGrams;
-    const unit = units[unitId];
-    if (!unit) return amountInGrams;
-    
-    const toG = unit.conversions?.metric?.to_g_average || unit.base_weight_grams;
-    if (toG && toG > 0) {
-      return amountInGrams / toG;
-    }
-    
-    const toMl = unit.conversions?.metric?.to_ml;
-    if (toMl && toMl > 0) {
-      return amountInGrams / toMl;
+    if (!unitId || !amountInGrams) return amountInGrams || 0;
+    const norm = normalizeUnitId(unitId);
+
+    if (norm === 'g' || norm === 'ml') return amountInGrams;
+    if (norm === 'kg' || norm === 'l') return amountInGrams / 1000;
+    if (norm === 'oz') return amountInGrams / GRAMS_PER_OZ;
+    if (norm === 'lb') return amountInGrams / (OZ_PER_LB * GRAMS_PER_OZ);
+    if (norm === 'fl_oz') return amountInGrams / ML_PER_FL_OZ;
+
+    const unit = units[unitId] || units[norm];
+    if (unit) {
+      const toG = unit.conversions?.metric?.to_g_average || unit.base_weight_grams;
+      if (toG && toG > 0) {
+        return amountInGrams / toG;
+      }
+      
+      const toMl = unit.conversions?.metric?.to_ml;
+      if (toMl && toMl > 0) {
+        return amountInGrams / toMl;
+      }
     }
     
     return amountInGrams;
@@ -569,14 +634,15 @@ const RecipeDetail = () => {
                               (isBg ? nameBg : nameEn) || reqIng.ingredient_id;
         
         const origUnit = reqIng.unit_id || reqIng.unit;
-        const unitObj = units[origUnit];
+        const normOrig = normalizeUnitId(origUnit);
+        const unitObj = units[origUnit] || units[normOrig];
         
         let finalUnit = origUnit;
         let finalQty = Math.max(0, missingInRecipeUnit);
         
         if (dbIng) {
           const isLiquidIng = dbIng.meta?.is_liquid === true;
-          const hasWeightOrVolumeConversion = origUnit === 'g' || origUnit === 'kg' || origUnit === 'ml' || origUnit === 'l' ||
+          const hasWeightOrVolumeConversion = ['g', 'kg', 'ml', 'l', 'oz', 'lb', 'fl_oz'].includes(normOrig) ||
             (unitObj && (
               (unitObj.conversions?.metric?.to_g_average !== undefined && unitObj.conversions?.metric?.to_g_average !== null && unitObj.conversions?.metric?.to_g_average > 0) ||
               (unitObj.base_weight_grams !== undefined && unitObj.base_weight_grams !== null && unitObj.base_weight_grams > 0) ||
@@ -592,14 +658,14 @@ const RecipeDetail = () => {
               finalQty = Number(missingInGrams.toFixed(2));
             }
           }
-        } else if (unitObj) {
-          const toMl = unitObj.conversions?.metric?.to_ml;
-          const toG = unitObj.conversions?.metric?.to_g_average || unitObj.base_weight_grams;
+        } else if (unitObj || ['g', 'kg', 'ml', 'l', 'oz', 'lb', 'fl_oz'].includes(normOrig)) {
+          const toMl = unitObj?.conversions?.metric?.to_ml;
+          const toG = unitObj?.conversions?.metric?.to_g_average || unitObj?.base_weight_grams;
           
-          if (origUnit === 'ml' || origUnit === 'l' || (toMl !== undefined && toMl !== null && toMl > 0)) {
+          if (['ml', 'l', 'fl_oz'].includes(normOrig) || (toMl !== undefined && toMl !== null && toMl > 0)) {
             finalUnit = 'ml';
             finalQty = Number(missingInGrams.toFixed(2));
-          } else if (origUnit === 'g' || origUnit === 'kg' || (toG !== undefined && toG !== null && toG > 0)) {
+          } else if (['g', 'kg', 'oz', 'lb'].includes(normOrig) || (toG !== undefined && toG !== null && toG > 0)) {
             finalUnit = 'g';
             finalQty = Number(missingInGrams.toFixed(2));
           }
@@ -1195,10 +1261,39 @@ const RecipeDetail = () => {
       </div>
 
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-slate-100 text-2xl font-extrabold flex flex-col tracking-tight">
-            {t('recipe_detail.ingredients.title')}
-          </h3>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-slate-100 text-2xl font-extrabold tracking-tight">
+              {t('recipe_detail.ingredients.title')}
+            </h3>
+            {/* Unit System Toggle Pill */}
+            <div className="flex items-center bg-background-dark/80 p-0.5 rounded-xl border border-primary/20 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setUnitSystem('metric')}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  unitSystem === 'metric'
+                    ? 'bg-primary text-background-dark shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title={t('recipe_detail.ingredients.unit_system_metric')}
+              >
+                {t('recipe_detail.ingredients.unit_toggle_metric')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnitSystem('imperial')}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  unitSystem === 'imperial'
+                    ? 'bg-primary text-background-dark shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title={t('recipe_detail.ingredients.unit_system_imperial')}
+              >
+                {t('recipe_detail.ingredients.unit_toggle_imperial')}
+              </button>
+            </div>
+          </div>
           <span className="material-symbols-outlined text-primary text-3xl">shopping_bag</span>
         </div>
 
@@ -1219,8 +1314,6 @@ const RecipeDetail = () => {
         <ul className="space-y-4">
           {recipe.ingredients?.map((ing, idx) => {
             const isSubRecipe = ing.type === 'recipe';
-            const unit = units[ing.unit_id];
-            const unitName = getLocalizedField(unit, 'name', currentLang) || unit?.name || ing.unit_id;
             const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id) : null;
             
             const ingName = isSubRecipe
@@ -1263,7 +1356,14 @@ const RecipeDetail = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-bold text-primary">{(ing.amount * currentServings).toFixed(1).replace('.0', '')} {unitName}</span>
+                    {(() => {
+                      const { amountStr, unitStr } = formatIngredientDisplay(ing, dbIng);
+                      return (
+                        <span className="text-xs font-bold text-primary">
+                          {amountStr} {unitStr}
+                        </span>
+                      );
+                    })()}
                     {isPantryActive ? (
                       isIngMissing ? (
                         <span className="material-symbols-outlined text-rose-500/70 size-6 text-xl drop-shadow-md" title={t('recipe_detail.ingredients.missing_in_pantry')}>remove_circle</span>
@@ -1708,13 +1808,24 @@ const RecipeDetail = () => {
                   </h4>
                   <ul className="space-y-1.5 text-xs text-slate-200">
                     {previewSubRecipe.ingredients.map((subIng, sIdx) => {
-                      const subUnit = units[subIng.unit_id];
-                      const sUnitName = getLocalizedField(subUnit, 'name', currentLang) || subUnit?.name || subIng.unit_id;
+                      const sDbIng = ingredientsList.find(i => i.id === subIng.ingredient_id);
+                      const isLiquid = sDbIng?.meta?.is_liquid === true;
+                      const rawAmt = parseFloat(subIng.amount) || 0;
+                      const rawUnit = subIng.unit_id || subIng.unit;
+                      const converted = convertQuantityToSystem({
+                        amount: rawAmt,
+                        unitId: rawUnit,
+                        targetSystem: unitSystem,
+                        isLiquid,
+                        preferLargeUnits: true
+                      });
+                      const sUnitName = getDisplayUnitLabel(converted.unit);
+                      const sAmountStr = formatQuantity(converted.amount);
                       const sName = getLocalizedField(subIng, 'name', currentLang) || (isBg ? subIng.ingredient_bg : subIng.ingredient_en) || subIng.ingredient_id;
                       return (
                         <li key={sIdx} className="flex justify-between items-center py-1 border-b border-primary/5">
                           <span>• {sName}</span>
-                          <span className="text-primary font-bold">{subIng.amount} {sUnitName}</span>
+                          <span className="text-primary font-bold">{sAmountStr} {sUnitName}</span>
                         </li>
                       );
                     })}

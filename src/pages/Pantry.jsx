@@ -6,6 +6,8 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { normalizeMainGroup, getMainGroupLabel } from '../lib/recipeMetaUtils';
 import { getLocalizedField } from '../lib/localeUtils';
+import { useAuth } from '../context/AuthContext';
+import { normalizeUnitId, formatQuantity } from '../lib/unitConverter';
 
 const getGroupIcon = (val) => {
   const v = String(val || '').toLowerCase();
@@ -26,6 +28,7 @@ const getGroupIcon = (val) => {
 };
 
 const Pantry = () => {
+  const { user } = useAuth();
   const { pantry, addPantryItem, updatePantryItem, removePantryItem } = useAppContext();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -105,12 +108,19 @@ const Pantry = () => {
     defaultDate.setDate(defaultDate.getDate() + days);
     const dateString = defaultDate.toISOString().split('T')[0];
     
-    // Determine default unit from units_mapping if available
+    // Determine default unit from user preference and units_mapping
+    const userPrefSystem = user?.preferences?.unit_system || 'metric';
+    const isLiquid = ing.meta?.is_liquid === true;
     let defaultUnit = 'g';
-    if (ing.units_mapping && ing.units_mapping.length > 0) {
-      defaultUnit = ing.units_mapping[0].unit_id;
-    } else if (measurementsDB.length > 0) {
-      defaultUnit = measurementsDB[0].unit_id || measurementsDB[0].id;
+    if (userPrefSystem === 'imperial') {
+      defaultUnit = isLiquid ? 'fl_oz' : 'oz';
+    } else {
+      defaultUnit = isLiquid ? 'ml' : 'g';
+      if (ing.units_mapping && ing.units_mapping.length > 0) {
+        defaultUnit = ing.units_mapping[0].unit_id;
+      } else if (measurementsDB.length > 0) {
+        defaultUnit = measurementsDB[0].unit_id || measurementsDB[0].id;
+      }
     }
     
     setNewItem(prev => ({
@@ -191,33 +201,48 @@ const Pantry = () => {
 
   const getUnitName = (unitId) => {
     if (!unitId) return '';
-    const norm = String(unitId).toLowerCase().trim();
+    const norm = normalizeUnitId(unitId);
     const unitTranslationKey = `pantry.units.${norm}`;
     if (i18n.exists(unitTranslationKey)) {
       return t(unitTranslationKey);
     }
 
-    const found = measurementsDB.find(m => (m.unit_id === unitId || m.id === unitId));
+    const found = measurementsDB.find(m => (
+      m.unit_id === unitId || 
+      m.id === unitId || 
+      normalizeUnitId(m.unit_id || m.id || m.slug) === norm
+    ));
     if (found) {
-      return getLocalizedField(found, 'name', currentLang) || found.name_bg || found.name_en || found.name || unitId;
+      return getLocalizedField(found, 'short_name', currentLang) || 
+             getLocalizedField(found, 'name', currentLang) || 
+             found.name_bg || found.name_en || found.name || norm;
     }
     return unitId;
   };
 
   const getAddUnitsOptions = () => {
-    if (!selectedIngredient) {
-      return measurementsDB.length > 0
-        ? measurementsDB.map(m => m.unit_id || m.id)
-        : ['g', 'kg', 'ml', 'pcs'];
-    }
     let units = [];
-    if (selectedIngredient.units_mapping && selectedIngredient.units_mapping.length > 0) {
+    if (selectedIngredient?.units_mapping && selectedIngredient.units_mapping.length > 0) {
       units = selectedIngredient.units_mapping.map(u => u.unit_id);
+    } else if (measurementsDB.length > 0) {
+      units = measurementsDB.map(m => m.unit_id || m.id);
     } else {
-      units = measurementsDB.length > 0
-        ? measurementsDB.map(m => m.unit_id || m.id)
-        : ['g', 'kg', 'ml', 'pcs'];
+      units = ['g', 'kg', 'ml', 'pcs'];
     }
+
+    const isLiquid = selectedIngredient?.meta?.is_liquid === true;
+    if (isLiquid) {
+      if (!units.includes('fl_oz')) units.push('fl_oz');
+      if (!units.includes('ml')) units.push('ml');
+      if (!units.includes('l')) units.push('l');
+    } else {
+      const hasMass = units.some(u => ['g', 'kg', 'gram', 'kilogram'].includes(normalizeUnitId(u)));
+      if (hasMass || !selectedIngredient) {
+        if (!units.includes('oz')) units.push('oz');
+        if (!units.includes('lb')) units.push('lb');
+      }
+    }
+
     if (newItem.unit && !units.includes(newItem.unit)) {
       units = [newItem.unit, ...units];
     }
@@ -225,16 +250,30 @@ const Pantry = () => {
   };
 
   const getEditUnitsOptions = () => {
-    if (!editingItem) return ['g', 'kg', 'ml', 'pcs'];
+    if (!editingItem) return ['g', 'kg', 'ml', 'pcs', 'oz', 'fl_oz', 'lb'];
     const ing = ingredientsDB.find(i => i.id === editingItem.ingredientId);
     let units = [];
     if (ing?.units_mapping?.length > 0) {
       units = ing.units_mapping.map(u => u.unit_id);
+    } else if (measurementsDB.length > 0) {
+      units = measurementsDB.map(m => m.unit_id || m.id);
     } else {
-      units = measurementsDB.length > 0
-        ? measurementsDB.map(m => m.unit_id || m.id)
-        : ['g', 'kg', 'ml', 'pcs'];
+      units = ['g', 'kg', 'ml', 'pcs'];
     }
+
+    const isLiquid = ing?.meta?.is_liquid === true;
+    if (isLiquid) {
+      if (!units.includes('fl_oz')) units.push('fl_oz');
+      if (!units.includes('ml')) units.push('ml');
+      if (!units.includes('l')) units.push('l');
+    } else {
+      const hasMass = units.some(u => ['g', 'kg', 'gram', 'kilogram'].includes(normalizeUnitId(u)));
+      if (hasMass || !ing) {
+        if (!units.includes('oz')) units.push('oz');
+        if (!units.includes('lb')) units.push('lb');
+      }
+    }
+
     if (editingItem.unit && !units.includes(editingItem.unit)) {
       units = [editingItem.unit, ...units];
     }
@@ -364,7 +403,7 @@ const Pantry = () => {
                           </h4>
                           <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 mt-1 items-center">
                             <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 font-extrabold uppercase">
-                              {item.quantity} <span className="text-[9px] font-medium text-primary/70">{getUnitName(item.unit)}</span>
+                              {formatQuantity(item.quantity)} <span className="text-[9px] font-medium text-primary/70">{getUnitName(item.unit)}</span>
                             </span>
                             <span className={`font-bold flex items-center gap-1 uppercase tracking-widest text-[9px] ${isExpired ? 'text-rose-500' : isExpiringSoon ? 'text-amber-500' : 'text-emerald-400'}`}>
                               <span className="material-symbols-outlined text-[12px]">event</span>

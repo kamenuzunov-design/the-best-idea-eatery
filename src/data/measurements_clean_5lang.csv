@@ -1,0 +1,23 @@
+﻿unit_id,name_en,name_bg,name_it,name_fr,name_de,short_en,short_bg,short_it,short_fr,short_de,category,is_standard,to_ml,to_g_average,imperial_equivalent,conversion_factor
+bunch,Bunch,Връзка,Mazzetto,Botte,Bund,bunch,вр.,mazz.,botte,Bd.,count,false,,40,Bunch,1
+clove,Clove,Скилидка,Spicchio,Gousse,Zehe,clove,скил.,spicc.,gousse,Z.,count,false,0,5,Clove,1
+drop,Drops,Капки,Gocce,Gouttes,Tropfen,drops,кап.,gtt,gouttes,Tr.,custom,false,2,,Drops,1
+fluid_ounce,Fluid Ounce,Течна унция,Oncia liquida,Once liquide,Flüssigunze,fl oz,фл.оз.,fl oz,fl oz,fl. oz.,volume,false,29.57,29.57,Fluid Ounce,1
+gram,Grams,Грама,Grammi,Grammes,Gramm,g,гр.,g,g,g,mass,true,1,1,Ounce,0.03527
+handful,Handful,Шепа,Manciata,Poignée,Handvoll,handful,шепа,manc.,poignée,Hdv.,custom,false,0,24.99,Handful,1
+kilogram,Kilogram,Килограм,Chilogrammo,Kilogramme,Kilogramm,kg,кг.,kg,kg,kg,mass,true,1000,1000,Pound,2.20462
+liter,Liter,Литър,Litro,Litre,Liter,l,л.,l,l,l,volume,true,1000,1000,Gallon,0.26417
+milliliter,Milliliter,Милилитър,Millilitro,Millilitre,Milliliter,ml,мл.,ml,ml,ml,volume,true,1,1,Fluid Ounce,0.03381
+nest,Nest,Гнездо,Nido,Nid,Nest,nest,гнездо,nido,nid,Nest,mass,false,,25,,
+pack,Pack,Опаковка,Confezione,Paquet,Packung,pack,опк.,conf.,paq.,Pck.,count,true,,500,,
+piece,Piece/Count,Брой,Pezzo,Pièce,Stück,pcs,бр.,pz.,pc.,Stk.,count,true,,50,Piece,1
+pinch,Pinch,Щипка,Pizzico,Pincée,Prise,pinch,щипка,pizz.,pincée,Pr.,custom,true,0.3,0.6,Pinch,1
+portion,Portion,Порция,Porzione,Portion,Portion,portion,порция,porz.,port.,Port.,mass,true,,85,,
+slice,Slice,Резен / Филия,Fetta,Tranche,Scheibe,sl.,резен,fetta,tr.,Sch.,custom,false,,15,,
+sprig,Sprig,Стрък,Rametto,Brin,Zweig,Sprig,стрък,rametto,brin,Zw.,mass,false,,2,Sprig,1
+tablespoon,Tablespoon (leveled),Супена лъжица (изравнена),Cucchiaio raso,Cuillère à soupe rase,Esslöffel (gestrichen),tbsp,с.л.,c.s.,c. à s.,EL,custom,false,15,12,Tablespoon,1.0144
+teacup,Teacup,Чаена чаша,Tazza da tè,Tasse à thé,Tasse,cup,ч.ч.,tazza,tasse,Tasse,custom,false,250,150,Cup,1.0567
+teaspoon,Teaspoon (leveled),Чаена лъжица (изравнена),Cucchiaino raso,Cuillère à café rase,Teelöffel (gestrichen),tsp,ч.л.,c.c.,c. à c.,TL,custom,false,5,4,Teaspoon,1.0144
+tip_knife,On the tip of a knife,На върха на ножа,Punta di coltello,Pointe de couteau,Messerspitze,tip.kn.,на върха,p.d.c.,pte de couteau,Msp.,custom,false,0,3,tip of a knife,1
+ounce,Ounce,Унция,Oncia,Once,Unze,oz,унц.,oz,oz,oz,mass,false,,28.35,Ounce,1
+pound,Pound,Паунд,Libbra,Livre,Pfund,lb,паунд,lb,lb,lb,mass,false,,453.59,Pound,1

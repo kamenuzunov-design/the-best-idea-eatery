@@ -1,39 +1,47 @@
 /**
- * Robust Gemini AI Client for The Best Idea Eatery
+ * Direct & Resilient Gemini AI Client for The Best Idea Eatery
  * 
  * Features:
- * - Dynamic model discovery via Google Generative Language API
- * - Prioritized fallback chain across latest active Flash models
- * - Automatic exponential backoff & Google retryDelay parsing for HTTP 429 Rate Limits
- * - Graceful fallback on 500, 503 (Server Overload), 404 (Model Not Found), 403 (Forbidden)
- * - Support for both text prompts and multi-modal image inspection (Vision)
- * - Working model memory caching to prevent redundant network discovery
+ * - Hardcoded default modern model: gemini-3.8-flash (official Google recommended)
+ * - Single lightweight fallback model: gemini-3.5-flash-lite
+ * - Cloud synchronization with Firestore settings/ai_config (admin configurable)
+ * - Strict fetch timeout via AbortController (default 10s) to guarantee zero UI hanging
+ * - Immediate failover: if primary model fails or times out, tries fallback once, then throws cleanly
+ * - Instant local-fallback enablement for Chef AI & Ingredient Scanner
+ * - On-demand Google models query for Admin inspection
+ * - Multi-modal image support for Vision
  */
+
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebase';
+import { logActivity } from './activityLogger';
+
+export const PRIMARY_GEMINI_MODEL = 'gemini-3.8-flash';
+export const FALLBACK_GEMINI_MODEL = 'gemini-3.5-flash-lite';
+
+export const KNOWN_GEMINI_MODELS = [
+  { id: PRIMARY_GEMINI_MODEL, label: 'Gemini 3.8 Flash (Препоръчителен / Актуален)' },
+  { id: FALLBACK_GEMINI_MODEL, label: 'Gemini 3.5 Flash-Lite (Бърз / Резервен)' },
+  { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
+  { id: 'gemini-3.7-pro', label: 'Gemini 3.7 Pro' }
+];
+
+export const CANDIDATE_GEMINI_MODELS = [
+  PRIMARY_GEMINI_MODEL,
+  FALLBACK_GEMINI_MODEL
+];
 
 export const DEPRECATED_MODELS = [
   'gemini-2.0-flash',
   'gemini-2.0-flash-lite',
   'gemini-2.0-flash-001',
-  'gemini-2.0-flash-lite-preview-02-05',
   'gemini-1.5-flash',
   'gemini-1.5-flash-8b',
-  'gemini-1.5-flash-001',
-  'gemini-1.5-flash-002',
   'gemini-1.5-pro',
   'gemini-1.0-pro'
 ];
 
-export const CANDIDATE_GEMINI_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.8-flash-lite',
-  'gemini-3.7-flash',
-  'gemini-3.7-pro',
-  'gemini-3.6-flash'
-];
-
-let cachedWorkingModel = null;
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+let cachedRemoteConfig = null;
 
 /**
  * Retrieves the effective Gemini API key:
@@ -43,6 +51,9 @@ export function getGeminiApiKey() {
   if (typeof window !== 'undefined') {
     const custom = localStorage.getItem('gemini_api_key');
     if (custom && custom.trim()) return custom.trim();
+  }
+  if (cachedRemoteConfig?.api_key && cachedRemoteConfig.api_key.trim()) {
+    return cachedRemoteConfig.api_key.trim();
   }
   return import.meta.env.VITE_GEMINI_API_KEY || '';
 }
@@ -61,109 +72,196 @@ export function setGeminiApiKey(key) {
 }
 
 /**
- * Dynamically queries Google Generative Language API to detect which models
- * are currently enabled for this API key/project and support generateContent.
+ * Loads remote AI model configuration from Firestore settings/ai_config.
+ * Falls back to local defaults if document does not exist or network is unavailable.
  */
-export async function fetchAvailableGeminiModels(apiKey = getGeminiApiKey()) {
-  if (!apiKey) return [];
+export async function getRemoteAIConfig() {
+  if (cachedRemoteConfig) return cachedRemoteConfig;
   try {
-    const listRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-    );
-    if (!listRes.ok) return [];
-    const listData = await listRes.json();
-    const models = (listData.models || [])
-      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-      .map(m => {
-        const id = (m.name || '').replace('models/', '');
-        const displayName = m.displayName ? `${m.displayName} (${id})` : id;
-        return { id, label: displayName };
-      })
-      .filter(m => !DEPRECATED_MODELS.includes(m.id) && !m.id.includes('2.0') && !m.id.includes('1.5'));
-    return models;
-  } catch (e) {
-    console.warn("Could not list Gemini models dynamically:", e.message);
-    return [];
-  }
-}
-
-/**
- * Determines the best available Gemini Flash model for this API key.
- * Caches the working model in memory.
- */
-export async function getBestGeminiModel(apiKey = getGeminiApiKey()) {
-  if (cachedWorkingModel && !DEPRECATED_MODELS.includes(cachedWorkingModel)) {
-    return cachedWorkingModel;
-  }
-
-  try {
-    const listRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-    );
-    if (listRes.ok) {
-      const listData = await listRes.json();
-      const availableNames = (listData.models || []).map(m => (m.name || '').replace('models/', ''));
-
-      // 1. Check priority candidates
-      for (const candidate of CANDIDATE_GEMINI_MODELS) {
-        if (availableNames.includes(candidate)) {
-          cachedWorkingModel = candidate;
-          return candidate;
-        }
-      }
-
-      // 2. Fallback to any active flash model supporting generateContent
-      const anyFlash = (listData.models || []).find(m => {
-        const name = (m.name || '').replace('models/', '');
-        return name.includes('flash') &&
-               !DEPRECATED_MODELS.includes(name) &&
-               !name.includes('2.0') &&
-               !name.includes('1.5') &&
-               (m.supportedGenerationMethods || []).includes('generateContent');
-      });
-      if (anyFlash) {
-        cachedWorkingModel = anyFlash.name.replace('models/', '');
-        return cachedWorkingModel;
-      }
+    const snap = await getDoc(doc(db, 'settings', 'ai_config'));
+    if (snap.exists()) {
+      const data = snap.data();
+      cachedRemoteConfig = {
+        primary_model: data.primary_model || PRIMARY_GEMINI_MODEL,
+        fallback_model: data.fallback_model || FALLBACK_GEMINI_MODEL,
+        api_key: data.api_key || '',
+        updated_at: data.updated_at || null,
+        updated_by: data.updated_by || null
+      };
+      return cachedRemoteConfig;
     }
-  } catch (e) {
-    console.warn("Could not list Gemini models dynamically:", e.message);
+  } catch (err) {
+    console.warn("Could not load remote AI config from Firestore, using local defaults:", err.message);
   }
-
-  // Default fallback candidate
-  cachedWorkingModel = CANDIDATE_GEMINI_MODELS[0] || 'gemini-3.8-flash';
-  return cachedWorkingModel;
+  cachedRemoteConfig = {
+    primary_model: PRIMARY_GEMINI_MODEL,
+    fallback_model: FALLBACK_GEMINI_MODEL,
+    api_key: '',
+    updated_at: null,
+    updated_by: null
+  };
+  return cachedRemoteConfig;
 }
 
 /**
- * Parses Google's retry delay from error response or error text
- * E.g.: "Please retry in 6.26s." -> returns 8 (seconds)
+ * Saves system-wide AI model configuration to Firestore settings/ai_config.
+ * Only callable by authenticated Admin / Owner.
+ */
+export async function saveRemoteAIConfig({ primary_model, fallback_model, api_key, user }) {
+  const newConfig = {
+    primary_model: (primary_model && primary_model.trim()) || PRIMARY_GEMINI_MODEL,
+    fallback_model: (fallback_model && fallback_model.trim()) || FALLBACK_GEMINI_MODEL,
+    updated_at: new Date().toISOString(),
+    updated_by: user?.email || user?.uid || 'admin'
+  };
+
+  if (typeof api_key === 'string') {
+    newConfig.api_key = api_key.trim();
+  }
+
+  await setDoc(doc(db, 'settings', 'ai_config'), newConfig, { merge: true });
+  cachedRemoteConfig = { ...(cachedRemoteConfig || {}), ...newConfig };
+
+  if (user?.uid) {
+    try {
+      await logActivity(
+        user.uid,
+        user.email || 'admin',
+        'update_ai_config',
+        `Updated system AI models: Primary="${newConfig.primary_model}", Fallback="${newConfig.fallback_model}"`
+      );
+    } catch (e) {
+      console.warn("Could not log activity for AI config update:", e.message);
+    }
+  }
+
+  return newConfig;
+}
+
+/**
+ * Fast synchronous model lookup
+ */
+export function getBestGeminiModel() {
+  return cachedRemoteConfig?.primary_model || PRIMARY_GEMINI_MODEL;
+}
+
+/**
+ * Fast model list for settings UI (returns known working models without blocking network)
+ */
+export async function fetchAvailableGeminiModels() {
+  return KNOWN_GEMINI_MODELS;
+}
+
+/**
+ * On-demand queries Google Generative Language API using the admin's API key
+ * to discover all active models that support generateContent.
+ */
+export async function fetchAvailableModelsFromGoogle(apiKey = getGeminiApiKey()) {
+  if (!apiKey) throw new Error("Missing Gemini API Key. Please provide a valid key.");
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+  if (!res.ok) {
+    let errText = `HTTP ${res.status}`;
+    try {
+      const errData = await res.json();
+      if (errData.error?.message) errText = errData.error.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errText);
+  }
+  const data = await res.json();
+  const models = (data.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map(m => {
+      const id = (m.name || '').replace('models/', '');
+      return {
+        id,
+        displayName: m.displayName || id,
+        description: m.description || '',
+        supportedMethods: m.supportedGenerationMethods || []
+      };
+    })
+    .filter(m => !DEPRECATED_MODELS.includes(m.id));
+  return models;
+}
+
+/**
+ * Sends a quick live test query to verify that a selected model responds properly.
+ */
+export async function testGeminiModel({ apiKey = getGeminiApiKey(), model = PRIMARY_GEMINI_MODEL }) {
+  const startTime = Date.now();
+  const res = await callGemini({
+    apiKey,
+    model,
+    prompt: "Respond with exactly two words: 'Chef Online'.",
+    timeoutMs: 8000
+  });
+  const elapsedMs = Date.now() - startTime;
+  return {
+    success: true,
+    text: res.text,
+    modelUsed: res.modelUsed,
+    elapsedMs
+  };
+}
+
+/**
+ * Parses Google's retry delay from error response or error text if available
  */
 export function parseRetryDelaySeconds(errData, errText) {
   if (errData?.error?.details && Array.isArray(errData.error.details)) {
     for (const d of errData.error.details) {
       if (d.retryDelay) {
         const sec = parseFloat(d.retryDelay);
-        if (!isNaN(sec) && sec > 0) return Math.ceil(sec) + 1;
+        if (!isNaN(sec) && sec > 0) return Math.ceil(sec);
       }
     }
   }
-
   const combined = `${typeof errText === 'string' ? errText : ''} ${errData?.error?.message || ''}`;
   const match = combined.match(/retry in\s+([0-9.]+)\s*s/i) || 
-                combined.match(/retry after\s+([0-9.]+)\s*s/i) ||
-                combined.match(/reset in\s+([0-9.]+)\s*s/i);
+                combined.match(/retry after\s+([0-9.]+)\s*s/i);
   if (match && match[1]) {
     const sec = parseFloat(match[1]);
-    if (!isNaN(sec) && sec > 0) return Math.ceil(sec) + 1;
+    if (!isNaN(sec) && sec > 0) return Math.ceil(sec);
   }
-
   return null;
 }
 
 /**
- * Executes a call to Google Gemini with automatic model rotation,
- * exponential backoff, rate-limit recovery, and optional multi-modal image support.
+ * Resilient JSON extractor from text response (handles code fences, comments, whitespace)
+ */
+export function extractJsonFromText(text) {
+  if (!text || typeof text !== 'string') return null;
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const firstBracket = cleaned.indexOf('[');
+    const lastBracket = cleaned.lastIndexOf(']');
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      try {
+        return JSON.parse(cleaned.substring(firstBracket, lastBracket + 1));
+      } catch {
+        // continue
+      }
+    }
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
+      } catch {
+        // continue
+      }
+    }
+    return null;
+  }
+}
+
+/**
+ * Executes a call to Google Gemini with the configured modern model,
+ * strict timeout via AbortController, and immediate failover to fallback.
  * 
  * @param {Object} options
  * @param {string} [options.apiKey] - Gemini API Key (defaults to getGeminiApiKey())
@@ -172,10 +270,8 @@ export function parseRetryDelaySeconds(errData, errText) {
  * @param {Array} [options.contents] - Pre-constructed contents array (overrides prompt)
  * @param {Array<{ mimeType: string, data: string }>} [options.images] - Base64 images to include
  * @param {Object} [options.generationConfig] - Generation parameters (e.g. responseMimeType, temperature)
- * @param {string} [options.model] - Specific model to use or 'auto'
- * @param {number} [options.maxAttemptsPerModel] - Maximum retry attempts per candidate model (default: 3)
- * @param {Function} [options.onLog] - Optional logger callback (message, type)
- * @param {Function} [options.isCancelled] - Optional cancellation check
+ * @param {string} [options.model] - Specific model to use (defaults to system configured primary)
+ * @param {number} [options.timeoutMs] - Request timeout in milliseconds (default: 10000ms = 10s)
  * @returns {Promise<{ text: string, data?: any, modelUsed: string }>}
  */
 export async function callGemini({
@@ -186,35 +282,29 @@ export async function callGemini({
   images = [],
   generationConfig = {},
   model = null,
-  maxAttemptsPerModel = 3,
-  onLog = () => {},
-  isCancelled = () => false
+  timeoutMs = 10000
 }) {
   if (!apiKey) {
     throw new Error("Missing Gemini API Key. Please configure an API key in settings.");
   }
 
-  const selectedModel = (model && model !== 'auto') ? model : await getBestGeminiModel(apiKey);
-  const modelsToTry = [
-    selectedModel,
-    ...CANDIDATE_GEMINI_MODELS
-  ].filter(m => m && (!DEPRECATED_MODELS.includes(m) || m === selectedModel) && !m.includes('2.0') && !m.includes('1.5'))
-   .filter((v, i, a) => a.indexOf(v) === i); // unique candidates
+  const effectivePrimary = (model && model !== 'auto') 
+    ? model 
+    : (cachedRemoteConfig?.primary_model || PRIMARY_GEMINI_MODEL);
+  const effectiveFallback = cachedRemoteConfig?.fallback_model || FALLBACK_GEMINI_MODEL;
 
-  let lastError = null;
+  const modelsToTry = (model && model !== 'auto' && model !== effectivePrimary)
+    ? [model]
+    : [effectivePrimary, effectiveFallback].filter((v, i, a) => a.indexOf(v) === i);
 
-  // Build parts array if contents wasn't provided directly
+  // Build parts array if contents wasn't provided directly (images first, then prompt)
   let requestContents = contents;
   if (!requestContents) {
     const parts = [];
-    if (prompt) {
-      parts.push({ text: prompt });
-    }
     if (Array.isArray(images) && images.length > 0) {
       images.forEach(img => {
         if (img?.data) {
-          // Clean base64 header if present
-          const cleanBase64 = img.data.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, '');
+          const cleanBase64 = img.data.replace(/^data:[^;]+;base64,/, '').trim();
           parts.push({
             inlineData: {
               mimeType: img.mimeType || 'image/jpeg',
@@ -223,6 +313,9 @@ export async function callGemini({
           });
         }
       });
+    }
+    if (prompt) {
+      parts.push({ text: prompt });
     }
     requestContents = [{ parts }];
   }
@@ -241,126 +334,74 @@ export async function callGemini({
     };
   }
 
+  let lastError = null;
+
   for (const currentModel of modelsToTry) {
-    for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
-      if (isCancelled && isCancelled()) {
-        throw new Error("Operation cancelled by user.");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        }
+      );
+
+      clearTimeout(timer);
+
+      if (!response.ok) {
+        let errText = `HTTP ${response.status} ${response.statusText}`;
+        try {
+          const errData = await response.json();
+          if (errData.error?.message) {
+            errText = errData.error.message;
+          }
+        } catch {
+          // ignore parsing error
+        }
+        throw new Error(errText);
       }
 
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
-          }
-        );
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        throw new Error("No response text candidate returned by Gemini API.");
+      }
 
-        if (!response.ok) {
-          let errText = '';
-          let errData = null;
-          try {
-            errData = await response.json();
-            errText = errData.error?.message || response.statusText;
-          } catch {
-            errText = `HTTP ${response.status} ${response.statusText}`;
-          }
+      let parsedData = null;
+      if (generationConfig.responseMimeType === 'application/json' || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+        parsedData = extractJsonFromText(text);
+      }
 
-          // 1. Model Not Found / Deprecated (404) -> switch to next candidate immediately
-          if (response.status === 404 || errText.includes('no longer available') || errText.includes('not found')) {
-            lastError = new Error(`Model ${currentModel} not found: ${errText}`);
-            onLog(`Model ${currentModel} is not active. Trying next model...`, "warn");
-            break;
-          }
+      return {
+        text,
+        data: parsedData,
+        modelUsed: currentModel,
+        rawResponse: data
+      };
 
-          // 2. Server Overload (500, 503, 504, high demand)
-          if ([500, 502, 503, 504].includes(response.status) || errText.includes('high demand') || errText.includes('temporarily unavailable')) {
-            lastError = new Error(`Google server error (${response.status}) on ${currentModel}: ${errText}`);
-            if (attempt < maxAttemptsPerModel) {
-              const backoffSec = attempt * 2;
-              onLog(`Google server overloaded (${response.status}). Retrying in ${backoffSec}s (${attempt + 1}/${maxAttemptsPerModel})...`, "warn");
-              await sleep(backoffSec * 1000);
-              continue;
-            } else {
-              onLog(`Model ${currentModel} overloaded. Falling back to alternative model...`, "warn");
-              break;
-            }
-          }
-
-          // 3. Rate Limit / Quota Exceeded (429)
-          if (response.status === 429 || errText.includes('Quota exceeded') || errText.includes('rate limit') || errText.includes('rate-limit')) {
-            lastError = new Error(`Quota limit (HTTP 429) on ${currentModel}: ${errText}`);
-            if (attempt < maxAttemptsPerModel) {
-              const delayFromGoogle = parseRetryDelaySeconds(errData, errText);
-              const waitSec = delayFromGoogle || Math.max(5, Math.pow(2, attempt) * 3);
-              onLog(`Rate limit (429) on ${currentModel}. Pausing for ${waitSec}s before retry...`, "warn");
-              await sleep(waitSec * 1000);
-              continue;
-            } else {
-              onLog(`Model ${currentModel} reached quota limit. Trying alternative model...`, "warn");
-              break;
-            }
-          }
-
-          // 4. Permission / Forbidden (403)
-          if (response.status === 403) {
-            lastError = new Error(`Permission denied (HTTP 403) on ${currentModel}: ${errText}`);
-            onLog(`Permission issue on ${currentModel}. Trying alternative model...`, "warn");
-            break;
-          }
-
-          throw new Error(errText);
-        }
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) {
-          throw new Error("No response text candidate returned by Gemini API.");
-        }
-
-        cachedWorkingModel = currentModel;
-
-        // If JSON output was requested, parse it safely
-        let parsedData = null;
-        if (generationConfig.responseMimeType === 'application/json') {
-          try {
-            parsedData = JSON.parse(text);
-          } catch (pe) {
-            console.warn("Could not parse JSON response from Gemini:", pe.message);
-          }
-        }
-
-        return {
-          text,
-          data: parsedData,
-          modelUsed: currentModel,
-          rawResponse: data
-        };
-
-      } catch (err) {
+    } catch (err) {
+      clearTimeout(timer);
+      if (err.name === 'AbortError') {
+        lastError = new Error(`Request to model ${currentModel} timed out after ${Math.round(timeoutMs / 1000)}s`);
+      } else {
         lastError = err;
-        const msg = err.message || '';
-        if (msg.includes('not found') || msg.includes('no longer available')) {
-          break;
-        }
-        if (msg.includes('503') || msg.includes('high demand') || msg.includes('500')) {
-          if (attempt < maxAttemptsPerModel) {
-            await sleep(2000);
-            continue;
-          }
-          break;
-        }
-        if (msg.includes('429') || msg.includes('Quota exceeded') || msg.includes('rate limit')) {
-          if (attempt < maxAttemptsPerModel) {
-            continue;
-          }
-          break;
-        }
-        throw err;
       }
+      console.warn(`Gemini call to ${currentModel} failed:`, lastError.message);
+      // Immediately move to fallback model without blocking sleep
     }
   }
 
-  throw lastError || new Error("Failed to contact Gemini API models.");
+  throw lastError || new Error("Failed to contact Gemini API.");
+}
+
+// Pre-fetch remote AI configuration on module import in browser
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    getRemoteAIConfig().catch(() => {});
+  }, 100);
 }

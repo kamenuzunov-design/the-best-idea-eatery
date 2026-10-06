@@ -3,6 +3,150 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-10-06] - Преработка и пълно реално активиране на Скенера за съставки (Gemini Vision & Smart Matching)
+### Добавено / Коригирано (Added / Fixed)
+- **Истинска мултимодална AI Vision интеграция в [IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx)**:
+  - Премахната напълно старата наивна симулация по име на файла (`file.name.includes(...)`) и фалшивото зареждане на списък „Телешки стек“ по подразбиране.
+  - Качените или заснети снимки вече реално се изпращат към Google Gemini Vision API след автоматично клиентско компресиране до 800px (~150 KB) с `resizeImage`.
+  - Изграден чист и интуитивен интерфейс без фалшиви данни при празен екран.
+  - Добавен специализиран модал за бързо въвеждане на Gemini API ключ директно от скенера, както и автоматично разпознаване на системния ключ от Firestore `settings/ai_config`.
+  - При грешка или липса на ключ потребителят се уведомява коректно с информационен банер и бутони „Въведи API ключ“ и „Опитай отново“, без подмяна на съставките.
+- **Интелигентен скоринг модул за съпоставяне на продукти ([ingredientMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/ingredientMatcher.js))**:
+  - Елиминиран проблемът със слепия подниз (`find(ing => ing.name_bg.includes(kw))`), който водеше до погрешно свързване на „хляб“ със „сода за хляб“, „beef“ с „говежди бульон (течен)“ и „домат“ с „чери домати“.
+  - Въведена точкова система:
+    - Tier 1 (1000 т.): Точно съвпадение (Exact Match) по ID или име на произволен от 5-те езика.
+    - Tier 2 (950 т.): Нормализация и изчистване на пояснения в скоби (`(пресен)`, `(сух)`).
+    - Tier 3 (900 т.): Множествено/единствено число на български и английски (`-и`, `-а`, `-s`, `-es`).
+    - Tier 4 (650 т.): Съвпадение по цяла дума (Word Boundary regex).
+    - Санкция (-400 т.): При съставки със съставни думи като „бульон“, „сода“, „оцет“, „екстракт“, „прах“, ако потребителят/моделът не е поискал изрично такъв дериват.
+- **Поддръжка на системен API ключ в [geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js) и [ManageAIConfig.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAIConfig.jsx)**:
+  - Системният ключ вече се запазва и чете централизирано от Firestore `settings/ai_config`, осигурявайки незабавна AI функционалност за всички потребители и гости.
+  - Подобрено парсване на JSON отговори от Google чрез функцията `extractJsonFromText`, защитена от markdown code fences.
+- **5-езикова локализация (i18n)**:
+  - Добавени нови съобщения и подсказки на всички 5 езика (`bg.json`, `en.json`, `it.json`, `fr.json`, `de.json`).
+- **Разрешен технически дълг**: Точка 6 от `06_known_issues.md` е маркирана като [РЕШЕНО].
+- **Верификация**: `pnpm run lint` (0 грешки) и `pnpm run build` завършиха със статус 0.
+
+## [2026-10-06] - Административен контрол над Google Gemini AI моделите (ManageAIConfig.jsx & Firestore)
+### Добавено / Коригирано (Added / Fixed)
+- **Административен панел за управление на AI модели ([ManageAIConfig.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAIConfig.jsx))**:
+  - Създаден специализиран екран за Admin и Owner, позволяващ централизирано конфигуриране на активния модел (`primary_model`) и резервния модел (`fallback_model`) за цялото приложение в Firestore (`settings/ai_config`).
+  - Възможност за бърз избор от списък с препоръчани модели или директно въвеждане на произволен новоизлязъл модел на Google (напр. бъдещ `gemini-4.0-flash`).
+  - Вграден бутон за жива проверка („Тествай модела“) с реален тестови промпт (`testGeminiModel`) и измерване на времето за отговор в милисекунди преди запазване.
+  - Инспектор за откриване на модели в Google Cloud в реално време (`fetchAvailableModelsFromGoogle`), който преглежда достъпните модели с поддръжка на `generateContent` за ключа на администратора и позволява задаването им с един клик.
+- **Интеграция с [geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js)**:
+  - Добавено кеширане и предварително зареждане на отдалечената конфигурация от Firestore (`settings/ai_config`) с мигновен fallback към твърдо дефинирания `gemini-3.8-flash` при офлайн режим.
+  - Chef AI и Скенерът автоматично използват конфигурирания в Firestore модел, без да се налага промяна в кода или редеплоймънт.
+- **Рутиране и Навигация**:
+  - Регистриран защитен маршрут `/admin/ai-config` в [App.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/App.jsx).
+  - Добавена плочка „AI Конфигурация & Модели“ в Главното административно табло [AdminDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AdminDashboard.jsx).
+- **Локализация (i18n)**:
+  - Пълна многоезична поддръжка на модула на всички 5 езика (`bg.json`, `en.json`, `it.json`, `fr.json`, `de.json`).
+- **Верификация**: `pnpm run lint` (0 грешки) и `pnpm run build` завършиха със статус 0.
+
+## [2026-10-06] - Оптимизация на Chef AI и Скенера: премахване на увисването и преминаване към твърд модел
+### Добавено / Коригирано (Added / Fixed)
+- **Премахване на увисването и опростяване на [geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js)**:
+  - Премахнати бавещите динамични HTTP заявки за изброяване на модели преди всяко повикване.
+  - Зададен твърд актуален модел по подразбиране: `gemini-3.8-flash` (официален препоръчителен модел) с единствен лек резервен вариант `gemini-3.5-flash-lite`.
+  - Вграден строг таймаут чрез `AbortController` (10 секунди по подразбиране), елиминиращ напълно безкрайното чакане при мрежови лагове.
+  - Премахнати многократните `sleep` цикли с exponential backoff, които блокираха потребителския интерфейс до 1–2 минути.
+  - При грешка или изтекъл таймаут системата веднага освобождава контрола към локалния кулинарен fallback (Gourmet Rule Engine в Chef AI и локалната евристика в Скенера).
+- **Оптимизация на Скенера ([IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx))**:
+  - Вградено автоматично преоразмеряване на заснетите изображения с `resizeImage(file, 800)` преди конвертиране в Base64. Намалява обема на заявката от 10–20 MB до ~150 KB, ускорявайки изпращането драстично.
+  - Добавен светкавичен локален fallback при отказ на API.
+- **Оптимизация на Chef AI ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+  - Промптът вече филтрира и изпраща само топ 40-те най-релевантни рецепти според наличностите в килера и диетичните предпочитания (`getFilteredRecipes().slice(0, 40)`), намалявайки обема на токените неколкократно.
+- **Верификация**: `pnpm run lint` (0 грешки) и `pnpm run build` завършиха със статус 0.
+
+## [2026-10-06] - Интеграция на имперски мерни единици в Chef AI (AIAssistant.jsx) - Стъпка 6
+### Добавено / Коригирано (Added / Fixed)
+- **Контекстуална мерна система в Chef AI ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+  - В `sendToGemini` се предава предпочитаната от потребителя мерна система (`user?.preferences?.unit_system || 'metric'`).
+  - При предпочитана имперска система (`imperial`):
+    - В контекста на системния промпт се посочва `Imperial (ounces/oz, fluid ounces/fl oz, pounds/lb, cups, tbsp, tsp)`.
+    - Добавено изрично кулинарно правило в промпта: съставките задължително се генерират в `oz`, `fl oz` (за течности), `lb` (при $\ge 16\text{ oz}$) или бройни единици / лъжици, със забрана за връщане към грамове или милилитри.
+    - В системната инструкция (`systemInstruction`) на Gemini API е добавено изрично указание за форматиране в Imperial.
+  - При метрична система (`metric`): съставките се инструктират да следват грамове (`g`), милилитри (`ml`), килограми (`kg`), литри (`l`).
+- **Успешно завършване на цялостния 6-стъпков план за имперски мерни единици (Imperial Unit System)**.
+- **Верификация**: `pnpm run lint` (0 грешки) и `pnpm run build` завършиха със статус 0.
+
+## [2026-10-06] - Интеграция на имперски мерни единици в списъка за пазаруване (SavedRecipes.jsx) - Стъпка 5
+### Добавено / Коригирано (Added / Fixed)
+- **Универсално форматиране на съставки в списъка за пазаруване ([SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx))**:
+  - Заменена старата твърдо метрична функция `formatMetricItem` с интелигентна функция `formatShoppingItem(rawQty, rawUnit, isLiquid)`.
+  - Автоматично конвертиране и кулинарно мащабиране според системното предпочитание на потребителя (`user?.preferences?.unit_system`):
+    - При имперска система (`imperial`): съставките се преобразуват в `oz` (или `fl_oz` при течности `isLiquid: true`), а при количества $\ge 16\text{ oz}$ автоматично се мащабират в паундове (`lb`).
+    - При метрична система (`metric`): съставките се преобразуват в `g` или `ml`, а при количества $\ge 1000$ автоматично се мащабират съответно в `kg` или `l`.
+    - Дискретните и бройни единици (бр., с.л., ч.л. и др.) се запазват без изкривяване.
+- **Поддръжка на имперски единици при ръчно добавяне и редакция на списъка**:
+  - Добавени опциите `oz`, `fl_oz` и `lb` в падащото меню за потребителски съставки и в опциите за редакция (`getUnitOptions`).
+  - Разширена функцията `getUnitName` с `normalizeUnitId` и динамична проверка в `saved.units.*` и базата данни `measurements`, осигурявайки точен 5-езиков превод на всички единици.
+- **Верификация**: `pnpm run lint` (0 грешки) и `pnpm run build` завършиха със статус 0.
+
+## [2026-10-06] - Нормализация на Долапа и съпоставяне на наличностите (Pantry & Home.jsx) - Стъпка 4
+### Добавено / Коригирано (Added / Fixed)
+- **Имперски мерни единици в Долапа ([Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx))**:
+  - Интегриран `useAuth()` за разчитане на предпочитанието на потребителя (`user?.preferences?.unit_system`).
+  - При избор на продукт за добавяне в Долапа автоматично се избира мерна единица по подразбиране според предпочитанията: `fl_oz` за течности и `oz` за твърди продукти при имперска система (или `ml` / `g` / `units_mapping` при метрична).
+  - Падащите списъци за избор на мерна единица при добавяне (`getAddUnitsOptions`) и редакция (`getEditUnitsOptions`) вече включват `oz` и `lb` за твърди продукти и `fl_oz` за течности.
+  - Подобрена функцията `getUnitName` с автоматична нормализация `normalizeUnitId`, осигуряваща правилен превод на 5 езика чрез `pantry.units` и базата `measurements`.
+  - Изчистено форматиране на количествата в картите на продуктите чрез `formatQuantity`.
+- **Точно канонично съпоставяне на наличности в [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx) и [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx)**:
+  - Функциите `convertToGrams` и `convertFromGrams` в [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx) са надградени с каноничната нормализация от [unitConverter.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/unitConverter.js).
+  - Позволява надеждно сравняване между рецепти в грамове/милилитри и наличности в килера в унции/течни унции (и обратното), отстранявайки риска от фалшиво отчитане на липсващи съставки.
+  - В [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx) е разширена проверката `hasWeightOrVolumeConversion` за имперски мерки (`oz`, `lb`, `fl_oz`), гарантираща прецизно добавяне на липсващи съставки в списъка за пазаруване.
+- **Верификация**: `pnpm run lint` (0 грешки) и `pnpm run build` завършиха със статус 0.
+
+## [2026-10-06] - Интеграция на имперски мерни единици в детайлите на рецептата (RecipeDetail.jsx) - Стъпка 3
+### Добавено / Коригирано (Added / Fixed)
+- **Интерактивен превключвател (тогъл) за мерни единици в [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx)**:
+  - Добавен стилен сегментиран контрол `[ g / ml | oz / fl oz ]` в хедъра на списъка със съставки.
+  - Инициализира се автоматично с предпочитанието на потребителя от профила (`user?.preferences?.unit_system || 'metric'`) и поддържа динамично локално превключване.
+  - Пълна многоезична локализация на бутоните и техните подсказки (tooltips) на всички 5 езика чрез ключовете `recipe_detail.ingredients.unit_toggle_metric`, `unit_toggle_imperial`, `unit_system_metric`, `unit_system_imperial`.
+- **Динамично преизчисляване на съставките**:
+  - Създадена помощна функция `formatIngredientDisplay(ing, dbIng)` в [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), която използва `convertQuantityToSystem` от [unitConverter.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/unitConverter.js) с отчитане на `is_liquid` и порциите.
+  - Динамично локализиране на имената на мерните единици чрез `getDisplayUnitLabel`, съчетаващо преводите от `pantry.units` и базата данни `measurements`.
+  - Интегрирано преизчисляване в модала за бърз преглед на заготовки ([previewSubRecipe]).
+- **Подобрени вътрешни функции `convertToGrams` и `convertFromGrams`**:
+  - Разширени с канонично научна конверсия за `oz`, `lb`, `fl_oz` при липса на изричен запис във Firestore, гарантирайки точно съпоставяне с наличностите в Долапа (Pantry).
+- **Верификация**: `pnpm run lint` (0 грешки, 0 предупреждения) и `pnpm run build` завършиха със статус 0.
+
+## [2026-10-06] - Номенклатура на мерните единици и 5-езикова локализация (oz, fl oz, lb) - Стъпка 2
+### Добавено / Коригирано (Added / Fixed)
+- **Актуализация на 5-те езикови речника ([bg.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/bg.json), [en.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/en.json), [it.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/it.json), [fr.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/fr.json), [de.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/de.json))**:
+  - Добавени самостоятелни ключове за имперски мерни единици в секции `pantry.units` и `saved.units`:
+    - `en`: `"oz": "oz"`, `"fl_oz": "fl oz"`, `"lb": "lb"`
+    - `bg`: `"oz": "унц."`, `"fl_oz": "фл. оз."`, `"lb": "паунд"`
+    - `it`: `"oz": "oz"`, `"fl_oz": "fl oz"`, `"lb": "lb"`
+    - `fr`: `"oz": "oz"`, `"fl_oz": "fl oz"`, `"lb": "lb"`
+    - `de`: `"oz": "oz"`, `"fl_oz": "fl. oz."`, `"lb": "lb"`
+  - Добавени локализирани етикети за бутона за добавяне на имперски мерки в секция `measurements` (`add_imperial_units`, `add_imperial_units_title`).
+- **Разширение на кулинарния речник в [measurementUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/measurementUtils.js)**:
+  - В `BULGARIAN_UNIT_DICTIONARY` са добавени: *унция*, *унции*, *унц.* $\to$ `ounce`, *паунд*, *паунда* $\to$ `pound`, *течна унция*, *течни унции*, *фл. оз.* $\to$ `fluid_ounce`.
+- **1-клик сийд функционалност в [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx)**:
+  - Автоматична детекция `needsImperialSeed` при липса на `ounce` или `pound` в колекция `measurements`.
+  - Динамичен златист бутон `+ Имперски (oz, lb)` в хедъра на страницата за атомарно пакетно записване на `ounce`, `pound` и `fluid_ounce` с пълни 5-езикови наименования, съкращения и конверсии през сесията на администратора.
+  - Бутонът се скрива автоматично след запис в базата.
+- **Генериран референтен CSV файл `src/data/measurements_clean_5lang.csv`**:
+  - Пълен списък от 22 мерни единици на 5 езика с 17 колони за директен двустъпков импорт или бекъп.
+- **Верификация**: `pnpm run lint` и `pnpm run build` завършиха със статус 0 (без грешки).
+
+## [2026-10-06] - Създаване на помощен кулинарен модул за мерни единици (unitConverter.js) - Стъпка 1
+### Добавено / Коригирано (Added / Fixed)
+- **Създаден централен модул [unitConverter.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/unitConverter.js)**:
+  - Прецизни научни фактори: `GRAMS_PER_OZ` ($28.3495\text{ g}$), `ML_PER_FL_OZ` ($29.5735\text{ ml}$), `OZ_PER_LB` ($16$), `FL_OZ_PER_CUP` ($8$), `FL_OZ_PER_PINT` ($16$).
+  - `normalizeUnitId`: нормализира текстови и езикови варианти към канонични идентификатори (`g`, `kg`, `ml`, `l`, `oz`, `lb`, `fl_oz`, `cup`, `pint`).
+  - `isMetricUnit`, `isImperialUnit`, `getUnitCategory`: категоризация на мерките по тип (маса, обем, дискретни/бройни).
+  - `roundCulinary`: интелигентно кулинарно закръгляване (цяло число при $\ge 100$, 1 десетичен знак при $1 - 99$, 2 знака при $< 1$).
+  - `formatQuantity`: изчистено форматиране на количества за визуализация в UI без плаващи нули.
+  - `normalizeToCanonical`: нормализира количества към грамове или милилитри (с отчитане на `isLiquid: true` за течности, измерени в грамове: $1\text{ g} \approx 1\text{ ml}$).
+  - `convertMetricToImperial`: конвертира метрични стойности към имперски с отчитане на `isLiquid` ($g \to fl\_oz$ за течности, $g \to oz/lb$ за сухи продукти, $ml \to fl\_oz$).
+  - `convertImperialToMetric`: конвертира имперски мерки към метрични ($oz/lb \to g/kg$, $fl\_oz \to ml/l$).
+  - `convertQuantityToSystem`: универсален диспечер за целева мерна система (`metric` или `imperial`).
+  - `compareQuantities`: сравнява две количества от различни мерни системи за засичане на наличност в Долапа (Pantry Matching).
+- **Верификация**: Създаден и изпълнен тестов скрипт, валидиран линт с `pnpm run lint` и успешен билд с `pnpm run build`.
+
 ## [2026-10-02] - Архивиране на временния раздел „AI Автоматичен Превод & Миграция“ в резервни копия (/admin/backup)
 ### Добавено / Коригирано (Added / Fixed)
 - **Скриване и архивиране на модула [AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx) в [BackupRecovery.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/BackupRecovery.jsx)**:

@@ -215,7 +215,10 @@
       "kg": "кг.",
       "ml": "мл.",
       "l": "л.",
-      "pcs": "бр."
+      "pcs": "бр.",
+      "oz": "унц.",
+      "fl_oz": "фл. оз.",
+      "lb": "паунд"
     },
     "diet_edit_title": "Редактиране на Диетичен Профил",
     "diet_edit_subtitle": "Персонализирайте вашите предпочитания и алергии",
@@ -362,7 +365,10 @@
       "kg": "кг.",
       "ml": "мл.",
       "l": "л.",
-      "pcs": "бр."
+      "pcs": "бр.",
+      "oz": "унц.",
+      "fl_oz": "фл. оз.",
+      "lb": "паунд"
     }
   },
   "gdpr": {
@@ -574,6 +580,8 @@
     "export_csv_title": "Експорт CSV",
     "import_csv": "CSV",
     "import_csv_title": "Импорт CSV",
+    "add_imperial_units": "+ Имперски единици",
+    "add_imperial_units_title": "Добави липсващи имперски единици (унция, паунд)",
     "parsing": "Анализира...",
     "saving": "Записва...",
     "done": "Готово!",
@@ -897,7 +905,47 @@
     "backup_title": "Бекъп и Сигурност",
     "backup_desc": "Облачни архиви и локален експорт",
     "ads_title": "Реклами",
-    "ads_desc": "Кампании и промоции"
+    "ads_desc": "Кампании и промоции",
+    "ai_config_title": "AI Конфигурация & Модели",
+    "ai_config_desc": "Управление на моделите на Google Gemini и API настройки"
+  },
+  "ai_config": {
+    "title": "AI Конфигурация & Модели",
+    "subtitle": "Управление на активните модели на Google Gemini за цялото приложение",
+    "current_status_title": "Текущ системен статус",
+    "active_primary_label": "Основен активен модел",
+    "active_fallback_label": "Резервен модел (Fallback)",
+    "last_updated_by": "Последно обновен на {{date}} от {{user}}",
+    "edit_heading": "Настройка на модели",
+    "primary_model_field": "Основен модел (Primary)",
+    "primary_model_hint": "Използва се по подразбиране от Chef AI и Скенера",
+    "fallback_model_field": "Резервен модел (Fallback)",
+    "fallback_model_hint": "Активира се мигновено при временна недостъпност",
+    "option_custom": "Въведи друго ID (ръчно)...",
+    "custom_input_placeholder": "напр. gemini-4.0-flash",
+    "custom_input_hint": "Въведете точното ID на новия модел, издаден от Google",
+    "test_section_title": "Бърз тест на избрания модел",
+    "test_section_desc": "Изпраща пробна заявка към {{model}}, за да провери готовността му",
+    "test_btn": "Тествай",
+    "testing_btn": "Тестване...",
+    "test_success_msg": "Моделът {{model}} отговори успешно за {{ms}} ms!",
+    "test_error_msg": "Грешка при тестване: {{error}}",
+    "save_btn": "Запази за цялата система",
+    "saving_btn": "Запазване...",
+    "save_success_msg": "Конфигурацията е запазена успешно във Firestore!",
+    "discovery_heading": "Откриване на нови модели от Google",
+    "discovery_desc": "Проверка в реално време кои модели поддържа твоят Google Cloud / AI Studio проект",
+    "api_key_label": "Gemini API ключ за проверка",
+    "discover_btn": "Провери",
+    "discovering_btn": "Проверка...",
+    "found_models_count": "Открити модели: {{count}}",
+    "no_models_found": "Не бяха открити модели с права за generateContent за този ключ.",
+    "selected_badge": "Избран",
+    "btn_current_active": "Текущ",
+    "btn_use_as_primary": "Избери като основен",
+    "error_no_model": "Моля, изберете или въведете основен модел.",
+    "error_key_required": "Моля, въведете валиден Gemini API ключ.",
+    "error_saving": "Възникна грешка при запис"
   },
   "moderation": {
     "title": "Модерация",
@@ -1397,6 +1445,10 @@
     },
     "ingredients": {
       "title": "Съставки",
+      "unit_toggle_metric": "g / ml",
+      "unit_toggle_imperial": "oz / fl oz",
+      "unit_system_metric": "Метрични единици (g, ml)",
+      "unit_system_imperial": "Имперски единици (oz, fl oz, lb)",
       "missing_count": "Липсват {{count}} продукта",
       "missing_desc": "Някои продукти липсват или не са в достатъчно количество в килера ви.",
       "view_sub_recipe": "Виж заготовка",
@@ -1565,6 +1617,15 @@
     "select_at_least_one": "Моля изберете поне един продукт.",
     "added_success": "Успешно добавихте {{count}} продукта в Килера!",
     "error_adding": "Грешка при добавяне в килера.",
-    "select_at_least_one_ingredient": "Моля изберете поне една съставка."
+    "select_at_least_one_ingredient": "Моля изберете поне една съставка.",
+    "take_photo_prompt": "Заснемете или качете снимка на ястие / продукти",
+    "take_photo_sub": "AI ще анализира видимите съставки и ще ги съпостави с рецептите",
+    "missing_api_key_desc": "За визуален AI анализ е необходим Google Gemini API ключ. Администраторът може да го въведе в настройките, или можете да добавите собствен ключ.",
+    "enter_api_key_btn": "Въведи API ключ",
+    "scan_failed": "Възникна грешка при разпознаване на изображението. Моля, опитайте отново.",
+    "retry_btn": "Опитай отново",
+    "api_key_modal_title": "Google Gemini API Ключ",
+    "api_key_modal_desc": "Въведете вашия Gemini API ключ за автоматично сканиране на снимки.",
+    "api_key_saved_success": "API ключът е запазен успешно!"
   }
 }

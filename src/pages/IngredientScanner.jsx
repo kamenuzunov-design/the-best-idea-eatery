@@ -6,7 +6,9 @@ import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { getLocalizedField } from '../lib/localeUtils';
-import { callGemini, getGeminiApiKey } from '../lib/geminiClient';
+import { callGemini, getGeminiApiKey, setGeminiApiKey } from '../lib/geminiClient';
+import { findBestIngredientMatch } from '../lib/ingredientMatcher';
+import { resizeImage } from '../lib/imageUtils';
 
 const IngredientScanner = () => {
   const navigate = useNavigate();
@@ -16,7 +18,10 @@ const IngredientScanner = () => {
   const { user } = useAuth();
   
   const fileInputRef = useRef(null);
-  const [scanning, setScanning] = useState(true);
+  const [lastFile, setLastFile] = useState(null);
+
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
   const [masterIngredients, setMasterIngredients] = useState([]);
   const [detectedItems, setDetectedItems] = useState([]);
@@ -27,11 +32,15 @@ const IngredientScanner = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showSearchModal, setShowSearchModal] = useState(false);
 
+  // API Key Quick Entry Modal
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(getGeminiApiKey());
+
   // Category Priority for Main Product selection:
   // 1: Meat, Poultry, Fish, Seafood
   // 2: Cheese, Dairy, Eggs
   // 3: Bakery, Bread, Pasta, Rice, Potatoes
-  // 4: Vegetables, Mushrooms
+  // 4: Vegetables, Fruits, Mushrooms
   // 5: Default / Spices / Oils
   const getItemCategoryPriority = (name = '') => {
     const n = name.toLowerCase();
@@ -39,13 +48,15 @@ const IngredientScanner = () => {
     if (
       n.includes('месо') || n.includes('стек') || n.includes('пиле') || n.includes('телеш') ||
       n.includes('говеж') || n.includes('свинс') || n.includes('риба') || n.includes('сьомга') ||
-      n.includes('филе') || n.includes('колбас') || n.includes('кайма') || n.includes('бекон') ||
-      n.includes('мясо') || n.includes('steak') || n.includes('chicken') || n.includes('beef') ||
-      n.includes('pork') || n.includes('fish') || n.includes('salmon') || n.includes('meat') ||
-      n.includes('carne') || n.includes('pollo') || n.includes('manzo') || n.includes('pesce') ||
-      n.includes('salmone') || n.includes('viande') || n.includes('poulet') || n.includes('boeuf') ||
-      n.includes('poisson') || n.includes('saumon') || n.includes('fleisch') || n.includes('huhn') ||
-      n.includes('rind') || n.includes('fisch') || n.includes('lachs')
+      n.includes('миди') || n.includes('филе') || n.includes('колбас') || n.includes('кайма') ||
+      n.includes('бекон') || n.includes('мясо') || n.includes('steak') || n.includes('chicken') ||
+      n.includes('beef') || n.includes('pork') || n.includes('fish') || n.includes('salmon') ||
+      n.includes('mussel') || n.includes('seafood') || n.includes('meat') || n.includes('carne') ||
+      n.includes('pollo') || n.includes('manzo') || n.includes('pesce') || n.includes('salmone') ||
+      n.includes('cozze') || n.includes('viande') || n.includes('poulet') || n.includes('boeuf') ||
+      n.includes('poisson') || n.includes('saumon') || n.includes('moules') || n.includes('fleisch') ||
+      n.includes('huhn') || n.includes('rind') || n.includes('fisch') || n.includes('lachs') ||
+      n.includes('miesmuscheln')
     ) {
       return 1;
     }
@@ -73,11 +84,12 @@ const IngredientScanner = () => {
     if (
       n.includes('домат') || n.includes('краставиц') || n.includes('гъби') || n.includes('морков') ||
       n.includes('чушк') || n.includes('салат') || n.includes('лук') || n.includes('зеле') ||
+      n.includes('круш') || n.includes('ябълк') || n.includes('банан') || n.includes('портокал') ||
       n.includes('tomato') || n.includes('cucumber') || n.includes('mushroom') || n.includes('carrot') ||
-      n.includes('pepper') || n.includes('salad') || n.includes('onion') ||
+      n.includes('pepper') || n.includes('salad') || n.includes('onion') || n.includes('pear') || n.includes('apple') ||
       n.includes('pomodoro') || n.includes('cetriolo') || n.includes('funghi') || n.includes('carota') || n.includes('cipolla') ||
       n.includes('tomate') || n.includes('concombre') || n.includes('champignon') || n.includes('carotte') || n.includes('oignon') ||
-      n.includes('gurke') || n.includes('pilz') || n.includes('karotte') || n.includes('zwiebel')
+      n.includes('gurke') || n.includes('pilz') || n.includes('karotte') || n.includes('zwiebel') || n.includes('birne') || n.includes('apfel')
     ) {
       return 4;
     }
@@ -138,192 +150,93 @@ const IngredientScanner = () => {
     reader.readAsDataURL(file);
   });
 
-  // Run smart AI ingredient detection logic (Gemini Vision with local fallback)
-  const runAIDetection = async (fileOrName = '', list = masterIngredients) => {
+  // Run real Gemini Vision detection with intelligent DB matching
+  const runAIDetection = async (file, list = masterIngredients) => {
+    if (!file) return;
+    setLastFile(file);
+
     setScanning(true);
-    setDetectedItems([]); // Wipes previous items
+    setScanError(null);
+    setDetectedItems([]);
 
     const apiKey = getGeminiApiKey();
 
-    // 1. If a real image File/Blob was selected and Gemini API Key is available, use Gemini Vision
-    if ((fileOrName instanceof File || fileOrName instanceof Blob) && apiKey) {
-      try {
-        const base64Data = await fileToBase64(fileOrName);
-        const prompt = `Inspect this food / pantry image. Identify all food ingredients visible in the photo.
-Respond ONLY with a JSON array of objects, with keys:
-- "name_en": ingredient name in English
-- "name_bg": ingredient name in Bulgarian
-- "name_it": ingredient name in Italian
-- "name_fr": ingredient name in French
-- "name_de": ingredient name in German
-Only include raw or culinary ingredients (vegetables, meat, dairy, pantry items, spices, etc.). No utensils, plates, or generic dish names.
-Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", "name_fr": "Tomate", "name_de": "Tomate"}]`;
-
-        const res = await callGemini({
-          apiKey,
-          images: [{ mimeType: fileOrName.type || 'image/jpeg', data: base64Data }],
-          prompt,
-          generationConfig: {
-            responseMimeType: "application/json"
-          }
-        });
-
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          const formatted = res.data.map((itemObj, idx) => {
-            const kwName = itemObj[`name_${currentLang}`] || itemObj.name_en || itemObj.name_bg || itemObj.name;
-            const dbMatch = list && list.find(ing => {
-              const bg = (ing.name_bg || '').toLowerCase();
-              const en = (ing.name_en || '').toLowerCase();
-              const local = (getLocalizedField(ing, 'name', currentLang) || '').toLowerCase();
-              const kwEn = (itemObj.name_en || '').toLowerCase();
-              const kwBg = (itemObj.name_bg || '').toLowerCase();
-              const kwLocal = (kwName || '').toLowerCase();
-              return (
-                (bg && (bg === kwBg || bg.includes(kwBg) || kwBg.includes(bg))) ||
-                (en && (en === kwEn || en.includes(kwEn) || kwEn.includes(en))) ||
-                (local && (local === kwLocal || local.includes(kwLocal) || kwLocal.includes(local)))
-              );
-            });
-
-            const localizedName = dbMatch 
-              ? (getLocalizedField(dbMatch, 'name', currentLang) || dbMatch.name_en || dbMatch.name_bg) 
-              : kwName;
-
-            return {
-              id: dbMatch ? dbMatch.id : `gemini_${idx}_${Date.now()}`,
-              name: localizedName,
-              quantity: 1,
-              unit: 'бр',
-              checked: true
-            };
-          });
-
-          setDetectedItems(formatted);
-          setScanning(false);
-          return;
-        }
-      } catch (err) {
-        console.warn("Gemini vision scan failed, switching to smart local heuristic:", err.message);
-      }
+    if (!apiKey) {
+      setScanning(false);
+      setScanError(t('ingredient_scanner.missing_api_key_desc'));
+      return;
     }
 
-    // 2. Local Fallback Heuristics
-    setTimeout(() => {
-      const fileNameStr = typeof fileOrName === 'string' ? fileOrName : (fileOrName?.name || '');
-      const lowerName = fileNameStr.toLowerCase();
+    try {
+      let fileToProcess = file;
+      try {
+        fileToProcess = await resizeImage(file, 800);
+      } catch (resizeErr) {
+        console.warn("Could not resize image, using original:", resizeErr);
+      }
 
-      // Keywords matching
-      const isChicken = lowerName.includes('chicken') || lowerName.includes('пиле') || lowerName.includes('poultry') || lowerName.includes('печено') || lowerName.includes('pollo') || lowerName.includes('poulet') || lowerName.includes('huhn');
-      const isSteak = lowerName.includes('steak') || lowerName.includes('beef') || lowerName.includes('телешко') || lowerName.includes('говеждо') || lowerName.includes('миньон') || lowerName.includes('meat') || lowerName.includes('bistecca') || lowerName.includes('boeuf') || lowerName.includes('rind');
-      const isFish = lowerName.includes('fish') || lowerName.includes('salmon') || lowerName.includes('риба') || lowerName.includes('сьомга') || lowerName.includes('pesce') || lowerName.includes('poisson') || lowerName.includes('fisch') || lowerName.includes('lachs');
-      const isSalad = lowerName.includes('salad') || lowerName.includes('салата') || lowerName.includes('tomato') || lowerName.includes('cucumber') || lowerName.includes('домати') || lowerName.includes('insalata') || lowerName.includes('salade');
-      const isSandwich = lowerName.includes('sandwich') || lowerName.includes('сандвич') || lowerName.includes('bread') || lowerName.includes('хляб') || lowerName.includes('toast') || lowerName.includes('тост') || lowerName.includes('сирене') || lowerName.includes('cheese') || lowerName.includes('panino');
+      const base64Data = await fileToBase64(fileToProcess);
 
-      const samples = {
-        sandwich: [
-          { en: 'Bread', bg: 'Хляб', it: 'Pane', fr: 'Pain', de: 'Brot' },
-          { en: 'Cheese', bg: 'Сирене', it: 'Formaggio', fr: 'Fromage', de: 'Käse' },
-          { en: 'Tomatoes', bg: 'Домати', it: 'Pomodori', fr: 'Tomates', de: 'Tomaten' },
-          { en: 'Cucumbers', bg: 'Краставици', it: 'Cetrioli', fr: 'Concombres', de: 'Gurken' },
-          { en: 'Butter', bg: 'Масло', it: 'Burro', fr: 'Beurre', de: 'Butter' }
-        ],
-        chicken: [
-          { en: 'Chicken Meat', bg: 'Пилешко месо', it: 'Carne di pollo', fr: 'Viande de poulet', de: 'Hähnchenfleisch' },
-          { en: 'Carrots', bg: 'Моркови', it: 'Carote', fr: 'Carottes', de: 'Karotten' },
-          { en: 'Potatoes', bg: 'Картофи', it: 'Patate', fr: 'Pommes de terre', de: 'Kartoffeln' },
-          { en: 'Garlic', bg: 'Чесън', it: 'Aglio', fr: 'Ail', de: 'Knoblauch' },
-          { en: 'Paprika', bg: 'Червен пипер', it: 'Paprika', fr: 'Paprika', de: 'Paprika' },
-          { en: 'Butter', bg: 'Масло', it: 'Burro', fr: 'Beurre', de: 'Butter' }
-        ],
-        steak: [
-          { en: 'Beef Steak', bg: 'Телешки стек', it: 'Bistecca di manzo', fr: 'Steak de boeuf', de: 'Rindersteak' },
-          { en: 'Carrots', bg: 'Моркови', it: 'Carote', fr: 'Carottes', de: 'Karotten' },
-          { en: 'Mushrooms', bg: 'Гъби', it: 'Funghi', fr: 'Champignons', de: 'Pilze' },
-          { en: 'Garlic', bg: 'Чесън', it: 'Aglio', fr: 'Ail', de: 'Knoblauch' },
-          { en: 'Olive Oil', bg: 'Зехтин', it: 'Olio d\'oliva', fr: 'Huile d\'olive', de: 'Olivenöl' },
-          { en: 'Paprika', bg: 'Червен пипер', it: 'Paprika', fr: 'Paprika', de: 'Paprika' }
-        ],
-        fish: [
-          { en: 'Salmon Filet', bg: 'Филе от сьомга', it: 'Filetto di salmone', fr: 'Pavé de saumon', de: 'Lachsfilet' },
-          { en: 'Lemon', bg: 'Лимон', it: 'Limone', fr: 'Citron', de: 'Zitrone' },
-          { en: 'Dill', bg: 'Копър', it: 'Aneto', fr: 'Aneth', de: 'Dill' },
-          { en: 'Olive Oil', bg: 'Зехтин', it: 'Olio d\'oliva', fr: 'Huile d\'olive', de: 'Olivenöl' },
-          { en: 'Black Pepper', bg: 'Черен пипер', it: 'Pepe nero', fr: 'Poivre noir', de: 'Schwarzer Pfeffer' }
-        ],
-        salad: [
-          { en: 'Tomatoes', bg: 'Домати', it: 'Pomodori', fr: 'Tomates', de: 'Tomaten' },
-          { en: 'Cucumbers', bg: 'Краставици', it: 'Cetrioli', fr: 'Concombres', de: 'Gurken' },
-          { en: 'Cheese', bg: 'Сирене', it: 'Formaggio', fr: 'Fromage', de: 'Käse' },
-          { en: 'Olives', bg: 'Маслини', it: 'Olive', fr: 'Olives', de: 'Oliven' },
-          { en: 'Olive Oil', bg: 'Зехтин', it: 'Olio d\'oliva', fr: 'Huile d\'olive', de: 'Olivenöl' }
-        ],
-        default: [
-          { en: 'Beef Steak', bg: 'Телешки стек', it: 'Bistecca di manzo', fr: 'Steak de boeuf', de: 'Rindersteak' },
-          { en: 'Carrots', bg: 'Моркови', it: 'Carote', fr: 'Carottes', de: 'Karotten' },
-          { en: 'Mushrooms', bg: 'Гъби', it: 'Funghi', fr: 'Champignons', de: 'Pilze' },
-          { en: 'Garlic', bg: 'Чесън', it: 'Aglio', fr: 'Ail', de: 'Knoblauch' },
-          { en: 'Olive Oil', bg: 'Зехтин', it: 'Olio d\'oliva', fr: 'Huile d\'olive', de: 'Olivenöl' }
-        ]
-      };
+      const prompt = `You are an expert culinary vision AI. Inspect this food, pantry, or meal photo.
+Identify the real visible food ingredients (vegetables, fruits, seafood, meat, poultry, dairy, bakery, herbs, spices).
+If it is a finished dish (e.g. seafood pasta, mussels in broth, steak with salad), identify the main components and key culinary ingredients.
+If it is a single product (e.g. pear, tomato, steak cut), identify the exact product.
+Respond ONLY with a JSON array of objects with the exact schema:
+[
+  {
+    "name_en": "Mussels",
+    "name_bg": "Миди",
+    "name_it": "Cozze",
+    "name_fr": "Moules",
+    "name_de": "Miesmuscheln"
+  }
+]
+Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food".`;
 
-      const targetItems = isSandwich ? samples.sandwich
-        : isChicken ? samples.chicken
-        : isSteak ? samples.steak
-        : isFish ? samples.fish
-        : isSalad ? samples.salad
-        : samples.default;
-
-      // Map to DB items if available, or create clean formatted items
-      const formatted = targetItems.map((itemObj, idx) => {
-        const kwName = itemObj[currentLang] || itemObj.en || itemObj.bg;
-        const dbMatch = list && list.find(ing => {
-          const bg = (ing.name_bg || '').toLowerCase();
-          const en = (ing.name_en || '').toLowerCase();
-          const local = (getLocalizedField(ing, 'name', currentLang) || '').toLowerCase();
-          const kwEn = (itemObj.en || '').toLowerCase();
-          const kwBg = (itemObj.bg || '').toLowerCase();
-          const kwLocal = kwName.toLowerCase();
-          return (
-            (bg && (bg.includes(kwBg) || kwBg.includes(bg))) ||
-            (en && (en.includes(kwEn) || kwEn.includes(en))) ||
-            (local && (local.includes(kwLocal) || kwLocal.includes(local)))
-          );
-        });
-
-        const localizedName = dbMatch 
-          ? (getLocalizedField(dbMatch, 'name', currentLang) || dbMatch.name_en || dbMatch.name_bg) 
-          : kwName;
-
-        return {
-          id: dbMatch ? dbMatch.id : `detected_${idx}_${Date.now()}`,
-          name: localizedName,
-          quantity: 1,
-          unit: 'бр',
-          checked: true
-        };
+      const res = await callGemini({
+        apiKey,
+        images: [{ mimeType: fileToProcess.type || 'image/jpeg', data: base64Data }],
+        prompt,
+        generationConfig: {
+          responseMimeType: "application/json"
+        },
+        timeoutMs: 15000
       });
 
-      setDetectedItems(formatted);
-      setScanning(false);
-    }, 1500);
-  };
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        const ingredientsPool = list.length > 0 ? list : masterIngredients;
+        const formatted = res.data.map((itemObj, idx) => {
+          const dbMatch = findBestIngredientMatch(itemObj, ingredientsPool);
+          const localizedName = dbMatch 
+            ? (getLocalizedField(dbMatch, 'name', currentLang) || dbMatch.name_en || dbMatch.name_bg) 
+            : (itemObj[`name_${currentLang}`] || itemObj.name_en || itemObj.name_bg || itemObj.name || 'Ingredient');
 
-  // Initial detection when masterIngredients is loaded
-  useEffect(() => {
-    if (masterIngredients.length > 0 && detectedItems.length === 0) {
-      const timer = setTimeout(() => {
-        runAIDetection('', masterIngredients);
-      }, 0);
-      return () => clearTimeout(timer);
+          return {
+            id: dbMatch ? dbMatch.id : `detected_${idx}_${Date.now()}`,
+            name: localizedName,
+            dbIngredient: dbMatch || null,
+            quantity: 1,
+            unit: dbMatch?.units_mapping?.[0]?.unit_id || 'бр',
+            checked: true
+          };
+        });
+
+        setDetectedItems(formatted);
+        setScanning(false);
+      } else {
+        setScanning(false);
+        setScanError(t('ingredient_scanner.empty_detected'));
+      }
+    } catch (err) {
+      console.error("Gemini Vision scan failed:", err);
+      setScanError(err.message || t('ingredient_scanner.scan_failed'));
+      setScanning(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [masterIngredients]);
+  };
 
   const handleStartScan = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
-    } else {
-      runAIDetection('', masterIngredients);
     }
   };
 
@@ -333,6 +246,18 @@ Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", 
       const url = URL.createObjectURL(file);
       setCapturedImage(url);
       runAIDetection(file, masterIngredients);
+    }
+  };
+
+  const handleSaveApiKey = (e) => {
+    e.preventDefault();
+    if (apiKeyInput && apiKeyInput.trim()) {
+      setGeminiApiKey(apiKeyInput.trim());
+      setShowApiKeyModal(false);
+      setScanError(null);
+      if (lastFile) {
+        runAIDetection(lastFile, masterIngredients);
+      }
     }
   };
 
@@ -353,8 +278,9 @@ Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", 
         {
           id: ing.id,
           name: ingName,
+          dbIngredient: ing,
           quantity: 1,
-          unit: 'бр',
+          unit: ing?.units_mapping?.[0]?.unit_id || 'бр',
           checked: true
         }
       ]);
@@ -435,64 +361,88 @@ Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", 
 
       {/* Top Navigation Bar */}
       <div className="flex items-center bg-background-dark/80 backdrop-blur-md p-4 justify-between z-10 border-b border-primary/10 sticky top-0">
-        <button onClick={() => navigate(-1)} className="text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+        <button onClick={() => navigate(-1)} className="text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors cursor-pointer">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h2 className="text-slate-100 text-sm font-extrabold tracking-widest uppercase flex-1 text-center">
           {t('ingredient_scanner.title')}
         </h2>
-        <div className="w-10"></div>
-      </div>
-
-      {/* 1. Button ABOVE Image */}
-      <div className="p-4 bg-surface-dark border-b border-primary/10 z-20">
         <button 
-          onClick={handleStartScan}
-          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-primary/30"
+          onClick={() => setShowApiKeyModal(true)} 
+          className="text-slate-400 hover:text-primary flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+          title={t('ingredient_scanner.api_key_modal_title')}
         >
-          <span className="material-symbols-outlined text-[20px]">photo_camera</span>
-          <span>{t('ingredient_scanner.rescan_btn')}</span>
+          <span className="material-symbols-outlined text-[20px]">key</span>
         </button>
       </div>
 
-      {/* 2. Photo Viewfinder Area (Clean, non-overlapping) */}
-      <div className="relative w-full h-64 bg-neutral-950 flex flex-col items-center justify-center overflow-hidden border-b border-primary/20 shrink-0">
-        {/* Background Image / Camera Feed */}
-        <div 
-          className={`absolute inset-0 z-0 bg-cover bg-center transition-all duration-700 ${scanning ? 'scale-105 filter brightness-75' : 'scale-100'}`}
-          style={{backgroundImage: `url("${capturedImage || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBrS3vfdomQe5IkdACW8DXEF0f_SEEjwN83nTvtrW4Af1nXx8FUmrc-lAcE7D__CtLMSCmjeBR7CP06VBWchPFJtUEm90JZM6nCT8EK7HysSzuz-wK3pCucoo_M-xV9YptspBcR19YYOYv7-JdJXH2TLXv3xO4M5X3rwlif7rNZ9EfKgpWN07UX9NtD-l1bivN7B6m1oPLuvocCp-HmRphIjWboJwiw__0pHexw6-h-lYt225aXXvMtcogmc-9qHyG1mVH6qyN4jRw'}")`}}
+      {/* 1. Action Button ABOVE Viewfinder */}
+      <div className="p-4 bg-surface-dark border-b border-primary/10 z-20">
+        <button 
+          onClick={handleStartScan}
+          disabled={scanning}
+          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-primary/30 disabled:opacity-50"
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-background-dark/40 via-transparent to-background-dark/60"></div>
-        </div>
+          <span className="material-symbols-outlined text-[20px]">photo_camera</span>
+          <span>{capturedImage ? t('ingredient_scanner.rescan_btn') : t('ingredient_scanner.take_photo_prompt')}</span>
+        </button>
+      </div>
 
-        {/* Scanning Animation & Brackets */}
-        <div className="absolute inset-0 z-10 pointer-events-none p-6">
-          <div className="relative w-full h-full border-2 border-primary/30 rounded-2xl">
-            <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
-            <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
-            <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
-            <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
-            
-            {scanning && (
-              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_15px_#f59e0b] animate-bounce top-1/2"></div>
-            )}
+      {/* 2. Photo Viewfinder Area */}
+      {capturedImage ? (
+        <div className="relative w-full h-64 bg-neutral-950 flex flex-col items-center justify-center overflow-hidden border-b border-primary/20 shrink-0">
+          {/* Captured Image */}
+          <div 
+            className={`absolute inset-0 z-0 bg-cover bg-center transition-all duration-700 ${scanning ? 'scale-105 filter brightness-75' : 'scale-100'}`}
+            style={{ backgroundImage: `url("${capturedImage}")` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-background-dark/30 via-transparent to-background-dark/60"></div>
+          </div>
+
+          {/* Scanning Animation & Brackets */}
+          <div className="absolute inset-0 z-10 pointer-events-none p-6">
+            <div className="relative w-full h-full border-2 border-primary/30 rounded-2xl">
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+              <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+              
+              {scanning && (
+                <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_15px_#f59e0b] animate-bounce top-1/2"></div>
+              )}
+            </div>
+          </div>
+
+          {/* Status Badge */}
+          <div className="absolute top-4 left-0 w-full px-4 text-center z-20">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-background-dark/80 backdrop-blur-md border border-primary/30 text-primary text-xs font-bold shadow-lg">
+              <span className={`material-symbols-outlined text-sm ${scanning ? 'animate-spin' : 'text-emerald-400'}`}>
+                {scanning ? 'sync' : 'check_circle'}
+              </span>
+              <span>
+                {scanning 
+                  ? t('ingredient_scanner.scanning_photo') 
+                  : t('ingredient_scanner.photo_scanned')}
+              </span>
+            </span>
           </div>
         </div>
-
-        {/* Status Badge inside image */}
-        <div className="absolute top-4 left-0 w-full px-4 text-center z-20">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-background-dark/80 backdrop-blur-md border border-primary/30 text-primary text-xs font-bold shadow-lg">
-            <span className={`material-symbols-outlined text-sm ${scanning ? 'animate-spin' : 'text-emerald-400'}`}>
-              {scanning ? 'sync' : 'check_circle'}
-            </span>
-            <span>
-              {scanning 
-                ? t('ingredient_scanner.scanning_photo') 
-                : t('ingredient_scanner.photo_scanned')}
-            </span>
-          </span>
+      ) : (
+        <div 
+          onClick={handleStartScan}
+          className="relative w-full h-64 bg-neutral-950/80 hover:bg-neutral-900 border-b border-primary/20 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-colors group"
+        >
+          <div className="size-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary group-hover:scale-110 group-hover:border-primary transition-all shadow-lg mb-3">
+            <span className="material-symbols-outlined text-3xl">add_a_photo</span>
+          </div>
+          <p className="text-xs font-extrabold text-slate-100 uppercase tracking-wider mb-1">
+            {t('ingredient_scanner.take_photo_prompt')}
+          </p>
+          <p className="text-[11px] text-slate-400 max-w-xs">
+            {t('ingredient_scanner.take_photo_sub')}
+          </p>
         </div>
-      </div>
+      )}
 
       {/* AI Accuracy Disclaimer Notice Banner */}
       <div className="mx-4 my-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-2.5 text-slate-300 shadow-md">
@@ -507,7 +457,40 @@ Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", 
         </div>
       </div>
 
-      {/* 3. Detected Ingredients Section AFTER / BELOW the Photo */}
+      {/* Scan Error / Missing Key Banner */}
+      {scanError && (
+        <div className="mx-4 mb-3 p-3.5 bg-rose-500/10 border border-rose-500/40 rounded-2xl flex flex-col gap-2.5 text-rose-300 shadow-md animate-in fade-in">
+          <div className="flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-rose-400 text-xl shrink-0 mt-0.5">warning</span>
+            <div className="text-xs leading-relaxed flex-1">
+              <span className="font-bold text-rose-400 block mb-0.5">
+                {t('ingredient_scanner.scan_failed')}
+              </span>
+              <span>{scanError}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={() => setShowApiKeyModal(true)}
+              className="px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-xl text-primary text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">key</span>
+              <span>{t('ingredient_scanner.enter_api_key_btn')}</span>
+            </button>
+            {lastFile && (
+              <button
+                onClick={() => runAIDetection(lastFile, masterIngredients)}
+                className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 rounded-xl text-rose-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">refresh</span>
+                <span>{t('ingredient_scanner.retry_btn')}</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Detected Ingredients Section */}
       <div className="p-4 flex-1 flex flex-col gap-3 bg-surface-dark/50">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
@@ -533,9 +516,10 @@ Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", 
             </p>
           </div>
         ) : detectedItems.length === 0 ? (
-          <div className="p-4 bg-surface-dark border border-primary/20 rounded-2xl text-center">
-            <p className="text-xs text-slate-400 italic">
-              {t('ingredient_scanner.empty_detected')}
+          <div className="p-8 bg-surface-dark border border-primary/20 rounded-2xl text-center space-y-2">
+            <span className="material-symbols-outlined text-slate-500 text-3xl">image_search</span>
+            <p className="text-xs text-slate-400">
+              {capturedImage ? t('ingredient_scanner.empty_detected') : t('ingredient_scanner.take_photo_prompt')}
             </p>
           </div>
         ) : (
@@ -651,7 +635,7 @@ Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", 
         <div className="grid grid-cols-2 gap-3">
           <button 
             onClick={handleAddToPantry}
-            disabled={scanning || addingToPantry}
+            disabled={scanning || addingToPantry || detectedItems.length === 0}
             className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 border border-primary/30"
           >
             <span className="material-symbols-outlined text-[18px]">kitchen</span>
@@ -660,7 +644,7 @@ Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", 
 
           <button 
             onClick={handleSearchRecipes}
-            disabled={scanning}
+            disabled={scanning || detectedItems.length === 0}
             className="w-full py-3.5 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[18px]">search</span>
@@ -712,6 +696,54 @@ Example: [{"name_en": "Tomato", "name_bg": "Домат", "name_it": "Pomodoro", 
                 </p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* API Key Modal */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl p-5 space-y-4">
+            <div className="flex justify-between items-center border-b border-primary/20 pb-3">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">key</span>
+                {t('ingredient_scanner.api_key_modal_title')}
+              </h3>
+              <button onClick={() => setShowApiKeyModal(false)} className="text-slate-400 hover:text-rose-500 p-1">
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {t('ingredient_scanner.api_key_modal_desc')}
+            </p>
+
+            <form onSubmit={handleSaveApiKey} className="space-y-3">
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full h-11 bg-background-dark border border-primary/30 rounded-xl px-3.5 text-xs text-slate-100 focus:outline-none focus:border-primary"
+                autoFocus
+              />
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowApiKeyModal(false)}
+                  className="flex-1 h-10 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 h-10 bg-primary hover:bg-primary/90 text-background-dark rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-md"
+                >
+                  {t('common.save')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

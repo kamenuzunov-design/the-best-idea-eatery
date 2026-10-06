@@ -399,6 +399,108 @@ const ManageMeasurements = () => {
     }
   };
 
+  // ── Imperial Units Seeding ──────────────────────────────────────────────────
+  const [seedingImperial, setSeedingImperial] = useState(false);
+  const hasOunce = measurements.some(m => (m.unit_id === 'ounce' || m.id === 'ounce') && !m.is_deleted);
+  const hasPound = measurements.some(m => (m.unit_id === 'pound' || m.id === 'pound') && !m.is_deleted);
+  const needsImperialSeed = !hasOunce || !hasPound;
+
+  const handleSeedImperialUnits = async () => {
+    setSeedingImperial(true);
+    try {
+      const now = new Date().toISOString();
+      const batch = writeBatch(db);
+
+      const ounceData = {
+        id: 'ounce',
+        unit_id: 'ounce',
+        category: 'mass',
+        is_standard: false,
+        is_deleted: false,
+        name_en: 'Ounce',
+        short_en: 'oz',
+        name_bg: 'Унция',
+        short_bg: 'унц.',
+        name_it: 'Oncia',
+        short_it: 'oz',
+        name_fr: 'Once',
+        short_fr: 'oz',
+        name_de: 'Unze',
+        short_de: 'oz',
+        name: { en: 'Ounce', bg: 'Унция', it: 'Oncia', fr: 'Once', de: 'Unze' },
+        short_name: { en: 'oz', bg: 'унц.', it: 'oz', fr: 'oz', de: 'oz' },
+        conversions: {
+          metric: { to_ml: null, to_g_average: 28.35 },
+          imperial: { imperial_equivalent: 'Ounce', conversion_factor: 1 }
+        },
+        createdAt: now,
+        updatedAt: now
+      };
+
+      const poundData = {
+        id: 'pound',
+        unit_id: 'pound',
+        category: 'mass',
+        is_standard: false,
+        is_deleted: false,
+        name_en: 'Pound',
+        short_en: 'lb',
+        name_bg: 'Паунд',
+        short_bg: 'паунд',
+        name_it: 'Libbra',
+        short_it: 'lb',
+        name_fr: 'Livre',
+        short_fr: 'lb',
+        name_de: 'Pfund',
+        short_de: 'lb',
+        name: { en: 'Pound', bg: 'Паунд', it: 'Libbra', fr: 'Livre', de: 'Pfund' },
+        short_name: { en: 'lb', bg: 'паунд', it: 'lb', fr: 'lb', de: 'lb' },
+        conversions: {
+          metric: { to_ml: null, to_g_average: 453.59 },
+          imperial: { imperial_equivalent: 'Pound', conversion_factor: 1 }
+        },
+        createdAt: now,
+        updatedAt: now
+      };
+
+      const flOzData = {
+        id: 'fluid_ounce',
+        unit_id: 'fluid_ounce',
+        category: 'volume',
+        is_standard: false,
+        is_deleted: false,
+        name_en: 'Fluid Ounce',
+        short_en: 'fl oz',
+        name_bg: 'Течна унция',
+        short_bg: 'фл.оз.',
+        name_it: 'Oncia liquida',
+        short_it: 'fl oz',
+        name_fr: 'Once liquide',
+        short_fr: 'fl oz',
+        name_de: 'Flüssigunze',
+        short_de: 'fl. oz.',
+        name: { en: 'Fluid Ounce', bg: 'Течна унция', it: 'Oncia liquida', fr: 'Once liquide', de: 'Flüssigunze' },
+        short_name: { en: 'fl oz', bg: 'фл.оз.', it: 'fl oz', fr: 'fl oz', de: 'fl. oz.' },
+        conversions: {
+          metric: { to_ml: 29.57, to_g_average: 29.57 },
+          imperial: { imperial_equivalent: 'Fluid Ounce', conversion_factor: 1 }
+        },
+        updatedAt: now
+      };
+
+      batch.set(doc(db, 'measurements', 'ounce'), ounceData, { merge: true });
+      batch.set(doc(db, 'measurements', 'pound'), poundData, { merge: true });
+      batch.set(doc(db, 'measurements', 'fluid_ounce'), flOzData, { merge: true });
+
+      await batch.commit();
+      await logActivity(user.uid, user.email, 'seed_imperial_measurements', 'Added imperial units: ounce, pound, fluid_ounce');
+    } catch (err) {
+      console.error('Error seeding imperial units:', err);
+    } finally {
+      setSeedingImperial(false);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
       <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
@@ -414,6 +516,21 @@ const ManageMeasurements = () => {
 
         {/* CSV Export & Import Buttons */}
         <div className="flex items-center gap-2">
+          {needsImperialSeed && (
+            <button
+              type="button"
+              onClick={handleSeedImperialUnits}
+              disabled={seedingImperial}
+              title={t('measurements.add_imperial_units_title')}
+              className="px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <span className={`material-symbols-outlined text-sm ${seedingImperial ? 'animate-spin' : ''}`}>
+                {seedingImperial ? 'refresh' : 'add_circle'}
+              </span>
+              <span className="hidden sm:inline">{t('measurements.add_imperial_units')}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleExportCSV}

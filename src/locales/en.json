@@ -215,7 +215,10 @@
       "kg": "kg",
       "ml": "ml",
       "l": "l",
-      "pcs": "pcs"
+      "pcs": "pcs",
+      "oz": "oz",
+      "fl_oz": "fl oz",
+      "lb": "lb"
     },
     "diet_edit_title": "Edit Dietary Profile",
     "diet_edit_subtitle": "Customize your preferences & allergies",
@@ -362,7 +365,10 @@
       "kg": "kg",
       "ml": "ml",
       "l": "l",
-      "pcs": "pcs"
+      "pcs": "pcs",
+      "oz": "oz",
+      "fl_oz": "fl oz",
+      "lb": "lb"
     }
   },
   "gdpr": {
@@ -574,6 +580,8 @@
     "export_csv_title": "Export CSV",
     "import_csv": "CSV",
     "import_csv_title": "Import CSV",
+    "add_imperial_units": "+ Imperial Units",
+    "add_imperial_units_title": "Add missing imperial units (oz, lb)",
     "parsing": "Parsing...",
     "saving": "Saving...",
     "done": "Done!",
@@ -897,7 +905,47 @@
     "backup_title": "Backup & Security",
     "backup_desc": "Cloud backups and local export",
     "ads_title": "Advertising",
-    "ads_desc": "Campaigns and promotions"
+    "ads_desc": "Campaigns and promotions",
+    "ai_config_title": "AI Configuration & Models",
+    "ai_config_desc": "Manage Google Gemini models and API settings"
+  },
+  "ai_config": {
+    "title": "AI Configuration & Models",
+    "subtitle": "Manage active Google Gemini models for the entire application",
+    "current_status_title": "Current System Status",
+    "active_primary_label": "Active Primary Model",
+    "active_fallback_label": "Fallback Model",
+    "last_updated_by": "Last updated on {{date}} by {{user}}",
+    "edit_heading": "Model Configuration",
+    "primary_model_field": "Primary Model",
+    "primary_model_hint": "Default model used by Chef AI and Ingredient Scanner",
+    "fallback_model_field": "Fallback Model",
+    "fallback_model_hint": "Activated instantly if primary model is unavailable",
+    "option_custom": "Enter custom ID...",
+    "custom_input_placeholder": "e.g. gemini-4.0-flash",
+    "custom_input_hint": "Enter the exact ID of the newly released Google Gemini model",
+    "test_section_title": "Live Model Verification",
+    "test_section_desc": "Send a fast test prompt to {{model}} to check readiness",
+    "test_btn": "Test Model",
+    "testing_btn": "Testing...",
+    "test_success_msg": "Model {{model}} responded successfully in {{ms}} ms!",
+    "test_error_msg": "Test error: {{error}}",
+    "save_btn": "Save System Configuration",
+    "saving_btn": "Saving...",
+    "save_success_msg": "Configuration saved successfully in Firestore!",
+    "discovery_heading": "Discover Models from Google",
+    "discovery_desc": "Inspect available generateContent models for your Google project in real-time",
+    "api_key_label": "Gemini API key for inspection",
+    "discover_btn": "Discover",
+    "discovering_btn": "Checking...",
+    "found_models_count": "Models found: {{count}}",
+    "no_models_found": "No models with generateContent capability found for this key.",
+    "selected_badge": "Selected",
+    "btn_current_active": "Current",
+    "btn_use_as_primary": "Use as Primary",
+    "error_no_model": "Please select or enter a primary model.",
+    "error_key_required": "Please provide a valid Gemini API key.",
+    "error_saving": "Error saving configuration"
   },
   "moderation": {
     "title": "Moderation Queue",
@@ -1397,6 +1445,10 @@
     },
     "ingredients": {
       "title": "Ingredients",
+      "unit_toggle_metric": "g / ml",
+      "unit_toggle_imperial": "oz / fl oz",
+      "unit_system_metric": "Metric units (g, ml)",
+      "unit_system_imperial": "Imperial units (oz, fl oz, lb)",
       "missing_count": "Missing {{count}} ingredients",
       "missing_desc": "Some items are missing or not in sufficient quantity in your pantry.",
       "view_sub_recipe": "View recipe",
@@ -1565,6 +1617,15 @@
     "select_at_least_one": "Please select at least one item.",
     "added_success": "Successfully added {{count}} items to Pantry!",
     "error_adding": "Error adding to pantry.",
-    "select_at_least_one_ingredient": "Please select at least one ingredient."
+    "select_at_least_one_ingredient": "Please select at least one ingredient.",
+    "take_photo_prompt": "Take or upload a photo of food / ingredients",
+    "take_photo_sub": "AI will analyze visible ingredients and match them with recipes",
+    "missing_api_key_desc": "Google Gemini API key is required for visual AI analysis. You can enter a personal key here or the admin can configure it in the dashboard.",
+    "enter_api_key_btn": "Enter API Key",
+    "scan_failed": "An error occurred while recognizing the image. Please try again.",
+    "retry_btn": "Try Again",
+    "api_key_modal_title": "Google Gemini API Key",
+    "api_key_modal_desc": "Enter your Gemini API key from Google AI Studio for automated photo scanning.",
+    "api_key_saved_success": "API key saved successfully!"
   }
 }
