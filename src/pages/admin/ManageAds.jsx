@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { logActivity } from '../../lib/activityLogger';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, getLocalizedField } from '../../lib/localeUtils';
+import { extractYouTubeId, isYouTubeUrl, getYouTubeThumbnail } from '../../lib/videoUtils';
 
 const ManageAds = () => {
   const { isAdmin, isOwner, user } = useAuth();
@@ -880,11 +881,30 @@ const ManageAds = () => {
                     >
                       {ad.type === 'image' || ad.type === 'native' ? (
                         <img src={ad.contentUrl} className="w-full h-full object-cover opacity-75 group-hover:opacity-90 transition-opacity" alt="Ad" />
-                      ) : ad.type === 'video' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-900">
-                          <span className="material-symbols-outlined text-4xl text-primary">videocam</span>
-                        </div>
-                      ) : (
+                      ) : ad.type === 'video' ? (() => {
+                        const ytThumb = getYouTubeThumbnail(ad.contentUrl);
+                        if (ytThumb) {
+                          return (
+                            <div className="w-full h-full relative overflow-hidden bg-black">
+                              <img src={ytThumb} className="w-full h-full object-cover opacity-80 group-hover:opacity-95 transition-opacity" alt="YouTube Thumbnail" />
+                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                <div className="size-10 rounded-full bg-rose-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                  <span className="material-symbols-outlined text-2xl pl-0.5">play_arrow</span>
+                                </div>
+                              </div>
+                              <div className="absolute top-2.5 right-2.5 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-bold text-rose-400 border border-rose-500/30 flex items-center gap-1 z-10">
+                                <span className="material-symbols-outlined text-[11px]">smart_display</span>
+                                <span>YouTube</span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                            <span className="material-symbols-outlined text-4xl text-rose-500">videocam</span>
+                          </div>
+                        );
+                      })() : (
                         <div className="w-full h-full flex items-center justify-center bg-slate-900 p-4 overflow-hidden italic text-[10px] text-slate-500">
                           {ad.contentUrl}
                         </div>
@@ -1418,13 +1438,17 @@ const ManageAds = () => {
               )}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{t('manage_ads.ad_modal.media_html')}</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                  {formData.type === 'video' 
+                    ? (isYouTubeUrl(formData.contentUrl) ? t('manage_ads.ad_modal.video_url_recognized', 'YouTube Видео (Разпознато ✓)') : t('manage_ads.ad_modal.video_url_label', 'YouTube Линк или MP4 видео'))
+                    : t('manage_ads.ad_modal.media_html')}
+                </label>
                 <div className="flex gap-2">
                   <input 
                     value={formData.contentUrl} 
                     onChange={e => setFormData({...formData, contentUrl: e.target.value})} 
                     className="flex-1 bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary" 
-                    placeholder={t('manage_ads.ad_modal.media_placeholder')} 
+                    placeholder={formData.type === 'video' ? t('manage_ads.ad_modal.video_placeholder', 'https://www.youtube.com/watch?v=... или https://youtu.be/...') : t('manage_ads.ad_modal.media_placeholder')} 
                   />
                   {formData.type !== 'html' && (
                     <label className="bg-primary/10 border border-primary/30 p-3 rounded-xl cursor-pointer text-primary hover:bg-primary/20 transition-all" title={t('manage_ads.ad_modal.upload_tooltip')}>
@@ -1433,6 +1457,36 @@ const ManageAds = () => {
                     </label>
                   )}
                 </div>
+
+                {/* Live YouTube Preview Card */}
+                {formData.type === 'video' && isYouTubeUrl(formData.contentUrl) && (
+                  <div className="mt-2 p-3 bg-background-dark/80 rounded-2xl border border-rose-500/30 flex flex-col gap-2 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs">
+                        <span className="material-symbols-outlined text-sm">smart_display</span>
+                        <span>{t('manage_ads.ad_modal.video_preview_title', 'YouTube Видео Преглед')}</span>
+                      </div>
+                      <span className="text-[9px] bg-rose-500/15 text-rose-300 font-mono px-2 py-0.5 rounded-full border border-rose-500/30">
+                        ID: {extractYouTubeId(formData.contentUrl)}
+                      </span>
+                    </div>
+                    <div className="relative h-36 rounded-xl overflow-hidden bg-black border border-white/10 group">
+                      <img 
+                        src={getYouTubeThumbnail(formData.contentUrl, 'hqdefault')} 
+                        alt="YouTube Preview" 
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="size-12 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-lg">
+                          <span className="material-symbols-outlined text-2xl pl-0.5">play_arrow</span>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg text-[10px] text-slate-200 truncate">
+                        {formData.title_local || formData.title_en || 'Заглавие на видеото'}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">

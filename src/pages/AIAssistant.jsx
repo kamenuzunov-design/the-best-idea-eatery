@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
-import { getLocalizedField, getLocalizedRecipeTitle } from '../lib/localeUtils';
+import { getLocalizedField, getLocalizedRecipeTitle, extractLocalizedNote } from '../lib/localeUtils';
 import { useNavigate } from 'react-router-dom';
 import { callGemini, getGeminiApiKey } from '../lib/geminiClient';
 
@@ -309,14 +309,177 @@ const AIAssistant = () => {
     return Array.from(titles);
   };
 
+  // Extract clean ingredient list formatted for Chef AI prompt context
+  const formatRecipeIngredientsForPrompt = (recipe, lang) => {
+    if (!recipe.ingredients || !Array.isArray(recipe.ingredients)) return 'Standard ingredients';
+    return recipe.ingredients.slice(0, 10).map(ing => {
+      const name = getLocalizedField(ing, 'name', lang) || ing.ingredient_bg || ing.name_bg || ing.ingredient_en || ing.name_en || 'Ingredient';
+      const qty = ing.amount || ing.quantity || '';
+      const unit = ing.unit || '';
+      const note = extractLocalizedNote(ing.notes_bg, ing.notes, lang) || (typeof ing.notes === 'string' ? ing.notes : '');
+      const qtyStr = qty ? `${qty}${unit ? ' ' + unit : ''}` : '';
+      const noteStr = note ? ` (${note})` : '';
+      return [qtyStr, name].filter(Boolean).join(' ') + noteStr;
+    }).join(', ');
+  };
+
+  // Format a single recipe with culinary depth for the prompt
+  const formatCuratedRecipeForPrompt = (r, lang) => {
+    const title = getLocalizedRecipeTitle(r, lang) || getLocalizedField(r, 'title', lang) || (typeof r.title === 'string' ? r.title : '') || 'Recipe';
+    const tags = getRecipeTags(r, ingredientsDB);
+    const cuisine = getLocalizedField(r, 'cuisine', lang) || r.cuisine || '';
+    const totalTime = (Number(r.prep_time) || 0) + (Number(r.cook_time) || 0);
+    const difficulty = r.difficulty || 'medium';
+    const desc = getLocalizedField(r, 'description', lang) || r.description_bg || r.description_en || '';
+    const cleanDesc = typeof desc === 'string' ? desc.replace(/\s+/g, ' ').trim().slice(0, 140) : '';
+    const chefNotes = extractLocalizedNote(r.notes_bg, r.notes, lang) || (typeof r.notes === 'string' ? r.notes : '');
+    const cleanChefNotes = typeof chefNotes === 'string' ? chefNotes.replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+    const ings = formatRecipeIngredientsForPrompt(r, lang);
+
+    let text = `• Recipe: "${title}"\n`;
+    text += `  - Tags & Cuisine: ${[cuisine, ...tags].filter(Boolean).join(', ') || 'General'}\n`;
+    text += `  - Time & Difficulty: Prep ${r.prep_time || 0}m, Cook ${r.cook_time || 0}m (${totalTime}m total) | Difficulty: ${difficulty}\n`;
+    if (cleanDesc) {
+      text += `  - Profile/Description: ${cleanDesc}\n`;
+    }
+    text += `  - Key Ingredients: ${ings}\n`;
+    if (cleanChefNotes) {
+      text += `  - Chef Notes: ${cleanChefNotes}\n`;
+    }
+    return text;
+  };
+
+  // Smart recipe curation: ranks filtered recipes based on query keywords, pantry matches, and expiring items
+  const getSmartCuratedRecipes = (userQuery, limit = 12) => {
+    const baseList = getFilteredRecipes();
+    if (!baseList || baseList.length === 0) return [];
+
+    // Extract search tokens from userQuery (words >= 3 chars, letters/digits only)
+    const rawTokens = (userQuery || '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter(w => w.length >= 3);
+
+    // Stop words to ignore in Bulgarian and English
+    const stopWords = new Set([
+      'как', 'какво', 'може', 'мога', 'рецепта', 'рецепти', 'искам', 'направи', 'готвя', 'сготвя',
+      'имам', 'нямам', 'днеска', 'днес', 'вечеря', 'обяд', 'закуска', 'който', 'която', 'нещо',
+      'what', 'have', 'make', 'cook', 'recipe', 'recipes', 'dinner', 'lunch', 'today', 'with', 'from'
+    ]);
+    const queryTokens = rawTokens.filter(t => !stopWords.has(t));
+
+    const scored = baseList.map(recipe => {
+      let queryScore = 0;
+
+      if (queryTokens.length > 0) {
+        // 1. Title matches
+        const titles = getRecipeSearchTitles(recipe);
+        titles.forEach(tStr => {
+          queryTokens.forEach(token => {
+            if (tStr.includes(token)) queryScore += 20;
+          });
+        });
+
+        // 2. Tags matches
+        const tags = getRecipeTags(recipe, ingredientsDB);
+        tags.forEach(tg => {
+          const tgLower = tg.toLowerCase();
+          queryTokens.forEach(token => {
+            if (tgLower.includes(token)) queryScore += 12;
+          });
+        });
+
+        // 3. Cuisine match
+        const cuisine = String(recipe.cuisine || recipe.cuisine_bg || recipe.cuisine_en || '').toLowerCase();
+        queryTokens.forEach(token => {
+          if (cuisine.includes(token)) queryScore += 10;
+        });
+
+        // 4. Ingredients matches
+        recipe.ingredients?.forEach(ing => {
+          const ingNameBg = String(ing.ingredient_bg || ing.name_bg || '').toLowerCase();
+          const ingNameEn = String(ing.ingredient_en || ing.name_en || '').toLowerCase();
+          queryTokens.forEach(token => {
+            if (ingNameBg.includes(token) || ingNameEn.includes(token)) queryScore += 8;
+          });
+        });
+
+        // 5. Description matches
+        const descBg = String(recipe.description_bg || (typeof recipe.description === 'string' ? recipe.description : '')).toLowerCase();
+        const descEn = String(recipe.description_en || '').toLowerCase();
+        queryTokens.forEach(token => {
+          if (descBg.includes(token) || descEn.includes(token)) queryScore += 5;
+        });
+      }
+
+      // Pantry relevance: expiring items prioritized heavily, then matched count
+      const pantryScore = (recipe.expiringUsed * 12) + (recipe.matchedCount * 3) + ((recipe.matchPercentage || 0) * 0.1);
+
+      // Custom extra ingredients relevance
+      let extraScore = 0;
+      if (extraIngredients.length > 0) {
+        extraIngredients.forEach(extra => {
+          const eName = getItemName(extra).toLowerCase().trim();
+          recipe.ingredients?.forEach(ing => {
+            const ingBg = String(ing.ingredient_bg || ing.name_bg || '').toLowerCase();
+            const ingEn = String(ing.ingredient_en || ing.name_en || '').toLowerCase();
+            if (ingBg.includes(eName) || ingEn.includes(eName)) {
+              extraScore += 10;
+            }
+          });
+        });
+      }
+
+      const totalScore = (queryTokens.length > 0 ? queryScore * 2 : 0) + pantryScore + extraScore;
+
+      return {
+        recipe,
+        totalScore
+      };
+    });
+
+    // Sort descending by totalScore
+    scored.sort((a, b) => b.totalScore - a.totalScore);
+
+    return scored.slice(0, limit).map(s => s.recipe);
+  };
+
   // Detect which database recipes are named in the text output
-  const detectRecommendedRecipes = (text) => {
+  const detectRecommendedRecipes = (text, curatedList = []) => {
     if (!text || typeof text !== 'string') return [];
     const lower = text.toLowerCase();
-    return recipes.filter(r => {
+    
+    // Find candidate matching recipes
+    const matches = recipes.filter(r => {
       const titles = getRecipeSearchTitles(r);
       return titles.some(tStr => tStr.length >= 3 && lower.includes(tStr));
-    }).slice(0, 3);
+    });
+
+    if (matches.length === 0) return [];
+
+    // Prioritize recipes that were in the curated list sent to Gemini
+    const curatedIds = new Set((curatedList || []).map(r => r.id));
+    matches.sort((a, b) => {
+      const aInCurated = curatedIds.has(a.id) ? 1 : 0;
+      const bInCurated = curatedIds.has(b.id) ? 1 : 0;
+      if (bInCurated !== aInCurated) return bInCurated - aInCurated;
+
+      // Position in text: earlier mention ranks higher
+      const aTitles = getRecipeSearchTitles(a);
+      const bTitles = getRecipeSearchTitles(b);
+      const aIdx = Math.min(...aTitles.map(t => {
+        const pos = lower.indexOf(t);
+        return pos === -1 ? 99999 : pos;
+      }));
+      const bIdx = Math.min(...bTitles.map(t => {
+        const pos = lower.indexOf(t);
+        return pos === -1 ? 99999 : pos;
+      }));
+      return aIdx - bIdx;
+    });
+
+    return matches.slice(0, 3);
   };
 
   // Gourmet Rule Engine Fallback (Offline Mode)
@@ -374,8 +537,8 @@ const AIAssistant = () => {
     return { text, recipes: matchedRecipes };
   };
 
-  // Call Gemini API or fallback
-  const sendToGemini = async (userMessage) => {
+  // Call Gemini API or fallback with full culinary depth
+  const sendToGemini = async (userMessage, messageHistory = []) => {
     const apiKey = customApiKey || getGeminiApiKey();
     
     if (!apiKey) {
@@ -388,36 +551,74 @@ const AIAssistant = () => {
     const extraNamesStr = extraIngredients.map(i => getItemName(i)).join(', ');
     const userUnitSystem = user?.preferences?.unit_system || 'metric';
 
-    // Prioritize top 40 relevant/matching recipes to keep prompt fast and compact
-    const relevantRecipes = getFilteredRecipes().slice(0, 40);
+    // Curate the top 10-12 contextually relevant recipes with rich culinary metadata
+    const curatedRecipes = getSmartCuratedRecipes(userMessage, 12);
+    const curatedRecipesText = curatedRecipes.length > 0
+      ? curatedRecipes.map(r => formatCuratedRecipeForPrompt(r, currentLang)).join('\n\n')
+      : 'No database recipes matched the current filters.';
 
-    const systemPrompt = `You are Chef AI, a world-class gourmet chef culinary assistant.
+    // Extract recent conversational context (last 6 messages, excluding generic welcome)
+    const recentHistory = (messageHistory || [])
+      .filter(m => m.id !== 'welcome' && m.text)
+      .slice(-6)
+      .map(m => `${m.sender === 'user' ? 'User' : 'Chef AI'}: ${m.text.trim()}`)
+      .join('\n\n');
+
+    const conversationHistorySection = recentHistory
+      ? `\n\nRecent Conversation History:\n${recentHistory}\n`
+      : '';
+
+    const firstCuratedTitle = curatedRecipes[0] 
+      ? (getLocalizedRecipeTitle(curatedRecipes[0], currentLang) || 'Recipe') 
+      : 'Recipe';
+
+    const systemPrompt = `You are Chef AI, an acclaimed Michelin-star executive chef and warm culinary mentor at "The Best Idea Eatery".
+You guide home cooks and food lovers with culinary mastery, passion, and elegance.
+You don't just provide ingredient lists; you explain the "why" and "how" behind cooking techniques: pan temperatures, searing and the Maillard reaction, deglazing fond, balancing acidity against fat, aroma blooming, emulsification, and resting meats.
+
 Context of the user's kitchen:
-- User selected language: ${targetLangName}. Respond ONLY in this language!
-- User preferred measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (ounces/oz, fluid ounces/fl oz, pounds/lb, cups, tbsp, tsp)' : 'Metric (grams/g, kilograms/kg, milliliters/ml, liters/l, tbsp, tsp)'}.
-- Pantry items: ${pantry.map(p => `${getItemName(p)} (${p.quantity} ${p.unit}, expires: ${p.expirationDate})`).join(', ')}
-- Extra custom ingredients specified by user (not in pantry): ${extraNamesStr || 'None'}
-- Dietary profile: Diets: ${diets.join(', ') || 'None'}, Allergies: ${allergies.join(', ') || 'None'}, Excluded Ingredient IDs: ${exclusions.join(', ')}
-- Available recipes in our database:
-${relevantRecipes.map(r => `- ${getLocalizedRecipeTitle(r, currentLang) || getLocalizedField(r, 'title', currentLang) || (typeof r.title === 'string' ? r.title : '') || 'Recipe'} (Tags: ${getRecipeTags(r, ingredientsDB).join(', ')}, Prep time: ${(r.prep_time || 0) + (r.cook_time || 0)}m, Ingredients: ${r.ingredients?.map(i => getLocalizedField(i, 'name', currentLang) || i.ingredient_bg || i.name_bg || i.ingredient_en || i.name_en).join(', ')})`).join('\n')}
+- User language: ${targetLangName}. Respond exclusively in ${targetLangName}!
+- Preferred measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (ounces/oz, fluid ounces/fl oz, pounds/lb, cups, tbsp, tsp)' : 'Metric (grams/g, kilograms/kg, milliliters/ml, liters/l, tbsp, tsp)'}.
+- Pantry items: ${pantry.length > 0 ? pantry.map(p => `${getItemName(p)} (${p.quantity} ${p.unit}, expires: ${p.expirationDate})`).join(', ') : 'None / Empty pantry'}
+- Extra custom ingredients: ${extraNamesStr || 'None'}
+- Dietary profile: Diets: ${diets.join(', ') || 'None'}, Allergies: ${allergies.join(', ') || 'None'}, Exclusions: ${exclusions.join(', ') || 'None'}
 
-Rules:
-1. Always respond in the user's language (${targetLangName}).
-2. Keep answers concise, helpful and full of gourmet chef wisdom.
-3. Measurement units: ${userUnitSystem === 'imperial'
-  ? 'IMPORTANT: The user uses the Imperial measurement system. Always provide ingredient quantities in ounces (oz) for weight/mass, fluid ounces (fl oz) for liquids, pounds (lb) for large weights (>= 16 oz), or count units (e.g. pcs, tbsp, tsp). Do NOT default to grams (g) or milliliters (ml) unless explicitly requested.'
-  : 'IMPORTANT: The user uses the Metric measurement system. Always provide ingredient quantities in grams (g), milliliters (ml), kilograms (kg), liters (l), or count units (e.g. pcs, tbsp, tsp).'}
-4. Recommend recipes from the list above when possible. Refer to them by their exact titles so the system can display clickable cards for them.
-5. If a recipe from the list does not fit the user's diets/allergies/exclusions, do NOT recommend it.
-6. If extra custom ingredients are provided, take them into account alongside pantry items when suggesting recipes.
-7. If the user asks for generic advice or ingredients substitution, answer with professional chef expertise.`;
+Top Curated Recipes from our database for this query:
+${curatedRecipesText}
+
+Culinary Directives:
+1. Persona & Voice:
+   - Speak with culinary warmth, inspiration, and expertise.
+   - Do NOT give cold, brief, or robotic responses. Bring gastronomy alive with vivid culinary descriptions of flavor profiles, aromas, and textures.
+2. Structured Signature Response (when recommending dishes or recipes):
+   - 🍽️ **Кулинарно предложение / Рецепта**: Present the dish with pride. Explain why it works with the user's ingredients and describe the flavor harmony.
+   - 💡 **Шеф тайна (Chef's Secret / Pro Tip)**: Reveal an authentic culinary technique tip (e.g. ideal pan heat, dry brining, fond deglazing, cold butter mount / monter au beurre, resting times, herb timing).
+   - 🍷 **Сомелиерски съвет / Перфектно съчетание**: Offer an exquisite beverage pairing (wine, artisanal cider, or refreshing non-alcoholic botanical pairing) or a balancing side dish/salad.
+3. Interactive Recipe Cards:
+   - Whenever you recommend or reference one of the database recipes listed above, write its exact title in **bold** (e.g. **${firstCuratedTitle}**). The system detects exact titles and renders an interactive recipe card for the user.
+4. Measurement System:
+   - Strictly follow the user's preferred measurement system (${userUnitSystem === 'imperial' ? 'Imperial: oz, fl oz, lb, cups, tbsp, tsp' : 'Metric: g, ml, kg, l, tbsp, tsp'}).
+5. Safety:
+   - Respect dietary restrictions, allergies, and exclusions absolutely.
+6. Multi-turn Follow-ups:
+   - If the user asks a follow-up question (e.g. "What wine with that?", "How do I make it spicier?", "Can I substitute butter?"), refer back to what was discussed previously in the conversation history naturally.`;
 
     try {
       const response = await callGemini({
         apiKey,
-        prompt: `${systemPrompt}\n\nUser Question: ${userMessage}`,
-        systemInstruction: `You are Chef AI, a world-class gourmet culinary assistant. Respond in the user's language (${targetLangName}). Always specify ingredient quantities in the user's preferred measurement system (${userUnitSystem === 'imperial' ? 'Imperial: oz, fl oz, lb, tbsp, tsp' : 'Metric: g, ml, kg, l, tbsp, tsp'}). Recommend real database recipes by name where appropriate.`,
-        timeoutMs: 10000
+        prompt: `${systemPrompt}${conversationHistorySection}\n\nCurrent User Request: ${userMessage}`,
+        systemInstruction: `You are Chef AI, an acclaimed Michelin-star executive chef and warm culinary mentor.
+Respond ONLY in ${targetLangName}.
+Tone: Inspiring, articulate, warm, and gourmet. Never dry or robotic.
+Whenever suggesting dishes or cooking methods, include:
+🍽️ Culinary Suggestion (with exact database recipe titles in **bold**)
+💡 Chef's Secret (a high-end cooking technique tip)
+🍷 Sommelier / Pairing Tip (wine/beverage or balancing side)
+Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, tbsp, tsp)' : 'Metric (g, ml, kg, l, tbsp, tsp)'}.`,
+        generationConfig: {
+          temperature: 0.7
+        },
+        timeoutMs: 12000
       });
 
       const text = response?.text;
@@ -425,7 +626,7 @@ Rules:
         return handleLocalFallbackResponse(userMessage, "No response text candidate returned from Gemini API");
       }
 
-      const recommended = detectRecommendedRecipes(text);
+      const recommended = detectRecommendedRecipes(text, curatedRecipes);
       return { text, recipes: recommended };
 
     } catch (err) {
@@ -455,7 +656,7 @@ Rules:
       effectivePrompt += t('ai.prompt_extra_ingredients', { names: extraNamesStr });
     }
 
-    const result = await sendToGemini(effectivePrompt);
+    const result = await sendToGemini(effectivePrompt, messages);
 
     setIsTyping(false);
     const chefMsg = {

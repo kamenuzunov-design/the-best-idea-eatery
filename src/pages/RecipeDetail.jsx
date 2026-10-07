@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { REPUTATION_POINTS, getPointsForRating } from '../lib/reputationUtils';
 import { getLocalizedField, extractLocalizedNote } from '../lib/localeUtils';
+import { getYouTubeThumbnail, getYouTubeWatchUrl, isYouTubeUrl } from '../lib/videoUtils';
 import { 
   convertQuantityToSystem, 
   normalizeUnitId, 
@@ -373,16 +374,21 @@ const RecipeDetail = () => {
       console.warn("Failed to log ad click");
     }
 
-    if (ad.linkUrl) {
-      if (ad.isLocalLink) {
+    const isVideo = ad.type === 'video';
+    const isYT = isVideo && isYouTubeUrl(ad.contentUrl);
+    const videoTarget = isYT ? getYouTubeWatchUrl(ad.contentUrl) : ad.contentUrl;
+    const targetUrl = ad.linkUrl || videoTarget;
+
+    if (targetUrl) {
+      if (ad.isLocalLink && ad.linkUrl) {
         try {
-          const urlObj = new URL(ad.linkUrl);
+          const urlObj = new URL(targetUrl);
           navigate(urlObj.pathname + urlObj.search + urlObj.hash);
         } catch {
-          navigate(ad.linkUrl.replace(window.location.origin, ''));
+          navigate(targetUrl.replace(window.location.origin, ''));
         }
       } else {
-        window.open(ad.linkUrl, '_blank');
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
       }
     }
   };
@@ -1384,11 +1390,22 @@ const RecipeDetail = () => {
                     <span className="material-symbols-outlined text-[14px] text-primary/50 group-hover:text-primary transition-colors">open_in_new</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    {matchedAd.contentUrl && (
-                      <div className="size-12 rounded-lg overflow-hidden shrink-0 border border-primary/20 shadow-md">
-                        <img src={matchedAd.contentUrl} alt="Ad" className="w-full h-full object-cover" />
-                      </div>
-                    )}
+                    {(() => {
+                      const adImgSrc = matchedAd.type === 'video' 
+                        ? (getYouTubeThumbnail(matchedAd.contentUrl) || matchedAd.contentUrl)
+                        : matchedAd.contentUrl;
+                      if (!adImgSrc) return null;
+                      return (
+                        <div className="size-12 rounded-lg overflow-hidden shrink-0 border border-primary/20 shadow-md relative bg-black">
+                          <img src={adImgSrc} alt="Ad" className="w-full h-full object-cover" />
+                          {matchedAd.type === 'video' && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                              <span className="material-symbols-outlined text-white text-base">play_arrow</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="flex flex-col flex-1">
                       <h4 className="text-slate-100 font-bold text-sm leading-tight group-hover:text-primary transition-colors">{getLocalizedField(matchedAd, 'title', currentLang) || (isBg ? matchedAd.title_bg : matchedAd.title_en)}</h4>
                       {(() => {

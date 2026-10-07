@@ -11,7 +11,8 @@ import {
   setGeminiApiKey,
   PRIMARY_GEMINI_MODEL,
   FALLBACK_GEMINI_MODEL,
-  KNOWN_GEMINI_MODELS
+  KNOWN_GEMINI_MODELS,
+  DEFAULT_AVAILABLE_MODELS
 } from '../../lib/geminiClient';
 
 const ManageAIConfig = () => {
@@ -21,6 +22,9 @@ const ManageAIConfig = () => {
 
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [currentConfig, setCurrentConfig] = useState(null);
+
+  // Soft list of active / starred models
+  const [softModels, setSoftModels] = useState(DEFAULT_AVAILABLE_MODELS);
 
   const [primaryModel, setPrimaryModel] = useState(PRIMARY_GEMINI_MODEL);
   const [fallbackModel, setFallbackModel] = useState(FALLBACK_GEMINI_MODEL);
@@ -38,6 +42,49 @@ const ManageAIConfig = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Helper to check if model is permanent shortcut
+  const isPermanent = (modelId) => {
+    return modelId === 'gemini-flash-latest' || modelId === 'gemini-pro-latest';
+  };
+
+  // Helper to get formatted readable title (e.g. Gemini 3.8 Flash)
+  const getReadableName = (modelId) => {
+    if (modelId === 'gemini-flash-latest') return 'Gemini Flash Latest';
+    if (modelId === 'gemini-pro-latest') return 'Gemini Pro Latest';
+    const known = KNOWN_GEMINI_MODELS.find(m => m.id === modelId);
+    if (known) {
+      return known.label.split('(')[0].trim();
+    }
+    const discovered = discoveredModels.find(m => m.id === modelId);
+    if (discovered?.displayName && discovered.displayName !== modelId) {
+      return discovered.displayName;
+    }
+    return modelId
+      .split('-')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  };
+
+  // Helper to get technical subtitle with explanation for shortcuts
+  const getTechnicalSubtitle = (modelId) => {
+    if (modelId === 'gemini-flash-latest') return 'gemini-flash-latest · Най-нов Flash модел';
+    if (modelId === 'gemini-pro-latest') return 'gemini-pro-latest · Най-нов Pro модел';
+    return modelId;
+  };
+
+  // Helper to get human label for select dropdowns
+  const getModelLabel = (modelId) => {
+    if (modelId === 'gemini-flash-latest') return 'Gemini Flash Latest (Най-нов Flash модел)';
+    if (modelId === 'gemini-pro-latest') return 'Gemini Pro Latest (Най-нов Pro модел)';
+    const known = KNOWN_GEMINI_MODELS.find(m => m.id === modelId);
+    if (known) return known.label;
+    const discovered = discoveredModels.find(m => m.id === modelId);
+    if (discovered?.displayName && discovered.displayName !== modelId) {
+      return `${discovered.displayName} (${modelId})`;
+    }
+    return modelId;
+  };
+
   // Load current remote configuration from Firestore on mount
   useEffect(() => {
     const load = async () => {
@@ -47,9 +94,21 @@ const ManageAIConfig = () => {
         setCurrentConfig(config);
         const pModel = config.primary_model || PRIMARY_GEMINI_MODEL;
         const fModel = config.fallback_model || FALLBACK_GEMINI_MODEL;
+        const rawAvail = Array.isArray(config.available_models) ? config.available_models : DEFAULT_AVAILABLE_MODELS;
 
-        const isKnown = KNOWN_GEMINI_MODELS.some(m => m.id === pModel);
-        if (isKnown) {
+        // Ensure permanent shortcuts are always present and at the top
+        const normAvail = [
+          'gemini-flash-latest',
+          'gemini-pro-latest',
+          ...rawAvail.filter(id => id !== 'gemini-flash-latest' && id !== 'gemini-pro-latest')
+        ];
+
+        if (pModel && !normAvail.includes(pModel)) normAvail.push(pModel);
+        if (fModel && !normAvail.includes(fModel)) normAvail.push(fModel);
+
+        setSoftModels(normAvail);
+
+        if (normAvail.includes(pModel)) {
           setPrimaryModel(pModel);
           setIsCustomModel(false);
         } else {
@@ -86,6 +145,29 @@ const ManageAIConfig = () => {
     setSaveSuccess(false);
   };
 
+  // Toggle star to add or remove a model from soft list
+  const toggleStar = (modelId) => {
+    if (isPermanent(modelId)) return;
+
+    setSoftModels(prev => {
+      if (prev.includes(modelId)) {
+        const next = prev.filter(id => id !== modelId);
+        if (primaryModel === modelId) {
+          setPrimaryModel('gemini-flash-latest');
+          setIsCustomModel(false);
+          setCustomModelId('');
+        }
+        if (fallbackModel === modelId) {
+          setFallbackModel('gemini-pro-latest');
+        }
+        return next;
+      } else {
+        return [...prev, modelId];
+      }
+    });
+    setSaveSuccess(false);
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!effectivePrimaryModel) {
@@ -96,14 +178,25 @@ const ManageAIConfig = () => {
     setIsSaving(true);
     setSaveSuccess(false);
     try {
-      // Save local API key if changed
       if (apiKey && apiKey.trim()) {
         setGeminiApiKey(apiKey.trim());
       }
 
+      // Ensure permanent shortcuts and active selections are part of saved available models
+      const finalAvailable = Array.from(new Set([
+        'gemini-flash-latest',
+        'gemini-pro-latest',
+        ...softModels,
+        effectivePrimaryModel,
+        fallbackModel
+      ])).filter(Boolean);
+
+      setSoftModels(finalAvailable);
+
       const updated = await saveRemoteAIConfig({
         primary_model: effectivePrimaryModel,
         fallback_model: fallbackModel,
+        available_models: finalAvailable,
         api_key: apiKey?.trim() || '',
         user
       });
@@ -206,17 +299,17 @@ const ManageAIConfig = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-background-dark/70 rounded-xl p-3 border border-primary/10">
                 <p className="text-[10px] text-slate-400 uppercase font-semibold">{t('ai_config.active_primary_label')}</p>
-                <p className="text-base font-extrabold text-primary mt-0.5 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm text-emerald-400">check_circle</span>
-                  {currentConfig?.primary_model || PRIMARY_GEMINI_MODEL}
+                <p className="text-base font-extrabold text-primary mt-0.5 flex items-center gap-1.5 truncate">
+                  <span className="material-symbols-outlined text-sm text-emerald-400 shrink-0">check_circle</span>
+                  <span className="truncate">{currentConfig?.primary_model || PRIMARY_GEMINI_MODEL}</span>
                 </p>
               </div>
 
               <div className="bg-background-dark/70 rounded-xl p-3 border border-primary/10">
                 <p className="text-[10px] text-slate-400 uppercase font-semibold">{t('ai_config.active_fallback_label')}</p>
-                <p className="text-sm font-bold text-slate-300 mt-0.5 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm text-amber-400">shield</span>
-                  {currentConfig?.fallback_model || FALLBACK_GEMINI_MODEL}
+                <p className="text-sm font-bold text-slate-300 mt-0.5 flex items-center gap-1.5 truncate">
+                  <span className="material-symbols-outlined text-sm text-amber-400 shrink-0">shield</span>
+                  <span className="truncate">{currentConfig?.fallback_model || FALLBACK_GEMINI_MODEL}</span>
                 </p>
               </div>
 
@@ -254,13 +347,13 @@ const ManageAIConfig = () => {
               <span className="text-[10px] text-slate-400 font-normal">{t('ai_config.primary_model_hint')}</span>
             </label>
             <select
-              value={primaryModel}
+              value={isCustomModel ? 'custom' : primaryModel}
               onChange={(e) => handleSelectPrimary(e.target.value)}
               className="w-full h-11 bg-background-dark border border-primary/30 rounded-xl px-3.5 text-sm text-slate-100 focus:border-primary focus:outline-none transition-colors"
             >
-              {KNOWN_GEMINI_MODELS.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.label} ({m.id})
+              {softModels.map(id => (
+                <option key={id} value={id}>
+                  {getModelLabel(id)}
                 </option>
               ))}
               <option value="custom">{t('ai_config.option_custom')}</option>
@@ -293,12 +386,15 @@ const ManageAIConfig = () => {
             </label>
             <select
               value={fallbackModel}
-              onChange={(e) => setFallbackModel(e.target.value)}
+              onChange={(e) => {
+                setFallbackModel(e.target.value);
+                setSaveSuccess(false);
+              }}
               className="w-full h-11 bg-background-dark border border-primary/30 rounded-xl px-3.5 text-sm text-slate-100 focus:border-primary focus:outline-none transition-colors"
             >
-              {KNOWN_GEMINI_MODELS.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.label} ({m.id})
+              {softModels.map(id => (
+                <option key={id} value={id}>
+                  {getModelLabel(id)}
                 </option>
               ))}
             </select>
@@ -317,7 +413,7 @@ const ManageAIConfig = () => {
               type="button"
               onClick={handleTestModel}
               disabled={isTesting || !effectivePrimaryModel}
-              className="h-10 px-4 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer active:scale-95"
+              className="h-10 px-4 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer active:scale-95 shrink-0"
             >
               {isTesting ? (
                 <>
@@ -387,7 +483,120 @@ const ManageAIConfig = () => {
           </div>
         </form>
 
-        {/* Discovery & Inspection Panel */}
+        {/* SOFT LIST: Active System Models (⭐) - 3 Columns (Star | 3-Row Info | Delete) */}
+        <div className="bg-surface-dark/90 rounded-2xl p-5 border border-primary/20 shadow-lg space-y-4">
+          <div className="flex items-center justify-between border-b border-primary/10 pb-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-400 text-base fill-current">star</span>
+                {t('ai_config.soft_list_heading')}
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">{t('ai_config.soft_list_desc')}</p>
+            </div>
+            <span className="text-[11px] font-extrabold text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/25">
+              {softModels.length}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2.5">
+            {softModels.map(modelId => {
+              const isPerm = isPermanent(modelId);
+              const isPrimary = effectivePrimaryModel === modelId;
+              const isFallback = fallbackModel === modelId;
+
+              return (
+                <div 
+                  key={modelId}
+                  className={`p-3.5 rounded-xl border transition-colors flex items-start gap-3 sm:gap-4 ${
+                    isPrimary 
+                      ? 'bg-primary/15 border-primary text-slate-100 shadow-sm'
+                      : 'bg-background-dark/80 border-primary/15 hover:border-primary/30 text-slate-300'
+                  }`}
+                >
+                  {/* КОЛОНА 1: Звездата */}
+                  <div className="pt-0.5 shrink-0 flex items-center justify-center">
+                    {isPerm ? (
+                      <span 
+                        className="text-amber-400 select-none p-1 block" 
+                        title={t('ai_config.permanent_tooltip')}
+                      >
+                        <span className="material-symbols-outlined text-2xl fill-current text-amber-400">star</span>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => toggleStar(modelId)}
+                        className="text-amber-400 hover:text-amber-300 p-1 rounded-lg hover:bg-amber-400/10 transition-colors cursor-pointer"
+                        title={t('ai_config.star_active_tooltip')}
+                      >
+                        <span className="material-symbols-outlined text-2xl fill-current text-amber-400">star</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* КОЛОНА 2: Вътрешна структура с 3 реда */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    {/* Ред 1: Името на модела (БЕЗ етикети) */}
+                    <div className="text-sm font-extrabold text-slate-100 tracking-wide truncate">
+                      {getReadableName(modelId)}
+                    </div>
+
+                    {/* Ред 2: Техническото наименование и пояснение */}
+                    <div className="text-xs font-mono text-slate-400 select-all truncate">
+                      {getTechnicalSubtitle(modelId)}
+                    </div>
+
+                    {/* Ред 3: Статуси "Основен" и "Резервен" един до друг (само оцветяване, без избор) */}
+                    <div className="flex items-center gap-2 pt-1 select-none">
+                      <span
+                        className={`px-3 py-1 text-xs rounded-lg border font-bold transition-all ${
+                          isPrimary
+                            ? 'bg-primary text-background-dark border-primary font-black shadow-sm'
+                            : 'bg-background-dark/40 text-slate-500 border-slate-700/40 opacity-40'
+                        }`}
+                      >
+                        {t('ai_config.badge_primary')}
+                      </span>
+
+                      <span
+                        className={`px-3 py-1 text-xs rounded-lg border font-bold transition-all ${
+                          isFallback
+                            ? 'bg-amber-400 text-background-dark border-amber-400 font-black shadow-sm'
+                            : 'bg-background-dark/40 text-slate-500 border-slate-700/40 opacity-40'
+                        }`}
+                      >
+                        {t('ai_config.badge_fallback')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* КОЛОНА 3: Бутон за премахване/изтриване */}
+                  <div className="pt-0.5 shrink-0 flex items-center justify-center">
+                    {isPerm ? (
+                      <span 
+                        className="p-1.5 text-slate-600 cursor-not-allowed select-none" 
+                        title={t('ai_config.permanent_tooltip')}
+                      >
+                        <span className="material-symbols-outlined text-lg">lock</span>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => toggleStar(modelId)}
+                        className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/15 transition-colors cursor-pointer"
+                        title={t('ai_config.star_active_tooltip')}
+                      >
+                        <span className="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Discovery & Inspection Panel - 3 Columns (Star | 3-Row Info | Delete / Status) */}
         <div className="bg-surface-dark/90 rounded-2xl p-5 border border-primary/20 shadow-lg space-y-4">
           <div className="flex items-center justify-between border-b border-primary/10 pb-3">
             <div>
@@ -445,42 +654,108 @@ const ManageAIConfig = () => {
                   <span className="material-symbols-outlined text-sm">list_alt</span>
                   {t('ai_config.found_models_count', { count: discoveredModels.length })}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+                <div className="flex flex-col gap-2.5 max-h-96 overflow-y-auto pr-1">
                   {discoveredModels.map(m => {
-                    const isSelected = effectivePrimaryModel === m.id;
+                    const isStarred = softModels.includes(m.id);
+                    const isPerm = isPermanent(m.id);
+                    const isPrimary = effectivePrimaryModel === m.id;
+                    const isFallback = fallbackModel === m.id;
+
                     return (
                       <div 
                         key={m.id}
-                        className={`p-3 rounded-xl border flex flex-col justify-between transition-colors ${
-                          isSelected 
+                        className={`p-3.5 rounded-xl border transition-colors flex items-start gap-3 sm:gap-4 ${
+                          isPrimary 
                             ? 'bg-primary/15 border-primary text-slate-100 shadow-sm'
-                            : 'bg-background-dark/80 border-primary/10 hover:border-primary/30 text-slate-300'
+                            : isStarred
+                            ? 'bg-background-dark/90 border-amber-500/25 text-slate-200'
+                            : 'bg-background-dark/70 border-primary/10 hover:border-primary/25 text-slate-300'
                         }`}
                       >
-                        <div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-xs font-extrabold truncate text-primary">{m.id}</span>
-                            {isSelected && (
-                              <span className="text-[9px] bg-primary text-background-dark px-1.5 py-0.5 rounded font-black uppercase">
-                                {t('ai_config.selected_badge')}
+                        {/* КОЛОНА 1: Звездата */}
+                        <div className="pt-0.5 shrink-0 flex items-center justify-center">
+                          {isPerm ? (
+                            <span 
+                              className="text-amber-400 select-none p-1 block" 
+                              title={t('ai_config.permanent_tooltip')}
+                            >
+                              <span className="material-symbols-outlined text-2xl fill-current text-amber-400">star</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => toggleStar(m.id)}
+                              className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                                isStarred 
+                                  ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-400/10' 
+                                  : 'text-slate-500 hover:text-amber-400 hover:bg-slate-700/50'
+                              }`}
+                              title={isStarred ? t('ai_config.star_active_tooltip') : t('ai_config.star_inactive_tooltip')}
+                            >
+                              <span className={`material-symbols-outlined text-2xl ${isStarred ? 'fill-current text-amber-400' : ''}`}>
+                                {isStarred ? 'star' : 'star_border'}
                               </span>
-                            )}
-                          </div>
-                          {m.displayName && m.displayName !== m.id && (
-                            <p className="text-[10px] text-slate-400 truncate mt-0.5">{m.displayName}</p>
+                            </button>
                           )}
                         </div>
 
-                        <div className="pt-2 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleSelectPrimary(m.id);
-                            }}
-                            className="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded-lg border border-primary/25 cursor-pointer active:scale-95 transition-all"
-                          >
-                            {isSelected ? t('ai_config.btn_current_active') : t('ai_config.btn_use_as_primary')}
-                          </button>
+                        {/* КОЛОНА 2: Вътрешна структура с 3 реда */}
+                        <div className="flex-1 min-w-0 flex flex-col gap-1">
+                          {/* Ред 1: Името на модела (БЕЗ етикети) */}
+                          <div className="text-sm font-extrabold text-slate-100 tracking-wide truncate">
+                            {getReadableName(m.id)}
+                          </div>
+
+                          {/* Ред 2: Техническото наименование и пояснение */}
+                          <div className="text-xs font-mono text-slate-400 select-all truncate">
+                            {getTechnicalSubtitle(m.id)}
+                          </div>
+
+                          {/* Ред 3: Статуси "Основен" и "Резервен" един до друг (само оцветяване, без избор) */}
+                          <div className="flex items-center gap-2 pt-1 select-none">
+                            <span
+                              className={`px-3 py-1 text-xs rounded-lg border font-bold transition-all ${
+                                isPrimary 
+                                  ? 'bg-primary text-background-dark border-primary font-black shadow-sm' 
+                                  : 'bg-background-dark/40 text-slate-500 border-slate-700/40 opacity-40'
+                              }`}
+                            >
+                              {t('ai_config.badge_primary')}
+                            </span>
+
+                            <span
+                              className={`px-3 py-1 text-xs rounded-lg border font-bold transition-all ${
+                                isFallback 
+                                  ? 'bg-amber-400 text-background-dark border-amber-400 font-black shadow-sm' 
+                                  : 'bg-background-dark/40 text-slate-500 border-slate-700/40 opacity-40'
+                              }`}
+                            >
+                              {t('ai_config.badge_fallback')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* КОЛОНА 3: Бутон за премахване/изтриване (или статус) */}
+                        <div className="pt-0.5 shrink-0 flex items-center justify-center">
+                          {isPerm ? (
+                            <span 
+                              className="p-1.5 text-slate-600 cursor-not-allowed select-none" 
+                              title={t('ai_config.permanent_tooltip')}
+                            >
+                              <span className="material-symbols-outlined text-lg">lock</span>
+                            </span>
+                          ) : isStarred ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleStar(m.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/15 transition-colors cursor-pointer"
+                              title={t('ai_config.star_active_tooltip')}
+                            >
+                              <span className="material-symbols-outlined text-xl">delete</span>
+                            </button>
+                          ) : (
+                            <div className="w-8" />
+                          )}
                         </div>
                       </div>
                     );

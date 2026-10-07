@@ -19,7 +19,23 @@ import { logActivity } from './activityLogger';
 export const PRIMARY_GEMINI_MODEL = 'gemini-3.8-flash';
 export const FALLBACK_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
+export const PERMANENT_SHORTCUTS = [
+  { id: 'gemini-flash-latest', label: 'Gemini Flash Latest', type: 'shortcut', isPermanent: true },
+  { id: 'gemini-pro-latest', label: 'Gemini Pro Latest', type: 'shortcut', isPermanent: true }
+];
+
+export const DEFAULT_AVAILABLE_MODELS = [
+  'gemini-flash-latest',
+  'gemini-pro-latest',
+  'gemini-3.8-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.7-flash',
+  'gemini-3.7-pro'
+];
+
 export const KNOWN_GEMINI_MODELS = [
+  { id: 'gemini-flash-latest', label: 'Gemini Flash Latest (Най-нов Flash модел)', isPermanent: true },
+  { id: 'gemini-pro-latest', label: 'Gemini Pro Latest (Най-нов Pro модел)', isPermanent: true },
   { id: PRIMARY_GEMINI_MODEL, label: 'Gemini 3.8 Flash (Препоръчителен / Актуален)' },
   { id: FALLBACK_GEMINI_MODEL, label: 'Gemini 3.5 Flash-Lite (Бърз / Резервен)' },
   { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
@@ -27,6 +43,7 @@ export const KNOWN_GEMINI_MODELS = [
 ];
 
 export const CANDIDATE_GEMINI_MODELS = [
+  'gemini-flash-latest',
   PRIMARY_GEMINI_MODEL,
   FALLBACK_GEMINI_MODEL
 ];
@@ -40,6 +57,30 @@ export const DEPRECATED_MODELS = [
   'gemini-1.5-pro',
   'gemini-1.0-pro'
 ];
+
+export const IGNORED_MODEL_PATTERNS = [
+  'tts',
+  '-image',
+  'imagen',
+  'lyria',
+  'transcribe',
+  'whisper',
+  'embedding',
+  'aqa',
+  'robotics',
+  'code-',
+  'medlm',
+  'chirp',
+  'tune'
+];
+
+export function isModelUsefulForApp(modelId) {
+  if (!modelId || typeof modelId !== 'string') return false;
+  const idLower = modelId.toLowerCase();
+  if (DEPRECATED_MODELS.includes(modelId)) return false;
+  if (IGNORED_MODEL_PATTERNS.some(p => idLower.includes(p))) return false;
+  return idLower.includes('flash') || idLower.includes('pro');
+}
 
 let cachedRemoteConfig = null;
 
@@ -81,9 +122,18 @@ export async function getRemoteAIConfig() {
     const snap = await getDoc(doc(db, 'settings', 'ai_config'));
     if (snap.exists()) {
       const data = snap.data();
+      const rawAvailable = Array.isArray(data.available_models) ? data.available_models : DEFAULT_AVAILABLE_MODELS;
+      // Ensure shortcuts are always at the top of available_models
+      const normalizedAvailable = [
+        'gemini-flash-latest',
+        'gemini-pro-latest',
+        ...rawAvailable.filter(id => id !== 'gemini-flash-latest' && id !== 'gemini-pro-latest')
+      ];
+
       cachedRemoteConfig = {
         primary_model: data.primary_model || PRIMARY_GEMINI_MODEL,
         fallback_model: data.fallback_model || FALLBACK_GEMINI_MODEL,
+        available_models: normalizedAvailable,
         api_key: data.api_key || '',
         updated_at: data.updated_at || null,
         updated_by: data.updated_by || null
@@ -96,6 +146,7 @@ export async function getRemoteAIConfig() {
   cachedRemoteConfig = {
     primary_model: PRIMARY_GEMINI_MODEL,
     fallback_model: FALLBACK_GEMINI_MODEL,
+    available_models: [...DEFAULT_AVAILABLE_MODELS],
     api_key: '',
     updated_at: null,
     updated_by: null
@@ -107,10 +158,19 @@ export async function getRemoteAIConfig() {
  * Saves system-wide AI model configuration to Firestore settings/ai_config.
  * Only callable by authenticated Admin / Owner.
  */
-export async function saveRemoteAIConfig({ primary_model, fallback_model, api_key, user }) {
+export async function saveRemoteAIConfig({ primary_model, fallback_model, available_models, api_key, user }) {
+  const normalizedAvailable = Array.isArray(available_models) && available_models.length > 0
+    ? [
+        'gemini-flash-latest',
+        'gemini-pro-latest',
+        ...available_models.filter(id => id !== 'gemini-flash-latest' && id !== 'gemini-pro-latest')
+      ]
+    : [...DEFAULT_AVAILABLE_MODELS];
+
   const newConfig = {
     primary_model: (primary_model && primary_model.trim()) || PRIMARY_GEMINI_MODEL,
     fallback_model: (fallback_model && fallback_model.trim()) || FALLBACK_GEMINI_MODEL,
+    available_models: normalizedAvailable,
     updated_at: new Date().toISOString(),
     updated_by: user?.email || user?.uid || 'admin'
   };
@@ -128,7 +188,7 @@ export async function saveRemoteAIConfig({ primary_model, fallback_model, api_ke
         user.uid,
         user.email || 'admin',
         'update_ai_config',
-        `Updated system AI models: Primary="${newConfig.primary_model}", Fallback="${newConfig.fallback_model}"`
+        `Updated system AI models: Primary="${newConfig.primary_model}", Fallback="${newConfig.fallback_model}", Available=[${newConfig.available_models.join(', ')}]`
       );
     } catch (e) {
       console.warn("Could not log activity for AI config update:", e.message);
@@ -154,7 +214,7 @@ export async function fetchAvailableGeminiModels() {
 
 /**
  * On-demand queries Google Generative Language API using the admin's API key
- * to discover all active models that support generateContent.
+ * to discover all active models that support generateContent, filtered for application usefulness.
  */
 export async function fetchAvailableModelsFromGoogle(apiKey = getGeminiApiKey()) {
   if (!apiKey) throw new Error("Missing Gemini API Key. Please provide a valid key.");
@@ -170,7 +230,7 @@ export async function fetchAvailableModelsFromGoogle(apiKey = getGeminiApiKey())
     throw new Error(errText);
   }
   const data = await res.json();
-  const models = (data.models || [])
+  const rawModels = (data.models || [])
     .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
     .map(m => {
       const id = (m.name || '').replace('models/', '');
@@ -181,8 +241,21 @@ export async function fetchAvailableModelsFromGoogle(apiKey = getGeminiApiKey())
         supportedMethods: m.supportedGenerationMethods || []
       };
     })
-    .filter(m => !DEPRECATED_MODELS.includes(m.id));
-  return models;
+    .filter(m => isModelUsefulForApp(m.id));
+
+  // Merge shortcuts at the top so they are always visible in discovered list
+  const shortcutsList = PERMANENT_SHORTCUTS.map(s => ({
+    id: s.id,
+    displayName: s.label,
+    description: s.id === 'gemini-flash-latest' ? 'Най-нов Flash модел' : 'Най-нов Pro модел',
+    isPermanent: true
+  }));
+
+  // Combine and deduplicate
+  const existingIds = new Set(shortcutsList.map(s => s.id));
+  const otherModels = rawModels.filter(m => !existingIds.has(m.id));
+
+  return [...shortcutsList, ...otherModels];
 }
 
 /**
