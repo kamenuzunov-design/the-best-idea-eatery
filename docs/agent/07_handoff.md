@@ -2,7 +2,100 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 07 Октомври 2026
+## Последна сесия: 08 Октомври 2026
+
+### Извършена работа:
+1. **Корекция на съпоставянето на съставки между Килер и Рецепти (Pantry Matching & Discrete Units Fix: [recipeMatcherEngine.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMatcherEngine.js), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [unitConverter.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/unitConverter.js), [locales](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+   - **Проблем**: При въведена в килера „Сьомга 4 бр.“, в рецепта „Печена сьомга“ продуктът се маркираше като липсващ.
+   - **Диагностика**:
+     1. В `RecipeDetail.jsx` и `Home.jsx` съпоставянето разчиташе на примитивно строго равенство на ID (`pId === rId`). По-стари записи в килера със стари слугове или без точен `ingredientId` отпадаха.
+     2. В `unitConverter.js` липсваха псевдоними за бройки (`бр.`, `бр`, `брой`, `pcs`, `pc`), в резултат на което мерната единица не се нормализираше до `piece`.
+     3. Наличие на грешно преобразуване на бройки в грамове – 4 бр. сьомга се сравняваха като грамове спрямо изчислените грамове за рецептата.
+   - **Решение**:
+     1. Интегриран `matchesPantryItem` в `RecipeDetail.jsx` и `Home.jsx` с многоезичен толеранс по ID, slug, име и корени на думите.
+     2. Добавени разширени псевдоними в `UNIT_ALIASES` за дискретни единици (`piece`, `clove`, `bunch`, `pinch`, `slice`, `pack` и др.).
+     3. Директно количествено сравнение при дискретни мерни единици (`pantryAmount >= scaledAmount`) без деградиране през грамове.
+     4. Използване с приоритет на `dbIng.units_mapping` (напр. 1 бр. сьомга = 200г) вместо общите таблици за мерни единици при крос-конверсии.
+     5. Добавена мерна единица `piece` (`бр.`) в локализациите на килера за 5-те езика.
+   - **Верификация**: `pnpm run lint` и `pnpm run build` завършват с 0 грешки.
+
+2. **Фундаментална логика „Какво да сготвя сега?“ (The "Magic" Pantry Matching & Culinary Hub: [recipeMatcherEngine.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMatcherEngine.js), [AIIngredientsSearch.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIIngredientsSearch.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx), [AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+   - **Детерминиран алгоритъм ПРЕДИ извикването на AI ([recipeMatcherEngine.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMatcherEngine.js))**:
+     - `PANTRY_STAPLES`: списък от 22 базови съставки (сол, пипер, зехтин, олио, вода, оцет, захар и техни синоними на BG и EN).
+     - `isPantryStaple`: базов траен продукт, чиято липса никога не компрометира 100% готовност за готвене.
+     - `matchesPantryItem`: прецизно многоезично съпоставяне по ID, slug и нормализирани форми на думите (елиминира множествени окончания като -а, -и, -е).
+     - `classifyRecipes`: тристепенна категоризация:
+       - 🟢 **100% Готови за готвене (`ready`)**: Всички необходими не-staple продукти са в наличност. Готви се веднага.
+       - 🟡 **Липсва точно 1 съставка (`missing_one`)**: Минимално усилие – добавя се с 1 клик в списъка или се пита Chef AI за замяна.
+       - 🟠 **Липсват 2 до 5 съставки („Готов за пазаруване“ - `shopping_ready`)**: Изисква поне 1 налична съществена съставка, предлагайки рецепти с до 5 липсващи артикула.
+     - `getRotatedBatch`: детерминирано превъртане на партиди рецепти при натискане на „🔄 Други предложения“.
+     - Приоритетно класиране на рецепти, използващи продукти с изтичащ срок на годност от килера.
+   - **Интелигентен кулинарен хъб ([AIIngredientsSearch.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIIngredientsSearch.jsx))**:
+     - Автоматично зареждане на активните съставки от Килера (`🏠`) плюс динамично въвеждане на допълнителни персонализирани съставки (`✨`).
+     - Бързи филтри: „Всички“, „Бързи (<30 мин)“, „С изтичащ срок първо“, „Леки / Вегетариански“.
+     - Секции за всяко от трите нива с отделни броячи, съставки и баджове.
+     - Интерактивен бутон „+ Списък“ / „✓ В списъка“ за всяка липсваща съставка с 1-клик синхронизация към `AppContext.shoppingList` и тост нотификации.
+     - Бутони „🔄 Други предложения“ за всяко ниво, въртящи нови селекции при несъгласие на потребителя.
+     - Бутони „✨ Шеф AI съвет“ и „✨ Замяна без пазаруване“, които отварят `/ai-assistant` с директно зададен специфичен въпрос.
+   - **Автоматичен диалог в Шеф AI ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+     - Прихваща `location.state.autoPrompt` и автоматично генерира отговор от Шеф AI с интелигентно скролиране до началото му.
+   - **Условни бутони и банери за достъп**:
+     - `Home.jsx`: Златист банер с брояч на наличните продукти под търсачката, видим **САМО** ако `pantry.length > 0`.
+     - `Pantry.jsx`: Хедър бутон „Какво да сготвя сега?“, видим **САМО** ако `pantry.length > 0`.
+   - **5-езикова локализация (i18n)**:
+     - Ново речниково пространство `what_to_cook` в `bg.json`, `en.json`, `it.json`, `fr.json`, `de.json`.
+   - **Верификация**: `pnpm run lint` и `pnpm run build` с 0 грешки.
+
+2. **Оптимизация на потребителския интерфейс & интелигентен скрол в Шеф AI ([AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx))**:
+   - **Интелигентно скролиране до началото на отговора**: Заместен досегашният безусловен скрол до дъното (`messagesEndRef`) със селективен реф-базиран скрол (`latestChefMsgRef`). При получен отговор от Шеф AI екранът плавно позиционира изгледа в самото начало на отговора, за да може потребителят веднага да чете от първия ред, вместо да вижда само долните карти с рецепти и да се налага ръчно да скролира нагоре.
+   - **Преместване на полето за писане**: Полето за свободен разговор с AI (`#chat-message-input` и бутонът `#btn-send-message`) е преместено на челна позиция в контролния панел – директно под хронологията и над съставките и чиповете.
+   - `pnpm run lint` и `pnpm run build` валидирани успешно с 0 грешки.
+
+2. **Цялостно изграждане на модул „Винено съчетаване“ (Wine Pairing System: [WinePairing.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WinePairing.jsx), [wineMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/wineMatcher.js), [wines.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/wines.js))**:
+   - **Разширена международна винена база от данни ([wines.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/wines.js))**:
+     - 23 първокласни винени сорта и стила с добавени световни класики: Темпранийо (Риоха, Испания), Небиоло/Бароло (Пиемонт, Италия), Малбек (Мендоса, Аржентина), Албариньо (Риас Байшас, Испания), Грюнер Велтлинер (Вахау, Австрия) заедно с френските и българските вина.
+     - Пълни органолептични профили на 5 езика (BG, EN, IT, FR, DE): тяло, сладост, киселинност, танини, алкохол, температура на сервиране, декантиране/аериране, чаша с иконка и дегустационни нотки.
+     - Метаданни за произход: флаг на държавата, винен регион/тероар, държава и маркер за локален произход (`is_local_bg`).
+     - Структурирани правила за афинитет (affinity rules): съвместимост с категории храни, световни кухни, съставки и вкусови профили.
+   - **Интелигентен сомелиерски алгоритъм с езикова адаптация ([wineMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/wineMatcher.js))**:
+     - Анализира категорията/подкатегорията на рецептата, кухнята, протеини, мазнини, киселинност и специфични съставки.
+     - **Езиково филтриране на Gold Match**: За потребители на английски, италиански, френски и немски (интерфейс `!== 'bg'`) българските регионални вина (Мавруд, Гъмза, Мискет) **НЕ** се препоръчват като Gold Match, осигурявайки леснодостъпни международни алтернативи на чужденците. За български потребители местните сортове са налични като водещ фаворит при съответните ястия.
+     - Селектира триада от съчетания:
+       - 🏆 **Gold Match**: класическият препоръчан фаворит.
+       - 🍷 **Alternative Match**: алтернативен стил (по-леко тяло или различен сорт).
+       - ✨ **Wildcard / Sommelier's Adventure**: смел избор (искрящо, розе или ендемичен сорт).
+     - Генерира богати персонализирани сомелиерски обяснения „Защо си подхождат“ на 5 езика за всички 23 вина.
+   - **Динамична страница за винено съчетаване ([WinePairing.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WinePairing.jsx))**:
+     - Зареждане на рецептата по `:id` или slug от Firestore.
+     - Луксозен банер на ястието с кликаем линк обратно към рецептата.
+     - **Корекция на responsive layout при дълги немски имена**: Реорганизиран хедър на картата с `flex flex-col sm:flex-row`, `min-w-0` и `break-words`, елиминиращ хоризонтален overflow на етикета за съвместимост.
+     - Сегментиран таб контролер за трите препоръки с флагове на държавите и динамичен процент на съвместимост (калибриран детерминирано: Gold 94–98%, Alt 85–92%, Wildcard 68–82%).
+     - Визуализиране на знамето и винения регион/тероар в главното представяне на виното.
+     - Визуални сензорни скали за тяло, сладост, киселинност и танини.
+     - Информационен блок за сервиране: препоръчана чаша, температура и декантиране.
+     - Интеграция с `AppContext` за директно добавяне на бутилката към списъка за пазаруване (`shoppingList`) с анимация и тост потвърждение.
+     - Бутони за запазване в любими (`favorite_wines` в `localStorage`) и споделяне (Web Share API / копиране на линк).
+     - Секция за бързо сравнение с другите две препоръки (със знаме и страна).
+     - **Спонсорирана селекция (Native Ads за вино)**: Интелигентно таргетирана рекламна карта над „Златно правило на сомелиера“, съпоставяща съставки на ястието и препоръчани вина, поддържаща статични и видео реклами с отчитане на импресии и кликове във Firestore.
+     - Сомелиерски екран при опит за пряко отваряне на рецепта от неподходяща категория (`not_applicable_title` / `not_applicable_desc`) с бърз бутон за връщане.
+   - **Интелигентно филтриране по приложимост на категории ([wineMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/wineMatcher.js) & [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+     - `isWinePairingApplicable(recipe)` изключва категории и подкатегории: Салати (`salad`), Супи (`soup`), Десерти (`dessert`), Напитки (`drink`), Сос/Марината (`sauce`) и Закуска (`breakfast`).
+     - Бутонът за вино в `RecipeDetail.jsx` (в горната лента и в долната лента с действия) се визуализира САМО при приложими рецепти (Основни, Тестени, Предястия/Тапас и др.).
+     - Премахнато старото ограничение `!isPowerUser`, гарантирайки равен достъп за всички потребители.
+     - Адаптивно мобилно оформление на горната лента (`grid-cols-2` при 4 бутона, `flex` при по-малко).
+   - **Мулти-продуктово контекстуално спонсорство с Native Ads в рецепти ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+     - Внедрен модел „1 продукт = 1 контекстуален спонсор“: всяка съвпадаща съставка показва своя персонален спонсор едновременно.
+     - Без дублиране на една и съща реклама в рамките на рецептата.
+     - Ротация на конкуриращи се реклами за една и съща съставка на 10-секунден интервал според приоритета.
+     - Отчитане на импресии (`viewsCount`) и кликове (`clicksCount`) за всяка отделно показана реклама.
+   - **5-езикова локализация (i18n)**:
+     - Пълно покритие на BG, EN, IT, FR, DE чрез пространството `wine_pairing` в `src/locales/*.json`.
+   - **Верификация**:
+     - `pnpm run lint` и `pnpm run build` завършиха със статус 0 (0 грешки).
+
+---
+
+## Предишна сесия: 07 Октомври 2026
 
 ### Извършена работа:
 1. **Интерактивни YouTube Видео Реклами тип „Социална медия“ ([videoUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/videoUtils.js), [AdBanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/AdBanner.jsx), [ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:

@@ -20,6 +20,8 @@ import {
   ML_PER_FL_OZ,
   OZ_PER_LB
 } from '../lib/unitConverter';
+import { isWinePairingApplicable } from '../lib/wineMatcher.js';
+import { matchesPantryItem } from '../lib/recipeMatcherEngine.js';
 
 const RecipeDetail = () => {
   const { id } = useParams();
@@ -33,6 +35,7 @@ const RecipeDetail = () => {
   const isPowerUser = isAdmin || isOwner;
 
   const [recipe, setRecipe] = useState(null);
+  const showWineButton = useMemo(() => isWinePairingApplicable(recipe), [recipe]);
   const [loading, setLoading] = useState(true);
   const [userVote, setUserVote] = useState(null);
   const [hoverStar, setHoverStar] = useState(0);
@@ -53,7 +56,7 @@ const RecipeDetail = () => {
   // Native Ads & Campaign State
   const [nativeAds, setNativeAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
-  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const [rotationTick, setRotationTick] = useState(0);
   const trackedNativeAds = useRef(new Set());
 
   const handleOpenSubRecipePreview = async (ing) => {
@@ -103,15 +106,22 @@ const RecipeDetail = () => {
     };
   }, []);
 
-  // 2. Compute Active & Valid Matching Native Ads (Sorted by Priority Descending: 10 -> 1)
-  const matchingList = useMemo(() => {
-    if (!recipe?.ingredients || nativeAds.length === 0) return [];
+  // 2. Handle Rotation interval (10s) for ingredients with competing candidate ads
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRotationTick(prev => prev + 1);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 3. Compute Active & Valid Matching Native Ads per Ingredient
+  const matchedAdsByIngredient = useMemo(() => {
+    if (!recipe?.ingredients || nativeAds.length === 0) return {};
 
     const now = new Date().toISOString().split('T')[0];
 
     const validAds = nativeAds.filter(ad => {
       if (!ad.isActive) return false;
-
       const adStart = ad.startDate || '0000-00-00';
       const adEnd = ad.endDate || '9999-99-99';
       if (now < adStart || now > adEnd) return false;
@@ -134,229 +144,155 @@ const RecipeDetail = () => {
       return true;
     });
 
-    const matches = [];
-    validAds.forEach(ad => {
-      let matchedIdx = -1;
-      let isMatched = false;
+    if (validAds.length === 0) return {};
 
-      // Collect all target Slug (IDs) from the Ad
-      const adTargetSlugs = [
-        ...(Array.isArray(ad.targetIngredientIds) ? ad.targetIngredientIds : []),
-        ...(Array.isArray(ad.targetKeywords) ? ad.targetKeywords : (typeof ad.targetKeywords === 'string' ? ad.targetKeywords.split(',') : []))
-      ].map(s => {
-        // If string contains "(slug)", extract the slug inside parentheses
-        const match = String(s).match(/\(([^)]+)\)/);
-        return (match ? match[1] : String(s)).trim().toLowerCase();
-      }).filter(Boolean);
-
-      // Map any Bulgarian/English target ingredient names to their master ingredient slug/id
-      ingredientsList.forEach(dbI => {
-        const bg = (dbI.name_bg || '').trim().toLowerCase();
-        const en = (dbI.name_en || '').trim().toLowerCase();
-        const docId = String(dbI.id || '').trim().toLowerCase();
-        const slug = String(dbI.slug || '').trim().toLowerCase();
-
-        if (adTargetSlugs.some(target => target === bg || target === en || target === docId || target === slug)) {
-          if (slug && !adTargetSlugs.includes(slug)) adTargetSlugs.push(slug);
-          if (docId && !adTargetSlugs.includes(docId)) adTargetSlugs.push(docId);
-        }
-      });
-
-      if (adTargetSlugs.length > 0) {
-        // Match strictly within recipe.ingredients list (never description or steps)
-        for (let i = 0; i < recipe.ingredients.length; i++) {
-          const ing = recipe.ingredients[i];
-          const recId = String(ing.ingredient_id || ing.id || '').trim().toLowerCase();
-          const recSlug = String(ing.slug || '').trim().toLowerCase();
-          const ingBg = String(ing.ingredient_bg || ing.name_bg || '').trim().toLowerCase();
-          const ingEn = String(ing.ingredient_en || ing.name_en || '').trim().toLowerCase();
-
-          // Find corresponding ingredient from ingredientsList
-          const dbIng = ingredientsList.find(d => {
-            const dId = String(d.id || '').trim().toLowerCase();
-            const dSlug = String(d.slug || '').trim().toLowerCase();
-            const dNameBg = (d.name_bg || '').trim().toLowerCase();
-            const dNameEn = (d.name_en || '').trim().toLowerCase();
-
-            return (recId && (dId === recId || dSlug === recId)) ||
-                   (recSlug && (dId === recSlug || dSlug === recSlug)) ||
-                   (ingBg && (dNameBg === ingBg || dId === ingBg || dSlug === ingBg)) ||
-                   (ingEn && (dNameEn === ingEn || dId === ingEn || dSlug === ingEn));
-          });
-
-          // All possible Slug (ID) representations for this recipe ingredient
-          const ingredientSlugsAndIds = [
-            recId,
-            recSlug,
-            dbIng?.id?.toLowerCase(),
-            dbIng?.slug?.toLowerCase()
-          ].filter(Boolean);
-
-          // 1. Exact match on Slug (ID)
-          const isSlugMatch = adTargetSlugs.some(targetSlug => {
-            return ingredientSlugsAndIds.some(candidate => {
-              return candidate === targetSlug || 
-                     candidate.includes(targetSlug) || 
-                     targetSlug.includes(candidate);
-            });
-          });
-
-          // 2. Direct text / name fallback match
-          const adRawTexts = [
-            ...(Array.isArray(ad.targetKeywords) ? ad.targetKeywords : []),
-            ...(Array.isArray(ad.targetIngredientIds) ? ad.targetIngredientIds : [])
-          ].map(k => String(k).replace(/\([^)]*\)/g, '').trim().toLowerCase()).filter(Boolean);
-
-          const isTextMatch = adRawTexts.some(kw => {
-            if (!kw) return false;
-            return (ingBg && (ingBg.includes(kw) || kw.includes(ingBg))) ||
-                   (ingEn && (ingEn.includes(kw) || kw.includes(ingEn)));
-          });
-
-          if (isSlugMatch || isTextMatch) {
-            matchedIdx = i;
-            isMatched = true;
-            break;
-          }
-        }
-      } else {
-        // Fallback for native ads without any target criteria
-        matchedIdx = 0;
-        isMatched = true;
-      }
-
-      if (isMatched) {
-        matches.push({
-          ad,
-          ingredientIdx: matchedIdx,
-          priority: Number(ad.priority) || 1
-        });
-      }
-    });
-
-    // Sort matching ads by Priority (higher number = higher priority: 10 > 9 > ... > 1)
-    // If priorities are equal, sort newest first (createdAt descending)
-    matches.sort((a, b) => {
-      const pA = Number(a.ad.priority) || 1;
-      const pB = Number(b.ad.priority) || 1;
+    // Sort validAds by Priority descending (10 -> 1), then newest first
+    validAds.sort((a, b) => {
+      const pA = Number(a.priority) || 1;
+      const pB = Number(b.priority) || 1;
       if (pB !== pA) return pB - pA;
-      const tA = a.ad.createdAt?.seconds || 0;
-      const tB = b.ad.createdAt?.seconds || 0;
+      const tA = a.createdAt?.seconds || 0;
+      const tB = b.createdAt?.seconds || 0;
       return tB - tA;
     });
 
-    return matches;
-  }, [recipe, nativeAds, campaigns, ingredientsList]);
+    // Map any Bulgarian/English target ingredient names to their master ingredient slug/id
+    const ingredientDbMap = new Map();
+    ingredientsList.forEach(dbI => {
+      const bg = (dbI.name_bg || '').trim().toLowerCase();
+      const en = (dbI.name_en || '').trim().toLowerCase();
+      const docId = String(dbI.id || '').trim().toLowerCase();
+      const slug = String(dbI.slug || '').trim().toLowerCase();
+      if (bg) ingredientDbMap.set(bg, { docId, slug });
+      if (en) ingredientDbMap.set(en, { docId, slug });
+    });
 
-  // Keep a ref always in sync with latest matchingList
-  const matchingListRef = useRef(matchingList);
-  useEffect(() => {
-    matchingListRef.current = matchingList;
-  }, [matchingList]);
+    // Find candidate matching ads for each ingredient in the recipe
+    const ingredientCandidates = recipe.ingredients.map((ing, idx) => {
+      const recId = String(ing.ingredient_id || ing.id || '').trim().toLowerCase();
+      const recSlug = String(ing.slug || '').trim().toLowerCase();
+      const ingBg = String(ing.ingredient_bg || ing.name_bg || '').trim().toLowerCase();
+      const ingEn = String(ing.ingredient_en || ing.name_en || '').trim().toLowerCase();
 
-  // Stable key of matching ad IDs and priorities to prevent reset when viewsCount updates
-  const matchingKey = useMemo(() => {
-    return matchingList.map(m => `${m.ad.id}:${m.priority}`).join(',');
-  }, [matchingList]);
+      // Find in db
+      const dbIng = ingredientsList.find(d => {
+        const dId = String(d.id || '').trim().toLowerCase();
+        const dSlug = String(d.slug || '').trim().toLowerCase();
+        const dNameBg = (d.name_bg || '').trim().toLowerCase();
+        const dNameEn = (d.name_en || '').trim().toLowerCase();
 
-  // 3. Initial Ad Selection based on Rotation Model (runs on recipe load or ads pool change)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const activeList = matchingListRef.current;
-      if (activeList.length === 0) {
-        setCurrentAdIndex(0);
-        return;
-      }
-
-      const firstCampId = activeList[0]?.ad?.campaignId;
-      const associatedCamp = firstCampId ? campaigns.find(c => c.id === firstCampId) : null;
-      const rotationType = associatedCamp?.rotationType || 'timer';
-
-      if (rotationType === 'weighted') {
-        // Weighted Random by Priority (1-10)
-        const totalWeight = activeList.reduce((sum, item) => sum + Math.max(1, Number(item.ad.priority) || 1), 0);
-        let rand = Math.random() * totalWeight;
-        let chosenIdx = 0;
-        for (let i = 0; i < activeList.length; i++) {
-          const weight = Math.max(1, Number(activeList[i].ad.priority) || 1);
-          if (rand <= weight) {
-            chosenIdx = i;
-            break;
-          }
-          rand -= weight;
-        }
-        setCurrentAdIndex(chosenIdx);
-      } else if (rotationType === 'sequential') {
-        // Sequential (Round-Robin on each recipe load)
-        const storageKey = `native_ad_rot_${recipe?.id || 'global'}`;
-        const lastIdx = parseInt(sessionStorage.getItem(storageKey) || '-1', 10);
-        const nextIdx = (lastIdx + 1) % activeList.length;
-        sessionStorage.setItem(storageKey, nextIdx.toString());
-        setCurrentAdIndex(nextIdx);
-      } else {
-        // 'timer' or default -> start with highest priority (index 0)
-        setCurrentAdIndex(0);
-      }
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [matchingKey, recipe?.id, campaigns]);
-
-  // 4. Handle Timer Carousel Rotation (Cycles every 10s or campaign timerIntervalSeconds)
-  useEffect(() => {
-    const activeList = matchingListRef.current;
-    if (activeList.length <= 1) return;
-
-    const firstCampId = activeList[0]?.ad?.campaignId;
-    const associatedCamp = firstCampId ? campaigns.find(c => c.id === firstCampId) : null;
-    const rotationType = associatedCamp?.rotationType || 'timer';
-
-    // Only run interval if rotationType is 'timer' or not set (standalone ads default to timer)
-    if (associatedCamp && rotationType !== 'timer') return;
-
-    const timerInterval = Math.max(3, associatedCamp?.timerIntervalSeconds || 10) * 1000;
-
-    const timer = setInterval(() => {
-      const currentList = matchingListRef.current;
-      if (currentList.length <= 1) return;
-
-      setCurrentAdIndex(prevIdx => {
-        const nextIdx = (prevIdx + 1) % currentList.length;
-        const storageKey = `native_ad_rot_${recipe?.id || 'global'}`;
-        sessionStorage.setItem(storageKey, nextIdx.toString());
-        return nextIdx;
+        return (recId && (dId === recId || dSlug === recId)) ||
+               (recSlug && (dId === recSlug || dSlug === recSlug)) ||
+               (ingBg && (dNameBg === ingBg || dId === ingBg || dSlug === ingBg)) ||
+               (ingEn && (dNameEn === ingEn || dId === ingEn || dSlug === ingEn));
       });
-    }, timerInterval);
 
-    return () => clearInterval(timer);
-  }, [matchingKey, recipe?.id, campaigns]);
+      const ingredientSlugsAndIds = [
+        recId,
+        recSlug,
+        dbIng?.id?.toLowerCase(),
+        dbIng?.slug?.toLowerCase()
+      ].filter(Boolean);
 
-  // Derived current matched ad & index
-  const currentMatchingItem = useMemo(() => {
-    if (matchingList.length === 0) return null;
-    return matchingList[currentAdIndex % matchingList.length] || matchingList[0];
-  }, [currentAdIndex, matchingList]);
+      const matchingAdsForThisIng = [];
 
-  const matchedAd = currentMatchingItem?.ad || null;
-  const rawIngredientIdx = currentMatchingItem?.ingredientIdx ?? 0;
-  const matchedIngredientIdx = Math.min(Math.max(0, rawIngredientIdx), Math.max(0, (recipe?.ingredients?.length || 1) - 1));
+      validAds.forEach(ad => {
+        const adTargetSlugs = [
+          ...(Array.isArray(ad.targetIngredientIds) ? ad.targetIngredientIds : []),
+          ...(Array.isArray(ad.targetKeywords) ? ad.targetKeywords : (typeof ad.targetKeywords === 'string' ? ad.targetKeywords.split(',') : []))
+        ].map(s => {
+          const match = String(s).match(/\(([^)]+)\)/);
+          return (match ? match[1] : String(s)).trim().toLowerCase();
+        }).filter(Boolean);
 
-  // 5. Increment ViewsCount when an ad is displayed
-  useEffect(() => {
-    if (matchedAd && !trackedNativeAds.current.has(matchedAd.id)) {
-      trackedNativeAds.current.add(matchedAd.id);
+        adTargetSlugs.forEach(target => {
+          const mapped = ingredientDbMap.get(target);
+          if (mapped) {
+            if (mapped.slug && !adTargetSlugs.includes(mapped.slug)) adTargetSlugs.push(mapped.slug);
+            if (mapped.docId && !adTargetSlugs.includes(mapped.docId)) adTargetSlugs.push(mapped.docId);
+          }
+        });
 
-      updateDoc(doc(db, 'ads', matchedAd.id), {
-        viewsCount: increment(1)
-      }).catch(() => {});
+        const adRawTexts = [
+          ...(Array.isArray(ad.targetKeywords) ? ad.targetKeywords : []),
+          ...(Array.isArray(ad.targetIngredientIds) ? ad.targetIngredientIds : [])
+        ].map(k => String(k).replace(/\([^)]*\)/g, '').trim().toLowerCase()).filter(Boolean);
 
-      if (matchedAd.campaignId) {
-        updateDoc(doc(db, 'campaigns', matchedAd.campaignId), {
-          viewsCount: increment(1)
-        }).catch(() => {});
+        const isSlugMatch = adTargetSlugs.length > 0 && adTargetSlugs.some(targetSlug => {
+          return ingredientSlugsAndIds.some(candidate => {
+            return candidate === targetSlug || 
+                   candidate.includes(targetSlug) || 
+                   targetSlug.includes(candidate);
+          });
+        });
+
+        const isTextMatch = adRawTexts.length > 0 && adRawTexts.some(kw => {
+          return (ingBg && (ingBg.includes(kw) || kw.includes(ingBg))) ||
+                 (ingEn && (ingEn.includes(kw) || kw.includes(ingEn)));
+        });
+
+        if (isSlugMatch || isTextMatch) {
+          matchingAdsForThisIng.push(ad);
+        }
+      });
+
+      return {
+        idx,
+        candidates: matchingAdsForThisIng
+      };
+    });
+
+    // Assign ads without duplicates across ingredients
+    const assignedAds = {};
+    const usedAdIds = new Set();
+
+    ingredientCandidates.forEach(({ idx, candidates }) => {
+      if (candidates.length === 0) return;
+
+      // Filter out ads already assigned to previous ingredients in this recipe
+      const availableCandidates = candidates.filter(ad => !usedAdIds.has(ad.id));
+      if (availableCandidates.length === 0) return;
+
+      // If multiple competing ads match this ingredient, rotate through them via rotationTick
+      const selectedAd = availableCandidates[rotationTick % availableCandidates.length];
+      assignedAds[idx] = selectedAd;
+      usedAdIds.add(selectedAd.id);
+    });
+
+    // Untargeted ad fallback (no target ingredients & no keywords): show only once if no targeted ads matched
+    if (Object.keys(assignedAds).length === 0) {
+      const fallbackAd = validAds.find(ad => {
+        const hasTargetIngredients = Array.isArray(ad.targetIngredientIds) && ad.targetIngredientIds.length > 0;
+        const hasKeywords = (Array.isArray(ad.targetKeywords) && ad.targetKeywords.length > 0) || (typeof ad.targetKeywords === 'string' && ad.targetKeywords.trim().length > 0);
+        return !hasTargetIngredients && !hasKeywords;
+      });
+      if (fallbackAd) {
+        assignedAds[0] = fallbackAd;
       }
     }
-  }, [matchedAd]);
+
+    return assignedAds;
+  }, [recipe, nativeAds, campaigns, ingredientsList, rotationTick]);
+
+  // 4. Increment ViewsCount when ads are displayed
+  useEffect(() => {
+    const displayedAds = Object.values(matchedAdsByIngredient);
+    displayedAds.forEach(ad => {
+      if (ad && !trackedNativeAds.current.has(ad.id)) {
+        trackedNativeAds.current.add(ad.id);
+
+        updateDoc(doc(db, 'ads', ad.id), {
+          viewsCount: increment(1)
+        }).catch(() => {});
+
+        if (ad.campaignId) {
+          updateDoc(doc(db, 'campaigns', ad.campaignId), {
+            viewsCount: increment(1)
+          }).catch(() => {});
+        }
+      }
+    });
+  }, [matchedAdsByIngredient]);
 
   // 5. Handle Click Tracking for Native Ads
   const handleAdClick = async (ad) => {
@@ -556,13 +492,23 @@ const RecipeDetail = () => {
     };
   };
 
-  const convertToGrams = (amount, unitId) => {
+  const convertToGrams = (amount, unitId, dbIng = null) => {
     if (!unitId || !amount) return amount || 0;
     const norm = normalizeUnitId(unitId);
 
     const canonical = normalizeToCanonical({ amount, unitId: norm });
     if (canonical.unit === 'g' || canonical.unit === 'ml') {
       return canonical.amount;
+    }
+
+    // Check dbIng units_mapping (e.g. 1 piece of salmon = 200g)
+    if (dbIng?.units_mapping && Array.isArray(dbIng.units_mapping)) {
+      const mapEntry = dbIng.units_mapping.find(m => 
+        normalizeUnitId(m.unit_id) === norm || m.unit_id === unitId
+      );
+      if (mapEntry && (mapEntry.weight_grams || mapEntry.to_g)) {
+        return amount * (mapEntry.weight_grams || mapEntry.to_g);
+      }
     }
 
     const unit = units[unitId] || units[norm];
@@ -612,26 +558,55 @@ const RecipeDetail = () => {
     if (!recipe || !recipe.ingredients) return [];
     
     recipe.ingredients.forEach(reqIng => {
-      // Find in pantry by ID matching
-      const pantryItem = pantry.find(p => {
-        const pId = p.ingredientId || p.ingredient_id || p.id;
-        const rId = reqIng.ingredient_id || reqIng.id;
-        return pId && rId && pId === rId;
-      });
+      // 1. Find in pantry by robust matching (ID, slug, or multi-lingual name)
+      const pantryItem = pantry.find(p => matchesPantryItem(reqIng, p));
       
       const requiredAmount = parseFloat(reqIng.amount) || 0;
       const scaledAmount = requiredAmount * currentServings;
       
-      const scaledAmountInGrams = convertToGrams(scaledAmount, reqIng.unit_id || reqIng.unit);
+      const origUnit = reqIng.unit_id || reqIng.unit || '';
+      const normOrig = normalizeUnitId(origUnit);
       
       const pantryAmount = pantryItem ? (parseFloat(pantryItem.quantity) || 0) : 0;
-      const pantryAmountInGrams = pantryItem ? convertToGrams(pantryAmount, pantryItem.unit || pantryItem.unit_id) : 0;
+      const pantryUnit = pantryItem ? (pantryItem.unit || pantryItem.unit_id || '') : '';
+      const normPantryUnit = normalizeUnitId(pantryUnit);
       
-      if (pantryAmountInGrams < scaledAmountInGrams) {
-        const missingInGrams = scaledAmountInGrams - pantryAmountInGrams;
-        const missingInRecipeUnit = convertFromGrams(missingInGrams, reqIng.unit_id || reqIng.unit);
-        
-        const dbIng = ingredientsList.find(i => i.id === reqIng.ingredient_id);
+      const dbIng = ingredientsList.find(i => 
+        i.id === reqIng.ingredient_id || 
+        i.slug === reqIng.ingredient_id ||
+        (reqIng.id && (i.id === reqIng.id || i.slug === reqIng.id))
+      );
+
+      const convertIngToGrams = (amt, uId) => convertToGrams(amt, uId, dbIng);
+
+      let isMissing = false;
+      let missingQtyInRecipeUnit = 0;
+      let missingInGrams = 0;
+
+      if (!pantryItem) {
+        isMissing = true;
+        missingQtyInRecipeUnit = scaledAmount;
+        missingInGrams = convertIngToGrams(scaledAmount, origUnit);
+      } else if (normOrig && normPantryUnit && normOrig === normPantryUnit) {
+        // Both use the same unit (e.g. piece == piece, g == g, clove == clove)
+        if (pantryAmount < scaledAmount) {
+          isMissing = true;
+          missingQtyInRecipeUnit = scaledAmount - pantryAmount;
+          missingInGrams = convertIngToGrams(missingQtyInRecipeUnit, origUnit);
+        }
+      } else {
+        // Different units (e.g. piece vs grams)
+        const scaledGrams = convertIngToGrams(scaledAmount, origUnit);
+        const pantryGrams = convertIngToGrams(pantryAmount, pantryUnit);
+
+        if (pantryGrams < scaledGrams) {
+          isMissing = true;
+          missingInGrams = scaledGrams - pantryGrams;
+          missingQtyInRecipeUnit = convertFromGrams(missingInGrams, origUnit);
+        }
+      }
+
+      if (isMissing) {
         const nameBg = reqIng.ingredient_bg || reqIng.name_bg || dbIng?.name_bg || reqIng.ingredient_id;
         const nameEn = reqIng.ingredient_en || reqIng.name_en || dbIng?.name_en || reqIng.ingredient_id;
         const localizedName = getLocalizedField(reqIng, 'ingredient', currentLang) || 
@@ -639,12 +614,9 @@ const RecipeDetail = () => {
                               getLocalizedField(dbIng, 'name', currentLang) || 
                               (isBg ? nameBg : nameEn) || reqIng.ingredient_id;
         
-        const origUnit = reqIng.unit_id || reqIng.unit;
-        const normOrig = normalizeUnitId(origUnit);
         const unitObj = units[origUnit] || units[normOrig];
-        
         let finalUnit = origUnit;
-        let finalQty = Math.max(0, missingInRecipeUnit);
+        let finalQty = Math.max(0, missingQtyInRecipeUnit);
         
         if (dbIng) {
           const isLiquidIng = dbIng.meta?.is_liquid === true;
@@ -1143,12 +1115,12 @@ const RecipeDetail = () => {
         })()}
       </div>
 
-      {/* Action Bar (My Version / Wine Pairing) */}
-      <div className="flex px-4 pt-4 gap-3">
+      {/* Action Bar (Edit / My Version / Wine Pairing / Save) */}
+      <div className={`px-4 pt-4 gap-2.5 sm:gap-3 ${(isPowerUser && showWineButton) ? 'grid grid-cols-2 sm:flex sm:flex-row' : 'flex'}`}>
         {isPowerUser && (
           <button 
             onClick={() => navigate('/admin/recipes')} 
-            className="flex-1 flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-500 py-3 rounded-xl hover:bg-amber-500/20 transition-all shadow-md"
+            className="flex-1 flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-500 py-3 rounded-xl hover:bg-amber-500/20 transition-all shadow-md active:scale-95"
           >
             <span className="material-symbols-outlined text-[20px]">edit</span>
             <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.edit')}</span>
@@ -1156,20 +1128,23 @@ const RecipeDetail = () => {
         )}
         <button 
           onClick={() => navigate(`/recipe/${id}/customize`)} 
-          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/40 text-primary py-3 rounded-xl hover:from-primary hover:to-[#b8860b] hover:text-background-dark transition-all shadow-md group"
+          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/40 text-primary py-3 rounded-xl hover:from-primary hover:to-[#b8860b] hover:text-background-dark transition-all shadow-md group active:scale-95"
         >
           <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">alt_route</span>
           <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.my_version')}</span>
         </button>
-        {!isPowerUser && (
-          <button onClick={() => navigate(`/recipe/${id}/wine`)} className="flex-1 flex items-center justify-center gap-2 bg-surface-dark border border-rose-500/30 text-rose-400 py-3 rounded-xl hover:bg-rose-500/10 transition-colors shadow-sm">
-            <span className="material-symbols-outlined text-[18px]">wine_bar</span>
+        {showWineButton && (
+          <button 
+            onClick={() => navigate(`/recipe/${id}/wine`)} 
+            className="flex-1 flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 py-3 rounded-xl hover:bg-rose-500/20 hover:border-rose-500/50 transition-all shadow-md group active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition-transform">wine_bar</span>
             <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.wine')}</span>
           </button>
         )}
         <button 
           onClick={handleToggleSave} 
-          className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl transition-all shadow-md ${isSaved ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30' : 'bg-surface-dark border-slate-500/30 text-slate-400 hover:bg-slate-800'}`}
+          className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl transition-all shadow-md active:scale-95 ${isSaved ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30' : 'bg-surface-dark border-slate-500/30 text-slate-400 hover:bg-slate-800'}`}
         >
           <span className={`material-symbols-outlined text-[20px] ${isSaved ? 'font-black' : ''}`}>bookmark</span>
           <span className="text-xs font-bold uppercase tracking-widest">{isSaved ? t('recipe_detail.actions.saved') : t('recipe_detail.actions.save')}</span>
@@ -1331,7 +1306,7 @@ const RecipeDetail = () => {
             const noteText = extractLocalizedNote(ing[`notes_${currentLang}`] || (isBg ? ing.notes_bg : ing.notes_en), ing.notes, currentLang);
 
             const isIngMissing = isPantryActive && missing.some(m => 
-              (m.ingredient_id || m.id) === (ing.ingredient_id || ing.id)
+              matchesPantryItem(ing, m)
             );
 
             return (
@@ -1381,45 +1356,50 @@ const RecipeDetail = () => {
                     )}
                   </div>
                 </li>
-              {matchedAd && matchedIngredientIdx === idx && (
-                <li className="mt-2 mb-3 bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-xl p-3 flex flex-col gap-2 shadow-sm cursor-pointer hover:bg-primary/10 transition-colors group" onClick={() => handleAdClick(matchedAd)}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-primary/70 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-                      {t('recipe_detail.ingredients.sponsored')}
-                    </span>
-                    <span className="material-symbols-outlined text-[14px] text-primary/50 group-hover:text-primary transition-colors">open_in_new</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {(() => {
-                      const adImgSrc = matchedAd.type === 'video' 
-                        ? (getYouTubeThumbnail(matchedAd.contentUrl) || matchedAd.contentUrl)
-                        : matchedAd.contentUrl;
-                      if (!adImgSrc) return null;
-                      return (
-                        <div className="size-12 rounded-lg overflow-hidden shrink-0 border border-primary/20 shadow-md relative bg-black">
-                          <img src={adImgSrc} alt="Ad" className="w-full h-full object-cover" />
-                          {matchedAd.type === 'video' && (
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                              <span className="material-symbols-outlined text-white text-base">play_arrow</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                    <div className="flex flex-col flex-1">
-                      <h4 className="text-slate-100 font-bold text-sm leading-tight group-hover:text-primary transition-colors">{getLocalizedField(matchedAd, 'title', currentLang) || (isBg ? matchedAd.title_bg : matchedAd.title_en)}</h4>
-                      {(() => {
-                        const adDesc = getLocalizedField(matchedAd, 'description', currentLang) || (isBg ? matchedAd.description_bg : matchedAd.description_en);
-                        return adDesc ? (
-                          <p className="text-slate-400 text-xs mt-0.5 line-clamp-2 leading-snug">
-                            {adDesc}
-                          </p>
-                        ) : null;
-                      })()}
+              {(() => {
+                const matchedAd = matchedAdsByIngredient[idx];
+                if (!matchedAd) return null;
+
+                return (
+                  <li className="mt-2 mb-3 bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-xl p-3 flex flex-col gap-2 shadow-sm cursor-pointer hover:bg-primary/10 transition-colors group" onClick={() => handleAdClick(matchedAd)}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-primary/70 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                        {t('recipe_detail.ingredients.sponsored')}
+                      </span>
+                      <span className="material-symbols-outlined text-[14px] text-primary/50 group-hover:text-primary transition-colors">open_in_new</span>
                     </div>
-                  </div>
-                </li>
-              )}
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const adImgSrc = matchedAd.type === 'video' 
+                          ? (getYouTubeThumbnail(matchedAd.contentUrl) || matchedAd.contentUrl)
+                          : matchedAd.contentUrl;
+                        if (!adImgSrc) return null;
+                        return (
+                          <div className="size-12 rounded-lg overflow-hidden shrink-0 border border-primary/20 shadow-md relative bg-black">
+                            <img src={adImgSrc} alt="Ad" className="w-full h-full object-cover" />
+                            {matchedAd.type === 'video' && (
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-white text-base">play_arrow</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <div className="flex flex-col flex-1">
+                        <h4 className="text-slate-100 font-bold text-sm leading-tight group-hover:text-primary transition-colors">{getLocalizedField(matchedAd, 'title', currentLang) || (isBg ? matchedAd.title_bg : matchedAd.title_en)}</h4>
+                        {(() => {
+                          const adDesc = getLocalizedField(matchedAd, 'description', currentLang) || (isBg ? matchedAd.description_bg : matchedAd.description_en);
+                          return adDesc ? (
+                            <p className="text-slate-400 text-xs mt-0.5 line-clamp-2 leading-snug">
+                              {adDesc}
+                            </p>
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })()}
             </React.Fragment>
           );
         })}
@@ -1657,6 +1637,16 @@ const RecipeDetail = () => {
           <span className="material-symbols-outlined text-xl">play_circle</span>
           {t('recipe_detail.bottom_actions.start_cooking')}
         </button>
+
+        {showWineButton && (
+          <button 
+            onClick={() => navigate(`/recipe/${id}/wine`)} 
+            className="w-full mt-4 border border-rose-500/40 bg-gradient-to-r from-rose-950/40 via-surface-dark to-rose-950/30 text-rose-300 font-extrabold py-4 rounded-2xl shadow-sm hover:bg-rose-500/20 hover:border-rose-500/60 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer group"
+          >
+            <span className="material-symbols-outlined text-xl text-rose-400 group-hover:scale-110 transition-transform">wine_bar</span>
+            {t('recipe_detail.actions.wine_pairing')}
+          </button>
+        )}
       </div>
 
       {/* Repeating Products Confirmation Modal */}

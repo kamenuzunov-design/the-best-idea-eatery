@@ -216,6 +216,7 @@
       "ml": "ml",
       "l": "l",
       "pcs": "Stk.",
+      "piece": "Stk.",
       "oz": "oz",
       "fl_oz": "fl. oz.",
       "lb": "lb"
@@ -1443,6 +1444,7 @@
       "edit": "Bearbeiten",
       "my_version": "Meine Version",
       "wine": "Wein",
+      "wine_pairing": "Weinbegleitung",
       "save": "Speichern",
       "saved": "Gespeichert"
     },
@@ -1644,5 +1646,136 @@
     "api_key_modal_title": "Google Gemini-API-Schlüssel",
     "api_key_modal_desc": "Geben Sie Ihren Gemini-API-Schlüssel für das automatische Fotoscannen ein.",
     "api_key_saved_success": "API-Schlüssel erfolgreich gespeichert!"
+  },
+  "wine_pairing": {
+    "header_title": "The Best Idea Eatery",
+    "title": "Weinbegleitung",
+    "subtitle": "Intelligenter Sommelier für Ihr Menü",
+    "selected_recipe": "Ausgewähltes Rezept",
+    "back_to_recipe": "Zurück zum Rezept",
+    "ai_recommendations": "Sommelier-Empfehlungen",
+    "ai_recommendations_sub": "Harmonische Weinbegleitungen für Sie abgestimmt",
+    "tabs": {
+      "gold": "Gold-Wahl",
+      "alternative": "Alternative",
+      "wildcard": "Entdeckung"
+    },
+    "roles": {
+      "gold": "Goldene Empfehlung",
+      "alternative": "Alternativer Stil",
+      "wildcard": "Sommelier-Entdeckung"
+    },
+    "match_score": "Harmonie-Score",
+    "tasting_notes": "Verkostungsnotizen",
+    "why_pairs": "Warum es passt",
+    "sommelier_note": "Sommelier-Notiz",
+    "sensory_profile": "Sensorisches Profil",
+    "body": "Körper",
+    "sweetness": "Süße",
+    "acidity": "Säure",
+    "tannins": "Tannine",
+    "alcohol": "Alkohol",
+    "serving_guide": "Servierempfehlung",
+    "serving_temp": "Temperatur",
+    "decanting": "Dekantieren",
+    "glassware": "Empfohlenes Glas",
+    "sponsored_title": "Gesponserte Auswahl",
+    "sponsored_tag": "Partner-Empfehlung",
+    "view_deal": "Angebot ansehen",
+    "watch_video": "Video ansehen",
+    "add_to_list": "Flasche hinzufügen",
+    "added_to_list": "Zur Liste hinzugefügt!",
+    "share": "Teilen",
+    "share_copied": "Link in Zwischenablage kopiert!",
+    "expert_tip_title": "Goldene Sommelier-Regel",
+    "expert_tip_desc": "Wein und Speise dürfen nicht konkurrieren, sondern müssen sich vollenden. Wenn Säure, Fett und Frucht harmonieren, wird jeder Bissen zum Fest.",
+    "no_recipe_found": "Rezept nicht gefunden",
+    "no_recipe_desc": "Das Rezept wurde möglicherweise entfernt oder der Link ist ungültig.",
+    "not_applicable_title": "Weinbegleitung nicht empfohlen",
+    "not_applicable_desc": "Für Gerichte dieser Kategorie (Salate, Suppen, Desserts, Frühstück, Getränke und Saucen) empfiehlt die Sommelier-Praxis Mineralwasser, alkoholfreie Getränke oder Kaffee.",
+    "browse_recipes": "Alle Rezepte ansehen",
+    "types": {
+      "red": "Rotwein",
+      "white": "Weißwein",
+      "rose": "Roséwein",
+      "sparkling": "Schaumwein",
+      "dessert": "Dessertwein"
+    },
+    "body_levels": {
+      "light": "Leicht",
+      "medium": "Mittel",
+      "full": "Vollmundig"
+    },
+    "sweetness_levels": {
+      "bone-dry": "Knochentrocken",
+      "dry": "Trocken",
+      "off-dry": "Halbtrocken",
+      "sweet": "Süß"
+    },
+    "acidity_levels": {
+      "low": "Niedrig",
+      "medium": "Ausgewogen",
+      "high": "Frisch / Lebendig"
+    },
+    "tannin_levels": {
+      "none": "Keine",
+      "low": "Weich / Dezent",
+      "medium": "Ausgewogen",
+      "medium-high": "Präsent",
+      "high": "Kräftig / Griffig"
+    }
+  },
+  "what_to_cook": {
+    "header_title": "Was koche ich jetzt?",
+    "header_subtitle": "Clevere Rezeptideen basierend auf deinen Vorräten",
+    "pantry_badge": "{{count}} Vorräte vorhanden",
+    "custom_badge": "{{count}} ausgewählte Zutaten",
+    "add_more_ingredients": "Weitere Zutaten hinzufügen...",
+    "search_placeholder": "Zutat suchen & hinzufügen...",
+    "popular_suggestions": "Schnellvorschläge:",
+    "empty_pantry_title": "Keine Vorräte erfasst",
+    "empty_pantry_desc": "Füge Produkte zu deiner Vorratskammer hinzu oder gib oben Zutaten ein, um zu sehen, was du sofort kochen kannst!",
+    "filters": {
+      "all": "Alle Ideen",
+      "quick": "⚡ Schnell (< 30 Min)",
+      "expiring": "⏰ Bald ablaufend",
+      "light": "🥗 Leicht / Veggie"
+    },
+    "tier_ready": {
+      "title": "Sofort kochbereit",
+      "subtitle": "Du hast 100% aller benötigten Zutaten vorrätig",
+      "badge": "100% vorrätig",
+      "action_cook": "Jetzt kochen",
+      "action_ai": "Chef AI Tipps",
+      "shuffle": "Weitere Ideen",
+      "empty": "Keine Rezepte mit 100% Übereinstimmung für diese Filter. Entdecke unten Gerichte mit minimalen Lücken!"
+    },
+    "tier_missing_one": {
+      "title": "Nur 1 Zutat fehlt",
+      "subtitle": "Kaufe nur eine einzige Zutat und koche diese leckeren Gerichte",
+      "badge": "Fehlt nur:",
+      "action_add_to_cart": "Auf Einkaufsliste",
+      "action_in_cart": "Auf der Liste ✓",
+      "action_ai_substitute": "Ohne Einkauf ersetzen",
+      "shuffle": "Weitere Ideen",
+      "empty": "Keine Rezepte, bei denen aktuell genau 1 Zutat fehlt."
+    },
+    "tier_ready_to_shop": {
+      "title": "Bereit zum Einkaufen",
+      "subtitle": "Du hast die Basis, benötigst aber noch 2 bis 5 Zutaten",
+      "badge": "Es fehlen {{count}} Zutaten:",
+      "action_add_all_to_cart": "Alle fehlenden hinzufügen ({{count}})",
+      "action_in_cart": "Auf der Liste ✓",
+      "action_ai": "Chef AI Rat",
+      "shuffle": "Weitere Ideen",
+      "empty": "Keine Rezepte in dieser Kategorie gefunden."
+    },
+    "added_to_cart_toast": "Zutat zur Einkaufsliste hinzugefügt!",
+    "all_added_to_cart_toast": "Fehlende Zutaten zur Einkaufsliste hinzugefügt!",
+    "chef_ai_banner_title": "Nicht das passende Gericht gefunden?",
+    "chef_ai_banner_desc": "Frage Chef AI nach einem maßgeschneiderten Gourmet-Rezept mit deinen Zutaten!",
+    "chef_ai_banner_btn": "Chef AI fragen",
+    "home_banner_btn": "Was koche ich jetzt?",
+    "home_banner_desc": "Finde sofort Rezepte, die du mit deinen Vorräten zubereiten kannst!"
   }
 }

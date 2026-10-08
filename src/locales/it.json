@@ -216,6 +216,7 @@
       "ml": "ml",
       "l": "l",
       "pcs": "pz",
+      "piece": "pz",
       "oz": "oz",
       "fl_oz": "fl oz",
       "lb": "lb"
@@ -1443,6 +1444,7 @@
       "edit": "Modifica",
       "my_version": "Mia Versione",
       "wine": "Vino",
+      "wine_pairing": "Abbinamento Vini",
       "save": "Salva",
       "saved": "Salvata"
     },
@@ -1644,5 +1646,136 @@
     "api_key_modal_title": "Chiave API Google Gemini",
     "api_key_modal_desc": "Inserisci la tua chiave API Gemini per la scansione automatica delle foto.",
     "api_key_saved_success": "Chiave API salvata con successo!"
+  },
+  "wine_pairing": {
+    "header_title": "The Best Idea Eatery",
+    "title": "Abbinamento Vini",
+    "subtitle": "Sommelier intelligente per il tuo menu",
+    "selected_recipe": "Ricetta selezionata",
+    "back_to_recipe": "Torna alla ricetta",
+    "ai_recommendations": "Consigli del Sommelier",
+    "ai_recommendations_sub": "Abbinamenti armoniosi creati su misura per te",
+    "tabs": {
+      "gold": "Scelta d'Oro",
+      "alternative": "Alternativa",
+      "wildcard": "Audace"
+    },
+    "roles": {
+      "gold": "Scelta d'Oro Consigliata",
+      "alternative": "Stile Alternativo",
+      "wildcard": "Audacia del Sommelier"
+    },
+    "match_score": "Indice di Armonia",
+    "tasting_notes": "Note di Degustazione",
+    "why_pairs": "Perché si Abbina",
+    "sommelier_note": "Nota del Sommelier",
+    "sensory_profile": "Profilo Organolettico",
+    "body": "Corpo",
+    "sweetness": "Dolcezza",
+    "acidity": "Acidità",
+    "tannins": "Tannini",
+    "alcohol": "Alcol",
+    "serving_guide": "Guida al Servizio",
+    "serving_temp": "Temperatura",
+    "decanting": "Decantazione",
+    "glassware": "Calice Consigliato",
+    "sponsored_title": "Selezione Sponsorizzata",
+    "sponsored_tag": "Consigliato dal partner",
+    "view_deal": "Vedi offerta",
+    "watch_video": "Guarda il video",
+    "add_to_list": "Aggiungi la bottiglia",
+    "added_to_list": "Aggiunta alla lista!",
+    "share": "Condividi",
+    "share_copied": "Link copiato negli appunti!",
+    "expert_tip_title": "Regola Aurea del Sommelier",
+    "expert_tip_desc": "Il vino e il cibo non devono competere, ma completarsi. Quando acidità, struttura e morbidezza si incontrano, l'esperienza a tavola diventa sublime.",
+    "no_recipe_found": "Ricetta non trovata",
+    "no_recipe_desc": "La ricetta potrebbe essere stata rimossa o il link non è corretto.",
+    "not_applicable_title": "Abbinamento non consigliato",
+    "not_applicable_desc": "Per questa categoria di piatti (insalate, zuppe, dessert, colazioni, bevande e salse), la pratica consiglia acqua minerale, bevande analcoliche o caffè.",
+    "browse_recipes": "Sfoglia tutte le ricette",
+    "types": {
+      "red": "Vino Rosso",
+      "white": "Vino Bianco",
+      "rose": "Rosato",
+      "sparkling": "Spumante",
+      "dessert": "Vino da Dessert"
+    },
+    "body_levels": {
+      "light": "Leggero",
+      "medium": "Medio",
+      "full": "Strutturato"
+    },
+    "sweetness_levels": {
+      "bone-dry": "Molto secco",
+      "dry": "Secco",
+      "off-dry": "Semisecco",
+      "sweet": "Dolce"
+    },
+    "acidity_levels": {
+      "low": "Bassa",
+      "medium": "Moderata",
+      "high": "Vivace / Alta"
+    },
+    "tannin_levels": {
+      "none": "Assenti",
+      "low": "Morbidi / Bassi",
+      "medium": "Moderati",
+      "medium-high": "Strutturati",
+      "high": "Fermi / Decisi"
+    }
+  },
+  "what_to_cook": {
+    "header_title": "Cosa cucino adesso?",
+    "header_subtitle": "Idee culinarie intelligenti basate sulla tua dispensa",
+    "pantry_badge": "{{count}} ingredienti in dispensa",
+    "custom_badge": "{{count}} ingredienti selezionati",
+    "add_more_ingredients": "Aggiungi altri ingredienti...",
+    "search_placeholder": "Cerca e aggiungi ingrediente...",
+    "popular_suggestions": "Suggerimenti rapidi:",
+    "empty_pantry_title": "Nessun ingrediente inserito",
+    "empty_pantry_desc": "Aggiungi ingredienti alla tua dispensa o cercali sopra per scoprire cosa puoi cucinare subito!",
+    "filters": {
+      "all": "Tutte le idee",
+      "quick": "⚡ Rapide (< 30m)",
+      "expiring": "⏰ In scadenza",
+      "light": "🥗 Leggere / Veg"
+    },
+    "tier_ready": {
+      "title": "Pronti da cucinare subito",
+      "subtitle": "Hai il 100% degli ingredienti necessari disponibili",
+      "badge": "100% disponibile",
+      "action_cook": "Cucina ora",
+      "action_ai": "Consigli Chef AI",
+      "shuffle": "Altre idee",
+      "empty": "Nessuna ricetta al 100% per i filtri attuali. Guarda le opzioni con pochi ingredienti mancanti sotto!"
+    },
+    "tier_missing_one": {
+      "title": "Manca solo 1 ingrediente",
+      "subtitle": "Compra un solo ingrediente per sbloccare questi deliziosi piatti",
+      "badge": "Manca solo:",
+      "action_add_to_cart": "Aggiungi alla lista",
+      "action_in_cart": "In lista ✓",
+      "action_ai_substitute": "Sostituisci senza spesa",
+      "shuffle": "Altre idee",
+      "empty": "Nessuna ricetta con esattamente 1 ingrediente mancante."
+    },
+    "tier_ready_to_shop": {
+      "title": "Pronti per la spesa",
+      "subtitle": "Hai la base, ti mancano da 2 a 5 ingredienti",
+      "badge": "Mancano {{count}} ingredienti:",
+      "action_add_all_to_cart": "Aggiungi tutti i mancanti ({{count}})",
+      "action_in_cart": "In lista ✓",
+      "action_ai": "Consiglio Chef AI",
+      "shuffle": "Altre idee",
+      "empty": "Nessuna ricetta in questa categoria."
+    },
+    "added_to_cart_toast": "Ingrediente aggiunto alla lista della spesa!",
+    "all_added_to_cart_toast": "Ingredienti mancanti aggiunti alla lista della spesa!",
+    "chef_ai_banner_title": "Non trovi la ricetta giusta?",
+    "chef_ai_banner_desc": "Chiedi a Chef AI una ricetta gourmet esclusiva con i tuoi ingredienti!",
+    "chef_ai_banner_btn": "Chiedi a Chef AI",
+    "home_banner_btn": "Cosa cucino adesso?",
+    "home_banner_desc": "Scopri quali piatti puoi preparare subito con la tua dispensa!"
   }
 }

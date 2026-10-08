@@ -18,6 +18,7 @@ import {
   ML_PER_FL_OZ, 
   OZ_PER_LB 
 } from '../lib/unitConverter';
+import { matchesPantryItem } from '../lib/recipeMatcherEngine.js';
 
 const getPluralCategoryName = (id, t) => {
   return t ? t(`categories.${id}`, { defaultValue: id }) : id;
@@ -141,38 +142,82 @@ const Home = () => {
     if (!recipe.ingredients) return [];
     
     recipe.ingredients.forEach(reqIng => {
-      // Find in pantry by ID matching
-      const pantryItem = pantry.find(p => {
-        const pId = p.ingredientId || p.ingredient_id || p.id;
-        const rId = reqIng.ingredient_id || reqIng.id;
-        return pId && rId && pId === rId;
-      });
+      // Find in pantry by robust matching (ID, slug, or multi-lingual name)
+      const pantryItem = pantry.find(p => matchesPantryItem(reqIng, p));
       
       const requiredAmount = parseFloat(reqIng.amount) || 0;
       const servings = recipe.servings || 2;
       const scaledAmount = requiredAmount * servings;
       
-      const scaledAmountInGrams = convertToGrams(scaledAmount, reqIng.unit_id || reqIng.unit);
-      
-      const pantryAmount = pantryItem ? (parseFloat(pantryItem.quantity) || 0) : 0;
-      const pantryAmountInGrams = pantryItem ? convertToGrams(pantryAmount, pantryItem.unit || pantryItem.unit_id) : 0;
+      const origUnit = reqIng.unit_id || reqIng.unit || '';
+      const normOrig = normalizeUnitId(origUnit);
 
-      if (pantryAmountInGrams < scaledAmountInGrams) {
-        const missingInGrams = scaledAmountInGrams - pantryAmountInGrams;
-        const missingInRecipeUnit = convertFromGrams(missingInGrams, reqIng.unit_id || reqIng.unit);
-        
+      const pantryAmount = pantryItem ? (parseFloat(pantryItem.quantity) || 0) : 0;
+      const pantryUnit = pantryItem ? (pantryItem.unit || pantryItem.unit_id || '') : '';
+      const normPantryUnit = normalizeUnitId(pantryUnit);
+
+      const dbIng = ingredientsList.find(i => 
+        i.id === reqIng.ingredient_id || 
+        i.slug === reqIng.ingredient_id ||
+        (reqIng.id && (i.id === reqIng.id || i.slug === reqIng.id))
+      );
+
+      const convertIngToGrams = (amt, uId) => {
+        if (!uId || !amt) return amt || 0;
+        const normU = normalizeUnitId(uId);
+
+        const canonical = normalizeToCanonical({ amount: amt, unitId: normU });
+        if (canonical.unit === 'g' || canonical.unit === 'ml') {
+          return canonical.amount;
+        }
+
+        if (dbIng?.units_mapping && Array.isArray(dbIng.units_mapping)) {
+          const mapEntry = dbIng.units_mapping.find(m => 
+            normalizeUnitId(m.unit_id) === normU || m.unit_id === uId
+          );
+          if (mapEntry && (mapEntry.weight_grams || mapEntry.to_g)) {
+            return amt * (mapEntry.weight_grams || mapEntry.to_g);
+          }
+        }
+
+        return convertToGrams(amt, uId);
+      };
+
+      let isMissing = false;
+      let missingInRecipeUnit = 0;
+
+      if (!pantryItem) {
+        isMissing = true;
+        missingInRecipeUnit = scaledAmount;
+      } else if (normOrig && normPantryUnit && normOrig === normPantryUnit) {
+        if (pantryAmount < scaledAmount) {
+          isMissing = true;
+          missingInRecipeUnit = scaledAmount - pantryAmount;
+        }
+      } else {
+        const scaledGrams = convertIngToGrams(scaledAmount, origUnit);
+        const pantryGrams = convertIngToGrams(pantryAmount, pantryUnit);
+
+        if (pantryGrams < scaledGrams) {
+          isMissing = true;
+          const missingInGrams = scaledGrams - pantryGrams;
+          missingInRecipeUnit = convertFromGrams(missingInGrams, origUnit);
+        }
+      }
+
+      if (isMissing) {
         missingIngredients.push({
           ...reqIng,
           name: isBg 
-            ? (reqIng.ingredient_bg || reqIng.name_bg || reqIng.ingredient_id) 
-            : (reqIng.ingredient_en || reqIng.name_en || reqIng.ingredient_id),
+            ? (reqIng.ingredient_bg || reqIng.name_bg || dbIng?.name_bg || reqIng.ingredient_id) 
+            : (reqIng.ingredient_en || reqIng.name_en || dbIng?.name_en || reqIng.ingredient_id),
           quantityToBuy: Math.max(0, missingInRecipeUnit)
         });
       }
     });
 
     return missingIngredients;
-  }, [pantry, isBg, convertToGrams, convertFromGrams]);
+  }, [pantry, isBg, convertToGrams, convertFromGrams, ingredientsList]);
 
   useEffect(() => {
     const unsubIng = onSnapshot(query(collection(db, 'ingredients')), (snapshot) => {
@@ -500,6 +545,36 @@ const Home = () => {
           )}
         </div>
       </section>
+
+      {/* What to Cook Now Banner (Visible ONLY when pantry has items) */}
+      {pantry && pantry.length > 0 && (
+        <section className="px-4 mt-3">
+          <div 
+            onClick={() => navigate('/ai-search')}
+            className="p-3.5 rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-surface-dark border border-primary/30 hover:border-primary/60 cursor-pointer transition-all shadow-md active:scale-[0.99] group flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-[#b8860b] text-background-dark flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                <span className="material-symbols-outlined text-2xl font-black">kitchen</span>
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-xs font-black text-slate-100 uppercase tracking-wider group-hover:text-primary transition-colors truncate flex items-center gap-1.5">
+                  <span>{t('what_to_cook.home_banner_btn')}</span>
+                  <span className="px-1.5 py-0.2 rounded-md bg-primary/25 text-primary text-[9px] font-black">
+                    {pantry.length}
+                  </span>
+                </h4>
+                <p className="text-[10px] text-slate-300 font-medium line-clamp-1">
+                  {t('what_to_cook.home_banner_desc')}
+                </p>
+              </div>
+            </div>
+            <span className="material-symbols-outlined text-primary text-lg group-hover:translate-x-1 transition-transform shrink-0">
+              arrow_forward
+            </span>
+          </div>
+        </section>
+      )}
 
       {/* Dynamic Tabs */}
       <section className="px-4 mt-2">

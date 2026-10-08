@@ -313,7 +313,18 @@ const Pantry = () => {
             <h3 className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-1">{t('pantry.subtitle')}</h3>
             <h2 className="text-2xl font-extrabold text-slate-100 leading-none">{t('pantry.title')}</h2>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {pantry.length > 0 && (
+              <button 
+                type="button"
+                onClick={() => navigate('/ai-search')}
+                className="text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(16,185,129,0.25)] cursor-pointer"
+                title={t('what_to_cook.header_title')}
+              >
+                <span className="material-symbols-outlined text-[16px] font-black">restaurant_menu</span>
+                <span>{t('what_to_cook.header_title')}</span>
+              </button>
+            )}
             <button 
               type="button"
               onClick={() => setShowAddModal(true)}

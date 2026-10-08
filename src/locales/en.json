@@ -216,6 +216,7 @@
       "ml": "ml",
       "l": "l",
       "pcs": "pcs",
+      "piece": "pcs",
       "oz": "oz",
       "fl_oz": "fl oz",
       "lb": "lb"
@@ -1443,6 +1444,7 @@
       "edit": "Edit",
       "my_version": "My Version",
       "wine": "Wine",
+      "wine_pairing": "Wine Pairing",
       "save": "Save",
       "saved": "Saved"
     },
@@ -1644,5 +1646,136 @@
     "api_key_modal_title": "Google Gemini API Key",
     "api_key_modal_desc": "Enter your Gemini API key from Google AI Studio for automated photo scanning.",
     "api_key_saved_success": "API key saved successfully!"
+  },
+  "wine_pairing": {
+    "header_title": "The Best Idea Eatery",
+    "title": "Wine Pairing",
+    "subtitle": "Intelligent sommelier for your menu",
+    "selected_recipe": "Selected Recipe",
+    "back_to_recipe": "Back to Recipe",
+    "ai_recommendations": "Sommelier Recommendations",
+    "ai_recommendations_sub": "Harmonious wine pairings tailored for you",
+    "tabs": {
+      "gold": "Gold Match",
+      "alternative": "Alternative",
+      "wildcard": "Wildcard"
+    },
+    "roles": {
+      "gold": "Recommended Favorite",
+      "alternative": "Alternative Style",
+      "wildcard": "Sommelier's Adventure"
+    },
+    "match_score": "Harmony Score",
+    "tasting_notes": "Tasting Notes",
+    "why_pairs": "Why It Pairs",
+    "sommelier_note": "Sommelier's Note",
+    "sensory_profile": "Sensory Profile",
+    "body": "Body",
+    "sweetness": "Sweetness",
+    "acidity": "Acidity",
+    "tannins": "Tannins",
+    "alcohol": "Alcohol",
+    "serving_guide": "Serving Guide",
+    "serving_temp": "Temperature",
+    "decanting": "Decanting",
+    "glassware": "Glassware",
+    "sponsored_title": "Sponsored Selection",
+    "sponsored_tag": "Partner Recommendation",
+    "view_deal": "View Offer",
+    "watch_video": "Watch Video",
+    "add_to_list": "Add bottle to list",
+    "added_to_list": "Added to list!",
+    "share": "Share",
+    "share_copied": "Link copied to clipboard!",
+    "expert_tip_title": "Sommelier's Golden Rule",
+    "expert_tip_desc": "Wine and food should never compete — they must complete each other. When acidity, fats, and sweetness find balance, every bite and sip is elevated.",
+    "no_recipe_found": "Recipe Not Found",
+    "no_recipe_desc": "The recipe might have been moved or the URL is invalid.",
+    "not_applicable_title": "Wine Pairing Not Recommended",
+    "not_applicable_desc": "For this category of dishes (salads, soups, desserts, breakfast, beverages, and sauces), sommelier standards suggest serving with spring water, fresh non-alcoholic pairings, or coffee.",
+    "browse_recipes": "Browse All Recipes",
+    "types": {
+      "red": "Red Wine",
+      "white": "White Wine",
+      "rose": "Rosé",
+      "sparkling": "Sparkling Wine",
+      "dessert": "Dessert Wine"
+    },
+    "body_levels": {
+      "light": "Light",
+      "medium": "Medium",
+      "full": "Full-bodied"
+    },
+    "sweetness_levels": {
+      "bone-dry": "Bone-Dry",
+      "dry": "Dry",
+      "off-dry": "Off-Dry",
+      "sweet": "Sweet"
+    },
+    "acidity_levels": {
+      "low": "Low",
+      "medium": "Moderate",
+      "high": "Crisp / High"
+    },
+    "tannin_levels": {
+      "none": "None",
+      "low": "Soft / Low",
+      "medium": "Moderate",
+      "medium-high": "Structured",
+      "high": "Bold / High"
+    }
+  },
+  "what_to_cook": {
+    "header_title": "What to Cook Now?",
+    "header_subtitle": "Smart culinary ideas based on what's in your kitchen",
+    "pantry_badge": "{{count}} pantry items",
+    "custom_badge": "{{count}} selected items",
+    "add_more_ingredients": "Add more ingredients...",
+    "search_placeholder": "Search & add ingredient...",
+    "popular_suggestions": "Quick suggestions:",
+    "empty_pantry_title": "No ingredients added yet",
+    "empty_pantry_desc": "Add items to your Pantry or type ingredients above to see what you can cook right away!",
+    "filters": {
+      "all": "All Ideas",
+      "quick": "⚡ Quick (< 30m)",
+      "expiring": "⏰ Expiring First",
+      "light": "🥗 Light / Veg"
+    },
+    "tier_ready": {
+      "title": "Ready to Cook Now",
+      "subtitle": "You have 100% of the required ingredients in stock",
+      "badge": "100% in stock",
+      "action_cook": "Cook Now",
+      "action_ai": "Chef AI Tips",
+      "shuffle": "Shuffle Ideas",
+      "empty": "No recipes with a 100% match for the current filters. Check out recipes with minimal missing items below!"
+    },
+    "tier_missing_one": {
+      "title": "Missing Only 1 Item",
+      "subtitle": "Buy just one ingredient to unlock these delicious dishes",
+      "badge": "Missing only:",
+      "action_add_to_cart": "Add to List",
+      "action_in_cart": "In List ✓",
+      "action_ai_substitute": "Substitute without shopping",
+      "shuffle": "Shuffle Ideas",
+      "empty": "No recipes missing exactly 1 ingredient for the current selection."
+    },
+    "tier_ready_to_shop": {
+      "title": "Ready to Shop",
+      "subtitle": "You have the base, just need 2 to 5 extra ingredients",
+      "badge": "Missing {{count}} items:",
+      "action_add_all_to_cart": "Add all missing ({{count}})",
+      "action_in_cart": "In List ✓",
+      "action_ai": "Chef AI Advice",
+      "shuffle": "Shuffle Ideas",
+      "empty": "No recipes found in this tier."
+    },
+    "added_to_cart_toast": "Ingredient added to your shopping list!",
+    "all_added_to_cart_toast": "Missing ingredients added to your shopping list!",
+    "chef_ai_banner_title": "Can't find the exact recipe?",
+    "chef_ai_banner_desc": "Ask Chef AI for a custom signature recipe using your exact ingredients!",
+    "chef_ai_banner_btn": "Ask Chef AI",
+    "home_banner_btn": "What to Cook Now?",
+    "home_banner_desc": "See which recipes you can cook immediately with your pantry items!"
   }
 }

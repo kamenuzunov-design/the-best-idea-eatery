@@ -216,6 +216,7 @@
       "ml": "ml",
       "l": "l",
       "pcs": "pcs",
+      "piece": "pcs",
       "oz": "oz",
       "fl_oz": "fl oz",
       "lb": "lb"
@@ -1443,6 +1444,7 @@
       "edit": "Modifier",
       "my_version": "Ma Version",
       "wine": "Vin",
+      "wine_pairing": "Accords Mets & Vins",
       "save": "Enregistrer",
       "saved": "Enregistrée"
     },
@@ -1644,5 +1646,136 @@
     "api_key_modal_title": "Clé API Google Gemini",
     "api_key_modal_desc": "Entrez votre clé API Gemini pour la numérisation automatique des photos.",
     "api_key_saved_success": "Clé API enregistrée avec succès !"
+  },
+  "wine_pairing": {
+    "header_title": "The Best Idea Eatery",
+    "title": "Accords Mets & Vins",
+    "subtitle": "Sommelier intelligent pour votre menu",
+    "selected_recipe": "Recette sélectionnée",
+    "back_to_recipe": "Retour à la recette",
+    "ai_recommendations": "Recommandations du Sommelier",
+    "ai_recommendations_sub": "Accords harmonieux créés sur mesure",
+    "tabs": {
+      "gold": "Accord d'Or",
+      "alternative": "Alternative",
+      "wildcard": "Audacieux"
+    },
+    "roles": {
+      "gold": "Accord d'Or Recommandé",
+      "alternative": "Style Alternatif",
+      "wildcard": "Coup de Cœur Audacieux"
+    },
+    "match_score": "Score d'Harmonie",
+    "tasting_notes": "Notes de Dégustation",
+    "why_pairs": "Pourquoi cet Accord",
+    "sommelier_note": "Note du Sommelier",
+    "sensory_profile": "Profil Organoleptique",
+    "body": "Corps",
+    "sweetness": "Douceur",
+    "acidity": "Acidité",
+    "tannins": "Tanins",
+    "alcohol": "Alcool",
+    "serving_guide": "Guide de Service",
+    "serving_temp": "Température",
+    "decanting": "Décantation",
+    "glassware": "Verre Recommandé",
+    "sponsored_title": "Sélection Sponsorisée",
+    "sponsored_tag": "Recommandé par un partenaire",
+    "view_deal": "Voir l'offre",
+    "watch_video": "Regarder la vidéo",
+    "add_to_list": "Ajouter la bouteille",
+    "added_to_list": "Bouteille ajoutée !",
+    "share": "Partager",
+    "share_copied": "Lien copié dans le presse-papiers !",
+    "expert_tip_title": "Règle d'Or du Sommelier",
+    "expert_tip_desc": "Le vin et le mets ne doivent pas rivaliser, mais s'élever mutuellement. Lorsque l'acidité, les graisses et les sucs s'harmonisent, chaque bouchée est sublimée.",
+    "no_recipe_found": "Recette introuvable",
+    "no_recipe_desc": "La recette n'existe plus ou l'adresse est incorrecte.",
+    "not_applicable_title": "Accord vin non recommandé",
+    "not_applicable_desc": "Pour cette catégorie de plats (salades, soupes, desserts, petits-déjeuners, boissons et sauces), il est recommandé de servir de l'eau minérale, des boissons fraîches ou du café.",
+    "browse_recipes": "Toutes les recettes",
+    "types": {
+      "red": "Vin Rouge",
+      "white": "Vin Blanc",
+      "rose": "Vin Rosé",
+      "sparkling": "Effervescent",
+      "dessert": "Vin de Dessert"
+    },
+    "body_levels": {
+      "light": "Léger",
+      "medium": "Moyen",
+      "full": "Corsé"
+    },
+    "sweetness_levels": {
+      "bone-dry": "Très sec",
+      "dry": "Sec",
+      "off-dry": "Demi-sec",
+      "sweet": "Moelleux / Doux"
+    },
+    "acidity_levels": {
+      "low": "Faible",
+      "medium": "Équilibrée",
+      "high": "Vive / Fraîche"
+    },
+    "tannin_levels": {
+      "none": "Nuls",
+      "low": "Souples / Fondus",
+      "medium": "Équilibrés",
+      "medium-high": "Charpentés",
+      "high": "Puissants / Fermes"
+    }
+  },
+  "what_to_cook": {
+    "header_title": "Que cuisiner maintenant ?",
+    "header_subtitle": "Idées culinaires intelligentes selon le contenu de votre placard",
+    "pantry_badge": "{{count}} ingrédients au placard",
+    "custom_badge": "{{count}} ingrédients choisis",
+    "add_more_ingredients": "Ajouter d'autres ingrédients...",
+    "search_placeholder": "Chercher et ajouter un ingrédient...",
+    "popular_suggestions": "Suggestions rapides :",
+    "empty_pantry_title": "Aucun ingrédient renseigné",
+    "empty_pantry_desc": "Ajoutez des produits à votre placard ou saisissez vos ingrédients ci-dessus pour découvrir ce que vous pouvez préparer tout de suite !",
+    "filters": {
+      "all": "Toutes les idées",
+      "quick": "⚡ Rapides (< 30m)",
+      "expiring": "⏰ À consommer vite",
+      "light": "🥗 Légères / Végé"
+    },
+    "tier_ready": {
+      "title": "Prêts à cuisiner immédiatement",
+      "subtitle": "Vous avez 100% des ingrédients nécessaires en stock",
+      "badge": "100% disponible",
+      "action_cook": "Cuisiner",
+      "action_ai": "Conseils Chef AI",
+      "shuffle": "Autres idées",
+      "empty": "Aucune recette à 100% pour ces filtres. Découvrez ci-dessous les plats avec de légers manques !"
+    },
+    "tier_missing_one": {
+      "title": "Il ne manque qu'un ingrédient",
+      "subtitle": "Achetez un seul produit pour débloquer ces délicieux plats",
+      "badge": "Manque seulement :",
+      "action_add_to_cart": "Ajouter à la liste",
+      "action_in_cart": "Dans la liste ✓",
+      "action_ai_substitute": "Remplacer sans acheter",
+      "shuffle": "Autres idées",
+      "empty": "Aucune recette avec un seul ingrédient manquant actuellement."
+    },
+    "tier_ready_to_shop": {
+      "title": "Prêts pour les courses",
+      "subtitle": "Vous avez la base, il vous manque de 2 à 5 ingrédients",
+      "badge": "Manque {{count}} ingrédients :",
+      "action_add_all_to_cart": "Ajouter les manquants ({{count}})",
+      "action_in_cart": "Dans la liste ✓",
+      "action_ai": "Conseil Chef AI",
+      "shuffle": "Autres idées",
+      "empty": "Aucune recette dans cette catégorie."
+    },
+    "added_to_cart_toast": "Ingrédient ajouté à votre liste de courses !",
+    "all_added_to_cart_toast": "Ingrédients manquants ajoutés à votre liste de courses !",
+    "chef_ai_banner_title": "Vous ne trouvez pas la bonne recette ?",
+    "chef_ai_banner_desc": "Demandez à Chef AI une recette signature sur mesure avec vos ingrédients !",
+    "chef_ai_banner_btn": "Demander à Chef AI",
+    "home_banner_btn": "Que cuisiner maintenant ?",
+    "home_banner_desc": "Découvrez les recettes que vous pouvez préparer immédiatement avec votre placard !"
   }
 }

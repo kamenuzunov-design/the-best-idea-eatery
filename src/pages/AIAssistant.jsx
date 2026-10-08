@@ -6,7 +6,7 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
 import { getLocalizedField, getLocalizedRecipeTitle, extractLocalizedNote } from '../lib/localeUtils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { callGemini, getGeminiApiKey } from '../lib/geminiClient';
 
 const getUniqueId = (prefix) => {
@@ -22,6 +22,7 @@ const AIAssistant = () => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentLang = i18n.language || 'bg';
 
   const getItemName = (item) => {
@@ -52,6 +53,8 @@ const AIAssistant = () => {
   const [extraIngSearch, setExtraIngSearch] = useState('');
   
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const latestChefMsgRef = useRef(null);
 
   const handleAddExtraIngredient = (item) => {
     if (!item) return;
@@ -171,9 +174,42 @@ const AIAssistant = () => {
     }
   }, [recipes, pantry.length, currentLang, messages.length, t]);
 
-  // Scroll to bottom of chat
+  // Smart chat scrolling:
+  // - When typing or user sends a message: scroll to bottom so user sees prompt & typing indicator
+  // - When Chef AI responds: scroll to the TOP/BEGINNING of the Chef's response so user reads from the start
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const lastMsg = messages[messages.length - 1];
+
+    if (isTyping) {
+      const timer = setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        } else {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+
+    if (lastMsg?.sender === 'chef' && lastMsg.id !== 'welcome') {
+      const timer = setTimeout(() => {
+        if (latestChefMsgRef.current && chatContainerRef.current) {
+          const container = chatContainerRef.current;
+          const target = latestChefMsgRef.current;
+          const containerRect = container.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const scrollOffset = container.scrollTop + (targetRect.top - containerRect.top) - 12;
+          container.scrollTo({
+            top: Math.max(0, scrollOffset),
+            behavior: 'smooth'
+          });
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    }
   }, [messages, isTyping]);
 
   // Filtering helpers
@@ -669,6 +705,20 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
     setMessages(prev => [...prev, chefMsg]);
   };
 
+  // Auto-send prompt when arriving from "What to Cook Now" or other recipe suggestions
+  const autoPromptTriggeredRef = useRef(false);
+  useEffect(() => {
+    const autoPrompt = location.state?.autoPrompt;
+    if (autoPrompt && !autoPromptTriggeredRef.current && recipes.length > 0) {
+      autoPromptTriggeredRef.current = true;
+      const timer = setTimeout(() => {
+        handleSendMessage(autoPrompt);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, recipes.length]);
+
   // Quick Action Chips click
   const handleChipClick = (chipText) => {
     handleSendMessage(chipText);
@@ -771,10 +821,11 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
           /* CHAT MODE */
           <div className="h-full flex flex-col justify-between">
             {/* Scrollable messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((msg) => (
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((msg, idx) => (
                 <div
-                  key={msg.id}
+                  key={msg.id || idx}
+                  ref={msg.sender === 'chef' && idx === messages.length - 1 && msg.id !== 'welcome' ? latestChefMsgRef : null}
                   className={`flex gap-3 ${
                     msg.sender === 'user' ? 'max-w-[85%] ml-auto flex-row-reverse' : 'w-full mr-auto'
                   }`}
@@ -855,6 +906,26 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
 
             {/* Input Bar & Suggestions chips */}
             <div className="p-4 bg-surface-dark border-t border-primary/20 space-y-3">
+              {/* Text Input Row */}
+              <div className="flex gap-2 relative">
+                <input
+                  id="chat-message-input"
+                  type="text"
+                  placeholder={t('ai.input_placeholder')}
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  className="flex-1 bg-background-dark border border-primary/20 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary/50 focus:outline-none transition-all shadow-inner"
+                />
+                <button
+                  id="btn-send-message"
+                  onClick={() => handleSendMessage()}
+                  className="px-4 bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold rounded-xl flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined font-black">send</span>
+                </button>
+              </div>
+
               {/* Extra Custom Ingredients Bar */}
               <div className="bg-background-dark/80 p-2.5 rounded-xl border border-primary/20 space-y-2">
                 <div className="flex items-center justify-between">
@@ -941,26 +1012,6 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Text Input Row */}
-              <div className="flex gap-2 relative">
-                <input
-                  id="chat-message-input"
-                  type="text"
-                  placeholder={t('ai.input_placeholder')}
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="flex-1 bg-background-dark border border-primary/20 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary/50 focus:outline-none transition-all shadow-inner"
-                />
-                <button
-                  id="btn-send-message"
-                  onClick={() => handleSendMessage()}
-                  className="px-4 bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold rounded-xl flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined font-black">send</span>
-                </button>
               </div>
             </div>
           </div>
