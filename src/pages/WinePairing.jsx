@@ -8,6 +8,7 @@ import { getLocalizedField } from '../lib/localeUtils';
 import { getLocalizedCuisine } from '../data/cuisines';
 import { matchWinesForRecipe, isWinePairingApplicable } from '../lib/wineMatcher.js';
 import { getYouTubeThumbnail } from '../lib/videoUtils';
+import { getRecipeImageUrl } from '../lib/imageUtils';
 
 const WinePairing = () => {
   const { id } = useParams();
@@ -498,7 +499,7 @@ const WinePairing = () => {
   }
 
   const recipeTitle = getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || '';
-  const recipeImg = recipe.images?.[0] || recipe.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80';
+  const recipeImg = getRecipeImageUrl(recipe);
   const cuisineName = recipe.cuisine ? getLocalizedCuisine(recipe.cuisine, currentLang) : null;
 
   return (
@@ -553,6 +554,9 @@ const WinePairing = () => {
             <img
               src={recipeImg}
               alt={recipeTitle}
+              onError={(e) => {
+                e.currentTarget.src = '/images/recipe-placeholder.png';
+              }}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

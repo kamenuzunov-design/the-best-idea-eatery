@@ -6,6 +6,11 @@ import { db } from '../lib/firebase';
 import { useAppContext } from '../context/AppContext';
 import { getRecipeImageUrl } from '../lib/imageUtils';
 import { getLocalizedField, matchesRecipeSearch } from '../lib/localeUtils';
+import {
+  getLocalizedCuisine,
+  getDescendantCuisineIds,
+  resolveRecipeCuisineId
+} from '../data/cuisines';
 
 const RecipeSearchResults = () => {
   const navigate = useNavigate();
@@ -15,6 +20,7 @@ const RecipeSearchResults = () => {
   const { ingredientsList } = useAppContext();
 
   const queryFromUrl = searchParams.get('q') || searchParams.get('search') || '';
+  const cuisineFromUrl = searchParams.get('cuisine') || '';
   const [searchTerm, setSearchTerm] = useState(queryFromUrl);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -120,16 +126,36 @@ const RecipeSearchResults = () => {
     const updated = activeKeywords.filter(k => k.toLowerCase() !== kwToRemove.toLowerCase());
     const newQuery = updated.join(', ');
     setSearchTerm(newQuery);
-    setSearchParams({ q: newQuery });
+    const nextParams = {};
+    if (newQuery) nextParams.q = newQuery;
+    if (cuisineFromUrl) nextParams.cuisine = cuisineFromUrl;
+    setSearchParams(nextParams);
+  };
+
+  const handleRemoveCuisine = () => {
+    const nextParams = {};
+    if (searchTerm.trim()) nextParams.q = searchTerm.trim();
+    setSearchParams(nextParams);
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setSearchParams({ q: searchTerm });
+    const nextParams = {};
+    if (searchTerm.trim()) nextParams.q = searchTerm.trim();
+    if (cuisineFromUrl) nextParams.cuisine = cuisineFromUrl;
+    setSearchParams(nextParams);
   };
 
-  // Filter recipes according to activeKeywords (EVERY keyword must match across all 5 languages)
+  const allowedCuisineIds = cuisineFromUrl
+    ? new Set(getDescendantCuisineIds(cuisineFromUrl))
+    : null;
+
+  // Filter recipes according to cuisineFromUrl and activeKeywords (EVERY keyword must match across all 5 languages)
   const filteredRecipes = recipes.filter(r => {
+    if (allowedCuisineIds) {
+      const rCid = resolveRecipeCuisineId(r);
+      if (!rCid || !allowedCuisineIds.has(rCid)) return false;
+    }
     return matchesRecipeSearch(r, activeKeywords, ingredientsList, 'every');
   });
 
@@ -163,7 +189,7 @@ const RecipeSearchResults = () => {
           {searchTerm && (
             <button 
               type="button"
-              onClick={() => { setSearchTerm(''); setSearchParams({}); }} 
+              onClick={() => { setSearchTerm(''); setSearchParams(cuisineFromUrl ? { cuisine: cuisineFromUrl } : {}); }} 
               title={t('recipe_search.clear_tooltip')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-rose-400 p-1"
             >
@@ -172,12 +198,25 @@ const RecipeSearchResults = () => {
           )}
         </form>
 
-        {/* Active Keyword Chips (Allow removing keywords easily) */}
-        {activeKeywords.length > 0 && (
+        {/* Active Keyword & Cuisine Chips */}
+        {(activeKeywords.length > 0 || cuisineFromUrl) && (
           <div className="flex flex-wrap items-center gap-2 p-3 bg-surface-dark/60 rounded-2xl border border-primary/10 shadow-sm">
             <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
               {t('recipe_search.filter_label')}
             </span>
+            {cuisineFromUrl && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/20 border border-primary/50 rounded-xl text-xs font-extrabold text-primary shadow-sm">
+                <span className="material-symbols-outlined text-xs">public</span>
+                <span>{getLocalizedCuisine(cuisineFromUrl, currentLang) || cuisineFromUrl}</span>
+                <button
+                  onClick={handleRemoveCuisine}
+                  className="hover:text-rose-400 transition-colors text-xs font-bold"
+                  title={t('recipe_search.remove_keyword')}
+                >
+                  ×
+                </button>
+              </div>
+            )}
             {activeKeywords.map((kw, idx) => (
               <div 
                 key={idx}

@@ -27,6 +27,7 @@ const ManageMeasurements = () => {
   const [csvPreview, setCsvPreview] = useState(null); // { newRows, duplicateRows } | null
 
   // Form State
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [unitId, setUnitId] = useState('');
   
@@ -188,12 +189,14 @@ const ManageMeasurements = () => {
     
     setImperialEquivalent(m.conversions?.imperial?.imperial_equivalent || '');
     setConversionFactor(m.conversions?.imperial?.conversion_factor || '');
+    setShowForm(true);
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setShowForm(false);
     setUnitId('');
     setNameLocal('');
     setNameEn('');
@@ -577,19 +580,27 @@ const ManageMeasurements = () => {
       </div>
 
       <div className="p-4 overflow-y-auto">
-        <form onSubmit={handleSaveMeasurement} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg mb-6 space-y-4 transition-colors ${editingId ? 'bg-[#b8860b]/10 border-[#b8860b]/40' : 'bg-surface-dark/80 border-primary/20'}`}>
-          <div className="flex justify-between items-center border-b border-primary/10 pb-2">
-            <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest">
-              {editingId 
-                ? t('measurements.edit_unit') 
-                : t('measurements.new_unit')}
-            </h3>
-            {editingId && (
-              <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold cursor-pointer">
-                {t('measurements.cancel')}
+        {!showForm && !editingId ? (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="w-full border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 p-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-colors mb-6 cursor-pointer"
+          >
+            <span className="material-symbols-outlined">add</span>
+            {t('measurements.add_new_unit', { defaultValue: 'Добави нова мерна единица' })}
+          </button>
+        ) : (
+          <form onSubmit={handleSaveMeasurement} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg mb-6 space-y-4 transition-colors ${editingId ? 'bg-[#b8860b]/10 border-[#b8860b]/40' : 'bg-surface-dark/80 border-primary/20'}`}>
+            <div className="flex justify-between items-center border-b border-primary/10 pb-2">
+              <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest">
+                {editingId 
+                  ? t('measurements.edit_unit') 
+                  : t('measurements.new_unit')}
+              </h3>
+              <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded cursor-pointer">
+                {t('measurements.cancel', { defaultValue: 'Отказ' })}
               </button>
-            )}
-          </div>
+            </div>
           
           {/* Multilingual input fields */}
           {isEn ? (
@@ -704,6 +715,7 @@ const ManageMeasurements = () => {
             {editingId ? t('measurements.save_changes') : t('measurements.add_unit')}
           </button>
         </form>
+        )}
 
         <div className="space-y-3">
           {loading ? (

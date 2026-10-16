@@ -26,6 +26,7 @@ const ManageIngredientGroups = () => {
   const [csvPreview, setCsvPreview] = useState(null); // { newRows, duplicateRows } | null
 
   // Form State
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [groupId, setGroupId] = useState('');
   const [namesByLang, setNamesByLang] = useState({
@@ -132,6 +133,7 @@ const ManageIngredientGroups = () => {
   const handleEditClick = (g) => {
     setEditingId(g.id);
     setGroupId(g.id);
+    setShowForm(true);
     
     // Multilingual names
     setNamesByLang({
@@ -148,6 +150,7 @@ const ManageIngredientGroups = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setShowForm(false);
     setGroupId('');
     setNamesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
     setParentId('');
@@ -369,20 +372,28 @@ const ManageIngredientGroups = () => {
       </div>
 
       <div className="p-4 overflow-y-auto">
-        {/* Form */}
-        <form onSubmit={handleSaveGroup} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg mb-6 space-y-4 transition-colors ${editingId ? 'bg-blue-500/10 border-blue-500/40' : 'bg-surface-dark/80 border-primary/20'}`}>
-          <div className="flex justify-between items-center border-b border-primary/10 pb-2">
-            <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest">
-              {editingId 
-                ? t('ingredient_groups.edit_group') 
-                : t('ingredient_groups.new_group')}
-            </h3>
-            {editingId && (
+        {!showForm && !editingId ? (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="w-full border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 p-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-colors mb-6 cursor-pointer"
+          >
+            <span className="material-symbols-outlined">add</span>
+            {t('ingredient_groups.add_new_group', { defaultValue: 'Добави нова група' })}
+          </button>
+        ) : (
+          /* Form */
+          <form onSubmit={handleSaveGroup} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg mb-6 space-y-4 transition-colors ${editingId ? 'bg-blue-500/10 border-blue-500/40' : 'bg-surface-dark/80 border-primary/20'}`}>
+            <div className="flex justify-between items-center border-b border-primary/10 pb-2">
+              <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest">
+                {editingId 
+                  ? t('ingredient_groups.edit_group') 
+                  : t('ingredient_groups.new_group')}
+              </h3>
               <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded cursor-pointer">
-                {t('ingredient_groups.cancel')}
+                {t('ingredient_groups.cancel', { defaultValue: 'Отказ' })}
               </button>
-            )}
-          </div>
+            </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
@@ -450,6 +461,7 @@ const ManageIngredientGroups = () => {
             {editingId ? t('ingredient_groups.save_changes') : t('ingredient_groups.add_group')}
           </button>
         </form>
+        )}
 
         {/* List */}
         <div className="space-y-4">

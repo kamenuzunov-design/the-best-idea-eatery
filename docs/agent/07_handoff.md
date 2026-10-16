@@ -2,10 +2,70 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 08 Октомври 2026
+## Последна сесия: 16 Октомври 2026
 
 ### Извършена работа:
-1. **Корекция на съпоставянето на съставки между Килер и Рецепти (Pantry Matching & Discrete Units Fix: [recipeMatcherEngine.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMatcherEngine.js), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [unitConverter.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/unitConverter.js), [locales](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+1. **Интелигентен седмичен планьор на менюто ([WeeklyMenuPlanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WeeklyMenuPlanner.jsx))**:
+   - **Проблем**: Страницата `/planner` разполагаше само с базов макет с фиксирани дни, без запазване в потребителския профил във Firestore, без контрол на порциите, без интелигентен избор на рецепти по слот и без генериране на списък за пазаруване за седмицата.
+   - **Решение**:
+     - Динамичен 7-дневен календар за текущата седмица (`Пн` – `Нд`) в решетка `grid-cols-7` без хоризонтален плъзгач и с индикаторни точки за планираните хранения.
+     - 4 слота за хранене на ден (`breakfast`, `lunch`, `dinner`, `snack`) с контрол на порциите (`-` / `+`), смяна и премахване на рецепта.
+     - Двупосочна синхронизация с Firestore (`users/{uid}.weekly_menu`) за логнати потребители и `localStorage` за гости.
+     - Модален прозорец за избор на рецепта с търсене на 5 езика и 3 таба (`Препоръчани`, `Запазени`, `Всички`), плюс бутон „Попълни деня автоматично“.
+     - Интелигентно генериране на Списък за пазаруване за цялата седмица или избрания ден: мащабиране на съставките по порции, пропускане на базови подправки (`isPantryStaple`), приспадане на наличностите от Килера (`matchesPantryItem`), модален преглед с чекбоксове и обединяване в `shoppingList` (`useAppContext`).
+     - Пълна 5-езикова локализация (`bg`, `en`, `it`, `fr`, `de`) в `weekly_planner`.
+   - **Верификация**: `pnpm run lint` — 0 грешки, `pnpm run build` — 0 грешки (965ms).
+
+2. **Интерактивен каталог на световните кухни ([CuisinesExplorer.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CuisinesExplorer.jsx), [cuisines.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/cuisines.js), [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx))**:
+   - **Проблем**: Страницата `/cuisines` съдържаше само 5 статично кодирани кухни с фалшив брой рецепти, счупени външни Google URL-и, само BG/EN превод и навигираше към `/search?cuisine=...`, който се игнорираше от търсачката.
+   - **Решение**:
+     - В [`src/data/cuisines.js`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/cuisines.js) са добавени помощните функции `mergeCuisinesList`, `getDescendantCuisineIds`, `getCuisineBreadcrumbs` и `resolveRecipeCuisineId`.
+     - В [`src/pages/CuisinesExplorer.jsx`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CuisinesExplorer.jsx) е изграден двурежимен интерактивен модул:
+       - **Режим А (Световен кулинарен атлас)**: Синхронизация в реално време с Firestore колекциите `cuisines` и `recipes`, йерархично агрегиране на рецептите от подкухните към родителските региони, динамични корици от най-високо оценените рецепти, търсачка на 5 езика, филтър по континенти/региони, превключвател „Само с рецепти“ / „Целият каталог (94)“, секция „Водещи кулинарни традиции“ и секция „Кулинарна карта по региони“.
+       - **Режим Б (Детайлен изглед на избрана кухня `/cuisines?id=...`)**: Интерактивни breadcrumbs за навигация по дървото на кухните, Hero банер с бутон „✨ Тайните на тази кухня с Chef AI“ (водещ към `/ai-assistant` с контекстуален `autoPrompt`), чипове за подкухните с броячи, търсене и сортиране на рецептите („Най-високо оценени“, „Най-бързи“, „Най-нови“).
+     - В [`src/pages/RecipeSearchResults.jsx`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx) е добавена поддръжка за `?cuisine=...` с йерархично съпоставяне и активен филтър чип.
+     - Добавена е пълна 5-езикова локализация (`bg`, `en`, `it`, `fr`, `de`) в `cuisines_explorer`.
+   - **Верификация**: `pnpm run lint` — 0 грешки, `pnpm run build` — 0 грешки (1.02s).
+
+2. **Скриване на формите по подразбиране в разделите на модул „Данни“ ([ManageIngredients.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredients.jsx), [ManageIngredientGroups.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageIngredientGroups.jsx), [ManageMeasurements.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageMeasurements.jsx), [ManageCuisines.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageCuisines.jsx))**:
+   - **Проблем**: При отваряне на разделите „Продукти“, „Групи продукти“, „Мерни единици“ и „Кухни“ в модул „Данни“ (`/admin/data`), формата за въвеждане заемаше голяма част от екрана и изместваше списъка/търсенето надолу, за разлика от „Рецепти“, където формата е скрита зад удобен бутон.
+   - **Решение**: Всички 4 раздела са приведени към модела на [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx):
+     - Формите са скрити по подразбиране.
+     - Показва се голям бутон с пунктирана рамка и икона плюс: `+ Добави нов продукт`, `+ Добави нова група`, `+ Добави нова мерна единица`, `+ Добави нова кухня`.
+     - При клик или при натискане на бутон за редакция на елемент от списъка/мрежата, формата се отваря и скролва плавно нагоре.
+     - В заглавието на всяка форма има бутон „Отказ“, който връща формата в скрито състояние и изчиства въведените полета.
+     - Добавени са съответните многоезични ключове в 5-те поддържани езика.
+   - **Верификация**: `pnpm run lint` — 0 грешки, `pnpm run build` — 0 грешки (1.03s).
+
+2. **Реални потребителски профили и покани за роли ([ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx), [EditProfile.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/EditProfile.jsx), [ManageUsers.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageUsers.jsx))**:
+   - **Проблем**: В Администраторския модул (`/admin/users`) кликването върху потребител отваряше локален модален диалог, вместо истинския потребителски профил. Бутонът за покана към роля бе скрит само за собственика и липсваше навигация към пълния профил.
+   - **Диагностика**: `ManageUsers.jsx` съдържаше остарял вграден формуляр (`openProfileModal`), изолиран от пълните възможности на реалния профил.
+   - **Решение**:
+     - В `ManageUsers.jsx` кликването върху потребителско име или аватар (както в мрежов, така и в табличен изглед) вече навигира директно към `/profile?uid=${u.id}`.
+     - В `ProfileSettings.jsx` е реализирано зареждане на целевия профил в реално време (`onSnapshot`) за оторизирани администратори/собственици, с горна навигационна лента („Обратно към Потребители“).
+     - **Бутон „Покани за...“ под профилната снимка**:
+       - Ако потребителят е `ROLES.USER` $\rightarrow$ показва бутон **„Покани за Модератор“**.
+       - Ако потребителят е `ROLES.MODERATOR` $\rightarrow$ показва бутон **„Покани за Администратор“**.
+       - При изпратена покана бутонът се деактивира с надпис **„Поканата е изпратена“** и се появява линк **„Оттегли поканата“**. Действията се логват в `activity_logs`.
+     - Собственикът и Администраторът имат бутон „Редактирай профила“, водещ към `/profile/edit?uid=${targetUid}`.
+     - В `EditProfile.jsx` е осигурена пълна административна редакция на потребителски данни с валидация срещу редактиране на Собственик от Администратор.
+   - **Верификация**: `pnpm run lint` — 0 грешки, `pnpm run build` — 0 грешки (1.00s).
+
+2. **Корекция на изображението на избраната рецепта във Винено съчетаване ([WinePairing.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WinePairing.jsx))**:
+   - **Проблем**: При зареждане на произволна рецепта в модул „Винено съчетаване“ (напр. `/recipe/adjarian-khachapuri-cheese-boat/wine`), банерът на избраната рецепта показваше едно и също фалшиво Unsplash изображение вместо реалната снимка на рецептата.
+   - **Диагностика**: В `WinePairing.jsx` извличането на снимка бе реализирано като `recipe.images?.[0]`, но в структурата на Firestore рецептите пазят изображенията си като обект `{ main, extra1, extra2 }`. Вследствие на това проверката се проваляше и кодът винаги преминаваше към твърдо кодирания външен fallback от Unsplash.
+   - **Решение**: Заменен старият fallback с общовалидния за проекта метод `getRecipeImageUrl(recipe)` от [`src/lib/imageUtils.js`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/imageUtils.js) плюс `onError` fallback към `/images/recipe-placeholder.png`.
+   - **Верификация**: `pnpm run lint` — 0 грешки, `pnpm run build` — 0 грешки.
+
+3. **Положителен разрешителен модел за приложимост на винени съчетания ([wineMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/wineMatcher.js))**:
+   - **Проблем**: В раздел „Основни“ част от ястията нямаха бутон „Вино“ (19 от 56 основни ястия като Киш Лорен, Миш-маш, Тортиля, Фритата, Шакшука, Крок Мадам).
+   - **Диагностика**: Наличието на вторичен етикет `breakfast` блокираше виното заради отрицателен черен списък (`EXCLUDED_WINE_CATEGORIES`).
+   - **Решение**: Внедрен положителен модел:
+     - 100% от Основните ястия (`main`), Предястията (`appetizer`), Специален повод (`special`) и Тестените (`pastry` - пица/паста) вече показват бутон за вино.
+     - Твърдо се изключват само чисти напитки, сосове, супи, десерти и чисти закуски (мюсли, каши, палачинки).
+   - **Верификация**: `pnpm run lint` — 0 грешки, `pnpm run build` — 0 грешки.
+
+4. **Корекция на съпоставянето на съставки между Килер и Рецепти (Pantry Matching & Discrete Units Fix: [recipeMatcherEngine.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMatcherEngine.js), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [unitConverter.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/unitConverter.js), [locales](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
    - **Проблем**: При въведена в килера „Сьомга 4 бр.“, в рецепта „Печена сьомга“ продуктът се маркираше като липсващ.
    - **Диагностика**:
      1. В `RecipeDetail.jsx` и `Home.jsx` съпоставянето разчиташе на примитивно строго равенство на ID (`pId === rId`). По-стари записи в килера със стари слугове или без точен `ingredientId` отпадаха.

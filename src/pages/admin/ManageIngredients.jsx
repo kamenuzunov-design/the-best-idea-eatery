@@ -37,6 +37,7 @@ const ManageIngredients = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Form State
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
   // Identity (Multilingual Data Entry Paradigm)
@@ -303,6 +304,7 @@ const ManageIngredients = () => {
     setIsLiquid(ing.meta?.is_liquid || false);
     setPricePer100(ing.price_per_100 ?? '');
     setUnitsMapping(ing.units_mapping || []);
+    setShowForm(true);
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -322,6 +324,7 @@ const ManageIngredients = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setShowForm(false);
     setNamesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
     setSlug('');
     setMainGroup('');
@@ -1031,20 +1034,32 @@ const ManageIngredients = () => {
       </div>
 
       <div className="p-4 overflow-y-auto">
-        {/* Form */}
-        <form onSubmit={handleSaveIngredient} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg mb-6 space-y-4 transition-colors ${editingId ? 'bg-blue-500/10 border-blue-500/40' : 'bg-surface-dark/80 border-primary/20'}`}>
-          <div className="flex justify-between items-center border-b border-primary/10 pb-2">
-            <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest">
-              {editingId 
-                ? t('ingredients.edit_ingredient') 
-                : t('ingredients.new_ingredient')}
-            </h3>
-            {editingId && (
-              <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded">
-                {t('common.cancel')}
+        {!showForm && !editingId ? (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="w-full border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 p-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-colors mb-6 cursor-pointer"
+          >
+            <span className="material-symbols-outlined">add</span>
+            {t('ingredients.add_new_ingredient', { defaultValue: 'Добави нов продукт' })}
+          </button>
+        ) : (
+          /* Form */
+          <form onSubmit={handleSaveIngredient} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg mb-6 space-y-4 transition-colors ${editingId ? 'bg-blue-500/10 border-blue-500/40' : 'bg-surface-dark/80 border-primary/20'}`}>
+            <div className="flex justify-between items-center border-b border-primary/10 pb-2">
+              <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest">
+                {editingId 
+                  ? t('ingredients.edit_ingredient') 
+                  : t('ingredients.new_ingredient')}
+              </h3>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded cursor-pointer"
+              >
+                {t('ingredients.cancel', { defaultValue: 'Отказ' })}
               </button>
-            )}
-          </div>
+            </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isEn ? (
@@ -1240,6 +1255,7 @@ const ManageIngredients = () => {
             {editingId ? t('ingredients.save_changes') : t('ingredients.add_ingredient')}
           </button>
         </form>
+        )}
 
         {/* Search */}
         <div className="mb-4 relative">

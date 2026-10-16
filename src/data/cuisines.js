@@ -1236,3 +1236,101 @@ export const getSubCuisines = (parentId, customCuisines = null) => {
   const list = (customCuisines && customCuisines.length > 0) ? customCuisines : CUISINES;
   return list.filter(c => c.parentId === parentId);
 };
+
+/**
+ * Merges predefined CUISINES with custom Firestore cuisines documents so the full hierarchy
+ * is preserved while reflecting any admin edits or newly added cuisines.
+ */
+export const mergeCuisinesList = (firestoreDocs = []) => {
+  if (!firestoreDocs || firestoreDocs.length === 0) {
+    return CUISINES;
+  }
+
+  const map = new Map();
+  CUISINES.forEach(c => {
+    map.set(c.id, { ...c, name: { ...c.name } });
+  });
+
+  firestoreDocs.forEach(docItem => {
+    if (!docItem || !docItem.id) return;
+    const existing = map.get(docItem.id);
+    const mergedName = {
+      bg: docItem.name?.bg || docItem.name_bg || existing?.name?.bg || docItem.id,
+      en: docItem.name?.en || docItem.name_en || existing?.name?.en || docItem.id,
+      it: docItem.name?.it || docItem.name_it || existing?.name?.it || docItem.name?.en || docItem.id,
+      fr: docItem.name?.fr || docItem.name_fr || existing?.name?.fr || docItem.name?.en || docItem.id,
+      de: docItem.name?.de || docItem.name_de || existing?.name?.de || docItem.name?.en || docItem.id
+    };
+    map.set(docItem.id, {
+      ...(existing || {}),
+      ...docItem,
+      id: docItem.id,
+      parentId: docItem.parentId !== undefined ? (docItem.parentId || null) : (existing?.parentId || null),
+      level: docItem.level !== undefined ? Number(docItem.level) : (existing?.level ?? 0),
+      name: mergedName
+    });
+  });
+
+  return Array.from(map.values());
+};
+
+/**
+ * Returns an array containing the target cuisine ID and all its descendant cuisine IDs (children, grandchildren, etc.)
+ */
+export const getDescendantCuisineIds = (idOrName, customCuisines = null) => {
+  const list = (customCuisines && customCuisines.length > 0) ? customCuisines : CUISINES;
+  const target = getCuisineById(idOrName, list);
+  const rootId = target ? target.id : String(idOrName || '').trim().toLowerCase();
+  if (!rootId) return [];
+
+  const visited = new Set([rootId]);
+  const queue = [rootId];
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    for (const item of list) {
+      if (item.parentId === currentId && !visited.has(item.id)) {
+        visited.add(item.id);
+        queue.push(item.id);
+      }
+    }
+  }
+
+  return Array.from(visited);
+};
+
+/**
+ * Builds the breadcrumb trail from Root (Level 0) down to the specified cuisine.
+ */
+export const getCuisineBreadcrumbs = (idOrName, customCuisines = null) => {
+  const list = (customCuisines && customCuisines.length > 0) ? customCuisines : CUISINES;
+  let current = getCuisineById(idOrName, list);
+  if (!current) return [];
+
+  const trail = [];
+  const visited = new Set();
+
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    trail.unshift(current);
+    if (current.parentId) {
+      current = list.find(c => c.id === current.parentId) || null;
+    } else {
+      current = null;
+    }
+  }
+
+  return trail;
+};
+
+/**
+ * Resolves a recipe's cuisine field(s) to a canonical cuisine slug ID.
+ */
+export const resolveRecipeCuisineId = (recipe, customCuisines = null) => {
+  if (!recipe) return null;
+  const raw = recipe.cuisine_id || recipe.cuisine || recipe.cuisine_bg || recipe.cuisine_en;
+  if (!raw) return null;
+  const found = getCuisineById(raw, customCuisines);
+  return found ? found.id : String(raw).trim().toLowerCase();
+};
+

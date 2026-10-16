@@ -10,45 +10,69 @@
 import { WINES } from '../data/wines.js';
 
 /**
- * Изключени категории, при които не се предлага винено съчетаване:
- * Салати, Супи, Десерти, Напитки, Сос/Марината, Закуски.
+ * Основни категории, за които винаги се предлага винено съчетаване:
+ * Основни ястия (main), Предястия (appetizer), Специален повод (special), Тестени (pastry - паста, пица).
+ */
+export const WINE_APPLICABLE_CATEGORIES = new Set([
+  'main',
+  'appetizer',
+  'special',
+  'pastry'
+]);
+
+/**
+ * Първични категории, които никога не получават винено съчетаване:
+ * Напитки, Сосове/Маринати, Супи, Десерти.
  */
 export const EXCLUDED_WINE_CATEGORIES = new Set([
-  'salad',
-  'soup',
-  'dessert',
   'drink',
   'sauce',
-  'breakfast'
+  'soup',
+  'dessert'
 ]);
 
 /**
  * Проверява дали рецептата е подходяща за винено съчетаване.
- * Връща true за: Основни ястия (main), Тестени (pastry - паста, пица), Предястия (appetizer - тапас, плата) и др.
- * Връща false за: Салати, Супи, Десерти, Напитки, Сосове/Маринати и Закуски.
+ * Връща true за: Основни ястия (main), Тестени (pastry - паста, пица), Предястия (appetizer - тапас, плата), Специален повод (special).
+ * Дори ястието да е с допълнителен етикет за брънч/закуска (напр. Киш Лорен, Миш-маш, Тортиля, Фритата), щом е в Основни/Предястия, то получава вино.
+ * Връща false за: чисти Супи, Десерти, Напитки, Сосове/Маринати и чисти закуски (мюсли, палачинки, каши).
  * @param {Object} recipe
  * @returns {boolean}
  */
 export function isWinePairingApplicable(recipe) {
   if (!recipe) return false;
 
-  const rawCats = [];
-  if (recipe.category_id) rawCats.push(recipe.category_id);
-  if (Array.isArray(recipe.category_ids)) rawCats.push(...recipe.category_ids);
-  if (recipe.category) rawCats.push(recipe.category);
-  if (recipe.sub_category_id) rawCats.push(recipe.sub_category_id);
-  if (recipe.subcategory) rawCats.push(recipe.subcategory);
+  const primary = (recipe.category_id || '').toLowerCase().trim();
+  const secondary = (Array.isArray(recipe.category_ids) ? recipe.category_ids : []).map(c => String(c).toLowerCase().trim());
+  const rawSub = (recipe.sub_category_id || recipe.subcategory || '').toLowerCase().trim();
+  const rawCat = (recipe.category || '').toLowerCase().trim();
 
-  for (const raw of rawCats) {
-    if (!raw) continue;
-    const cat = String(raw).toLowerCase().trim();
-    if (EXCLUDED_WINE_CATEGORIES.has(cat)) return false;
-    for (const exc of EXCLUDED_WINE_CATEGORIES) {
-      if (cat.startsWith(`${exc}_`)) return false;
+  const allCats = new Set([primary, ...secondary, rawSub, rawCat].filter(Boolean));
+
+  // 1. Ако първичната категория е напитка, сос, супа или десерт -> твърдо изключваме
+  if (EXCLUDED_WINE_CATEGORIES.has(primary)) {
+    return false;
+  }
+
+  // 2. Ако първичната е 'breakfast' -> показваме само ако е класифицирана и като основно, предястие, специален повод или тестено
+  if (primary === 'breakfast') {
+    return allCats.has('main') || allCats.has('appetizer') || allCats.has('special') || allCats.has('pastry');
+  }
+
+  // 3. Ако първичната е 'salad' -> показваме само ако е отбелязана като основно ястие (напр. салата Коб)
+  if (primary === 'salad') {
+    return allCats.has('main');
+  }
+
+  // 4. Положително съпоставяне: ако съдържа някоя от разрешените категории (main, appetizer, special, pastry)
+  for (const cat of allCats) {
+    if (WINE_APPLICABLE_CATEGORIES.has(cat)) return true;
+    for (const app of WINE_APPLICABLE_CATEGORIES) {
+      if (cat.startsWith(`${app}_`)) return true;
     }
   }
 
-  return true;
+  return false;
 }
 
 // Нормализиране на текстови низове за търсене на кулинарни токени

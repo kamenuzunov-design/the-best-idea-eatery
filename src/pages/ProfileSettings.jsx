@@ -1,22 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { logActivity } from '../lib/activityLogger';
 import { LANGUAGE_LABELS } from '../lib/localeUtils';
 import { getReputationLabel } from '../lib/reputationUtils';
+import { ROLES } from '../constants/roles';
 
 const ProfileSettings = () => {
   const { user, logout, isGuest, isAdmin, isOwner, isModerator, isUser, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
+
+  const targetUid = searchParams.get('uid');
+  const isViewingOther = Boolean(targetUid && targetUid !== user?.uid);
+
+  const [targetUserData, setTargetUserData] = useState(null);
+  const [loadingTarget, setLoadingTarget] = useState(isViewingOther);
+  const [inviteLoading, setInviteLoading] = useState(false);
   
   const [resendStatus, setResendStatus] = useState(''); // '' | 'loading' | 'sent' | 'error'
   const [importStatus, setImportStatus] = useState(''); // '' | 'loading' | 'done' | 'error'
   const [importProgress, setImportProgress] = useState(0);
   const [showImportSection, setShowImportSection] = useState(false); // Hidden by default as requested
+
+  useEffect(() => {
+    if (!isViewingOther || !targetUid) {
+      return;
+    }
+
+    // Permission check: only admin, owner, moderator can view other users' profiles via uid
+    if (!isAdmin && !isOwner && !isModerator) {
+      navigate('/profile');
+      return;
+    }
+
+    const userRef = doc(db, 'users', targetUid);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setTargetUserData({
+          uid: docSnap.id,
+          email: data.auth?.email || data.email || '',
+          name: data.profile?.nickname || data.name || '',
+          isVerified: true,
+          role: (data.status?.level || data.role || ROLES.USER).toLowerCase(),
+          profile: data.profile || {},
+          reputation: data.reputation || { score: 0, badges: [] },
+          preferences: data.preferences || {},
+          status: data.status || {},
+          invited_role: data.invited_role || null
+        });
+      } else {
+        setTargetUserData(null);
+      }
+      setLoadingTarget(false);
+    }, (err) => {
+      console.error("Error loading target user:", err);
+      setLoadingTarget(false);
+    });
+
+    return () => unsubscribe();
+  }, [isViewingOther, targetUid, isAdmin, isOwner, isModerator, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -150,38 +198,145 @@ const ProfileSettings = () => {
     }
   };
 
+  const displayUser = isViewingOther ? targetUserData : user;
+
   const currentLang = i18n.language || 'bg';
-  const currentLangMeta = LANGUAGE_LABELS[currentLang] || { name: currentLang.toUpperCase(), fullName: currentLang };
+  const displayUserLang = displayUser?.preferences?.language || currentLang;
+  const currentLangMeta = LANGUAGE_LABELS[displayUserLang] || LANGUAGE_LABELS[currentLang] || { name: currentLang.toUpperCase(), fullName: currentLang };
   const currentLangLabel = currentLangMeta.fullName ? `${currentLangMeta.fullName} (${currentLangMeta.name})` : currentLangMeta.name;
 
-  if (!user) return null; // Or a loading spinner, but routing handles this
+  const displayRole = (displayUser?.status?.level || displayUser?.role || ROLES.USER).toLowerCase();
+  const displayIsAdmin = displayRole === ROLES.ADMIN;
+  const displayIsOwner = displayRole === ROLES.OWNER;
+  const displayIsModerator = displayRole === ROLES.MODERATOR;
+  const displayIsGuest = isViewingOther ? false : isGuest;
+
+  const canEdit = isViewingOther 
+    ? (isOwner || (isAdmin && displayRole !== ROLES.OWNER))
+    : !isGuest;
+
+  const canInvite = isViewingOther && (isOwner || isAdmin) && (displayRole === ROLES.USER || displayRole === ROLES.MODERATOR);
+  const nextInviteRole = displayRole === ROLES.USER ? ROLES.MODERATOR : ROLES.ADMIN;
+  const isAlreadyInvited = displayUser?.invited_role === nextInviteRole;
+
+  const handleInviteRole = async () => {
+    if (inviteLoading || !displayUser) return;
+    setInviteLoading(true);
+    try {
+      await updateDoc(doc(db, 'users', displayUser.uid), {
+        invited_role: nextInviteRole
+      });
+      await logActivity(
+        user.uid,
+        user.email,
+        'invite_role',
+        `Invited ${displayUser.email || displayUser.uid} to ${nextInviteRole}`
+      );
+      alert(t('manage_users.alerts.invite_success'));
+    } catch (e) {
+      console.error(e);
+      alert(t('manage_users.alerts.invite_error'));
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleCancelInvite = async () => {
+    if (inviteLoading || !displayUser) return;
+    if (!window.confirm('Сигурни ли сте, че искате да оттеглите поканата?')) return;
+    setInviteLoading(true);
+    try {
+      await updateDoc(doc(db, 'users', displayUser.uid), {
+        invited_role: null
+      });
+      await logActivity(
+        user.uid,
+        user.email,
+        'cancel_role_invite',
+        `Canceled role invitation for ${displayUser.email || displayUser.uid}`
+      );
+    } catch (e) {
+      console.error(e);
+      alert('Грешка при оттегляне на поканата.');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  if (isViewingOther && loadingTarget) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-primary min-h-[50vh]">
+        <span className="material-symbols-outlined text-4xl animate-spin">refresh</span>
+        <p className="mt-2 text-xs text-slate-400 font-bold uppercase tracking-wider">{t('common.loading') || 'Зареждане...'}</p>
+      </div>
+    );
+  }
+
+  if (isViewingOther && !loadingTarget && !targetUserData) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[50vh]">
+        <span className="material-symbols-outlined text-5xl text-rose-500 mb-3">person_off</span>
+        <h2 className="text-lg font-bold text-slate-100">Потребителят не е намерен</h2>
+        <p className="text-xs text-slate-400 mt-1 max-w-xs">Възможно е профилът да е изтрит или адресът да е невалиден.</p>
+        <button
+          onClick={() => navigate('/admin/users')}
+          className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary/10 text-primary border border-primary/30 text-xs font-bold hover:bg-primary/20 transition-all"
+        >
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+          Обратно към Потребители
+        </button>
+      </div>
+    );
+  }
+
+  if (!displayUser) return null;
+
+  const editProfileUrl = isViewingOther ? `/profile/edit?uid=${displayUser.uid}` : '/profile/edit';
+  const editPreferencesUrl = isViewingOther ? `/profile/edit?uid=${displayUser.uid}&tab=preferences` : '/profile/edit?tab=preferences';
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
+      {isViewingOther && (
+        <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20">
+          <button 
+            onClick={() => navigate('/admin/users')}
+            className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors"
+          >
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+            <span>{t('manage_users.title') || 'Потребители'}</span>
+          </button>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            {t('manage_users.viewing_profile', 'Преглед на профил')}
+          </div>
+        </div>
+      )}
+
       <section className="flex flex-col items-center py-10 px-4 bg-gradient-to-b from-surface-dark to-background-dark border-b border-primary/10">
         <div className="relative group">
           <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 border-4 border-primary shadow-[0_0_30px_rgba(212,175,53,0.3)] flex items-center justify-center bg-primary/10 overflow-hidden">
-            {user.profile?.avatar && !isGuest ? (
-              <img src={user.profile.avatar} alt="Profile" className="w-full h-full object-cover" />
+            {displayUser.profile?.avatar && !displayIsGuest ? (
+              <img src={displayUser.profile.avatar} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <span className="material-symbols-outlined text-6xl text-primary">person</span>
             )}
           </div>
-          {!isGuest && (
-            <Link to="/profile/edit" className="absolute bottom-1 right-1 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark rounded-full p-2 shadow-lg hover:scale-110 transition-transform cursor-pointer">
+          {canEdit && (
+            <Link to={editProfileUrl} className="absolute bottom-1 right-1 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark rounded-full p-2 shadow-lg hover:scale-110 transition-transform cursor-pointer">
               <span className="material-symbols-outlined text-sm font-extrabold">photo_camera</span>
             </Link>
           )}
         </div>
         
         <div className="mt-5 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">{user.profile?.nickname || (isGuest ? t('profile.roles.guest') : (user.name || t('profile.roles.default_user')))}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">
+            {displayUser.profile?.nickname || (displayIsGuest ? t('profile.roles.guest') : (displayUser.name || t('profile.roles.default_user')))}
+          </h1>
           <p className="text-primary/80 font-bold text-xs uppercase tracking-widest mt-1">
-            {user.reputation && !isGuest ? `${getReputationLabel(user.reputation.score, currentLang)} • ` : ''}
-            {isAdmin ? t('profile.roles.admin') : isOwner ? t('profile.roles.owner') : isModerator ? t('profile.roles.moderator') : isGuest ? t('profile.roles.guest') : t('profile.roles.user')}
+            {displayUser.reputation && !displayIsGuest ? `${getReputationLabel(displayUser.reputation.score, currentLang)} • ` : ''}
+            {displayIsAdmin ? t('profile.roles.admin') : displayIsOwner ? t('profile.roles.owner') : displayIsModerator ? t('profile.roles.moderator') : displayIsGuest ? t('profile.roles.guest') : t('profile.roles.user')}
           </p>
-          {user.email && <p className="text-slate-400 text-sm mt-1">{user.email}</p>}
-          {!user.isVerified && !isGuest && (
+          {displayUser.email && <p className="text-slate-400 text-sm mt-1">{displayUser.email}</p>}
+          {!isViewingOther && !user.isVerified && !isGuest && (
             <div className="mt-3 flex flex-col items-center">
               <button 
                 onClick={handleResendEmail}
@@ -212,8 +367,42 @@ const ProfileSettings = () => {
           )}
         </div>
 
-        {!isGuest && (() => {
-          const bioText = user.profile?.[`bio_${currentLang}`] || user.profile?.bio_en || user.profile?.bio_bg || user.profile?.bio || '';
+        {/* Role Invitation Button (Under photo for Owner or Admin viewing another user) */}
+        {canInvite && (
+          <div className="mt-4 w-full max-w-xs flex flex-col items-center gap-1.5 px-4">
+            <button
+              type="button"
+              disabled={isAlreadyInvited || inviteLoading}
+              onClick={handleInviteRole}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all active:scale-95 shadow-md ${
+                isAlreadyInvited
+                  ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 cursor-not-allowed opacity-90'
+                  : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-background-dark shadow-[0_0_20px_rgba(245,158,11,0.35)]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                {inviteLoading ? 'refresh' : isAlreadyInvited ? 'mark_email_read' : 'mail'}
+              </span>
+              {isAlreadyInvited 
+                ? t('manage_users.modal.invitation_sent')
+                : (displayRole === ROLES.USER ? t('manage_users.modal.invite_moderator') : t('manage_users.modal.invite_admin'))}
+            </button>
+            {displayUser.invited_role && (
+              <button
+                type="button"
+                onClick={handleCancelInvite}
+                disabled={inviteLoading}
+                className="text-[11px] text-rose-400/80 hover:text-rose-300 hover:underline flex items-center gap-1 mt-0.5"
+              >
+                <span className="material-symbols-outlined text-[13px]">cancel</span>
+                Оттегли поканата
+              </button>
+            )}
+          </div>
+        )}
+
+        {!displayIsGuest && (() => {
+          const bioText = displayUser.profile?.[`bio_${currentLang}`] || displayUser.profile?.bio_en || displayUser.profile?.bio_bg || displayUser.profile?.bio || '';
           return bioText ? (
             <div className="mt-4 px-6 max-w-sm w-full">
               <p className="text-slate-300 text-sm italic border-l-2 border-primary/30 pl-3 text-left">
@@ -223,8 +412,8 @@ const ProfileSettings = () => {
           ) : null;
         })()}
 
-        {!isGuest && user.profile?.location?.show_location && (() => {
-          const loc = user.profile.location;
+        {!displayIsGuest && displayUser.profile?.location?.show_location && (() => {
+          const loc = displayUser.profile.location;
           const city = loc?.[`city_${currentLang}`] || loc?.city_en || loc?.city_bg || '';
           const country = loc?.[`country_${currentLang}`] || loc?.country_en || loc?.country_bg || '';
           const locString = [city, country].filter(Boolean).join(', ');
@@ -236,9 +425,9 @@ const ProfileSettings = () => {
           ) : null;
         })()}
         
-        {!isGuest && (
+        {canEdit && (
           <div className="mt-6">
-            <Link to="/profile/edit" className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary border border-primary/30 px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm active:scale-95">
+            <Link to={editProfileUrl} className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary border border-primary/30 px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm active:scale-95">
               <span className="material-symbols-outlined text-lg">edit</span>
               {t('profile.buttons.edit_profile')}
             </Link>
@@ -246,7 +435,7 @@ const ProfileSettings = () => {
         )}
       </section>
 
-      {user.invited_role && (
+      {!isViewingOther && user.invited_role && (
         <section className="mt-4 px-4">
           <button 
             onClick={async () => {
@@ -271,7 +460,7 @@ const ProfileSettings = () => {
         </section>
       )}
 
-      {!isGuest && (
+      {!isViewingOther && !isGuest && (
         <section className="mt-6 px-4">
           <button 
             onClick={handleLogout} 
@@ -283,7 +472,7 @@ const ProfileSettings = () => {
         </section>
       )}
 
-      {(isAdmin || isOwner || isModerator || isUser) && (
+      {!isViewingOther && (isAdmin || isOwner || isModerator || isUser) && (
         <section className="mt-8 px-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 px-2 mb-2 flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">shield_person</span>
@@ -321,7 +510,7 @@ const ProfileSettings = () => {
       )}
 
       {/* Secret Owner Import Section */}
-      {isOwner && showImportSection && (
+      {!isViewingOther && isOwner && showImportSection && (
         <section className="mt-8 px-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-500/70 px-2 mb-2 flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">database</span>
@@ -385,7 +574,7 @@ const ProfileSettings = () => {
         </h3>
         <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-primary/10 border border-primary/20 shadow-lg">
           <Link 
-            to="/profile/edit?tab=preferences"
+            to={editPreferencesUrl}
             className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group"
           >
             <div className="flex items-center gap-4">

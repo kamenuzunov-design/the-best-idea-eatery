@@ -28,6 +28,7 @@ const ManageCuisines = () => {
   const [csvPreview, setCsvPreview] = useState(null); // { newRows, duplicateRows } | null
 
   // Form State
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [slugId, setSlugId] = useState('');
   const [namesByLang, setNamesByLang] = useState({
@@ -161,6 +162,7 @@ const ManageCuisines = () => {
   const handleEditClick = (item) => {
     setEditingId(item.id);
     setSlugId(item.id);
+    setShowForm(true);
     setNamesByLang({
       en: item.name?.en || item.name_en || '',
       bg: item.name?.bg || item.name_bg || '',
@@ -174,6 +176,7 @@ const ManageCuisines = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setShowForm(false);
     setSlugId('');
     setNamesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
     setParentId('');
@@ -389,19 +392,27 @@ const ManageCuisines = () => {
 
       <div className="p-4 overflow-y-auto space-y-6">
 
-        {/* Form */}
-        <form onSubmit={handleSaveCuisine} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg space-y-4 transition-colors ${editingId ? 'bg-blue-500/10 border-blue-500/40' : 'bg-surface-dark/80 border-primary/20'}`}>
-          <div className="flex justify-between items-center border-b border-primary/10 pb-2">
-            <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-lg">{editingId ? 'edit' : 'add_circle'}</span>
-              {editingId ? t('cuisines_admin.edit_title') : t('cuisines_admin.add_title')}
-            </h3>
-            {editingId && (
+        {!showForm && !editingId ? (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="w-full border-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 p-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined">add</span>
+            {t('cuisines_admin.add_title', { defaultValue: 'Добави нова кухня' })}
+          </button>
+        ) : (
+          /* Form */
+          <form onSubmit={handleSaveCuisine} className={`backdrop-blur-md border rounded-2xl p-4 shadow-lg space-y-4 transition-colors ${editingId ? 'bg-blue-500/10 border-blue-500/40' : 'bg-surface-dark/80 border-primary/20'}`}>
+            <div className="flex justify-between items-center border-b border-primary/10 pb-2">
+              <h3 className="font-bold text-slate-100 text-sm uppercase tracking-widest flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-lg">{editingId ? 'edit' : 'add_circle'}</span>
+                {editingId ? t('cuisines_admin.edit_title') : t('cuisines_admin.add_title')}
+              </h3>
               <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded cursor-pointer">
                 {t('common.buttons.cancel')}
               </button>
-            )}
-          </div>
+            </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -485,6 +496,7 @@ const ManageCuisines = () => {
             {editingId ? t('common.buttons.save') : t('common.buttons.add')}
           </button>
         </form>
+        )}
 
         {/* Search Bar */}
         <div className="flex items-center gap-3">

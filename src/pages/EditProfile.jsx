@@ -2,20 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../lib/firebase';
+import { logActivity } from '../lib/activityLogger';
 import { resizeImage } from '../lib/imageUtils';
 import { checkImageSafety } from '../lib/moderationUtils';
 import { ROLES } from '../constants/roles';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS } from '../lib/localeUtils';
 
 const EditProfile = () => {
-  const { user, updateUserProfile, deleteAccount, isGuest } = useAuth();
+  const { user, updateUserProfile, deleteAccount, isGuest, isAdmin, isOwner } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
   
+  const queryUid = new URLSearchParams(location.search).get('uid');
+  const isEditingOther = Boolean(queryUid && queryUid !== user?.uid);
+
   const currentLang = i18n.language || 'bg';
   const isEn = currentLang === 'en';
 
@@ -25,6 +29,10 @@ const EditProfile = () => {
   const setActiveTab = (tab) => setTabOverride(tab);
   const [deleteStep, setDeleteStep] = useState(0); 
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Target User State for Admin/Owner editing another user
+  const [targetUser, setTargetUser] = useState(null);
+  const [loadingTargetUser, setLoadingTargetUser] = useState(isEditingOther);
 
   // Profile State
   const [name, setName] = useState(user?.profile?.nickname || '');
@@ -68,6 +76,80 @@ const EditProfile = () => {
   const [unitSystem, setUnitSystem] = useState(user?.preferences?.unit_system || 'metric');
   const [servings, setServings] = useState(user?.preferences?.servings_default || 2);
   const [pantryActive, setPantryActive] = useState(user?.preferences?.pantry_active ?? true);
+
+  useEffect(() => {
+    if (!isEditingOther || !queryUid) return;
+
+    if (!isAdmin && !isOwner) {
+      navigate('/profile');
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchTarget = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', queryUid));
+        if (snap.exists() && isMounted) {
+          const data = snap.data();
+          const targetRole = (data.status?.level || data.role || ROLES.USER).toLowerCase();
+
+          // Security check: Admin cannot edit Owner
+          if (targetRole === ROLES.OWNER && !isOwner) {
+            alert(t('manage_users.alerts.cannot_edit_owner') || 'Нямате права да редактирате профила на собственик.');
+            navigate(`/profile?uid=${queryUid}`);
+            return;
+          }
+
+          setTargetUser(data);
+
+          setName(data.profile?.nickname || data.name || '');
+          setFirstName(data.profile?.first_name || '');
+          setLastName(data.profile?.last_name || '');
+
+          const bEn = data.profile?.bio_en || (isEn ? (data.profile?.bio || data.profile?.bio_bg || '') : '');
+          const bLoc = isEn ? '' : (data.profile?.[`bio_${currentLang}`] || (currentLang === 'bg' ? (data.profile?.bio_bg || data.profile?.bio || '') : ''));
+          setBioEn(bEn);
+          setBioLocal(bLoc);
+
+          setImagePreview(data.profile?.avatar || '');
+
+          const cEn = data.profile?.location?.city_en || (isEn ? (data.profile?.location?.city_bg || '') : '');
+          const cLoc = isEn ? '' : (data.profile?.location?.[`city_${currentLang}`] || (currentLang === 'bg' ? (data.profile?.location?.city_bg || '') : ''));
+          const cntryEn = data.profile?.location?.country_en || (isEn ? (data.profile?.location?.country_bg || '') : '');
+          const cntryLoc = isEn ? '' : (data.profile?.location?.[`country_${currentLang}`] || (currentLang === 'bg' ? (data.profile?.location?.country_bg || '') : ''));
+
+          setCityEn(cEn);
+          setCityLocal(cLoc);
+          setCountryEn(cntryEn);
+          setCountryLocal(cntryLoc);
+          setShowLocation(data.profile?.location?.show_location ?? true);
+
+          setPreferredLanguage(data.preferences?.language || 'bg');
+          setDiet(data.preferences?.diet?.join(', ') || '');
+          setAllergies(data.preferences?.allergies?.join(', ') || '');
+          setExclusions(
+            Array.isArray(data.preferences?.exclusions) 
+              ? data.preferences.exclusions 
+              : (data.preferences?.exclusions ? data.preferences.exclusions.split(',').map(s => s.trim()).filter(Boolean) : [])
+          );
+          setUnitSystem(data.preferences?.unit_system || 'metric');
+          setServings(data.preferences?.servings_default || 2);
+          setPantryActive(data.preferences?.pantry_active ?? true);
+        } else if (isMounted) {
+          alert('Потребителят не съществува.');
+          navigate('/admin/users');
+        }
+      } catch (err) {
+        console.error("Error loading target user:", err);
+      } finally {
+        if (isMounted) setLoadingTargetUser(false);
+      }
+    };
+
+    fetchTarget();
+    return () => { isMounted = false; };
+  }, [isEditingOther, queryUid, isAdmin, isOwner, currentLang, isEn, navigate, t]);
 
   // Master ingredients reference database for autocomplete exclusions
   const [ingredientsDB, setIngredientsDB] = useState([]);
@@ -156,11 +238,11 @@ const EditProfile = () => {
     setError('');
     
     try {
-      let photoURL = user?.profile?.avatar || '';
+      let photoURL = (isEditingOther ? targetUser?.profile?.avatar : user?.profile?.avatar) || '';
 
       if (imageFile) {
         // AI Safety Check (Skip for Admins to save resources)
-        const isPowerUser = user?.status?.level === ROLES.ADMIN || user?.status?.level === ROLES.OWNER;
+        const isPowerUser = user?.status?.level === ROLES.ADMIN || user?.status?.level === ROLES.OWNER || isAdmin || isOwner;
         
         if (!isPowerUser) {
           const b64 = await fileToBase64(imageFile);
@@ -174,7 +256,8 @@ const EditProfile = () => {
 
         const resizedImage = await resizeImage(imageFile, 800);
         const fileExtension = imageFile.name.split('.').pop();
-        const storageRef = ref(storage, `profiles/${user.uid}/avatar_${Date.now()}.${fileExtension}`);
+        const targetUploadUid = isEditingOther ? queryUid : user.uid;
+        const storageRef = ref(storage, `profiles/${targetUploadUid}/avatar_${Date.now()}.${fileExtension}`);
         await uploadBytes(storageRef, resizedImage);
         photoURL = await getDownloadURL(storageRef);
       }
@@ -207,7 +290,7 @@ const EditProfile = () => {
       }
 
       // Convert comma-separated strings to arrays, clean up spaces
-      const toArray = (str) => str.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      const toArray = (str) => typeof str === 'string' ? str.split(',').map(s => s.trim()).filter(s => s.length > 0) : (Array.isArray(str) ? str : []);
 
       const updatedProfile = { 
         'profile.nickname': name,
@@ -221,10 +304,11 @@ const EditProfile = () => {
         'preferences.unit_system': unitSystem,
         'preferences.servings_default': Number(servings) || 2,
         'preferences.pantry_active': pantryActive,
-        'preferences.language': preferredLanguage
+        'preferences.language': preferredLanguage,
+        'name': name // keep legacy name field synced
       };
 
-      const existingLoc = user?.profile?.location || {};
+      const existingLoc = (isEditingOther ? targetUser?.profile?.location : user?.profile?.location) || {};
       updatedProfile['profile.location'] = {
         ...existingLoc,
         show_location: showLocation,
@@ -245,14 +329,27 @@ const EditProfile = () => {
         // When English user saves, also ensure bio_bg / city_bg have values if not set before
         if (!existingLoc.city_bg && finalCityEn) updatedProfile['profile.location'].city_bg = finalCityEn;
         if (!existingLoc.country_bg && finalCountryEn) updatedProfile['profile.location'].country_bg = finalCountryEn;
-        if (!user?.profile?.bio_bg && finalBioEn) {
+        const targetBioBg = isEditingOther ? targetUser?.profile?.bio_bg : user?.profile?.bio_bg;
+        if (!targetBioBg && finalBioEn) {
           updatedProfile['profile.bio_bg'] = finalBioEn;
           updatedProfile['profile.bio'] = finalBioEn;
         }
       }
 
-      await updateUserProfile(updatedProfile);
-      navigate('/profile');
+      if (isEditingOther) {
+        const targetRef = doc(db, 'users', queryUid);
+        await updateDoc(targetRef, updatedProfile);
+        await logActivity(
+          user.uid,
+          user.email,
+          'profile_edit_admin',
+          `Admin edited profile for ${targetUser?.auth?.email || targetUser?.email || queryUid}`
+        );
+        navigate(`/profile?uid=${queryUid}`);
+      } else {
+        await updateUserProfile(updatedProfile);
+        navigate('/profile');
+      }
     } catch (err) {
       console.error(err);
       setError(t('profile.edit.save_error'));
@@ -261,14 +358,27 @@ const EditProfile = () => {
     }
   };
 
+  if (isEditingOther && loadingTargetUser) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-primary min-h-[50vh]">
+        <span className="material-symbols-outlined text-4xl animate-spin">refresh</span>
+        <p className="mt-2 text-xs text-slate-400 font-bold uppercase tracking-wider">{t('common.loading') || 'Зареждане...'}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col bg-background-dark pb-24">
       <div className="sticky top-0 z-10 flex flex-col pt-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
         <div className="flex items-center px-4 mb-2">
-          <button onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
+          <button onClick={() => navigate(isEditingOther ? `/profile?uid=${queryUid}` : -1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <h1 className="text-xl font-bold text-slate-100">{t('profile.titles.edit_profile')}</h1>
+          <h1 className="text-xl font-bold text-slate-100">
+            {isEditingOther 
+              ? `${t('profile.titles.edit_profile')} (${targetUser?.profile?.nickname || targetUser?.name || 'Потребител'})`
+              : t('profile.titles.edit_profile')}
+          </h1>
         </div>
         
         {/* Tabs */}
@@ -503,7 +613,7 @@ const EditProfile = () => {
               </div>
 
               {/* Delete Account Section */}
-              {!isGuest && (
+              {!isEditingOther && !isGuest && (
                 <div className="pt-8 mt-4 border-t border-rose-500/10">
                   {deleteStep === 0 ? (
                     <button 

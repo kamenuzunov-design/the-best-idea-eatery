@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../lib/firebase';
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { ROLES } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
 
 const ManageUsers = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const currentLang = i18n.language || 'bg';
   const isAuthorized = user.role === ROLES.OWNER || user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR;
   const isReadOnly = user.role === ROLES.MODERATOR;
 
@@ -30,97 +28,6 @@ const ManageUsers = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'deactivated' | 'deleted'
   const [roleFilter, setRoleFilter] = useState(null); // ROLES enum
-
-  // Profile Modal
-  const [editingUser, setEditingUser] = useState(null);
-  const [profileForm, setProfileForm] = useState({ 
-    firstName: '', 
-    lastName: '', 
-    nickname: '', 
-    bioBg: '',
-    bioEn: '',
-    avatar: '',
-    preferences: {
-      diet: [],
-      exclusions: [],
-      allergies: [],
-      servings_default: 2,
-      unit_system: 'metric'
-    }
-  });
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = React.useRef(null);
-
-  const [userRecipesCount, setUserRecipesCount] = useState({ published: 0, edited: 0 });
-
-  useEffect(() => {
-    if (!editingUser) {
-      return;
-    }
-
-    let isMounted = true;
-    const fetchCounts = async () => {
-      try {
-        const targetUid = editingUser.id || editingUser.uid;
-        const targetEmail = editingUser.auth?.email || editingUser.email || '';
-        const targetNickname = editingUser.profile?.nickname || editingUser.name || '';
-
-        // 1. Fetch all recipes from Firestore to count published recipes accurately
-        const recipesSnap = await getDocs(collection(db, 'recipes'));
-        const publishedCount = recipesSnap.docs.filter(docSnap => {
-          const r = docSnap.data();
-          if (r.is_deleted === true) return false;
-          
-          const matchesUid = Boolean(targetUid && (
-            r.publisher_id === targetUid || 
-            r.author?.uid === targetUid || 
-            r.created_by === targetUid
-          ));
-          const matchesEmail = Boolean(targetEmail && (
-            r.publisher_name === targetEmail || 
-            r.publisher_email === targetEmail
-          ));
-          const matchesNickname = Boolean(targetNickname && r.publisher_name === targetNickname);
-
-          return matchesUid || matchesEmail || matchesNickname;
-        }).length;
-
-        // 2. Fetch activity_logs to count edited and logged added recipes
-        const logsSnap = await getDocs(collection(db, 'activity_logs'));
-        let addLogCount = 0;
-        let editLogCount = 0;
-
-        logsSnap.docs.forEach(docSnap => {
-          const data = docSnap.data();
-          const matchesUser = Boolean(
-            (targetUid && data.userId === targetUid) ||
-            (targetEmail && data.userEmail === targetEmail)
-          );
-          if (!matchesUser) return;
-
-          if (data.action === 'edit_recipe' || data.action === 'update_recipe') {
-            editLogCount++;
-          } else if (data.action === 'add_recipe' || data.action === 'publish_recipe') {
-            addLogCount++;
-          }
-        });
-
-        const finalPublishedCount = Math.max(publishedCount, addLogCount);
-
-        if (isMounted) {
-          setUserRecipesCount({ published: finalPublishedCount, edited: editLogCount });
-        }
-      } catch(e) {
-        console.error("Error fetching user recipe counts:", e);
-      }
-    };
-
-    fetchCounts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [editingUser]);
 
   useEffect(() => {
     console.log("Fetching users...");
@@ -247,96 +154,6 @@ const ManageUsers = () => {
     } catch (error) {
       console.error("Error permanently deleting user:", error);
       alert(t('manage_users.alerts.permanent_delete_error'));
-    }
-  };
-
-  const openProfileModal = (u) => {
-    setEditingUser(u);
-    setProfileForm({
-      firstName: u.profile?.first_name || '',
-      lastName: u.profile?.last_name || '',
-      nickname: u.profile?.nickname || u.name || '',
-      bioBg: u.profile?.bio_bg || u.profile?.bio || '', // Fallback to old bio field if exists
-      bioEn: u.profile?.bio_en || '',
-      avatar: u.profile?.avatar || '',
-      location: {
-        cityBg: u.profile?.location?.city_bg || '',
-        cityEn: u.profile?.location?.city_en || '',
-        countryBg: u.profile?.location?.country_bg || '',
-        countryEn: u.profile?.location?.country_en || '',
-        showLocation: u.profile?.location?.show_location ?? true
-      },
-      preferences: {
-        diet: u.preferences?.diet || [],
-        exclusions: u.preferences?.exclusions || [],
-        allergies: u.preferences?.allergies || [],
-        servings_default: u.preferences?.servings_default ?? 2,
-        unit_system: u.preferences?.unit_system || 'metric'
-      }
-    });
-  };
-
-  const handleImageUpload = async (e) => {
-    if (isReadOnly) {
-      alert(t('manage_users.alerts.read_only'));
-      return;
-    }
-    const file = e.target.files[0];
-    if (!file || !editingUser) return;
-
-    setUploading(true);
-    try {
-      const storageRef = ref(storage, `avatars/${editingUser.id}_${Date.now()}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      setProfileForm(prev => ({ ...prev, avatar: downloadURL }));
-      alert(t('manage_users.alerts.image_upload_success'));
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      alert(t('manage_users.alerts.image_upload_error'));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const saveProfile = async (e) => {
-    e.preventDefault();
-    if (!isAuthorized || isReadOnly) {
-      alert(t('manage_users.alerts.read_only'));
-      return;
-    }
-
-    try {
-      // Security Check: Admin cannot edit Owner
-      const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
-      if (targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER) {
-        alert(t('manage_users.alerts.cannot_edit_owner'));
-        return;
-      }
-
-      const userRef = doc(db, 'users', editingUser.id);
-      await updateDoc(userRef, {
-        'profile.first_name': profileForm.firstName,
-        'profile.last_name': profileForm.lastName,
-        'profile.nickname': profileForm.nickname,
-        'profile.bio_bg': profileForm.bioBg,
-        'profile.bio_en': profileForm.bioEn,
-        'profile.avatar': profileForm.avatar,
-        'profile.location.city_bg': profileForm.location.cityBg,
-        'profile.location.city_en': profileForm.location.cityEn,
-        'profile.location.country_bg': profileForm.location.countryBg,
-        'profile.location.country_en': profileForm.location.countryEn,
-        'profile.location.show_location': profileForm.location.showLocation,
-        'preferences': profileForm.preferences,
-        'name': profileForm.nickname // keep legacy field synced
-      });
-      await logActivity(user.uid, user.email, 'profile_edit_admin', `Admin edited profile for ${editingUser.auth?.email || editingUser.email}`);
-      setEditingUser(null);
-      alert(t('manage_users.alerts.profile_update_success'));
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      alert(t('manage_users.alerts.profile_update_error'));
     }
   };
 
@@ -544,14 +361,27 @@ const ManageUsers = () => {
               return (
               <div key={u.id} className={`bg-surface-dark/80 backdrop-blur-md border rounded-2xl p-4 shadow-lg flex flex-col gap-3 ${isDeleted ? 'border-rose-500/50 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/20'}`}>
                 <div className="flex justify-between items-start">
-                  <div>
-                    <h3 
-                      onClick={() => openProfileModal(u)} 
-                      className="text-slate-100 font-bold flex items-center gap-2 hover:text-primary cursor-pointer transition-colors"
+                  <div className="flex items-center gap-3">
+                    <div 
+                      onClick={() => navigate(`/profile?uid=${u.id}`)}
+                      className="size-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-primary transition-colors"
+                      title={userName}
                     >
-                      {userName}
-                    </h3>
-                    <p className="text-xs text-slate-400 font-mono mt-0.5">{userEmail}</p>
+                      {u.profile?.avatar ? (
+                        <img src={u.profile.avatar} alt={userName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="material-symbols-outlined text-primary text-xl">person</span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 
+                        onClick={() => navigate(`/profile?uid=${u.id}`)} 
+                        className="text-slate-100 font-bold flex items-center gap-2 hover:text-primary cursor-pointer transition-colors"
+                      >
+                        {userName}
+                      </h3>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5">{userEmail}</p>
+                    </div>
                   </div>
                   <button 
                     onClick={() => setRoleFilter(userRole)}
@@ -609,9 +439,22 @@ const ManageUsers = () => {
                     return (
                       <tr key={u.id} className={`border-b border-primary/5 hover:bg-primary/5 transition-colors ${isDeleted ? 'opacity-60' : !isActive ? 'opacity-75' : ''}`}>
                         <td className="px-3 py-2">
-                          <button onClick={() => openProfileModal(u)} className="font-bold text-slate-200 hover:text-primary transition-colors text-left text-[11px]">
-                            {userName}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              onClick={() => navigate(`/profile?uid=${u.id}`)}
+                              className="size-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer"
+                              title={userName}
+                            >
+                              {u.profile?.avatar ? (
+                                <img src={u.profile.avatar} alt={userName} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="material-symbols-outlined text-primary text-xs">person</span>
+                              )}
+                            </div>
+                            <button onClick={() => navigate(`/profile?uid=${u.id}`)} className="font-bold text-slate-200 hover:text-primary transition-colors text-left text-[11px]">
+                              {userName}
+                            </button>
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-[10px] font-mono text-slate-400">{userEmail}</td>
                         <td className="px-3 py-2">
@@ -650,393 +493,6 @@ const ManageUsers = () => {
           </div>
         )}
       </div>
-
-      {/* Profile Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-surface-dark border border-primary/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[80vh] mb-12">
-            <div className="flex justify-between items-center p-4 border-b border-primary/20 bg-background-dark">
-              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">manage_accounts</span>
-                {t('manage_users.modal.title')}
-              </h3>
-              <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-rose-500 p-1">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-              <div className="flex flex-col items-center mb-6">
-                <div className="relative group">
-                  <div className="size-28 rounded-full bg-primary/10 border-4 border-primary/30 flex items-center justify-center overflow-hidden shadow-2xl">
-                    {profileForm.avatar ? (
-                      <img src={profileForm.avatar} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="material-symbols-outlined text-5xl text-primary/50">account_circle</span>
-                    )}
-                    {uploading && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <span className="material-symbols-outlined animate-spin text-white">refresh</span>
-                      </div>
-                    )}
-                  </div>
-                  {(() => {
-                    const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
-                    const canEdit = isAuthorized && !isReadOnly && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
-                    if (!canEdit) return null;
-                    
-                    return (
-                      <button 
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-0 right-0 size-9 rounded-full bg-primary text-background-dark flex items-center justify-center shadow-lg hover:scale-110 active:scale-90 transition-all border-2 border-background-dark"
-                        title={t('manage_users.modal.change_photo')}
-                      >
-                        <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
-                      </button>
-                    );
-                  })()}
-                  <input 
-                    ref={fileInputRef}
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={handleImageUpload} 
-                  />
-                </div>
-
-                {/* Invite to Role */}
-                {user.role === ROLES.OWNER && (
-                  (() => {
-                    const targetRole = editingUser.status?.level || ROLES.USER;
-                    if (targetRole === ROLES.USER || targetRole === ROLES.MODERATOR) {
-                      const isInvited = editingUser.invited_role;
-                      const nextRole = targetRole === ROLES.USER ? ROLES.MODERATOR : ROLES.ADMIN;
-                      const roleInviteLabel = targetRole === ROLES.USER ? t('manage_users.modal.invite_moderator') : t('manage_users.modal.invite_admin');
-                      
-                      return (
-                        <div className="mt-3 w-full flex justify-center">
-                          <button 
-                            type="button"
-                            disabled={isInvited === nextRole}
-                            onClick={async () => {
-                              try {
-                                await updateDoc(doc(db, 'users', editingUser.id), {
-                                  invited_role: nextRole
-                                });
-                                editingUser.invited_role = nextRole;
-                                alert(t('manage_users.alerts.invite_success'));
-                                logActivity(user.uid, user.email, 'invite_role', `Invited ${editingUser.auth?.email || editingUser.email || editingUser.id} to ${nextRole}`);
-                              } catch(e) {
-                                console.error(e);
-                                alert(t('manage_users.alerts.invite_error'));
-                              }
-                            }}
-                            className="w-full flex items-center justify-center gap-2 bg-amber-500 text-background-dark py-2.5 rounded-xl text-xs font-extrabold shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:bg-amber-400 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-500 disabled:shadow-none"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">mail</span>
-                            {isInvited === nextRole 
-                              ? t('manage_users.modal.invitation_sent')
-                              : roleInviteLabel}
-                          </button>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()
-                )}
-              </div>
-
-              <form id="profileForm" onSubmit={saveProfile} className="space-y-4">
-                {(() => {
-                  const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
-                  const canEdit = isAuthorized && !isReadOnly && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
-                  
-                  return (
-                    <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{t('manage_users.modal.first_name')}</label>
-                          <input 
-                            type="text" 
-                            disabled={!canEdit}
-                            value={profileForm.firstName} 
-                            onChange={e => setProfileForm({...profileForm, firstName: e.target.value})}
-                            className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{t('manage_users.modal.last_name')}</label>
-                          <input 
-                            type="text" 
-                            disabled={!canEdit}
-                            value={profileForm.lastName} 
-                            onChange={e => setProfileForm({...profileForm, lastName: e.target.value})}
-                            className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{t('manage_users.modal.nickname')}</label>
-                        <input 
-                          type="text" 
-                          disabled={!canEdit}
-                          value={profileForm.nickname} 
-                          onChange={e => setProfileForm({...profileForm, nickname: e.target.value})}
-                          className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                        />
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
-                            {t('manage_users.modal.bio_bg')}
-                          </label>
-                          <textarea 
-                            value={profileForm.bioBg} 
-                            disabled={!canEdit}
-                            onChange={e => setProfileForm({...profileForm, bioBg: e.target.value})}
-                            rows="3"
-                            className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors resize-none disabled:opacity-50" 
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
-                            {t('manage_users.modal.bio_en')}
-                          </label>
-                          <textarea 
-                            value={profileForm.bioEn} 
-                            disabled={!canEdit}
-                            onChange={e => setProfileForm({...profileForm, bioEn: e.target.value})}
-                            rows="3"
-                            className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors resize-none disabled:opacity-50" 
-                          />
-                        </div>
-                      </div>
-
-                      {/* Location Section */}
-                      <div className="pt-2 border-t border-primary/20">
-                        <h4 className="text-sm font-bold text-primary flex items-center gap-2 mb-3">
-                          <span className="material-symbols-outlined text-[18px]">location_on</span>
-                          {t('manage_users.modal.location')}
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{t('manage_users.modal.city_bg')}</label>
-                            <input 
-                              type="text" 
-                              disabled={!canEdit}
-                              value={profileForm.location.cityBg} 
-                              onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, cityBg: e.target.value}})}
-                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{t('manage_users.modal.city_en')}</label>
-                            <input 
-                              type="text" 
-                              disabled={!canEdit}
-                              value={profileForm.location.cityEn} 
-                              onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, cityEn: e.target.value}})}
-                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{t('manage_users.modal.country_bg')}</label>
-                            <input 
-                              type="text" 
-                              disabled={!canEdit}
-                              value={profileForm.location.countryBg} 
-                              onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, countryBg: e.target.value}})}
-                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{t('manage_users.modal.country_en')}</label>
-                            <input 
-                              type="text" 
-                              disabled={!canEdit}
-                              value={profileForm.location.countryEn} 
-                              onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, countryEn: e.target.value}})}
-                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                           <input
-                             type="checkbox"
-                             id="showLocationAdmin"
-                             disabled={!canEdit}
-                             checked={profileForm.location.showLocation}
-                             onChange={e => setProfileForm({...profileForm, location: {...profileForm.location, showLocation: e.target.checked}})}
-                             className="accent-primary w-4 h-4"
-                           />
-                           <label htmlFor="showLocationAdmin" className="text-xs text-slate-300 select-none">
-                             {t('manage_users.modal.show_location')}
-                           </label>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-primary/20">
-                        <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">{t('manage_users.modal.email_readonly')}</label>
-                        <div className="w-full bg-background-dark/30 border border-primary/10 rounded-xl p-2 text-slate-500 text-xs font-mono flex items-center justify-between">
-                          <span>{editingUser.auth?.email || editingUser.email || 'N/A'}</span>
-                          {(editingUser.auth?.email || editingUser.email) && (
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                const email = editingUser.auth?.email || editingUser.email;
-                                navigate(`/admin/activity?email=${encodeURIComponent(email)}`);
-                              }}
-                              className="text-primary hover:text-[#b8860b] transition-colors flex items-center gap-1"
-                              title={t('manage_users.modal.view_activity_log')}
-                            >
-                              <span className="material-symbols-outlined text-[16px]">history</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Preferences Section */}
-                      <div className="pt-6 border-t border-primary/20 space-y-4">
-                        <h4 className="text-sm font-bold text-primary flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[18px]">settings_accessibility</span>
-                          {t('manage_users.modal.preferences_heading')}
-                        </h4>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
-                              {t('manage_users.modal.default_servings')}
-                            </label>
-                            <input 
-                              type="number" 
-                              disabled={!canEdit}
-                              value={profileForm.preferences.servings_default} 
-                              onChange={e => setProfileForm({
-                                ...profileForm, 
-                                preferences: { ...profileForm.preferences, servings_default: parseInt(e.target.value) || 2 }
-                              })}
-                              min="1"
-                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
-                              {t('manage_users.modal.unit_system')}
-                            </label>
-                            <select 
-                              disabled={!canEdit}
-                              value={profileForm.preferences.unit_system} 
-                              onChange={e => setProfileForm({
-                                ...profileForm, 
-                                preferences: { ...profileForm.preferences, unit_system: e.target.value }
-                              })}
-                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50"
-                            >
-                              <option value="metric">{t('manage_users.modal.metric')}</option>
-                              <option value="imperial">{t('manage_users.modal.imperial')}</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
-                              {t('manage_users.modal.diets_label')}
-                            </label>
-                            <input 
-                              type="text" 
-                              disabled={!canEdit}
-                              value={profileForm.preferences.diet.join(', ')} 
-                              onChange={e => setProfileForm({
-                                ...profileForm, 
-                                preferences: { ...profileForm.preferences, diet: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }
-                              })}
-                              placeholder="Keto, Vegan..."
-                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-tighter">
-                              {t('manage_users.modal.exclusions_label')}
-                            </label>
-                            <input 
-                              type="text" 
-                              disabled={!canEdit}
-                              value={[...profileForm.preferences.exclusions, ...profileForm.preferences.allergies].join(', ')} 
-                              onChange={e => {
-                                const vals = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                                setProfileForm({
-                                  ...profileForm, 
-                                  preferences: { ...profileForm.preferences, exclusions: vals }
-                                });
-                              }}
-                              placeholder="Peanuts, Seafood..."
-                              className="w-full bg-background-dark/50 border border-primary/20 rounded-xl p-2 text-slate-100 text-sm focus:border-primary outline-none transition-colors disabled:opacity-50" 
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
-
-                {/* Extra readonly info */}
-                <div className="pt-4 border-t border-primary/10 grid grid-cols-2 gap-4">
-                   <div>
-                      <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{t('manage_users.modal.reputation')}</label>
-                      <p className="text-primary text-xs font-bold">{editingUser.reputation?.score || 0} pts ({currentLang === 'bg' ? (editingUser.reputation?.label || 'Новак') : (editingUser.reputation?.label_en || 'Novice')})</p>
-                   </div>
-                   <div>
-                      <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{t('manage_users.modal.member_since')}</label>
-                      <p className="text-slate-400 text-[10px]">{editingUser.status?.created_at ? new Date(editingUser.status.created_at).toLocaleDateString(currentLang === 'bg' ? 'bg-BG' : currentLang === 'de' ? 'de-DE' : currentLang === 'it' ? 'it-IT' : currentLang === 'fr' ? 'fr-FR' : 'en-US') : 'N/A'}</p>
-                   </div>
-                   <div>
-                      <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{t('manage_users.modal.added_recipes')}</label>
-                      <p className="text-slate-300 text-[10px] font-bold">{userRecipesCount.published}</p>
-                   </div>
-                   <div>
-                      <label className="block text-[9px] font-black text-slate-600 mb-1 uppercase">{t('manage_users.modal.edited_recipes')}</label>
-                      <p className="text-slate-300 text-[10px] font-bold">{userRecipesCount.edited}</p>
-                   </div>
-                </div>
-              </form>
-
-
-            </div>
-
-            <div className="p-4 border-t border-primary/20 bg-background-dark flex justify-end gap-3">
-              <button 
-                type="button" 
-                onClick={() => setEditingUser(null)} 
-                className="px-4 py-2 text-sm font-bold text-slate-300 hover:bg-primary/10 rounded-lg transition-colors"
-              >
-                {t('common.buttons.close')}
-              </button>
-              {(() => {
-                const targetUserRole = editingUser.status?.level || editingUser.role || ROLES.USER;
-                const canEdit = isAuthorized && !isReadOnly && !(targetUserRole === ROLES.OWNER && user.role !== ROLES.OWNER);
-                
-                if (!canEdit) return null;
-                
-                return (
-                  <button 
-                    type="submit" 
-                    form="profileForm"
-                    className="px-4 py-2 text-sm font-bold bg-primary text-background-dark rounded-lg shadow-lg hover:scale-105 active:scale-95 transition-all"
-                  >
-                    {t('common.buttons.save')}
-                  </button>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -2,12 +2,40 @@
 
 ## Предстояща задача (Приоритет за следваща стъпка)
 Очаква се избор от възложителя за следващия фокусен модул за разработка:
-1. **Седмичен планьор на менюто (`WeeklyMenuPlanner.jsx` `/planner`)**
-2. **История на поръчките (`OrderHistory.jsx` `/orders`)**
-3. **Световни кухни (`CuisinesExplorer.jsx` `/cuisines`)**
-4. **Сезонни менюта (`SeasonalMenu.jsx` `/seasonal`)**
+1. **История на поръчките (`OrderHistory.jsx` `/orders`)**
+2. **Сезонни менюта (`SeasonalMenu.jsx` `/seasonal`)**
+3. **Гурме общност (`GourmetCommunity.jsx` `/community`)**
 
 ## Наскоро завършени задачи
+Успешно изграден интелигентен **Седмичен планьор на менюто** ([WeeklyMenuPlanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WeeklyMenuPlanner.jsx)):
+1. **Динамичен 7-дневен календар и управление на храненията**:
+   - Автоматично изчисляване на датите за текущата седмица (`Пн` – `Нд`) в компактна 7-колонна решетка (`grid-cols-7`, без хоризонтален плъзгач) с визуални точки за брой планирани хранения за всеки ден.
+   - 4 слота за хранене на ден (`breakfast`, `lunch`, `dinner`, `snack`) с показване на реалната снимка на рецептата, време за приготвяне, оценка, бутон за смяна на рецептата, премахване и индивидуален контрол на порциите (`-` / `+`).
+   - Обобщена дневна и седмична статистика в реално време (планирани хранения за седмицата, общо време за готвене и калории за деня).
+2. **Персистиране на седмичното меню в профила на потребителя**:
+   - Двупосочна синхронизация с Firestore (`users/{uid}.weekly_menu`) за регистрирани потребители и автоматичен fallback към `localStorage` (`weekly_menu`) за гости.
+3. **Интерактивен модал за избор на рецепта и Автоматично попълване на деня**:
+   - Модал с търсачка на 5 езика и 3 филтърни таба: „Препоръчани“ (интелигентно съобразени със слота – закуски за сутринта, основни/супи за обяд и вечеря, десерти/напитки за следобед), „Запазени“ и „Всички“.
+   - Бутон „Попълни деня автоматично“ (`✨`), който избира подходящи рецепти за празните слотове на деня.
+4. **Интелигентно генериране на Списък за пазаруване за седмицата или деня**:
+   - Агрегира съставките от всички планирани рецепти (за цялата седмица или за избрания ден), мащабирани спрямо зададените порции за всяко хранене.
+   - Автоматично пропуска базови подправки (`isPantryStaple`) и приспада наличните количества в Дигиталния килер (`pantry`) чрез `matchesPantryItem`.
+   - Показва модален прозорец за преглед и потвърждение с отметки и информация за приспаднатите от килера наличности, след което обединява продуктите в `shoppingList` (`useAppContext`).
+5. **Пълна 5-езикова локализация (`bg`, `en`, `it`, `fr`, `de`)** в пространството `weekly_planner`.
+
+Успешно изграден интерактивен **Каталог на световните кухни** ([CuisinesExplorer.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CuisinesExplorer.jsx), [cuisines.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/cuisines.js), [RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx)):
+1. **Йерархичен двигател и синхронизация с Администраторския модул ([cuisines.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/cuisines.js))**:
+   - `mergeCuisinesList(firestoreDocs)`: обединява 94-те базови световни кухни с динамично добавените или редактирани кухни във Firestore (`/admin/cuisines`).
+   - `getDescendantCuisineIds(idOrName, customCuisines)`: рекурсивно извлича всички дъщерни кухни и подкухни (нива 0 → 1 → 2 → 3).
+   - `getCuisineBreadcrumbs(idOrName, customCuisines)`: генерира пълната йерархична пътека от континента до конкретната национална/регионална кухня.
+   - `resolveRecipeCuisineId(recipe, customCuisines)`: нормализира `cuisine_id` и legacy полета към каноничното ID на кухнята.
+2. **Интерактивен двурежимен интерфейс ([CuisinesExplorer.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CuisinesExplorer.jsx) `/cuisines`)**:
+   - **Режим А (Световен кулинарен атлас)**: търсачка на 5 езика, табове по континенти/региони, превключвател „Само с рецепти“ / „Целият каталог“, секция „Водещи кулинарни традиции“ с реални корици от най-високо оценените рецепти и секция „Кулинарна карта по региони“ с интерактивни чипове за подкухните и броячи на рецепти.
+   - **Режим Б (Детайлен изглед на избрана кухня `/cuisines?id=...`)**: интерактивни breadcrumbs за навигация нагоре/надолу по дървото, Hero банер с директен бутон „✨ Тайните на тази кухня с Chef AI“, чипове за подкухните, търсене и сортиране на рецептите („Най-високо оценени“, „Най-бързи“, „Най-нови“).
+3. **Поддръжка на `?cuisine=...` в търсачката ([RecipeSearchResults.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeSearchResults.jsx))**:
+   - Йерархично филтриране по кухня и визуален чип за активната кухня.
+4. **Пълна 5-езикова локализация (`bg`, `en`, `it`, `fr`, `de`)** в пространството `cuisines_explorer`.
+
 Успешно възкресяване и пълно изграждане на фундаменталната идея на приложението – „Какво да сготвя сега?“ ([AIIngredientsSearch.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIIngredientsSearch.jsx), [recipeMatcherEngine.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMatcherEngine.js), [Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx), [AIAssistant.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIAssistant.jsx)):
 1. **Детерминиран двигател за съпоставяне ([recipeMatcherEngine.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeMatcherEngine.js))**:
    - `PANTRY_STAPLES`: списък от 22 базови съставки (сол, пипер, олио, зехтин, вода, оцет, захар) на български и английски с пълна синонимна поддръжка.
