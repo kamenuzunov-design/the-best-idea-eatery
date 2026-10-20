@@ -1875,5 +1875,55 @@
     "no_planned_meals": "Veuillez d'abord ajouter au moins un repas au menu.",
     "already_in_cart_badge": "Déjà dans la liste ({{qty}} {{unit}})",
     "partial_in_cart_badge": "Dans la liste : {{qty}} {{unit}}"
+  },
+  "seasonal_menu": {
+    "page_badge": "Guide Culinaire de Saison",
+    "now_in_season": "De saison maintenant",
+    "recipes_count": "{{count}} recettes",
+    "seasons": {
+      "spring": {
+        "name": "Printemps",
+        "subtitle": "Jeunes pousses, herbes fraîches et éveil des saveurs",
+        "description": "Salades croquantes, épinards, ortie, asperges, radis, fraises et spécialités de Pâques."
+      },
+      "summer": {
+        "name": "Été",
+        "subtitle": "Jardins ensoleillés, brise marine et fraîcheur glacée",
+        "description": "Tomates juteuses, soupes froides, légumes grillés, fruits de mer, fruits rouges et boissons rafraîchissantes."
+      },
+      "autumn": {
+        "name": "Automne",
+        "subtitle": "Récolte dorée, champignons des bois et arômes veloutés",
+        "description": "Veloutés onctueux, betteraves et courges rôties, champignons, noix, pommes, risottos et plats mijotés."
+      },
+      "winter": {
+        "name": "Hiver",
+        "subtitle": "Chaleur du foyer, tables de fête et épices d'hiver",
+        "description": "Soupes et ragoûts réconfortants, choucroute, rôtis festifs, agrumes à la cannelle et au girofle, pâtisseries de Noël et boissons chaudes."
+      }
+    },
+    "spotlight_title": "Produits phares – {{season}}",
+    "spotlight_subtitle": "Touchez un ingrédient de saison pour filtrer les recettes",
+    "all_produce": "Tous les produits de saison",
+    "in_season_badge": "De saison :",
+    "course_tabs": {
+      "all": "Toutes",
+      "salads_soups": "Salades & Soupes",
+      "mains": "Plats Principaux",
+      "desserts_pastry": "Desserts & Boulangerie",
+      "drinks": "Boissons"
+    },
+    "search_placeholder": "Rechercher une recette ou un ingrédient de saison...",
+    "sort_seasonal": "Pertinence",
+    "sort_rating": "Mieux notées",
+    "sort_fast": "Plus rapides",
+    "featured_pick": "Coup de cœur de saison",
+    "favorites_heading": "Favoris – {{season}}",
+    "clear_filters": "Effacer les filtres",
+    "empty_filtered": "Aucune recette de saison ne correspond aux filtres choisis.",
+    "ask_chef_btn": "Inspiration de saison avec Chef AI",
+    "ask_chef_sub": "Demandez à Chef AI des idées et secrets autour des produits de saison",
+    "saved_toast": "Recette enregistrée dans les Favoris !",
+    "removed_toast": "Recette retirée des Favoris."
   }
 }

@@ -7,7 +7,7 @@ import { useAppContext } from '../context/AppContext';
 import { getLocalizedField } from '../lib/localeUtils';
 import { getLocalizedCuisine } from '../data/cuisines';
 import { matchWinesForRecipe, isWinePairingApplicable } from '../lib/wineMatcher.js';
-import { getYouTubeThumbnail } from '../lib/videoUtils';
+import { getYouTubeThumbnail, isYouTubeUrl, getYouTubeWatchUrl } from '../lib/videoUtils';
 import { getRecipeImageUrl } from '../lib/imageUtils';
 
 const WinePairing = () => {
@@ -289,8 +289,23 @@ const WinePairing = () => {
     } catch (err) {
       console.warn("Failed to increment wine ad click:", err);
     }
-    if (ad.targetUrl) {
-      window.open(ad.targetUrl, '_blank', 'noopener,noreferrer');
+
+    const isVideo = ad.type === 'video';
+    const isYT = isVideo && isYouTubeUrl(ad.contentUrl);
+    const videoTarget = isYT ? getYouTubeWatchUrl(ad.contentUrl) : ad.contentUrl;
+    const targetUrl = ad.linkUrl || ad.targetUrl || (isVideo ? videoTarget : '');
+
+    if (targetUrl) {
+      if (ad.isLocalLink && ad.linkUrl) {
+        try {
+          const urlObj = new URL(targetUrl);
+          navigate(urlObj.pathname + urlObj.search + urlObj.hash);
+        } catch {
+          navigate(targetUrl.replace(window.location.origin, ''));
+        }
+      } else {
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 

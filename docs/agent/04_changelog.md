@@ -3,6 +3,34 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-10-20] - Интелигентно Сезонно меню за 4-те сезона (SeasonalMenu.jsx, seasonalMatcher.js, locales)
+### Добавено / Подобрено (Added / Improved)
+- **Интелигентен кулинарен сезонен двигател ([seasonalMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/seasonalMatcher.js))**:
+  - `getCurrentSeasonId`: автоматично определя текущия календарен сезон (`spring`, `summer`, `autumn`, `winter`) спрямо месеца.
+  - `SEASONAL_PRODUCE_CATALOG`: каталог с емблематичните сезонни продукти в пика на своята свежест за всеки от 4-те сезона с 5-езикова локализация (`bg`, `en`, `it`, `fr`, `de`).
+  - `evaluateRecipeSeasonality`: оценява всяка рецепта спрямо изрични сезонни маркери, категория/подкатегория и семантичен анализ на съставките, връщайки точков скор, група ястие (`salads_soups`, `mains`, `desserts_pastry`, `drinks`) и списък от конкретните сезонни продукти в рецептата (`matchedProduce`).
+- **Пълнофункционална страница „Сезонно меню“ ([SeasonalMenu.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SeasonalMenu.jsx) `/seasonal`)**:
+  - Заменен старият статичен макет и премахнат дублираният вътрешен `<header>`.
+  - **4-сегментен селектор (`grid-cols-4`)** за **Пролет 🌸**, **Лято ☀️**, **Есен 🍂** и **Зима ❄️** със синхронизация през URL параметър (`?season=...`), живи броячи на рецепти и индикатор за текущия календарен сезон („Сега в сезон“).
+  - **Динамичен Hero банер**: показва реална снимка от най-високо оценената рецепта за сезона (`getRecipeImageUrl`) с бърза връзка „Сезонен акцент“.
+  - **Секция „Звездни продукти през сезона“**: интерактивни чипове с продуктите в пика на сезона и броя рецепти с тях за 1-клик филтриране.
+  - **Мост към Шеф AI**: бутон „✨ Сезонно вдъхновение с Chef AI“, който отваря `/ai-assistant` с контекстуален промпт за избрания сезон и продукт.
+  - **Филтри по тип ястие, търсачка и сортиране**: табове (`Всички`, `Салати и Супи`, `Основни`, `Десерти и Печива`, `Напитки`), търсене на 5 езика и сортиране (`Най-подходящи`, `Топ рейтинг`, `Най-бързи`).
+  - **Карти на рецептите**: визуализират чипове `В сезон: ...` за сезонните съставки в ястието, време, сложност, рейтинг, цена на порция и работещ бутон за запазване в Любими (`saved_recipes`).
+- **5-езикова локализация (`bg`, `en`, `it`, `fr`, `de`)**:
+  - Добавено пространство `seasonal_menu` във всички 5 езикови файла в `src/locales/`.
+
+## [2026-10-20] - Корекция на липсващото изображение по подразбиране при импортиране на рецепти чрез CSV и корекция на рекламата във Винено съчетаване (public/images/recipe-placeholder.png, ManageRecipes.jsx, SavedRecipes.jsx, WinePairing.jsx)
+### Коригирано (Fixed)
+- **Възстановено базово изображение по подразбиране и коректно зареждане при импорт от `.csv` ([recipe-placeholder.png](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/public/images/recipe-placeholder.png), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx))**:
+  - **Възстановен файл `public/images/recipe-placeholder.png`**: Файлът с базовото изображение при липса на качена снимка от потребителя (добавен по-рано в `master`, но липсващ в текущия работен клон `feat/dashboard-and-auth`) е възстановен в `public/images/recipe-placeholder.png`.
+  - **CSV импорт (`handleImportCSV` в `ManageRecipes.jsx`)**: При импортиране на рецепти от `.csv` файл вече се инициализира структурираният обект `images: { main: ..., extra1: '', extra2: '' }` с `/images/recipe-placeholder.png`, когато в CSV файла не е подаден URL адрес на снимка. Ако рецептата вече съществува и има качено от потребителя изображение, то се запазва при препокриване от CSV без снимка.
+  - **Визуализация в админ списъка и Запазени рецепти**: В `ManageRecipes.jsx` и `SavedRecipes.jsx` миниатюрите вече използват централизираната функция `getRecipeImageUrl(r)` с `onError` резервен вариант към `/images/recipe-placeholder.png` (премахнат старият несъществуващ път `/placeholder.jpg`).
+- **Работещ линк при клик върху нативната реклама във Винено съчетаване ([WinePairing.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WinePairing.jsx))**:
+  - Отстранен проблемът, при който кликването върху спонсорираната реклама за вино отчиташе клик, но не отваряше целевия URL адрес.
+  - Причина: В `handleAdClick` се проверяваше единствено `ad.targetUrl`, докато в схемата на Firestore (`ads`) целевият линк се съхранява в полето `ad.linkUrl` (и `ad.contentUrl` за видео реклами).
+  - Решение: `handleAdClick` вече използва `ad.linkUrl || ad.targetUrl || videoTarget`, поддържа вътрешни линкове (`ad.isLocalLink`) и отваря външните реклами и YouTube видеа в нов таб (`_blank`), идентично с `RecipeDetail.jsx` и `AdBanner.jsx`.
+
 ## [2026-10-16] - Интелигентен седмичен планьор на менюто със запазване в профила и автоматично генериране на Списък за пазаруване (WeeklyMenuPlanner.jsx, locales)
 ### Добавено / Подобрено (Added / Improved)
 - **Пълнофункционален Седмичен планьор на менюто ([WeeklyMenuPlanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WeeklyMenuPlanner.jsx) `/planner`)**:

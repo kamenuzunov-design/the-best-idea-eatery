@@ -1875,5 +1875,55 @@
     "no_planned_meals": "Bitte füge zuerst mindestens eine Mahlzeit zum Wochenmenü hinzu.",
     "already_in_cart_badge": "Bereits in der Liste ({{qty}} {{unit}})",
     "partial_in_cart_badge": "In der Liste: {{qty}} {{unit}}"
+  },
+  "seasonal_menu": {
+    "page_badge": "Saisonaler Kulinarik-Guide",
+    "now_in_season": "Jetzt in Saison",
+    "recipes_count": "{{count}} Rezepte",
+    "seasons": {
+      "spring": {
+        "name": "Frühling",
+        "subtitle": "Frisches Grün, junge Kräuter & erwachende Aromen",
+        "description": "Knackige Salate, Spinat, Brennnessel, Spargel, Radieschen, Erdbeeren und festliche Osterspezialitäten."
+      },
+      "summer": {
+        "name": "Sommer",
+        "subtitle": "Sonnengereifte Gärten, Meeresbrise & kühle Erfrischung",
+        "description": "Saftige Tomaten, kalte Suppen, Grillgemüse, Meeresfrüchte, Sommerbeeren und erfrischende Getränke."
+      },
+      "autumn": {
+        "name": "Herbst",
+        "subtitle": "Goldene Ernte, Waldpilze & samtige Aromen",
+        "description": "Cremige Suppen, geröstete Rote Bete und Kürbis, Pilze, Walnüsse, Äpfel, Risotto und Schmorgerichte."
+      },
+      "winter": {
+        "name": "Winter",
+        "subtitle": "Kaminwärme, Festtagstafel & wärmende Gewürze",
+        "description": "Herzhafte Eintöpfe, Sauerkraut, Festtagsbraten, Zitrusfrüchte mit Zimt und Nelken, Weihnachtsgebäck und Heißgetränke."
+      }
+    },
+    "spotlight_title": "Saison-Highlights im {{season}}",
+    "spotlight_subtitle": "Tippe auf eine Zutat der Saison, um passende Rezepte zu filtern",
+    "all_produce": "Alle Saisonprodukte",
+    "in_season_badge": "In Saison:",
+    "course_tabs": {
+      "all": "Alle",
+      "salads_soups": "Salate & Suppen",
+      "mains": "Hauptgerichte",
+      "desserts_pastry": "Desserts & Gebäck",
+      "drinks": "Getränke"
+    },
+    "search_placeholder": "Saisonales Rezept oder Zutat suchen...",
+    "sort_seasonal": "Beste Passung",
+    "sort_rating": "Top bewertet",
+    "sort_fast": "Schnellste",
+    "featured_pick": "Saison-Highlight",
+    "favorites_heading": "{{season}}-Favoriten",
+    "clear_filters": "Filter zurücksetzen",
+    "empty_filtered": "Keine saisonalen Rezepte für die gewählten Filter gefunden.",
+    "ask_chef_btn": "Saison-Inspiration mit Chef AI",
+    "ask_chef_sub": "Frage Chef AI nach Ideen und Tipps mit aktuellen Saisonprodukten",
+    "saved_toast": "Rezept in Favoriten gespeichert!",
+    "removed_toast": "Rezept aus Favoriten entfernt."
   }
 }

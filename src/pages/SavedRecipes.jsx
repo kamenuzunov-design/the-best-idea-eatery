@@ -9,6 +9,7 @@ import { getLocalizedCuisine } from '../data/cuisines';
 import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getLocalizedField } from '../lib/localeUtils';
+import { getRecipeImageUrl } from '../lib/imageUtils';
 import { 
   normalizeUnitId, 
   convertQuantityToSystem, 
@@ -681,7 +682,7 @@ const SavedRecipes = () => {
                   hard: t('saved.difficulty.hard', 'Трудно')
                 };
                 const difficulty = difficultyMap[recipe.difficulty] || difficultyMap.medium;
-                const imageUrl = recipe.images?.main || "/placeholder.jpg";
+                const imageUrl = getRecipeImageUrl(recipe);
                 const cuisineName = getLocalizedCuisine(recipe.cuisine_id || recipe.cuisine_bg, currentLang) || t('saved.global_selection');
                 const calculatedTags = getRecipeTags(recipe, ingredientsList);
                 const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
@@ -700,7 +701,7 @@ const SavedRecipes = () => {
                           src={imageUrl}
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = '/placeholder.jpg';
+                            e.target.src = '/images/recipe-placeholder.png';
                           }}
                         />
                       </div>

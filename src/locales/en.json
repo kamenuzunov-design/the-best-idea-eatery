@@ -1875,5 +1875,55 @@
     "no_planned_meals": "Please add at least one meal to your weekly menu first.",
     "already_in_cart_badge": "Already in list ({{qty}} {{unit}})",
     "partial_in_cart_badge": "In list: {{qty}} {{unit}}"
+  },
+  "seasonal_menu": {
+    "page_badge": "Seasonal Culinary Guide",
+    "now_in_season": "In Season Now",
+    "recipes_count": "{{count}} recipes",
+    "seasons": {
+      "spring": {
+        "name": "Spring",
+        "subtitle": "Vibrant Greens, Early Herbs & Awakening Flavors",
+        "description": "Crisp garden salads, spinach, nettle, asparagus, radishes, strawberries, and festive Easter specialties."
+      },
+      "summer": {
+        "name": "Summer",
+        "subtitle": "Sun-Ripened Gardens, Coastal Breeze & Chilled Refreshment",
+        "description": "Juicy heirloom tomatoes, cold soups, grilled vegetables, fresh seafood, summer berries, and refreshing drinks."
+      },
+      "autumn": {
+        "name": "Autumn",
+        "subtitle": "Golden Harvest, Forest Mushrooms & Velvety Aromas",
+        "description": "Rich cream soups, roasted beetroot and squash, earthy mushrooms, walnuts, apples, risotto, and slow-braised dishes."
+      },
+      "winter": {
+        "name": "Winter",
+        "subtitle": "Hearthside Warmth, Festive Feasts & Warming Spices",
+        "description": "Hearty stews and soups, sauerkraut, festive roasts, spiced citrus with cinnamon and cloves, holiday pastries, and warm drinks."
+      }
+    },
+    "spotlight_title": "Peak Produce in {{season}}",
+    "spotlight_subtitle": "Tap a peak-season ingredient to filter recipes featuring it",
+    "all_produce": "All Seasonal Produce",
+    "in_season_badge": "In season:",
+    "course_tabs": {
+      "all": "All",
+      "salads_soups": "Salads & Soups",
+      "mains": "Mains",
+      "desserts_pastry": "Desserts & Bakery",
+      "drinks": "Drinks"
+    },
+    "search_placeholder": "Search seasonal recipe or ingredient...",
+    "sort_seasonal": "Best Seasonal Fit",
+    "sort_rating": "Top Rated",
+    "sort_fast": "Quickest",
+    "featured_pick": "Seasonal Highlight",
+    "favorites_heading": "{{season}} Favorites",
+    "clear_filters": "Clear filters",
+    "empty_filtered": "No seasonal recipes match the selected filters.",
+    "ask_chef_btn": "Seasonal Inspiration with Chef AI",
+    "ask_chef_sub": "Ask Chef AI for culinary ideas and secrets with peak-season produce",
+    "saved_toast": "Recipe saved to Favorites!",
+    "removed_toast": "Recipe removed from Favorites."
   }
 }

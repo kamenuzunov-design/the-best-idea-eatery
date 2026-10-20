@@ -5,7 +5,7 @@ import { collection, query, onSnapshot, setDoc, updateDoc, doc, writeBatch, dele
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { resizeImage } from '../../lib/imageUtils';
+import { resizeImage, getRecipeImageUrl } from '../../lib/imageUtils';
 import { logActivity } from '../../lib/activityLogger';
 import { archiveVersion } from '../../lib/archiveUtils';
 import { checkImageSafety } from '../../lib/moderationUtils';
@@ -891,6 +891,11 @@ const ManageRecipes = () => {
           video_url: cols[idx('video_url')] || '',
           original_author: cols[idx('original_author')] || '',
           source_link: cols[idx('source_link')] || '',
+          images: recipes.find(r => (r.slug || r.id) === slug)?.images || {
+            main: idx('image_url') !== -1 ? (cols[idx('image_url')]?.trim() || '') : '',
+            extra1: '',
+            extra2: ''
+          },
           ingredients,
           steps,
           is_active: true,
@@ -2059,7 +2064,7 @@ const ManageRecipes = () => {
                 return (
                   <div key={r.id} className={`bg-surface-dark/50 border rounded-xl overflow-hidden flex flex-col group transition-colors ${isDeleted ? 'border-rose-500/30 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/10 hover:border-[#b8860b]/30'}`}>
                     <div className="h-24 w-full relative">
-                      <img src={r.images?.main || placeholderImg} alt={rName} className="w-full h-full object-cover" />
+                      <img src={getRecipeImageUrl(r)} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholderImg; }} alt={rName} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-background-dark to-transparent"></div>
                       {!isActive && !isDeleted && <div className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-background-dark text-[10px] font-bold rounded-full">{user?.role === ROLES.USER ? t('recipes.badge_pending') : t('recipes.badge_inactive')}</div>}
                       {r.needs_translation && (
@@ -2108,7 +2113,7 @@ const ManageRecipes = () => {
                         <tr key={r.id} className={`border-b border-primary/5 hover:bg-[#b8860b]/5 transition-colors ${isDeleted ? 'opacity-60' : !isActive ? 'opacity-75' : ''}`}>
                           <td className="px-3 py-2">
                             <div className="size-8 rounded overflow-hidden">
-                              <img src={r.images?.main || placeholderImg} className="w-full h-full object-cover" alt="r" />
+                              <img src={getRecipeImageUrl(r)} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholderImg; }} className="w-full h-full object-cover" alt="r" />
                             </div>
                           </td>
                           <td className="px-3 py-2">
