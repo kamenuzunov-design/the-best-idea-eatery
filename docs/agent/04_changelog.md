@@ -5,6 +5,10 @@
 
 ## [2026-10-22] - Гурме „Светла тема“ (Light Theme) с черен текст за рецептите, тъмно злато и подобрения в Гурме Общност (index.css, ThemeContext.jsx, GourmetCommunity.jsx, communityUtils.js, ManageRecipes.jsx, Moderation.jsx, ProfileSettings.jsx, Header.jsx)
 ### Добавено / Променено (Added / Changed)
+- **Изолация и синхронизация на темата по потребителски профил ([ThemeContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/ThemeContext.jsx))**:
+  - Темата на всеки логнат потребител се записва във Firebase Firestore в `users/{uid}.preferences.theme`.
+  - При излизане от профила (`signOut`), приложението автоматично се връща към базовата тъмна тема (`dark`).
+  - При влизане на нов потребител, темата се зарежда от личния му профил в Firestore (`user.preferences.theme`), елиминирайки проблема с наследяване на темата на предходния потребител в браузъра.
 - **Контраст и четимост в Светлата тема ([index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css))**:
   - Всички заглавия на рецепти и секции (`h1`–`h6` с класове `.text-white`, `.text-slate-100`, `.text-slate-200`) в светлата тема вече са с плътно черен цвят на шрифта (`#111111`).
   - Градиентите в долната част на снимките в светлата тема преливат плавно към топла слонова кост (`rgba(250, 248, 243, 0.96)`), осигурявайки перфектен контраст за черните заглавия на ястията.

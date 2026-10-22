@@ -11,8 +11,13 @@ const STORAGE_KEY = 'app_theme';
 
 export const ThemeProvider = ({ children }) => {
   const { user } = useAuth();
+  const currentUid = user?.uid && user?.role !== ROLES.GUEST ? user.uid : null;
+  const userProfileTheme =
+    user?.preferences?.theme === 'light' || user?.preferences?.theme === 'dark'
+      ? user.preferences.theme
+      : null;
 
-  const [localTheme, setLocalTheme] = useState(() => {
+  const [theme, setThemeState] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === 'light' || saved === 'dark') {
@@ -21,18 +26,37 @@ export const ThemeProvider = ({ children }) => {
     } catch {
       // ignore storage errors
     }
-    return null;
+    return 'dark';
   });
 
-  const userProfileTheme =
-    user?.preferences?.theme === 'light' || user?.preferences?.theme === 'dark'
-      ? user.preferences.theme
-      : null;
+  // Track previous user UID and Firestore profile theme to adjust state during render
+  // (Official React pattern: adjusting state when props change without effect setState cascades)
+  const [prevUid, setPrevUid] = useState(currentUid);
+  const [prevProfileTheme, setPrevProfileTheme] = useState(userProfileTheme);
 
-  // Effective theme: explicit local selection -> user profile preference -> default 'dark'
-  const theme = localTheme || userProfileTheme || 'dark';
+  if (prevUid !== currentUid) {
+    setPrevUid(currentUid);
+    setPrevProfileTheme(userProfileTheme);
+    const targetTheme = userProfileTheme || 'dark';
+    setThemeState(targetTheme);
+    try {
+      localStorage.setItem(STORAGE_KEY, targetTheme);
+    } catch {
+      // ignore
+    }
+  } else if (prevProfileTheme !== userProfileTheme) {
+    setPrevProfileTheme(userProfileTheme);
+    if (userProfileTheme) {
+      setThemeState(userProfileTheme);
+      try {
+        localStorage.setItem(STORAGE_KEY, userProfileTheme);
+      } catch {
+        // ignore
+      }
+    }
+  }
 
-  // Apply theme class to <html> element and persist in localStorage
+  // Apply theme class to <html> element
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'light') {
@@ -42,16 +66,11 @@ export const ThemeProvider = ({ children }) => {
       root.classList.remove('light');
       root.classList.add('dark');
     }
-    try {
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      // ignore
-    }
   }, [theme]);
 
   const setTheme = async (nextTheme) => {
     const normalized = nextTheme === 'light' ? 'light' : 'dark';
-    setLocalTheme(normalized);
+    setThemeState(normalized);
     try {
       localStorage.setItem(STORAGE_KEY, normalized);
     } catch {
