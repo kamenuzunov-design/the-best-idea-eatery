@@ -23,6 +23,7 @@ import Moderation from './pages/admin/Moderation';
 import BackupRecovery from './pages/admin/BackupRecovery';
 import ManageAds from './pages/admin/ManageAds';
 import ManageAIConfig from './pages/admin/ManageAIConfig';
+import ManageEvents from './pages/admin/ManageEvents';
 import RecipeDetail from './pages/RecipeDetail';
 import RecipeCustomization from './pages/RecipeCustomization';
 import WinePairing from './pages/WinePairing';
@@ -76,8 +77,16 @@ function App() {
           <Route path="/search" element={<RecipeSearchResults />} />
           <Route path="/ai-search" element={<AIIngredientsSearch />} />
           <Route path="/cuisines" element={<CuisinesExplorer />} />
-          <Route path="/community" element={<GourmetCommunity />} />
-          <Route path="/events" element={<GourmetEvents />} />
+          <Route path="/community" element={
+            <ProtectedRoute allowedRoles={requiresLogin}>
+              <GourmetCommunity />
+            </ProtectedRoute>
+          } />
+          <Route path="/events" element={
+            <ProtectedRoute allowedRoles={requiresLogin}>
+              <GourmetEvents />
+            </ProtectedRoute>
+          } />
           <Route path="/seasonal" element={<SeasonalMenu />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -205,6 +214,11 @@ function App() {
           <Route path="/admin/ai-config" element={
             <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER]}>
               <ManageAIConfig />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/events" element={
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.OWNER, ROLES.MODERATOR]}>
+              <ManageEvents />
             </ProtectedRoute>
           } />
 

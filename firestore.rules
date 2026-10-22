@@ -100,7 +100,20 @@ service cloud.firestore {
     // 11. Settings collection
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isAuth() && isAdminOrOwner();
+      allow write: if isAuth() && (isAdminOrOwner() || (settingId == 'gourmet_events' && isModerator()));
+    }
+
+    // 12. Events collection
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAuth() && (isAdminOrOwner() || isModerator());
+    }
+
+    // 13. Community posts collection
+    match /community_posts/{postId} {
+      allow read: if true;
+      allow create, update: if isAuth();
+      allow delete: if isAuth() && (isAdminOrOwner() || isModerator() || resource.data.authorId == request.auth.uid);
     }
   }
 }

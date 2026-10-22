@@ -2,16 +2,209 @@
 @config "../tailwind.config.js";
 
 @layer base {
+  :root,
+  html.dark {
+    --color-bg-main: #1a1812;
+    --color-bg-surface: #2a261a;
+    --color-bg-elevated: #231f15;
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    color-scheme: dark;
+  }
+
+  html.light {
+    --color-bg-main: #faf8f3;
+    --color-bg-surface: #ffffff;
+    --color-bg-elevated: #f3efe6;
+    --color-text-primary: #1c1917;
+    --color-text-secondary: #44403c;
+    --color-text-muted: #6e665e;
+    color-scheme: light;
+  }
+
   html, body {
     overflow-x: hidden;
     max-width: 100%;
     margin: 0;
     padding: 0;
   }
+
   body {
     font-family: 'Work Sans', sans-serif;
     min-height: max(884px, 100dvh);
+    background-color: var(--color-bg-main);
+    color: var(--color-text-primary);
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
+}
+
+/* ==========================================================================
+   Gourmet Light Theme ("Warm Ivory & Champagne Gold" - per light_theme/screen.png)
+   ========================================================================== */
+
+/* 1. Main Backgrounds & Surfaces */
+html.light body,
+html.light .bg-background-dark,
+html.light .bg-background-light {
+  background-color: #faf8f3 !important;
+  color: #1c1917;
+}
+
+html.light .bg-background-dark\/95,
+html.light .bg-background-dark\/90,
+html.light .bg-background-dark\/85,
+html.light .bg-background-dark\/80 {
+  background-color: rgba(250, 248, 243, 0.92) !important;
+}
+
+html.light .bg-background-dark\/70,
+html.light .bg-background-dark\/60,
+html.light .bg-background-dark\/50,
+html.light .bg-background-dark\/40 {
+  background-color: #f3efe6 !important;
+}
+
+/* Cards, Header, Drawers, Modals, Bottom Navigation */
+html.light .bg-surface-dark {
+  background-color: #ffffff !important;
+  box-shadow: 0 6px 22px rgba(180, 145, 55, 0.08);
+}
+
+html.light .bg-surface-dark\/95,
+html.light .bg-surface-dark\/90,
+html.light .bg-surface-dark\/85,
+html.light .bg-surface-dark\/80 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 6px 20px rgba(180, 145, 55, 0.08);
+}
+
+html.light .bg-surface-dark\/70,
+html.light .bg-surface-dark\/60,
+html.light .bg-surface-dark\/50,
+html.light .bg-surface-dark\/40,
+html.light .bg-surface-dark\/30 {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Nested backgrounds inside white cards (inputs, search boxes, chips, badges) */
+html.light .bg-surface-dark .bg-background-dark,
+html.light .bg-surface-dark\/95 .bg-background-dark,
+html.light .bg-surface-dark\/90 .bg-background-dark,
+html.light .bg-surface-dark\/85 .bg-background-dark,
+html.light .bg-surface-dark\/80 .bg-background-dark,
+html.light input.bg-background-dark,
+html.light textarea.bg-background-dark,
+html.light select.bg-background-dark {
+  background-color: #f4f1ea !important;
+  color: #1c1917 !important;
+}
+
+html.light input,
+html.light textarea,
+html.light select {
+  color: #1c1917;
+}
+
+/* Section & Card Gradients in Light Mode */
+html.light section.bg-gradient-to-b.from-surface-dark.to-background-dark {
+  background-image: linear-gradient(to bottom, #ffffff, #faf8f3) !important;
+}
+
+html.light .bg-gradient-to-br.from-primary\/20.via-surface-dark.to-background-dark {
+  background-image: linear-gradient(to bottom right, rgba(212, 175, 53, 0.18), #ffffff, #faf8f3) !important;
+  box-shadow: 0 10px 30px rgba(180, 145, 55, 0.12) !important;
+}
+
+html.light .bg-gradient-to-r.from-primary\/20.via-primary\/10.to-surface-dark {
+  background-image: linear-gradient(to right, rgba(212, 175, 53, 0.2), rgba(212, 175, 53, 0.08), #ffffff) !important;
+}
+
+/* Bottom Navigation Bar in Light Mode */
+html.light nav.bg-surface-dark {
+  background-color: #ffffff !important;
+  box-shadow: 0 -8px 30px rgba(180, 145, 55, 0.14) !important;
+  border-top-color: rgba(212, 175, 53, 0.28) !important;
+}
+
+html.light .border-surface-dark {
+  border-color: #ffffff !important;
+}
+
+html.light .border-background-dark {
+  border-color: #ffffff !important;
+}
+
+/* 2. Typography Contrast in Light Mode */
+html.light .text-slate-100,
+html.light .text-slate-200,
+html.light h1.text-white,
+html.light h2.text-white,
+html.light h3.text-white,
+html.light h4.text-white,
+html.light h5.text-white,
+html.light h6.text-white {
+  color: #111111 !important;
+}
+
+html.light h1.drop-shadow-lg,
+html.light h2.drop-shadow-lg,
+html.light h3.drop-shadow-lg,
+html.light h1.drop-shadow-md,
+html.light h2.drop-shadow-md,
+html.light h3.drop-shadow-md,
+html.light h4.drop-shadow-md {
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.9)) !important;
+}
+
+html.light .text-slate-300 {
+  color: #3f3a34 !important;
+}
+
+html.light .text-slate-400 {
+  color: #655e55 !important;
+}
+
+html.light .text-slate-500 {
+  color: #78716c !important;
+}
+
+/* Keep text on gold buttons dark espresso (#1a1812) */
+html.light .text-background-dark {
+  color: #1a1812 !important;
+}
+
+/* Darken golden text & icons by ~25-30% in Light Mode for crisp contrast */
+html.light .text-primary,
+html.light .text-primary-light,
+html.light .text-\[\#b8860b\],
+html.light .hover\:text-primary:hover {
+  color: #967316 !important;
+}
+
+html.light .text-primary\/90,
+html.light .text-primary\/80,
+html.light .text-primary\/70,
+html.light .text-primary\/60 {
+  color: #8a6914 !important;
+}
+
+html.light .text-amber-300,
+html.light .text-amber-400,
+html.light .text-amber-400\/90,
+html.light .text-amber-500 {
+  color: #946c0a !important;
+}
+
+/* 3. Light Vignette on Hero Images / Dish Photo Overlays so black recipe titles are crisp */
+html.light .relative.overflow-hidden > img + .bg-gradient-to-t,
+html.light .relative.overflow-hidden > div[style*="background-image"] + .bg-gradient-to-t {
+  background-image: linear-gradient(
+    to top,
+    rgba(250, 248, 243, 0.96) 0%,
+    rgba(250, 248, 243, 0.72) 50%,
+    transparent 100%
+  ) !important;
 }
 
 @layer utilities {

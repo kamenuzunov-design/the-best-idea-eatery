@@ -2,7 +2,30 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 16 Октомври 2026
+## Последна сесия: 22 Октомври 2026
+
+### Извършена работа:
+1. **Гурме „Светла тема“ с черен текст за рецептите, тъмно злато и Theme switcher ([index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css), [ThemeContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/ThemeContext.jsx), [ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx), [Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx))**:
+   - `ThemeProvider` и `useTheme()` с поддръжка на `'dark'` по подразбиране и `'light'`, запис в `localStorage` (`app_theme`) и синхронизация с `users/{uid}.preferences.theme`.
+   - Всички имена на рецепти и заглавия (`h1`–`h6` с класове `.text-white`, `.text-slate-100`, `.text-slate-200`) в светлата тема са с плътно черен шрифт (`#111111`).
+   - Градиентите в долната част на снимките в светлата тема преливат към светла слонова кост (`rgba(250, 248, 243, 0.96)`), давайки кристална четимост на черните заглавия на рецептите.
+   - Златните текстове и икони са потъмнени с ~25–30% (`#967316` / `#8a6914`), а кехлибарените акценти до `#946c0a`.
+   - Превключвател за тема в Профил (`/profile`) и в мобилното странично меню (`Header.jsx`).
+2. **Кулинарна социална мрежа „Гурме Общност“ и UX корекции ([GourmetCommunity.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetCommunity.jsx), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js), [defaultCommunityPosts.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/defaultCommunityPosts.js))**:
+   - Изградена социална емисия в реално време със споделяне на снимки на приготвени ястия, оценки (`1★–5★`), кулинарни отзиви, връзки към рецепти от каталога, харесвания (`❤️`), коментари (`💬`), запазване на рецепти (`🔖`) и секция с реални „Топ Готвачи“.
+   - Поставен въздух около снимките на ястията (`mx-4`), лека рамка и закръгляне (`rounded-2xl`).
+   - Бутоните за социални действия (`favorite`, `chat_bubble`, `share`, `bookmark`) са преместени най-отдолу на публикацията под текста.
+   - Заглавието „Гурме Общност“ е на един ред, пояснението на следващ ред, а бутонът „Сподели ястие“ под тях.
+   - Секцията „Топ Готвачи“ по подразбиране е свита и се разгъва/прибира при клик върху надписа.
+3. **Автоматичен 5-езиков AI превод на рецепти и модерация ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js))**:
+   - Потребителят въвежда рецептата само на своя език, а Chef AI автоматично превежда на 5 езика (`BG`, `EN`, `IT`, `FR`, `DE`): заглавие, описание, бележки към съставките и стъпки за приготвяне.
+   - Автоматично публикуване на новина („🆕 Нова рецепта в каталога“) в `/community` при новоодобрена рецепта.
+4. **Гурме събития & Мастъркласове ([GourmetEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetEvents.jsx) & [ManageEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageEvents.jsx))**:
+   - Админ панел за Собственик, Админ и Модератор, цени в Евро (€) / Безплатно, резервации на места и списък с участници в реално време.
+5. **Кулинарен дневник / История на сготвените рецепти ([OrderHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/OrderHistory.jsx))**:
+   - Автоматично логване от `CookingMode.jsx` (`+15 XP`), ръчно логване, оценки, лични бележки и 2-редови филтри.
+
+## Предишна сесия: 16 Октомври 2026
 
 ### Извършена работа:
 1. **Интелигентен седмичен планьор на менюто ([WeeklyMenuPlanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WeeklyMenuPlanner.jsx))**:

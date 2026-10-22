@@ -1115,40 +1115,45 @@ const RecipeDetail = () => {
         })()}
       </div>
 
-      {/* Action Bar (Edit / My Version / Wine Pairing / Save) */}
-      <div className={`px-4 pt-4 gap-2.5 sm:gap-3 ${(isPowerUser && showWineButton) ? 'grid grid-cols-2 sm:flex sm:flex-row' : 'flex'}`}>
-        {isPowerUser && (
+      {/* Action Bar: Row 1 (Edit / My Version), Row 2 (Save / Wine Pairing) */}
+      <div className="px-4 pt-4 flex flex-col gap-2.5">
+        <div className="flex gap-2.5">
+          {isPowerUser && (
+            <button 
+              onClick={() => navigate('/admin/recipes')} 
+              className="flex-1 flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-500 py-3 rounded-xl hover:bg-amber-500/20 transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px]">edit</span>
+              <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.edit')}</span>
+            </button>
+          )}
           <button 
-            onClick={() => navigate('/admin/recipes')} 
-            className="flex-1 flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-500 py-3 rounded-xl hover:bg-amber-500/20 transition-all shadow-md active:scale-95"
+            onClick={() => navigate(`/recipe/${id}/customize`)} 
+            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/40 text-primary py-3 rounded-xl hover:from-primary hover:to-[#b8860b] hover:text-background-dark transition-all shadow-md group active:scale-95 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px]">edit</span>
-            <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.edit')}</span>
+            <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">alt_route</span>
+            <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.my_version')}</span>
           </button>
-        )}
-        <button 
-          onClick={() => navigate(`/recipe/${id}/customize`)} 
-          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/40 text-primary py-3 rounded-xl hover:from-primary hover:to-[#b8860b] hover:text-background-dark transition-all shadow-md group active:scale-95"
-        >
-          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">alt_route</span>
-          <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.my_version')}</span>
-        </button>
-        {showWineButton && (
+        </div>
+
+        <div className="flex gap-2.5">
           <button 
-            onClick={() => navigate(`/recipe/${id}/wine`)} 
-            className="flex-1 flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 py-3 rounded-xl hover:bg-rose-500/20 hover:border-rose-500/50 transition-all shadow-md group active:scale-95"
+            onClick={handleToggleSave} 
+            className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer ${isSaved ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30' : 'bg-surface-dark border-slate-500/30 text-slate-400 hover:bg-slate-800'}`}
           >
-            <span className="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition-transform">wine_bar</span>
-            <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.wine')}</span>
+            <span className={`material-symbols-outlined text-[20px] ${isSaved ? 'font-black' : ''}`}>bookmark</span>
+            <span className="text-xs font-bold uppercase tracking-widest">{isSaved ? t('recipe_detail.actions.saved') : t('recipe_detail.actions.save')}</span>
           </button>
-        )}
-        <button 
-          onClick={handleToggleSave} 
-          className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl transition-all shadow-md active:scale-95 ${isSaved ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30' : 'bg-surface-dark border-slate-500/30 text-slate-400 hover:bg-slate-800'}`}
-        >
-          <span className={`material-symbols-outlined text-[20px] ${isSaved ? 'font-black' : ''}`}>bookmark</span>
-          <span className="text-xs font-bold uppercase tracking-widest">{isSaved ? t('recipe_detail.actions.saved') : t('recipe_detail.actions.save')}</span>
-        </button>
+          {showWineButton && (
+            <button 
+              onClick={() => navigate(`/recipe/${id}/wine`)} 
+              className="flex-1 flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 py-3 rounded-xl hover:bg-rose-500/20 hover:border-rose-500/50 transition-all shadow-md group active:scale-95 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px] text-rose-400 group-hover:scale-110 transition-transform">wine_bar</span>
+              <span className="text-xs font-bold uppercase tracking-widest">{t('recipe_detail.actions.wine')}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Community Variations */}

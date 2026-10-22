@@ -21,6 +21,7 @@ const CookingProgress = () => {
 
   const [chefData, setChefData] = useState(null);
   const [chefRecipes, setChefRecipes] = useState([]);
+  const [chefCommunityPosts, setChefCommunityPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAchievement, setSelectedAchievement] = useState(null);
 
@@ -62,6 +63,17 @@ const CookingProgress = () => {
         });
 
         if (isMounted) setChefRecipes(list);
+
+        // 3. Fetch Chef's Shared Community Posts
+        try {
+          const feedSnap = await getDoc(doc(db, 'campaigns', 'community_feed'));
+          if (feedSnap.exists() && Array.isArray(feedSnap.data()?.posts)) {
+            const cPosts = feedSnap.data().posts.filter(p => p.authorId === targetUid);
+            if (isMounted) setChefCommunityPosts(cPosts);
+          }
+        } catch {
+          // ignore
+        }
       } catch (err) {
         console.warn("Error fetching chef progress data:", err);
       } finally {
@@ -253,6 +265,27 @@ const CookingProgress = () => {
                   <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">{t('cooking_progress.stats_ingredients')}</span>
                 </div>
               </div>
+
+              {isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/orders')}
+                  className="mt-4 w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-primary/15 to-[#b8860b]/15 hover:from-primary/25 hover:to-[#b8860b]/25 border border-primary/30 text-primary font-extrabold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-[0.98] transition-all cursor-pointer group"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-lg text-primary">menu_book</span>
+                    <span>{t('cooking_journal.open_journal_btn')}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    {Array.isArray(chefData?.cooking_history) && chefData.cooking_history.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-primary text-background-dark text-[10px] font-black">
+                        {chefData.cooking_history.length}
+                      </span>
+                    )}
+                    <span className="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform">chevron_right</span>
+                  </span>
+                </button>
+              )}
             </section>
 
             {/* Achievements 3-Column Grid / Medals Showcase */}
@@ -399,6 +432,65 @@ const CookingProgress = () => {
                   <span className="material-symbols-outlined text-3xl text-slate-500 mb-1">restaurant</span>
                   <p className="text-xs text-slate-400 font-medium">
                     {t('cooking_progress.no_recipes')}
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {/* Shared in Gourmet Community Section */}
+            <section className="px-6 py-4">
+              <div className="flex items-center justify-between mb-4 px-2">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm">groups</span>
+                  {t('gourmet_community.profile_shared_title', 'Споделени в Гурме общността')}
+                </h3>
+                <button
+                  onClick={() => navigate('/community')}
+                  className="text-xs font-bold text-primary hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <span>{t('gourmet_community.open_community_btn', 'Към Общността')}</span>
+                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                </button>
+              </div>
+
+              {chefCommunityPosts.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {chefCommunityPosts.slice(0, 6).map((post) => {
+                    const pTitle = post.translations?.[currentLang]?.title || post.title || '';
+                    return (
+                      <div
+                        key={post.id}
+                        onClick={() => navigate('/community')}
+                        className="bg-surface-dark border border-primary/20 rounded-2xl overflow-hidden shadow-md hover:border-primary/50 transition-all cursor-pointer group"
+                      >
+                        <div className="h-28 w-full bg-background-dark overflow-hidden relative">
+                          <img
+                            src={post.image || '/images/recipe-placeholder.png'}
+                            alt={pTitle}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute bottom-1.5 right-1.5 bg-background-dark/85 px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold text-rose-400">
+                            <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                              favorite
+                            </span>
+                            <span>{Array.isArray(post.likes) ? post.likes.length : 0}</span>
+                          </div>
+                        </div>
+                        <div className="p-2.5">
+                          <h4 className="text-xs font-extrabold text-slate-100 truncate">{pTitle}</h4>
+                          <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
+                            {post.translations?.[currentLang]?.caption || post.caption || ''}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 bg-surface-dark/50 border border-dashed border-primary/20 rounded-2xl">
+                  <span className="material-symbols-outlined text-2xl text-slate-500 mb-1">photo_camera</span>
+                  <p className="text-xs text-slate-400 font-medium">
+                    {t('gourmet_community.no_profile_posts', 'Все още няма споделени публикации в общността.')}
                   </p>
                 </div>
               )}

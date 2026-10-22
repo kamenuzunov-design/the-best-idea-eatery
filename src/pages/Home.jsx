@@ -803,8 +803,13 @@ const Home = () => {
           <div className="relative z-10">
             <h4 className="text-primary font-extrabold text-xl mb-2">{t('home.what_to_cook')}</h4>
             <p className="text-slate-300 text-sm mb-6 font-medium">{t('home.find_based_on_ingredients')}</p>
-            <Link to="/ai-assistant" className="inline-block bg-gradient-to-r from-primary to-[#b8860b] text-background-dark px-6 py-3 rounded-xl text-sm font-bold shadow-[0_5px_20px_rgba(212,175,53,0.4)] hover:shadow-[0_8px_25px_rgba(212,175,53,0.5)] hover:-translate-y-1 transition-all active:translate-y-0">
-              {t('home.try_ai')}
+            <Link
+              to="/ai-assistant"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+              title={t('pantry.chef_ai_btn')}
+            >
+              <span className="material-symbols-outlined text-base font-black">auto_awesome</span>
+              <span>{t('pantry.chef_ai_btn')}</span>
             </Link>
           </div>
           <span className="material-symbols-outlined absolute -right-6 -bottom-6 text-primary/10 text-[140px] rotate-12">lightbulb</span>

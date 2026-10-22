@@ -313,12 +313,12 @@ const Pantry = () => {
             <h3 className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-1">{t('pantry.subtitle')}</h3>
             <h2 className="text-2xl font-extrabold text-slate-100 leading-none">{t('pantry.title')}</h2>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="inline-flex flex-col gap-2">
             {pantry.length > 0 && (
               <button 
                 type="button"
                 onClick={() => navigate('/ai-search')}
-                className="text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(16,185,129,0.25)] cursor-pointer"
+                className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(16,185,129,0.25)] cursor-pointer"
                 title={t('what_to_cook.header_title')}
               >
                 <span className="material-symbols-outlined text-[16px] font-black">restaurant_menu</span>
@@ -328,19 +328,10 @@ const Pantry = () => {
             <button 
               type="button"
               onClick={() => setShowAddModal(true)}
-              className="text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
+              className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px] font-black">add</span>
-              {t('pantry.add_btn')}
-            </button>
-            <button 
-              type="button"
-              onClick={() => navigate('/ai-assistant')}
-              className="text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-primary to-[#b8860b] text-background-dark hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
-              title={t('pantry.chef_ai_btn')}
-            >
-              <span className="material-symbols-outlined text-[16px] font-black">auto_awesome</span>
-              {t('pantry.chef_ai_btn')}
+              <span>{t('pantry.add_btn')}</span>
             </button>
           </div>
         </div>
@@ -450,6 +441,19 @@ const Pantry = () => {
             </div>
           ));
         })()}
+
+        {/* Large Full-Width Chef AI Button at Bottom (below available products) */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => navigate('/ai-assistant')}
+            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+            title={t('pantry.chef_ai_btn')}
+          >
+            <span className="material-symbols-outlined text-base font-black">auto_awesome</span>
+            <span>{t('pantry.chef_ai_btn')}</span>
+          </button>
+        </div>
       </div>
 
       {/* Floating Add Button */}

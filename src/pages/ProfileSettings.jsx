@@ -8,9 +8,11 @@ import { logActivity } from '../lib/activityLogger';
 import { LANGUAGE_LABELS } from '../lib/localeUtils';
 import { getReputationLabel } from '../lib/reputationUtils';
 import { ROLES } from '../constants/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const ProfileSettings = () => {
   const { user, logout, isGuest, isAdmin, isOwner, isModerator, isUser, resendVerificationEmail } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
@@ -597,18 +599,47 @@ const ProfileSettings = () => {
             </div>
             <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">chevron_right</span>
           </Link>
-          <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors">
+          <div
+            onClick={toggleTheme}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTheme();
+              }
+            }}
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/5 transition-colors select-none"
+          >
             <div className="flex items-center gap-4">
-              <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined">dark_mode</span>
+              <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary transition-transform hover:scale-110">
+                <span className="material-symbols-outlined">
+                  {isDark ? 'dark_mode' : 'light_mode'}
+                </span>
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.theme')}</p>
-                <p className="text-xs text-primary/70 font-medium">{t('profile.menu_items.dark_theme')}</p>
+                <p className="text-xs text-primary font-semibold">
+                  {isDark
+                    ? t('profile.menu_items.dark_theme')
+                    : t('profile.menu_items.light_theme', 'Светла тема')}
+                </p>
               </div>
             </div>
-            <div className="w-12 h-6 bg-gradient-to-r from-primary to-[#b8860b] rounded-full relative shadow-inner">
-              <div className="absolute right-1 top-1 w-4 h-4 bg-background-dark rounded-full shadow-sm"></div>
+            <div
+              className={`w-12 h-6 rounded-full relative shadow-inner transition-all duration-300 ${
+                isDark
+                  ? 'bg-gradient-to-r from-primary to-[#b8860b]'
+                  : 'bg-primary/25 border border-primary/40'
+              }`}
+            >
+              <div
+                className={`absolute top-1 w-4 h-4 rounded-full shadow-sm transition-all duration-300 ${
+                  isDark
+                    ? 'right-1 bg-[#1a1812]'
+                    : 'left-1 bg-primary'
+                }`}
+              />
             </div>
           </div>
         </div>
@@ -657,7 +688,7 @@ const ProfileSettings = () => {
           <Link to="/orders" className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors group">
             <div className="flex items-center gap-4">
               <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined">receipt_long</span>
+                <span className="material-symbols-outlined">menu_book</span>
               </div>
               <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.orders')}</p>
             </div>

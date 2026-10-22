@@ -1,3 +1,4 @@
+import { getRemoteAIConfig } from './geminiClient';
 import { 
   collection, 
   getDocs, 
@@ -167,15 +168,16 @@ export async function callGeminiTranslation({
     throw new Error("Missing Gemini API Key. Please provide an API key in the input field.");
   }
 
-  const selectedModel = (model && model !== 'auto') ? model : await getBestAvailableGeminiModel(apiKey);
+  const remoteCfg = await getRemoteAIConfig();
+  const primaryModel = (model && model !== 'auto') ? model : (remoteCfg?.primary_model || await getBestAvailableGeminiModel(apiKey));
+  const fallbackModel = remoteCfg?.fallback_model || 'gemini-3.5-flash-lite';
+  const configuredList = Array.isArray(remoteCfg?.available_models) ? remoteCfg.available_models : [];
   const modelsToTry = [
-    selectedModel,
-    'gemini-3.8-flash',
-    'gemini-3.8-flash-lite',
-    'gemini-3.7-flash',
-    'gemini-3.6-flash'
-  ].filter(m => m && (!DEPRECATED_MODELS.includes(m) || m === selectedModel) && !m.includes('2.0') && !m.includes('1.5'))
-   .filter((v, i, a) => a.indexOf(v) === i); // unique candidates
+    primaryModel,
+    fallbackModel,
+    ...configuredList
+  ].filter(m => m && (!DEPRECATED_MODELS.includes(m) || m === primaryModel) && !m.includes('2.0') && !m.includes('1.5'))
+   .filter((v, i, a) => a.indexOf(v) === i); // unique candidates from Firebase settings/ai_config
 
   let lastError = null;
 

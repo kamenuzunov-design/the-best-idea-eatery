@@ -3,6 +3,81 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-10-22] - Гурме „Светла тема“ (Light Theme) с черен текст за рецептите, тъмно злато и подобрения в Гурме Общност (index.css, ThemeContext.jsx, GourmetCommunity.jsx, communityUtils.js, ManageRecipes.jsx, Moderation.jsx, ProfileSettings.jsx, Header.jsx)
+### Добавено / Променено (Added / Changed)
+- **Контраст и четимост в Светлата тема ([index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css))**:
+  - Всички заглавия на рецепти и секции (`h1`–`h6` с класове `.text-white`, `.text-slate-100`, `.text-slate-200`) в светлата тема вече са с плътно черен цвят на шрифта (`#111111`).
+  - Градиентите в долната част на снимките в светлата тема преливат плавно към топла слонова кост (`rgba(250, 248, 243, 0.96)`), осигурявайки перфектен контраст за черните заглавия на ястията.
+  - Златният текст и златните икони в светлата тема са потъмнени с ~25–30% (до наситено антично злато `#967316` / `#8a6914`), а кехлибарените акценти до `#946c0a` за висока отчетливост.
+- **Подобрения в потребителския интерфейс на „Гурме Общност“ ([GourmetCommunity.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetCommunity.jsx))**:
+  - Добавен въздух около снимките на ястията (`mx-4`), лека рамка (`border-primary/25`) и заобляне (`rounded-2xl`).
+  - Бутоните за социални действия (`favorite`, `chat_bubble`, `share`, `bookmark`) са позиционирани в долната част на публикацията под текста.
+  - Заглавието „Гурме Общност“ е форматирано на един ред, подзаглавието „Споделени ястия, отзиви и нови рецепти“ на следващ ред, а бутонът „Сподели ястие“ под тях.
+  - Секцията „Топ Готвачи“ по подразбиране е свита и се разгъва/прибира при клик върху надписа, като линкът „Покажи всички (10)“ запазва пълната си функционалност.
+- **Система за управление на темата ([ThemeContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/ThemeContext.jsx), [main.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/main.jsx))**:
+  - Създаден `ThemeProvider` и `useTheme()`, който управлява състоянието `theme` (`'dark'` по подразбиране | `'light'`), превключва класовете `html.dark` и `html.light`, запазва избора в `localStorage` (`app_theme`) и го синхронизира с `users/{uid}.preferences.theme` във Firestore.
+- **CSS Архитектура за „Светла тема“ по референтния дизайн ([index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css), `light_theme/screen.png`)**:
+  - Изградена палитра „Топла Гурме Слонова Кост и Шампанско Злато“ (`#FAF8F3` основен фон, `#FFFFFF` карти/хедър/долна навигация с мека златиста сянка, `#F4F1EA` вътрешни полета и `#1C1917` / `#3F3A34` / `#655E55` контрастна типография).
+  - Запазен тъмният винетен градиент и белият текст върху Hero изображенията и снимките на ястията.
+- **Интерактивни превключватели в Профил и Мобилното меню ([ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx), [Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx))**:
+  - Активиран превключвателят **„Тема“** в `/profile` (смяна между Тъмна и Светла тема).
+  - Добавен бърз превключвател за тема (🌙 Тъмна / ☀️ Светла) и в долната част на мобилното странично меню в `Header.jsx`.
+
+## [2026-10-22] - Кулинарна социална мрежа „Гурме Общност“ с AI превод и автоматични новини за нови рецепти (GourmetCommunity.jsx, communityUtils.js, defaultCommunityPosts.js, ManageRecipes.jsx, Moderation.jsx, OrderHistory.jsx, CookingProgress.jsx, firestore.rules, locales)
+### Добавено / Променено (Added / Changed)
+- **Социална мрежа „Гурме Общност“ ([GourmetCommunity.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetCommunity.jsx) `/community`, [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js), [defaultCommunityPosts.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/defaultCommunityPosts.js))**:
+  - Споделяне на сготвени ястия със снимка от устройство (компресирана с `resizeImage` и качена във Firebase Storage с DataURL fallback), оценка (`1★–5★`), кулинарна значка, локация и връзка към рецепта от каталога (`/recipe/:id`) + награда **+10 XP** кулинарна репутация.
+  - Харесвания (`❤️`), разгъваема секция за коментари (`💬`), споделяне на линк (`🔗`) и директно запазване на свързаната рецепта в Любими (`🔖` `saved_recipes`).
+  - Реална секция **„Топ Готвачи“** с филтриране по автор и директен преход към портфолиото на готвача (`/profile/progress?uid=...`), плюс 2-редови филтри (`grid-cols-2`: `Всички публикации`, `Нови рецепти 🆕`, `Най-харесвани ❤️`, `Моите публикации`).
+- **Многоезичен AI превод на публикации и коментари (`BG, EN, IT, FR, DE`)**:
+  - Автоматичен превод на заглавието и отзива при публикуване чрез централизирания Gemini AI клиент (`translatePostTo5Languages`) и 1-клик превод при поискване (`translateTextOnDemand`) за публикации и коментари с кеширане във Firestore и бутон „Виж оригинала / Виж превода“.
+- **Автоматичен 5-езиков AI превод при въвеждане на рецепта ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js))**:
+  - Потребителят вече може да въведе рецепта само на своя собствен език (напр. `BG`), без да е задължен ръчно да попълва английските полета.
+  - Чрез `translatePostTo5Languages` и `translateRecipeTo5Languages` (както чрез бутон **„✨ Преведи (5 езика)“**, така и автоматично при натискане на **„Запази рецептата“**) Chef AI превежда наведнъж на 5 езика (`BG`, `EN`, `IT`, `FR`, `DE`): **Заглавие**, **Описание**, **Бележки към съставките (`notes`)** и **Стъпки за приготвяне (`steps`)**, генерирайки автоматично английски `slug` (`slugifyRecipeTitle`) и записвайки `needs_translation: false`.
+- **Автоматична новина при нова одобрена рецепта ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx))**:
+  - Когато нова рецепта бъде одобрена в Модерация (`/admin/moderation`), активирана в Рецепти (`/admin/recipes`) или публикувана директно от Собственик/Админ/Модератор, `publishNewRecipeAnnouncement` автоматично публикува 5-езична новина със златен бадж **„🆕 Нова рецепта в каталога“** в `/community`.
+- **Интеграция с Кулинарния дневник и Профила ([OrderHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/OrderHistory.jsx), [CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx))**:
+  - Бутон **„Сподели в Общността“** към всяко ястие в `/orders` и секция **„Споделени в Гурме общността“** в профила на готвача (`/profile/progress`).
+
+## [2026-10-22] - Гурме събития & Мастъркласове и Админ панел за събития (GourmetEvents.jsx, ManageEvents.jsx, defaultEvents.js, App.jsx, AdminDashboard.jsx, locales)
+### Добавено / Променено (Added / Changed)
+- **Административен панел за Гурме събития ([ManageEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageEvents.jsx) `/admin/events`)**:
+  - Създаване, редактиране, скриване и изтриване на кулинарни събития на 5 езика (`BG`, `EN`, `IT`, `FR`, `DE`), съхранявани в `settings/gourmet_events`.
+  - Поддръжка на категории (`masterclass`, `tasting`, `chefs_table`, `online`), водещ готвач/сомелиер, дата, час, продължителност, цена в **Евро (€)** (`0` = Безплатно), капацитет места, снимка и опционален външен линк.
+  - Модал **„Участници (X/Y)“** за всяко събитие с преглед на записаните потребители (име, имейл, брой места, телефон, бележки) и възможност за премахване на резервация.
+- **Потребителска страница „Гурме събития & Мастъркласове“ ([GourmetEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetEvents.jsx) `/events`)**:
+  - 2-колонна филтърна навигация (`grid-cols-2`) с категории и таб **„Моите резервации (N)“**.
+  - Hero банер за акцентно събитие, индикатор за оставащи места в реално време и детайлен модал за резервация (избор на брой места, телефон, бележка, обща сума в € / Безплатно, външен линк и отмяна на резервация в `users/{uid}.event_registrations`).
+  - Бърз бутон „Управление на събития“ за администратори и унифициран бутон „✨ Chef AI“ най-отдолу.
+
+## [2026-10-22] - Кулинарен дневник / История на сготвените рецепти (OrderHistory.jsx, CookingMode.jsx, CookingProgress.jsx, ProfileSettings.jsx, locales)
+### Добавено / Променено (Added / Changed)
+- **Интерактивен Кулинарен дневник ([OrderHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/OrderHistory.jsx) `/orders`)**:
+  - Заменен статичният макет за доставки с персонален **Кулинарен дневник**, синхронизиран в реално време с Firestore (`users/{uid}.cooking_history`) и `localStorage`.
+  - Добавено табло с обобщена статистика (общо сготвени ястия, уникални рецепти, общо приготвени порции).
+  - Добавен модал **„+ Отбележи сготвена рецепта“** с търсачка в каталога от рецепти, избор на порции, дата, лична оценка (1–5 ★) и кулинарни бележки, както и модал за редактиране на съществуващ запис.
+  - Внедрени търсачка на 5 езика (по заглавие и лични бележки) и 4 филтърни таба (`Всички`, `Този месец`, `Фаворити (5★)`, `Повторени` с брояч `×N пъти`).
+  - Добавен унифициран бутон **„✨ Chef AI“** най-отдолу с автоматичен промпт, базиран на последните сготвени от потребителя рецепти.
+- **Автоматично записване от Режим Готвене ([CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx))**:
+  - При натискане на „Завърши готвенето“ рецептата се записва автоматично в `cooking_history`, увеличава се `cooked_count`, добавят се `+15 XP` към `reputation.score` (отключвайки медала „Кулинарен Изпълнител“ в `achievements.js`) и потребителят се пренасочва към `/orders?justCooked=...` с поздравителен банер.
+- **Връзки от Профил и Моят напредък ([ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx), [CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx))**:
+  - Обновена иконката в Профил → Вътрешно меню на `menu_book` и преведен етикетът `profile.menu_items.orders` на „Кулинарен дневник“ на 5 езика.
+  - Добавен бърз бутон „Отвори Кулинарния дневник“ с брояч на сготвените ястия в екрана „Моят напредък“ (`/profile/progress`).
+
+## [2026-10-22] - Козметични подобрения в Дигитален килер, Бекъп / AI Мигратор и Детайли на рецепта (Pantry.jsx, Home.jsx, SavedRecipes.jsx, AIMultilingualMigrator.jsx, aiTranslationMigrator.js, RecipeDetail.jsx, locales)
+### Променено (Changed)
+- **Подредба на бутоните за действие в Детайли на рецепта ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**:
+  - Бутоните „Редактирай“ и „Моя версия“ са обособени задължително на първи ред, а на втори ред са бутоните „Запазена / Запази“ и „Вино“ (ако е активен), без събиране по 4 на един ред при изглед на компютър.
+- **AI Автоматичен Превод & Миграция в Бекъп ([AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx), [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js))**:
+  - Премахнато отделното падащо меню със списък на AI модели в секцията „AI Автоматичен Превод & Миграция“ (`/admin/backup`), като е запазено падащото меню „Пауза между заявките (Throttling)“ с избор по подразбиране **6 сек.** (`6000 ms`).
+  - Четирите колекции за сканиране („Групи продукти“, „Мерни единици“, „Продукти / съставки“, „Рецепти“) са подредени задължително една под друга (`grid-cols-1`) и на компютър, и на телефон.
+  - Миграторът използва директно избрания основен модел (`primary_model`), резервен модел (`fallback_model`) и активирания списък с модели (`available_models`), записани във Firebase от меню „AI Конфигурация & Модели“ (`settings/ai_config`).
+- **Уеднаквяване на бутона „✨ Chef AI“ в Рецепти, Килер и Запазени ([Home.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Home.jsx), [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx), [SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx))**:
+  - Във всички основни раздели („Рецепти“, „Килер“ и „Запазени“) бутонът за преход към кулинарния асистент вече е с идентична визия, златист градиентен фон (`from-primary to-[#b8860b]`), височина равна на бутона „Открий още рецепти“ (`w-full py-3 px-4 rounded-xl`), икона `auto_awesome` и надпис „Chef AI“ (`pantry.chef_ai_btn`).
+- **Преместен бутон „✨ Chef AI“ и обновен бутон „Добави продукт“ в Дигиталния килер ([Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx))**:
+  - Бутонът „✨ Chef AI“ е преместен от горната заглавна лента най-отдолу под наличните продукти, оформен като голям бутон на един ред (`w-full py-4`) със запазен златист градиентен цвят (`from-primary to-[#b8860b]`).
+  - Бутонът „Добави“ е преименуван на „Добави продукт“ (`pantry.add_btn` на 5 езика) и е уеднаквен по ширина и размер с бутона „Какво да сготвя сега?“.
+
 ## [2026-10-20] - Интелигентно Сезонно меню за 4-те сезона (SeasonalMenu.jsx, seasonalMatcher.js, locales)
 ### Добавено / Подобрено (Added / Improved)
 - **Интелигентен кулинарен сезонен двигател ([seasonalMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/seasonalMatcher.js))**:

@@ -27,17 +27,17 @@
     *   `admin/ManageCuisines.jsx`: Управление на кухни [✅ Напълно локализиран: EN, IT, FR, DE, BG + Многоезичен модел за въвеждане на данни + CSV + Миграция]
     *   `admin/ManageRecipes.jsx`: Управление на рецепти [✅ Напълно локализиран: EN, IT, FR, DE, BG + Многоезичен модел за въвеждане на данни]
     *   `admin/ManageAIConfig.jsx`: Управление на Google Gemini модели и API настройки [✅ Напълно локализиран: EN, IT, FR, DE, BG + Директна Firestore синхронизация + Тест на живо + Инспектор]
-    *   `CookingProgress.jsx`, `DietaryProfileEdit.jsx`, `OrderHistory.jsx`: Прогрес, диетичен профил, поръчки [⏳ Предстоящи]
+    *   `CookingProgress.jsx`, `DietaryProfileEdit.jsx`, `OrderHistory.jsx`: Прогрес, диетичен профил, кулинарен дневник [✅ Напълно локализирани: EN, IT, FR, DE, BG]
     *   `RecipeDetail.jsx`: Детайли за рецепта [✅ Напълно локализиран + Интерактивен тогъл за имперски/метрични единици]
     *   `Pantry.jsx`: Дигитален Долап [✅ Напълно локализиран + Имперски единици според профила + Умно съпоставяне на наличности]
     *   `SavedRecipes.jsx`: Запазени рецепти и списък за пазаруване [✅ Напълно локализиран + Динамично форматиране и конвертиране на мерни единици]
-    *   `RecipeCustomization.jsx`, `CookingMode.jsx`, `RecipeSearchResults.jsx`, `WinePairing.jsx`: Рецепти и кулинарни изгледи
+    *   `RecipeCustomization.jsx`, `CookingMode.jsx`, `RecipeSearchResults.jsx`, `WinePairing.jsx`: Рецепти и кулинарни изгледи [✅ Напълно локализирани: EN, IT, FR, DE, BG]
     *   `AIAssistant.jsx`: Chef AI Кулинарен Асистент [✅ Напълно локализиран + Интегрирана имперска/метрична система в промпта]
     *   `IngredientScanner.jsx`: Интелигентен визуален скенер за съставки [✅ Напълно локализиран + Реална Gemini Vision интеграция + Smart Matching]
     *   `AIIngredientsSearch.jsx`: Интелигентен кулинарен хъб „Какво да сготвя сега?“ [✅ Напълно локализиран: EN, IT, FR, DE, BG + Детерминиран 3-степенен алгоритъм с килер, базови подправки, ротация и мост към Chef AI]
-    *   `WeeklyMenuPlanner.jsx`: Седмичен планьор на менюто [⏳ Предстоящ]
-    *   `CuisinesExplorer.jsx`, `SeasonalMenu.jsx`, `GourmetCommunity.jsx`, `GourmetEvents.jsx`, `AdvertiseInfo.jsx`: Общност и кухни [⏳ Предстоящи]
-    *   `AdminDashboard.jsx`, `admin/*` (ManageUsers, Moderation, ManageAds, ActivityLog, BackupRecovery): Административни модули и табла [✅ Напълно локализирани: EN, IT, FR, DE, BG]
+    *   `WeeklyMenuPlanner.jsx`: Седмичен планьор на менюто [✅ Напълно локализиран: EN, IT, FR, DE, BG]
+    *   `CuisinesExplorer.jsx`, `SeasonalMenu.jsx`, `GourmetCommunity.jsx`, `GourmetEvents.jsx`, `AdvertiseInfo.jsx`: Общност, събития, сезонни менюта и кухни [✅ Напълно локализирани: EN, IT, FR, DE, BG]
+    *   `AdminDashboard.jsx`, `admin/*` (ManageUsers, Moderation, ManageAds, ManageEvents, ActivityLog, BackupRecovery): Административни модули и табла [✅ Напълно локализирани: EN, IT, FR, DE, BG]
 
 ## 4. Services & Config & Data (Firebase & Achievements)
 *   **Локация:** `src/lib/firebase.js`, `src/lib/activityLogger.js`, `src/lib/geminiClient.js`, `src/lib/ingredientMatcher.js`, `src/lib/recipeMatcherEngine.js`, `src/lib/wineMatcher.js`, `src/lib/moderationUtils.js`, `src/lib/imageUtils.js`, `src/lib/localeUtils.js`, `src/lib/unitConverter.js`, `src/data/achievements.js`, `src/data/wines.js`

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 import { getRecipeImageUrl } from '../lib/imageUtils';
 import { getLocalizedField } from '../lib/localeUtils';
 
@@ -98,6 +99,7 @@ const CookingMode = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const currentLang = i18n.language || 'bg';
 
   const [recipe, setRecipe] = useState(null);
@@ -540,12 +542,67 @@ const CookingMode = () => {
     synth.speak(utterance);
   };
 
-  const handleFinishCooking = () => {
+  const handleFinishCooking = async () => {
     if (isSpeaking && typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
-    alert(t('cooking_mode.finish_congratulations'));
-    navigate(`/profile/progress`);
+
+    const entryId = `cook_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const prepMins = Number(recipe?.prep_time_minutes || recipe?.prep_time || recipe?.prepTime || 0);
+    const cookMins = Number(recipe?.cook_time_minutes || recipe?.cooking_time_minutes || recipe?.cook_time || recipe?.cookTime || 0);
+    const totalMins = (prepMins + cookMins) > 0 ? (prepMins + cookMins) : Number(recipe?.total_time_minutes || 30);
+
+    const newEntry = {
+      id: entryId,
+      recipeId: recipe?.id || id || 'shopska-salad-classic',
+      title: {
+        bg: getLocalizedField(recipe, 'title', 'bg') || recipe?.title_bg || recipe?.title_en || 'Рецепта',
+        en: getLocalizedField(recipe, 'title', 'en') || recipe?.title_en || recipe?.title_bg || 'Recipe',
+        it: getLocalizedField(recipe, 'title', 'it') || recipe?.title_it || recipe?.title_en || 'Ricetta',
+        fr: getLocalizedField(recipe, 'title', 'fr') || recipe?.title_fr || recipe?.title_en || 'Recette',
+        de: getLocalizedField(recipe, 'title', 'de') || recipe?.title_de || recipe?.title_en || 'Rezept'
+      },
+      image: getRecipeImageUrl(recipe),
+      category_id: recipe?.category_id || (Array.isArray(recipe?.category_ids) && recipe.category_ids[0]) || 'main',
+      cuisine_id: recipe?.cuisine_id || '',
+      servings: Number(recipe?.servings) || 2,
+      prepTimeMinutes: totalMins,
+      caloriesPerServing: Number(recipe?.calories_per_serving || recipe?.calories || 0),
+      personalRating: 5,
+      notes: '',
+      cookedAt: new Date().toISOString()
+    };
+
+    try {
+      const localRaw = localStorage.getItem('cooking_history');
+      const localArr = localRaw ? JSON.parse(localRaw) : [];
+      const updatedLocal = [newEntry, ...(Array.isArray(localArr) ? localArr : [])];
+      localStorage.setItem('cooking_history', JSON.stringify(updatedLocal));
+    } catch (e) {
+      console.warn('Could not save cooking history to localStorage:', e);
+    }
+
+    if (user?.uid && user.role !== 'guest') {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+          const uData = snap.data();
+          const prevHistory = Array.isArray(uData.cooking_history) ? uData.cooking_history : [];
+          const updatedHistory = [newEntry, ...prevHistory];
+          const prevScore = Number(uData.reputation?.score) || 0;
+          await updateDoc(userRef, {
+            cooking_history: updatedHistory,
+            cooked_count: updatedHistory.length,
+            'reputation.score': prevScore + 15
+          });
+        }
+      } catch (err) {
+        console.warn('Could not persist cooking session to Firestore:', err);
+      }
+    }
+
+    navigate(`/orders?justCooked=${encodeURIComponent(entryId)}`);
   };
 
   if (loading) {

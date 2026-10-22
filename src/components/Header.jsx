@@ -2,12 +2,35 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES } from '../lib/localeUtils';
+
+const CYRILLIC_TO_LATIN_INITIAL = {
+  А: 'A', Б: 'B', В: 'V', Г: 'G', Д: 'D', Е: 'E', Ж: 'Z', З: 'Z',
+  И: 'I', Й: 'Y', К: 'K', Л: 'L', М: 'M', Н: 'N', О: 'O', П: 'P',
+  Р: 'R', С: 'S', Т: 'T', У: 'U', Ф: 'F', Х: 'H', Ц: 'C', Ч: 'C',
+  Ш: 'S', Щ: 'S', Ъ: 'A', Ь: 'Y', Ю: 'Y', Я: 'Y'
+};
+
+function getLatinInitial(name = '', email = '') {
+  const candidates = `${name || ''} ${email || ''}`.trim();
+  for (const ch of candidates) {
+    const upper = ch.toUpperCase();
+    if (/^[A-Z]$/.test(upper)) return upper;
+    if (CYRILLIC_TO_LATIN_INITIAL[upper]) return CYRILLIC_TO_LATIN_INITIAL[upper];
+  }
+  return 'G';
+}
 
 const Header = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, isGuest } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
+  const userAvatar = !isGuest ? (user?.profile?.avatar || user?.photoURL || user?.avatar || '') : '';
+  const userInitial = isGuest
+    ? 'G'
+    : getLatinInitial(user?.profile?.nickname || user?.name || user?.displayName, user?.email);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
@@ -160,16 +183,30 @@ const Header = () => {
 
             {/* User Profile Info Badge */}
             <div className="p-4 bg-primary/5 border-b border-primary/10 flex items-center gap-3">
-              <div className="size-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-bold overflow-hidden shrink-0">
-                {user?.profile?.avatar_url ? (
-                  <img src={user.profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="material-symbols-outlined text-lg">{isGuest ? 'person_outline' : 'person'}</span>
-                )}
+              <div className="size-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-black text-base uppercase overflow-hidden shrink-0">
+                {userAvatar ? (
+                  <img
+                    src={userAvatar}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextSibling) {
+                        e.currentTarget.nextSibling.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <span
+                  style={{ display: userAvatar ? 'none' : 'flex' }}
+                  className="w-full h-full items-center justify-center"
+                >
+                  {userInitial}
+                </span>
               </div>
               <div className="flex flex-col truncate">
                 <span className="text-xs font-extrabold text-slate-100 truncate">
-                  {isGuest ? t('nav.guest_user') : (user?.profile?.nickname || user?.displayName || user?.email)}
+                  {isGuest ? t('nav.guest_user') : (user?.profile?.nickname || user?.name || user?.displayName || user?.email)}
                 </span>
                 <span className="text-[10px] text-primary font-bold uppercase tracking-wider">
                   {isGuest ? t('nav.not_logged_in') : (user?.role || 'User')}
@@ -178,11 +215,11 @@ const Header = () => {
             </div>
 
             {/* Navigation Menu Links */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="flex-1 overflow-y-auto p-4 space-y-1.5">
               <NavLink 
                 to="/" 
                 onClick={closeMenu}
-                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-extrabold transition-all ${
+                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                   isActive ? 'bg-primary text-background-dark shadow-md shadow-primary/20' : 'text-slate-200 hover:bg-primary/10'
                 }`}
               >
@@ -193,7 +230,7 @@ const Header = () => {
               <NavLink 
                 to="/pantry" 
                 onClick={closeMenu}
-                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-extrabold transition-all ${
+                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                   isActive ? 'bg-primary text-background-dark shadow-md shadow-primary/20' : 'text-slate-200 hover:bg-primary/10'
                 }`}
               >
@@ -204,7 +241,7 @@ const Header = () => {
               <NavLink 
                 to="/scanner" 
                 onClick={closeMenu}
-                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-extrabold transition-all ${
+                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                   isActive ? 'bg-primary text-background-dark shadow-md shadow-primary/20' : 'text-slate-200 hover:bg-primary/10'
                 }`}
               >
@@ -215,7 +252,7 @@ const Header = () => {
               <NavLink 
                 to="/saved" 
                 onClick={closeMenu}
-                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-extrabold transition-all ${
+                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                   isActive ? 'bg-primary text-background-dark shadow-md shadow-primary/20' : 'text-slate-200 hover:bg-primary/10'
                 }`}
               >
@@ -224,9 +261,31 @@ const Header = () => {
               </NavLink>
 
               <NavLink 
+                to="/events" 
+                onClick={closeMenu}
+                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                  isActive ? 'bg-primary text-background-dark shadow-md shadow-primary/20' : 'text-slate-200 hover:bg-primary/10'
+                }`}
+              >
+                <span className="material-symbols-outlined text-xl">event</span>
+                <span>{t('nav.events', 'Събития')}</span>
+              </NavLink>
+
+              <NavLink 
+                to="/community" 
+                onClick={closeMenu}
+                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                  isActive ? 'bg-primary text-background-dark shadow-md shadow-primary/20' : 'text-slate-200 hover:bg-primary/10'
+                }`}
+              >
+                <span className="material-symbols-outlined text-xl">groups</span>
+                <span>{t('nav.community', 'Общност')}</span>
+              </NavLink>
+
+              <NavLink 
                 to={isGuest ? "/login" : "/profile"} 
                 onClick={closeMenu}
-                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-extrabold transition-all ${
+                className={({ isActive }) => `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                   isActive ? 'bg-primary text-background-dark shadow-md shadow-primary/20' : 'text-slate-200 hover:bg-primary/10'
                 }`}
               >
@@ -236,11 +295,11 @@ const Header = () => {
 
               {/* Add Recipe Button - Available ONLY for Registered Users! */}
               {!isGuest && (
-                <div className="pt-3 mt-3 border-t border-primary/10">
+                <div className="pt-2.5 mt-2.5 border-t border-primary/10">
                   <NavLink 
                     to="/admin/recipes" 
                     onClick={closeMenu}
-                    className="flex items-center gap-3 px-3.5 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-background-dark text-xs font-black uppercase tracking-wider shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                    className="flex items-center gap-3 px-3.5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-background-dark text-xs font-black uppercase tracking-wider shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-xl font-bold">add_circle</span>
                     <span>{t('nav.add_recipe')}</span>
@@ -249,8 +308,48 @@ const Header = () => {
               )}
             </div>
 
-            {/* Drawer Footer with Language Buttons */}
-            <div className="p-4 border-t border-primary/10 bg-background-dark/50 flex flex-col gap-2 text-[10px] text-slate-400">
+            {/* Drawer Footer with Theme Toggle & Language Buttons */}
+            <div className="p-4 border-t border-primary/10 bg-background-dark/50 flex flex-col gap-2.5 text-[10px] text-slate-400">
+              {/* Compact Theme Switcher */}
+              <div
+                onClick={toggleTheme}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleTheme();
+                  }
+                }}
+                className="flex items-center justify-between px-3 py-2 rounded-xl bg-surface-dark border border-primary/20 cursor-pointer hover:border-primary/40 transition-all select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-base">
+                    {isDark ? 'dark_mode' : 'light_mode'}
+                  </span>
+                  <span className="text-xs font-extrabold text-slate-100">
+                    {isDark
+                      ? t('profile.menu_items.dark_theme', 'Тъмна тема')
+                      : t('profile.menu_items.light_theme', 'Светла тема')}
+                  </span>
+                </div>
+                <div
+                  className={`w-10 h-5 rounded-full relative transition-all duration-300 ${
+                    isDark
+                      ? 'bg-gradient-to-r from-primary to-[#b8860b]'
+                      : 'bg-primary/25 border border-primary/40'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 w-3.5 h-3.5 rounded-full shadow-sm transition-all duration-300 ${
+                      isDark
+                        ? 'right-0.5 bg-[#1a1812]'
+                        : 'left-0.5 bg-primary'
+                    }`}
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <span>© 2026 Eatery</span>
                 <span className="text-primary font-bold flex items-center gap-1.5">

@@ -1,12 +1,45 @@
 # Активен План
 
 ## Предстояща задача (Приоритет за следваща стъпка)
-Очаква се избор от възложителя за следващия фокусен модул за разработка:
-1. **История на поръчките (`OrderHistory.jsx` `/orders`)**
-2. **Гурме общност (`GourmetCommunity.jsx` `/community`)**
-3. **Гурме събития (`GourmetEvents.jsx` `/events`)**
+Очаква се избор от възложителя за следващия фокусен модул или функционалност за разработка.
 
 ## Наскоро завършени задачи
+Успешно реализирана **Гурме „Светла тема“ (Light Theme)** и кулинарна социална мрежа **„Гурме Общност“ (`GourmetCommunity.jsx` `/community`)**:
+1. **Гурме „Светла тема“ с черен текст за рецептите и тъмно злато ([index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css), [ThemeContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/ThemeContext.jsx))**:
+   - `ThemeProvider` и `useTheme()` с управление на темата (`dark` по подразбиране | `light`), запис в `localStorage` (`app_theme`) и синхронизация с `users/{uid}.preferences.theme`.
+   - Всички имена на рецепти и заглавия (`h1`–`h6`) в светлата тема са с плътно черен шрифт (`#111111`) върху плавен градиент от слонова кост (`rgba(250, 248, 243, 0.96)`).
+   - Златните текстове и икони са потъмнени с ~25–30% (`#967316` / `#8a6914`), кехлибарените акценти до `#946c0a`.
+   - Превключвател за тема в Профил (`/profile`) и в мобилното странично меню.
+2. **Гурме Общност ([GourmetCommunity.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetCommunity.jsx) `/community`)**:
+   - Споделяне на сготвени ястия с компресирана снимка, оценка (1–5★), бадж, локация и връзка към рецепта от каталога (+10 XP репутация).
+   - Добавен въздух около снимките на ястията (`mx-4`), лека рамка и закръгление (`rounded-2xl`).
+   - Бутоните за социални действия (`favorite`, `chat_bubble`, `share`, `bookmark`) са позиционирани в долната част на публикацията под текста.
+   - Заглавието „Гурме Общност“ е на един ред, пояснението на следващ ред, а бутонът „Сподели ястие“ под тях.
+   - Секцията „Топ Готвачи“ по подразбиране е свита с плавно разгъване/прибиране при клик върху надписа.
+3. **Автоматичен 5-езиков AI превод на рецепти и модерация ([communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx))**:
+   - Потребителят може да въведе рецепта само на своя език.
+   - 1-клик и автоматичен AI превод на 5 езика (`BG`, `EN`, `IT`, `FR`, `DE`) за Заглавие, Описание, Бележки към съставките и Стъпки за приготвяне.
+   - Автоматично публикуване на новини за новоодобрени рецепти в Гурме Общността.
+1. **Административен панел за управление на събития ([ManageEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageEvents.jsx) `/admin/events`)**:
+   - Създаване, редактиране, активиране/скриване и изтриване на събития с 5-езикови табове (`BG`, `EN`, `IT`, `FR`, `DE`) за заглавие, описание и локация.
+   - Задаване на категория (`masterclass`, `tasting`, `chefs_table`, `online`), водещ шеф-готвач, дата, час, продължителност, цена в **Евро (€)** (или `0` = Безплатно), капацитет места, URL на снимка, опционален външен линк за билети/стрийм и флаг `Акцент (Featured)`.
+   - Модал **„Участници (X/Y)“** с реално време агрегиране на всички записани потребители (име, имейл, брой места, телефон, бележка) и възможност за премахване на резервация от администратор.
+2. **Интерактивна страница за Гурме събития ([GourmetEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetEvents.jsx) `/events`)**:
+   - 2-колонна филтърна решетка (`grid-cols-2`) за категориите и таб **„Моите резервации (N)“**.
+   - Динамичен Hero банер за акцентното събитие и списък с предстоящи събития с индикатор за оставащи свободни места.
+   - Детайлен модал за резервация (избор на 1–6 места, телефон, бележка/алергии, калкулация на обща сума в € или Безплатно, бутон за външен линк ако е зададен, както и редакция/отмяна на съществуваща резервация).
+   - Унифициран бутон „✨ Chef AI“ най-отдолу.
+3. **Пълна 5-езикова локализация (`bg`, `en`, `it`, `fr`, `de`)** в пространството `gourmet_events`.
+Успешно преобразуван модулът `/orders` в интерактивен **Кулинарен дневник (История на сготвените рецепти)** ([OrderHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/OrderHistory.jsx), [CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx), [CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx), [ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx)):
+1. **Автоматично записване от Режим Готвене ([CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx))**:
+   - Натискането на „Завърши готвенето“ създава запис в `users/{uid}.cooking_history` (и `localStorage`), увеличава `cooked_count`, добавя `+15 XP` репутация (отключвайки постижението „Кулинарен Изпълнител“ в `achievements.js`) и пренасочва потребителя към `/orders?justCooked=...` с поздравителен банер за добавяне на лична бележка.
+2. **Интерактивен Кулинарен дневник ([OrderHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/OrderHistory.jsx) `/orders`)**:
+   - Табло с 3 статистики: „Сготвени ястия“, „Уникални рецепти“, „Порции общо“.
+   - Ръчно отбелязване на сготвена рецепта от каталога („+ Отбележи сготвена рецепта“) с избор на рецепта, порции, дата, лична оценка (1–5 ★) и кулинарни бележки.
+   - Търсачка на 5 езика (по име на рецепта и по текст в личните бележки) и 4 филтърни таба (`Всички`, `Този месец`, `Фаворити (5★)`, `Повторени`).
+   - Карти на сготвените ястия с брояч за повторения (`×2 пъти`), редакция на бележка/оценка, бутон „Сготви отново“, „Към рецептата“ и изтриване на запис.
+   - Унифициран бутон „✨ Chef AI“ най-отдолу, който изпраща контекстуален промпт на база последните сготвени ястия.
+3. **Пълна 5-езикова локализация (`bg`, `en`, `it`, `fr`, `de`)** в пространството `cooking_journal` и обновен етикет `profile.menu_items.orders` („Кулинарен дневник“).
 Успешно изградено интелигентно **Сезонно меню за 4-те сезона** ([SeasonalMenu.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SeasonalMenu.jsx), [seasonalMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/seasonalMatcher.js)):
 1. **Интелигентен кулинарен сезонен двигател ([seasonalMatcher.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/seasonalMatcher.js))**:
    - Автоматично разпознаване на текущия астрономически/календарен сезон (`getCurrentSeasonId`).

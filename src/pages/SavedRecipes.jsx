@@ -769,11 +769,13 @@ const SavedRecipes = () => {
               </button>
 
               <button
+                type="button"
                 onClick={() => navigate('/ai-assistant')}
-                className="w-full py-3 px-4 rounded-xl bg-surface-dark border border-primary/30 text-primary font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:bg-primary/10 transition-all cursor-pointer active:scale-[0.98]"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+                title={t('pantry.chef_ai_btn')}
               >
-                <span className="material-symbols-outlined text-base">smart_toy</span>
-                <span>{t('saved.ask_chef_ai')}</span>
+                <span className="material-symbols-outlined text-base font-black">auto_awesome</span>
+                <span>{t('pantry.chef_ai_btn')}</span>
               </button>
             </div>
           </div>

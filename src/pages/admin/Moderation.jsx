@@ -6,6 +6,11 @@ import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
 import { getLocalizedField, LANGUAGE_LABELS } from '../../lib/localeUtils';
+import {
+  publishNewRecipeAnnouncement,
+  translateRecipeTo5Languages,
+  translatePostTo5Languages
+} from '../../lib/communityUtils';
 
 const Moderation = () => {
   const { t, i18n } = useTranslation();
@@ -18,6 +23,8 @@ const Moderation = () => {
   const [translationIngs, setTranslationIngs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'translation' | 'approval'
+  const [translatingKey, setTranslatingKey] = useState(null);
+  const [isBulkTranslating, setIsBulkTranslating] = useState(false);
 
   useEffect(() => {
     // 1. Recipes pending approval
@@ -77,13 +84,187 @@ const Moderation = () => {
     return allItems;
   }, [allItems, activeTab]);
 
+  const handleAutoTranslateItem = async (item, silent = false) => {
+    const key = `${item.type}_${item.id}`;
+    setTranslatingKey(key);
+    try {
+      if (item.type === 'recipe') {
+        const cleanStr = (val) => (typeof val === 'string' && !val.includes('[за превод]') && !val.includes('[needs translation]') ? val.trim() : '');
+        const bgTitle = cleanStr(item.title?.bg || item.title_bg);
+        const enTitle = cleanStr(item.title?.en || item.title_en);
+        const sourceLang = bgTitle ? 'bg' : (enTitle ? 'en' : currentLang);
+        const sourceTitle = bgTitle || enTitle || cleanStr(item.title?.[currentLang]) || item.id;
+
+        const bgDesc = cleanStr(item.description?.bg || item.description_bg);
+        const enDesc = cleanStr(item.description?.en || item.description_en);
+        const sourceDesc = sourceLang === 'bg' ? (bgDesc || enDesc) : (enDesc || bgDesc);
+
+        const rawIngs = Array.isArray(item.ingredients) ? item.ingredients : [];
+        const notesList = rawIngs.map(ing => {
+          const nBg = cleanStr(ing.notes?.bg || ing.notes_bg);
+          const nEn = cleanStr(ing.notes?.en || ing.notes_en);
+          return sourceLang === 'bg' ? (nBg || nEn) : (nEn || nBg);
+        });
+
+        const rawSteps = Array.isArray(item.steps) ? item.steps : [];
+        const stepsList = rawSteps.map(st => {
+          const sBg = cleanStr(st.instruction?.bg || st.instruction_bg);
+          const sEn = cleanStr(st.instruction?.en || st.instruction_en);
+          return sourceLang === 'bg' ? (sBg || sEn) : (sEn || sBg);
+        });
+
+        const aiRes = await translateRecipeTo5Languages({
+          title: sourceTitle,
+          description: sourceDesc,
+          notesList,
+          stepsList,
+          sourceLang
+        });
+
+        if (!aiRes.translatedAll) {
+          if (!silent) {
+            alert(t('moderation.ai_translate_failed', 'Преводът с Chef AI не успя (проверете интернет връзката или Gemini API ключа).'));
+          }
+          return null;
+        }
+
+        const updatedIngredients = rawIngs.map((ing, idx) => {
+          const noteMap = aiRes.notes[idx] || { bg: '', en: '', it: '', fr: '', de: '' };
+          return {
+            ...ing,
+            notes: noteMap,
+            notes_bg: noteMap.bg || '',
+            notes_en: noteMap.en || ''
+          };
+        });
+
+        const updatedSteps = rawSteps.map((st, idx) => {
+          const stepMap = aiRes.steps[idx] || { bg: '', en: '', it: '', fr: '', de: '' };
+          return {
+            ...st,
+            instruction: stepMap,
+            instruction_bg: stepMap.bg || '',
+            instruction_en: stepMap.en || ''
+          };
+        });
+
+        const updatedPayload = {
+          title: aiRes.title,
+          title_bg: aiRes.title.bg,
+          title_en: aiRes.title.en,
+          description: aiRes.description,
+          description_bg: aiRes.description.bg,
+          description_en: aiRes.description.en,
+          ingredients: updatedIngredients,
+          steps: updatedSteps,
+          needs_translation: false,
+          translation_reason: null,
+          updatedAt: new Date().toISOString()
+        };
+
+        await updateDoc(doc(db, 'recipes', item.id), updatedPayload);
+        await logActivity(
+          user.uid,
+          user.email,
+          'ai_translate_recipe',
+          `Auto-translated recipe into 5 languages: ${aiRes.title.en || sourceTitle}`
+        );
+        return { ...item, ...updatedPayload };
+      } else {
+        // Ingredient translation into 5 languages
+        const cleanStr = (val) => (typeof val === 'string' && !val.includes('[за превод]') && !val.includes('[needs translation]') ? val.trim() : '');
+        const bgName = cleanStr(item.name?.bg || item.name_bg);
+        const enName = cleanStr(item.name?.en || item.name_en);
+        const sourceLang = bgName ? 'bg' : (enName ? 'en' : currentLang);
+        const sourceName = bgName || enName || cleanStr(item.name?.[currentLang]) || item.id;
+
+        const postTrans = await translatePostTo5Languages({
+          title: sourceName,
+          caption: '',
+          sourceLang
+        });
+
+        const langsPresent = ['bg', 'en', 'it', 'fr', 'de'].every(l => postTrans[l]?.title);
+        if (!langsPresent) {
+          if (!silent) {
+            alert(t('moderation.ai_translate_failed', 'Преводът с Chef AI не успя (проверете интернет връзката или Gemini API ключа).'));
+          }
+          return null;
+        }
+
+        const nameObj = {
+          bg: postTrans.bg.title,
+          en: postTrans.en.title,
+          it: postTrans.it.title,
+          fr: postTrans.fr.title,
+          de: postTrans.de.title
+        };
+
+        const updatedPayload = {
+          name: nameObj,
+          name_bg: nameObj.bg,
+          name_en: nameObj.en,
+          needs_translation: false,
+          translation_reason: null,
+          updatedAt: new Date().toISOString()
+        };
+
+        await updateDoc(doc(db, 'ingredients', item.id), updatedPayload);
+        await logActivity(
+          user.uid,
+          user.email,
+          'ai_translate_ingredient',
+          `Auto-translated ingredient into 5 languages: ${nameObj.en || sourceName}`
+        );
+        return { ...item, ...updatedPayload };
+      }
+    } catch (err) {
+      console.error('Error auto-translating item:', err);
+      if (!silent) {
+        alert(t('moderation.ai_translate_failed', 'Преводът с Chef AI не успя (проверете интернет връзката или Gemini API ключа).'));
+      }
+      return null;
+    } finally {
+      setTranslatingKey(null);
+    }
+  };
+
+  const handleAutoTranslateAll = async () => {
+    const queue = allItems.filter(it => it.isNeedsTranslation);
+    if (queue.length === 0 || isBulkTranslating) return;
+
+    setIsBulkTranslating(true);
+    try {
+      for (const it of queue) {
+        await handleAutoTranslateItem(it, true);
+      }
+    } finally {
+      setIsBulkTranslating(false);
+    }
+  };
+
   const handleAction = async (itemId, type, newStatus, itemTitle) => {
     try {
+      const targetItem = allItems.find(it => it.type === type && it.id === itemId);
+      let latestItemData = targetItem;
+
+      // If approving an item that still needs translation, auto-translate it first
+      if (newStatus === 'approved' && targetItem?.isNeedsTranslation) {
+        const translated = await handleAutoTranslateItem(targetItem, true);
+        if (translated) {
+          latestItemData = translated;
+        }
+      }
+
       const itemRef = doc(db, type === 'recipe' ? 'recipes' : 'ingredients', itemId);
       await updateDoc(itemRef, { 
         status: newStatus,
         is_active: newStatus === 'approved'
       });
+
+      if (type === 'recipe' && newStatus === 'approved' && latestItemData) {
+        await publishNewRecipeAnnouncement(latestItemData, itemId);
+      }
       
       await logActivity(
         user.uid, 
@@ -138,33 +319,54 @@ const Moderation = () => {
       </div>
 
       <div className="p-4 overflow-y-auto space-y-4">
-        {/* Banner: Recipes pending translation from English */}
+        {/* Banner: Recipes/Ingredients pending translation */}
         {translationCount > 0 && (
           <div 
             onClick={() => setActiveTab('translation')}
-            className={`flex items-center justify-between p-3.5 bg-gradient-to-r from-amber-500/20 via-[#b8860b]/25 to-amber-600/20 border-2 rounded-2xl cursor-pointer transition-all shadow-lg group ${
+            className={`flex flex-col gap-3 p-3.5 bg-gradient-to-r from-amber-500/20 via-[#b8860b]/25 to-amber-600/20 border-2 rounded-2xl cursor-pointer transition-all shadow-lg group ${
               activeTab === 'translation' ? 'border-amber-400 shadow-amber-500/20' : 'border-amber-500/50 hover:border-amber-400'
             }`}
           >
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-[22px]">translate</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform shrink-0">
+                  <span className="material-symbols-outlined text-[22px]">translate</span>
+                </div>
+                <div>
+                  <p className="text-xs font-black text-amber-300 uppercase tracking-wide">
+                    {t('moderation.banner_title')}
+                  </p>
+                  <p className="text-[11px] text-slate-300">
+                    {translationCount === 1 
+                      ? t('moderation.banner_desc_one')
+                      : t('moderation.banner_desc_other', { count: translationCount })}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-black text-amber-300 uppercase tracking-wide">
-                  {t('moderation.banner_title')}
-                </p>
-                <p className="text-[11px] text-slate-300">
-                  {translationCount === 1 
-                    ? t('moderation.banner_desc_one')
-                    : t('moderation.banner_desc_other', { count: translationCount })}
-                </p>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500 text-background-dark rounded-full font-black text-xs shrink-0">
+                <span>{translationCount}</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500 text-background-dark rounded-full font-black text-xs">
-              <span>{translationCount}</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </div>
+
+            <button
+              type="button"
+              disabled={isBulkTranslating || !!translatingKey}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAutoTranslateAll();
+              }}
+              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs uppercase tracking-wider shadow-md hover:brightness-110 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <span className={`material-symbols-outlined text-base ${isBulkTranslating ? 'animate-spin' : ''}`}>
+                {isBulkTranslating ? 'sync' : 'auto_awesome'}
+              </span>
+              <span>
+                {isBulkTranslating
+                  ? t('moderation.ai_translating_all', 'Превеждане на всички с Chef AI...')
+                  : t('moderation.ai_translate_all_btn', 'Преведи всички с Chef AI (5 езика)')}
+              </span>
+            </button>
           </div>
         )}
 
@@ -284,6 +486,24 @@ const Moderation = () => {
                 <p className="text-sm text-slate-400 line-clamp-2">{description}</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-primary/10 pt-3">
+                  {item.isNeedsTranslation && (
+                    <button
+                      type="button"
+                      disabled={translatingKey === `${item.type}_${item.id}` || isBulkTranslating}
+                      onClick={() => handleAutoTranslateItem(item)}
+                      className="bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold py-2 px-3 rounded-lg transition-all hover:brightness-110 flex items-center justify-center gap-1.5 text-xs cursor-pointer disabled:opacity-50 sm:col-span-3 shadow-sm"
+                    >
+                      <span className={`material-symbols-outlined text-[16px] ${translatingKey === `${item.type}_${item.id}` ? 'animate-spin' : ''}`}>
+                        {translatingKey === `${item.type}_${item.id}` ? 'sync' : 'auto_awesome'}
+                      </span>
+                      <span>
+                        {translatingKey === `${item.type}_${item.id}`
+                          ? t('recipes.ai_translating_btn', 'Превеждане...')
+                          : t('moderation.buttons.ai_translate_5langs', 'Автоматичен превод с Chef AI (5 езика)')}
+                      </span>
+                    </button>
+                  )}
+
                   <button 
                     onClick={() => {
                       if (item.type === 'recipe') {

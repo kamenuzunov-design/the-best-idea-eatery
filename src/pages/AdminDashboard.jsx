@@ -156,6 +156,20 @@ const AdminDashboard = () => {
           </Link>
         )}
 
+        {/* Gourmet Events Management */}
+        {(user.role === ROLES.OWNER || user.role === ROLES.ADMIN || user.role === ROLES.MODERATOR) && (
+          <Link to="/admin/events" className="bg-surface-dark/80 backdrop-blur-md rounded-2xl p-5 border border-primary/30 shadow-[0_0_20px_rgba(212,175,53,0.1)] hover:shadow-[0_0_30px_rgba(212,175,53,0.2)] transition-all cursor-pointer group flex items-center gap-4">
+            <div className="size-12 rounded-xl bg-gradient-to-br from-primary to-[#b8860b] flex items-center justify-center text-background-dark shadow-md group-hover:scale-110 transition-transform shrink-0">
+              <span className="material-symbols-outlined text-2xl font-black">event</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-slate-100">{t('gourmet_events.admin.title')}</h3>
+              <p className="text-xs text-slate-400">{t('gourmet_events.admin.subtitle')}</p>
+            </div>
+            <span className="material-symbols-outlined text-slate-500">chevron_right</span>
+          </Link>
+        )}
+
       </div>
     </div>
   );

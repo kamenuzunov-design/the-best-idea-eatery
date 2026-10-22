@@ -3,11 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { logActivity } from '../../lib/activityLogger';
+import { getRemoteAIConfig } from '../../lib/geminiClient';
 import { 
   scanDatabaseForMissingTranslations, 
-  runBatchTranslation,
-  KNOWN_GEMINI_MODELS,
-  fetchAvailableModels
+  runBatchTranslation
 } from '../../lib/aiTranslationMigrator';
 
 const AIMultilingualMigrator = () => {
@@ -22,10 +21,8 @@ const AIMultilingualMigrator = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [keyInputVal, setKeyInputVal] = useState(apiKey);
 
-  // Model selection state
-  const [selectedModel, setSelectedModel] = useState('auto');
-  const [customModel, setCustomModel] = useState('');
-  const [availableModels, setAvailableModels] = useState([]);
+  // Remote AI configuration from Firestore (settings/ai_config)
+  const [remoteConfig, setRemoteConfig] = useState(null);
 
   // Scan state
   const [scanning, setScanning] = useState(false);
@@ -40,7 +37,7 @@ const AIMultilingualMigrator = () => {
   // Execution state: 'idle' | 'running' | 'paused' | 'stopped' | 'completed'
   const [executionState, setExecutionState] = useState('idle');
   const [isDryRun, setIsDryRun] = useState(false);
-  const [delayMs, setDelayMs] = useState(4500);
+  const [delayMs, setDelayMs] = useState(6000);
 
   // Progress state
   const [progress, setProgress] = useState({
@@ -68,32 +65,23 @@ const AIMultilingualMigrator = () => {
     }
   }, [logs]);
 
-  // Dynamically query available models if API key is present
+  // Load centralized AI model configuration from Firestore (settings/ai_config)
   useEffect(() => {
-    if (apiKey) {
-      fetchAvailableModels(apiKey)
-        .then(models => {
-          if (models && models.length > 0) {
-            setAvailableModels(models);
+    getRemoteAIConfig()
+      .then((cfg) => {
+        if (cfg) {
+          setRemoteConfig(cfg);
+          if (!apiKey && cfg.api_key && cfg.api_key.trim()) {
+            setApiKey(cfg.api_key.trim());
+            setKeyInputVal(cfg.api_key.trim());
+            setShowKeyInput(false);
           }
-        })
-        .catch(err => {
-          console.warn("Could not fetch available models:", err);
-        });
-    }
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load remote AI config in AIMultilingualMigrator:', err);
+      });
   }, [apiKey]);
-
-  // Combine standard default models with dynamically detected models
-  const allModelOptions = React.useMemo(() => {
-    const map = new Map();
-    KNOWN_GEMINI_MODELS.forEach(m => map.set(m.id, m));
-    availableModels.forEach(m => {
-      if (!map.has(m.id)) {
-        map.set(m.id, m);
-      }
-    });
-    return Array.from(map.values());
-  }, [availableModels]);
 
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
@@ -175,9 +163,8 @@ const AIMultilingualMigrator = () => {
     setExecutionState('running');
     setPreviews([]);
 
-    const activeModelToUse = selectedModel === 'custom' 
-      ? (customModel.trim() || 'auto') 
-      : selectedModel;
+    const cfg = remoteConfig || await getRemoteAIConfig();
+    const activeModelToUse = cfg?.primary_model || 'auto';
 
     try {
       const result = await runBatchTranslation({
@@ -344,7 +331,7 @@ const AIMultilingualMigrator = () => {
         </div>
 
         {/* Collection Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {[
             { id: 'ingredient_groups', label: t('backup_recovery.ai_migration.groups'), icon: 'category' },
             { id: 'measurements', label: t('backup_recovery.ai_migration.measurements'), icon: 'straighten' },
@@ -415,41 +402,8 @@ const AIMultilingualMigrator = () => {
           <span>{t('backup_recovery.ai_migration.batch_info')}</span>
         </p>
 
-        {/* Model & Throttling Controls - Stacked vertically (Label on line 1, Selector on line 2) */}
+        {/* Throttling Control */}
         <div className="flex flex-col gap-3.5 pt-2 border-t border-primary/10">
-          {/* Gemini AI Model Selection */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm text-primary">psychology</span>
-              <span>{t('backup_recovery.ai_migration.model_selector_title')}</span>
-            </label>
-            <select
-              value={selectedModel}
-              onChange={e => setSelectedModel(e.target.value)}
-              disabled={executionState === 'running'}
-              className="w-full bg-surface-dark border border-primary/30 rounded-xl px-3 py-2 text-xs text-primary font-bold focus:outline-none cursor-pointer"
-            >
-              <option value="auto">{t('backup_recovery.ai_migration.model_auto')}</option>
-              {allModelOptions.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-              <option value="custom">{t('backup_recovery.ai_migration.model_custom')}</option>
-            </select>
-            {selectedModel === 'custom' && (
-              <input
-                type="text"
-                value={customModel}
-                onChange={e => setCustomModel(e.target.value)}
-                placeholder={t('backup_recovery.ai_migration.model_custom_placeholder')}
-                disabled={executionState === 'running'}
-                className="w-full bg-surface-dark border border-primary/30 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-primary mt-1"
-              />
-            )}
-          </div>
-
-          {/* Throttling Selector */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm text-primary">timer</span>
@@ -461,8 +415,8 @@ const AIMultilingualMigrator = () => {
               disabled={executionState === 'running'}
               className="w-full bg-surface-dark border border-primary/30 rounded-xl px-3 py-2 text-xs text-primary font-bold focus:outline-none cursor-pointer"
             >
-              <option value={4500}>{t('backup_recovery.ai_migration.throttle_recommended')}</option>
               <option value={6000}>{t('backup_recovery.ai_migration.throttle_safe')}</option>
+              <option value={4500}>{t('backup_recovery.ai_migration.throttle_recommended')}</option>
               <option value={3000}>{t('backup_recovery.ai_migration.throttle_fast')}</option>
             </select>
           </div>
