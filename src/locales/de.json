@@ -983,7 +983,8 @@
     "tabs": {
       "all": "Alle",
       "translation": "Zu übersetzen",
-      "approval": "Warten auf Genehmigung"
+      "approval": "Warten auf Genehmigung",
+      "community": "Gourmet-Community"
     },
     "empty_translation": "Keine Einträge zur Übersetzung ausstehend.",
     "empty_approval": "Keine Inhalte zur Genehmigung ausstehend.",
@@ -1007,7 +1008,30 @@
       "reject": "Ablehnen"
     },
     "error_action": "Fehler bei der Moderation.",
-    "error_mark_translated": "Fehler beim Aktualisieren des Status."
+    "error_mark_translated": "Fehler beim Aktualisieren des Status.",
+    "community": {
+      "alert_banner_title": "Meldungen aus der Gourmet-Community",
+      "alert_banner_desc": "Es liegen {{count}} ausstehende Meldungen vor.",
+      "subtab_reports": "Gemeldete Inhalte",
+      "subtab_feed": "Alle Beiträge & Kommentare",
+      "open_community": "Zur Community",
+      "empty_reports": "Keine ausstehenden Meldungen in der Gourmet-Community.",
+      "empty_reports_hint": "Sie können alle Diskussionen im Tab „Alle Beiträge & Kommentare“ prüfen.",
+      "type_comment": "Kommentar",
+      "type_post": "Beitrag",
+      "author_label": "Autor",
+      "reported_by": "Gemeldet von",
+      "reporter_note": "Hinweis",
+      "rank_restriction_notice": "Der Autor hat denselben oder einen höheren Rang als Sie.",
+      "insufficient_rank": "Keine Berechtigung zur Moderation eines Benutzers mit gleichem oder höherem Rang.",
+      "confirm_delete": "Möchten Sie diesen Inhalt wirklich dauerhaft löschen?",
+      "btn_delete": "Löschen",
+      "btn_delete_cascade": "Löschen + Kette",
+      "btn_delete_cascade_hint": "Löscht diesen Kommentar und alle nachfolgenden Antworten",
+      "btn_hide": "Ausblenden",
+      "btn_dismiss": "Meldung verwerfen",
+      "comments_header": "Kommentare zum Beitrag"
+    }
   },
   "manage_users": {
     "title": "Benutzerverwaltung",
@@ -1333,7 +1357,15 @@
       "max_clicks": "Maximale Klicks",
       "zero_unlimited": "0 = Unbegrenzt",
       "is_active": "Kampagne aktiv?",
-      "save_btn": "Kampagne speichern"
+      "save_btn": "Kampagne speichern",
+      "assign_ads_label": "Anzeigen in der Kampagne (mindestens eine erforderlich)",
+      "selected_ads_count": "Ausgewählte Anzeigen: {{count}}",
+      "no_ads_available": "Keine Anzeigen verfügbar. Bitte erstellen Sie zuerst eine Anzeige über die Schaltfläche \"Neue Anzeige\", bevor Sie eine Kampagne erstellen.",
+      "ad_in_other_campaign": "In anderer Kampagne: {{name}}",
+      "ad_in_this_campaign": "In dieser Kampagne",
+      "select_all": "Alle auswählen",
+      "deselect_all": "Auswahl aufheben",
+      "saving_ai": "Speichern & AI-Übersetzen..."
     },
     "ad_modal": {
       "new_title": "Neue Werbung",
@@ -1367,7 +1399,8 @@
       "max_clicks": "Max. Klicks",
       "zero_unlimited": "* 0 bedeutet unbegrenzt (kein Limit)",
       "active_immediately": "Sofort aktiv?",
-      "save_btn": "Werbung speichern"
+      "save_btn": "Werbung speichern",
+      "saving_ai": "Speichern & AI-Übersetzen..."
     },
     "settings_modal": {
       "title": "Werberichtlinien",
@@ -1391,7 +1424,9 @@
       "reset_stats_error": "Fehler beim Zurücksetzen der Statistiken",
       "save_settings_success": "Richtlinien erfolgreich gespeichert!",
       "save_settings_error": "Fehler beim Speichern der Richtlinien",
-      "link_copied": "Link kopiert! Sie können ihn in das Feld 'Ziel-URL' einfügen."
+      "link_copied": "Link kopiert! Sie können ihn in das Feld 'Ziel-URL' einfügen.",
+      "campaign_name_required": "Bitte geben Sie einen Kampagnennamen ein!",
+      "campaign_ads_required": "Bitte fügen Sie mindestens eine Anzeige zur Kampagne hinzu! Eine Kampagne darf nicht leer sein."
     },
     "confirms": {
       "delete_campaign": "Sind Sie sicher, dass Sie die Kampagne \"{{name}}\" löschen möchten?",
@@ -2063,15 +2098,38 @@
         "is_featured_label": "Highlight (Hauptbanner)",
         "is_active_label": "Aktiv (Für Nutzer sichtbar)",
         "save_btn": "Event speichern",
-        "cancel_btn": "Abbrechen"
+        "cancel_btn": "Abbrechen",
+        "online_section_title": "Live-Stream & Meeting-Link",
+        "online_platform_label": "Streaming-Plattform",
+        "meeting_access_label": "Link-Zugriffsmodus",
+        "access_registered_only": "🔒 Nur für angemeldete Teilnehmer (Versteckter Link)",
+        "access_public": "🌐 Öffentlicher Link (Für alle sichtbar)",
+        "meeting_url_label": "Meeting- / Stream-Link (URL)",
+        "meeting_url_placeholder": "https://meet.google.com/... oder https://zoom.us/j/..."
       },
       "participants_modal": {
         "title": "Registrierte Teilnehmer",
         "total_booked": "Gebuchte Plätze: {{booked}} von {{capacity}}",
         "empty": "Noch keine Teilnehmer für dieses Event registriert.",
         "seats_count": "{{count}} Plätze",
-        "remove_participant_confirm": "Möchten Sie diese Buchung wirklich entfernen?"
+        "remove_participant_confirm": "Möchten Sie diese Buchung wirklich entfernen?",
+        "copy_emails_btn": "Teilnehmer-E-Mails kopieren",
+        "emails_copied": "Teilnehmer-E-Mails in die Zwischenablage kopiert!"
       }
+    },
+    "online_access_heading": "Online-Event-Zugang",
+    "join_online_event_btn": "Meeting beitreten",
+    "copy_link_btn": "Link kopieren",
+    "link_copied_toast": "Meeting-Link in die Zwischenablage kopiert!",
+    "access_unlocked_hint": "Ihr Platz ist bestätigt. Sie können zur geplanten Zeit beitreten.",
+    "link_pending_hint": "Der Meeting-Link wird vor Beginn der Veranstaltung hier aktiviert.",
+    "link_locked_hint": "Der Meeting-Link (Google Meet / Zoom) wird nach der Buchung freigeschaltet.",
+    "platforms": {
+      "google_meet": "Google Meet",
+      "zoom": "Zoom",
+      "youtube": "YouTube Live",
+      "teams": "Microsoft Teams",
+      "other": "Andere Plattform"
     }
   },
   "gourmet_community": {
@@ -2138,6 +2196,46 @@
     "link_copied": "Link in die Zwischenablage kopiert!",
     "profile_shared_title": "Geteilt in der Gourmet-Community",
     "open_community_btn": "Zur Community",
-    "no_profile_posts": "Noch keine geteilten Beiträge in der Community."
+    "no_profile_posts": "Noch keine geteilten Beiträge in der Community.",
+    "moderation": {
+      "safety_blocked": "Dieser Inhalt enthält unangemessene oder beleidigende Sprache und kann nicht veröffentlicht werden.",
+      "confirm_delete_post": "Möchten Sie diesen Beitrag wirklich löschen?",
+      "confirm_delete_comment": "Möchten Sie diesen Kommentar wirklich löschen?",
+      "confirm_delete_cascade": "Möchten Sie diesen Kommentar und alle nachfolgenden Antworten wirklich löschen?",
+      "post_deleted": "Der Beitrag wurde gelöscht.",
+      "comment_deleted": "Der Kommentar wurde gelöscht.",
+      "cascade_deleted": "Der Kommentar und die nachfolgende Diskussion wurden gelöscht.",
+      "comments_locked_toast": "Kommentare für diesen Beitrag sind gesperrt.",
+      "comments_unlocked_toast": "Kommentare für diesen Beitrag sind entsperrt.",
+      "comments_are_locked": "Kommentare für diesen Beitrag sind vorübergehend gesperrt.",
+      "comments_locked_banner": "Die Diskussion zu diesem Beitrag ist vorübergehend gesperrt.",
+      "lock_comments": "Kommentare sperren",
+      "unlock_comments": "Kommentare entsperren",
+      "report_post": "Beitrag melden",
+      "report_comment": "Kommentar melden",
+      "hide_comment_local": "Kommentar für mich ausblenden",
+      "comment_hidden_local": "Kommentar für Sie ausgeblendet",
+      "show_comment": "Anzeigen",
+      "delete_cascade_tooltip": "Kommentar + nachfolgende Diskussion löschen",
+      "post_quarantined_notice": "Dieser Beitrag wurde gemeldet und wartet auf Prüfung durch einen Moderator.",
+      "comment_quarantined_notice": "Dieser Kommentar wurde gemeldet und ist bis zur Prüfung vorübergehend ausgeblendet.",
+      "quarantined_badge": "Gemeldet / Ausgeblendet",
+      "open_panel": "Zur Moderation",
+      "report_modal_comment_title": "Kommentar melden",
+      "report_modal_post_title": "Beitrag melden",
+      "reported_author": "Autor",
+      "select_reason_label": "Grund für die Meldung",
+      "reason_hate_speech": "Grobe Sprache, Beleidigungen oder Aggression",
+      "reason_profanity": "Obszöne oder vulgäre Ausdrücke",
+      "reason_inappropriate": "Unangemessener Inhalt oder Spam",
+      "reason_other": "Anderer Grund",
+      "additional_details_label": "Zusätzliche Details (optional)",
+      "additional_details_placeholder": "Beschreiben Sie kurz das Problem...",
+      "submit_report_btn": "Meldung senden",
+      "already_reported": "Sie haben diesen Inhalt bereits gemeldet.",
+      "report_quarantined_toast": "Vielen Dank! Aufgrund mehrerer Meldungen wurde der Inhalt vorübergehend ausgeblendet.",
+      "report_submitted_toast": "Meldung zur Überprüfung durch Moderatoren gesendet.",
+      "report_error": "Fehler beim Senden der Meldung."
+    }
   }
 }

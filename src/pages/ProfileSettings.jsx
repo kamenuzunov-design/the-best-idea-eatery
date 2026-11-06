@@ -466,7 +466,7 @@ const ProfileSettings = () => {
         <section className="mt-6 px-4">
           <button 
             onClick={handleLogout} 
-            className="w-full flex items-center justify-center gap-2 border border-rose-500/30 text-rose-500 bg-rose-500/5 py-4 rounded-2xl hover:bg-rose-500/10 active:scale-95 transition-all font-extrabold shadow-sm"
+            className="w-full flex items-center justify-center gap-2 bg-surface-dark/80 backdrop-blur-md border border-primary/20 text-primary py-4 rounded-2xl hover:bg-primary/10 hover:border-primary/40 active:scale-95 transition-all font-extrabold shadow-lg cursor-pointer"
           >
             <span className="material-symbols-outlined">logout</span>
             {t('profile.buttons.logout')}
@@ -480,32 +480,32 @@ const ProfileSettings = () => {
             <span className="material-symbols-outlined text-sm">shield_person</span>
             {t('profile.titles.administration')}
           </h3>
-          <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-rose-500/20 border-2 border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+          <div className="bg-surface-dark/80 backdrop-blur-md rounded-2xl overflow-hidden divide-y divide-primary/10 border border-primary/20 shadow-lg">
             {(isAdmin || isOwner || isModerator) && (
-              <Link to="/admin" className="flex items-center justify-between p-4 cursor-pointer hover:bg-rose-500/5 transition-colors group">
+              <Link to="/admin" className="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/5 transition-colors group">
                 <div className="flex items-center gap-4">
-                  <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined">admin_panel_settings</span>
                   </div>
                   <div>
-                    <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{t('profile.titles.administration')}</p>
-                    <p className="text-[10px] text-rose-500/60 font-bold uppercase">{t('profile.menu_items.control_panel')}</p>
+                    <p className="text-sm font-bold text-slate-100">{t('profile.titles.administration')}</p>
+                    <p className="text-xs text-primary font-semibold">{t('profile.menu_items.control_panel')}</p>
                   </div>
                 </div>
-                <span className="material-symbols-outlined text-rose-500/50">chevron_right</span>
+                <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">chevron_right</span>
               </Link>
             )}
-            <Link to="/admin/data" className="flex items-center justify-between p-4 cursor-pointer hover:bg-rose-500/5 transition-colors group">
+            <Link to="/admin/data" className="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/5 transition-colors group">
               <div className="flex items-center gap-4">
-                <div className="size-10 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined">edit_square</span>
                 </div>
                 <div>
-                  <p className="text-sm font-black text-rose-500 uppercase tracking-wide">{t('profile.menu_items.edit_data')}</p>
-                  <p className="text-[10px] text-rose-500/60 font-bold uppercase">{t('profile.menu_items.data_management')}</p>
+                  <p className="text-sm font-bold text-slate-100">{t('profile.menu_items.edit_data')}</p>
+                  <p className="text-xs text-primary font-semibold">{t('profile.menu_items.data_management')}</p>
                 </div>
               </div>
-              <span className="material-symbols-outlined text-rose-500/50">chevron_right</span>
+              <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">chevron_right</span>
             </Link>
           </div>
         </section>

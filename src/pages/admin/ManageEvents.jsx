@@ -35,6 +35,9 @@ const ManageEvents = () => {
   const [formCapacity, setFormCapacity] = useState(16);
   const [formImage, setFormImage] = useState('');
   const [formExternalUrl, setFormExternalUrl] = useState('');
+  const [formOnlinePlatform, setFormOnlinePlatform] = useState('google_meet');
+  const [formMeetingAccess, setFormMeetingAccess] = useState('registered_only');
+  const [copiedEmails, setCopiedEmails] = useState(false);
   const [formIsFeatured, setFormIsFeatured] = useState(false);
   const [formIsActive, setFormIsActive] = useState(true);
 
@@ -133,6 +136,8 @@ const ManageEvents = () => {
     setFormCapacity(16);
     setFormImage('https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=1000');
     setFormExternalUrl('');
+    setFormOnlinePlatform('google_meet');
+    setFormMeetingAccess('registered_only');
     setFormIsFeatured(false);
     setFormIsActive(true);
     setShowFormModal(true);
@@ -170,7 +175,9 @@ const ManageEvents = () => {
     setFormPrice(Number(ev.price_eur) >= 0 ? Number(ev.price_eur) : 0);
     setFormCapacity(Number(ev.capacity) || 16);
     setFormImage(ev.image || '');
-    setFormExternalUrl(ev.external_url || '');
+    setFormExternalUrl(ev.external_url || ev.meeting_url || '');
+    setFormOnlinePlatform(ev.online_platform || 'google_meet');
+    setFormMeetingAccess(ev.meeting_access || 'registered_only');
     setFormIsFeatured(Boolean(ev.is_featured));
     setFormIsActive(ev.is_active !== false);
     setShowFormModal(true);
@@ -221,6 +228,9 @@ const ManageEvents = () => {
         image:
           formImage.trim() ||
           'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=1000',
+        online_platform: formCategory === 'online' ? formOnlinePlatform : '',
+        meeting_access: formCategory === 'online' ? formMeetingAccess : (formExternalUrl ? 'public' : 'registered_only'),
+        meeting_url: formExternalUrl.trim(),
         external_url: formExternalUrl.trim()
       };
 
@@ -617,18 +627,86 @@ const ManageEvents = () => {
                 />
               </div>
 
-              <div>
-                <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-300 block mb-1">
-                  {t('gourmet_events.admin.form.external_url_label')}
-                </label>
-                <input
-                  type="url"
-                  value={formExternalUrl}
-                  onChange={(e) => setFormExternalUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 outline-none"
-                />
-              </div>
+              {/* Online Access & Link Configuration */}
+              {formCategory === 'online' ? (
+                <div className="p-3.5 rounded-2xl bg-background-dark/80 border border-primary/25 space-y-3">
+                  <div className="flex items-center gap-2 text-primary font-extrabold text-xs">
+                    <span className="material-symbols-outlined text-base">videocam</span>
+                    <span>{t('gourmet_events.admin.form.online_section_title', 'Онлайн излъчване & Линк за среща')}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                        {t('gourmet_events.admin.form.online_platform_label', 'Платформа за излъчване')}
+                      </label>
+                      <select
+                        value={formOnlinePlatform}
+                        onChange={(e) => setFormOnlinePlatform(e.target.value)}
+                        className="w-full bg-surface-dark border border-primary/20 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-100 outline-none cursor-pointer"
+                      >
+                        <option value="google_meet">Google Meet</option>
+                        <option value="zoom">Zoom</option>
+                        <option value="youtube">YouTube Live</option>
+                        <option value="teams">Microsoft Teams</option>
+                        <option value="other">{t('gourmet_events.platforms.other', 'Друга платформа')}</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                        {t('gourmet_events.admin.form.meeting_access_label', 'Режим на достъп')}
+                      </label>
+                      <select
+                        value={formMeetingAccess}
+                        onChange={(e) => setFormMeetingAccess(e.target.value)}
+                        className="w-full bg-surface-dark border border-primary/20 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-100 outline-none cursor-pointer"
+                      >
+                        <option value="registered_only">
+                          {t('gourmet_events.admin.form.access_registered_only', '🔒 Само за записани')}
+                        </option>
+                        <option value="public">
+                          {t('gourmet_events.admin.form.access_public', '🌐 Публичен линк')}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                      {t('gourmet_events.admin.form.meeting_url_label', 'Линк за срещата / стрийма (URL)')}
+                    </label>
+                    <input
+                      type="url"
+                      value={formExternalUrl}
+                      onChange={(e) => setFormExternalUrl(e.target.value)}
+                      placeholder={t(
+                        'gourmet_events.admin.form.meeting_url_placeholder',
+                        'https://meet.google.com/... или https://zoom.us/j/...'
+                      )}
+                      className="w-full bg-surface-dark border border-primary/20 focus:border-primary rounded-xl px-3 py-2 text-xs font-medium text-slate-100 outline-none"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1 italic">
+                      {formMeetingAccess === 'registered_only'
+                        ? 'ℹ️ Линкът ще се вижда единствено от потребители с потвърдена резервация.'
+                        : 'ℹ️ Линкът ще бъде публично видим за всички посетители.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-300 block mb-1">
+                    {t('gourmet_events.admin.form.external_url_label', 'Външен линк за билети / видео стрийм (по избор)')}
+                  </label>
+                  <input
+                    type="url"
+                    value={formExternalUrl}
+                    onChange={(e) => setFormExternalUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs font-medium text-slate-100 outline-none"
+                  />
+                </div>
+              )}
 
               {/* Toggles */}
               <div className="space-y-2 pt-1">
@@ -711,6 +789,34 @@ const ManageEvents = () => {
                         })}
                       </span>
                     </div>
+
+                    {regs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const emails = Array.from(new Set(regs.map((r) => r.userEmail).filter(Boolean))).join(', ');
+                          if (emails) {
+                            navigator.clipboard.writeText(emails);
+                            setCopiedEmails(true);
+                            setTimeout(() => setCopiedEmails(false), 2500);
+                          }
+                        }}
+                        className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          copiedEmails
+                            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                            : 'bg-primary/15 border-primary/30 text-primary hover:bg-primary/25'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base">
+                          {copiedEmails ? 'check' : 'content_copy'}
+                        </span>
+                        <span>
+                          {copiedEmails
+                            ? t('gourmet_events.admin.participants_modal.emails_copied', 'Имейлите бяха копирани!')
+                            : t('gourmet_events.admin.participants_modal.copy_emails_btn', 'Копирай имейлите за покана')}
+                        </span>
+                      </button>
+                    )}
 
                     {regs.length === 0 ? (
                       <div className="py-10 text-center text-xs text-slate-400">

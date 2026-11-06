@@ -10,6 +10,28 @@ import { matchWinesForRecipe, isWinePairingApplicable } from '../lib/wineMatcher
 import { getYouTubeThumbnail, isYouTubeUrl, getYouTubeWatchUrl } from '../lib/videoUtils';
 import { getRecipeImageUrl } from '../lib/imageUtils';
 
+// Векторен компонент за показване на истински национални флагове (заобикаля липсата на emoji флагове в Windows)
+const WineFlag = ({ wine, className = "h-3.5 w-5 object-cover rounded-[2px] border border-black/15 dark:border-white/20 shadow-xs inline-block shrink-0" }) => {
+  if (!wine) return null;
+  const origin = wine.origin?.toLowerCase();
+  const flagUrl = origin ? `/flags/${origin}.svg` : null;
+
+  if (flagUrl) {
+    return (
+      <img
+        src={flagUrl}
+        alt={wine.country?.en || wine.country?.bg || origin || 'Flag'}
+        className={className}
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+    );
+  }
+
+  return wine.flag ? <span className="text-xs">{wine.flag}</span> : null;
+};
+
 const WinePairing = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -404,37 +426,37 @@ const WinePairing = () => {
     switch (type) {
       case 'red':
         return {
-          bg: 'bg-rose-950/80 text-rose-300 border-rose-800/50',
+          bg: 'wine-badge-red bg-rose-50/95 dark:bg-rose-950/80 text-rose-900 dark:text-rose-200 border-rose-300/80 dark:border-rose-800/50 shadow-sm',
           dot: 'bg-rose-500',
           label: t('wine_pairing.types.red')
         };
       case 'white':
         return {
-          bg: 'bg-amber-950/70 text-amber-300 border-amber-700/50',
-          dot: 'bg-amber-400',
+          bg: 'wine-badge-white bg-amber-50/95 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 border-amber-300/80 dark:border-amber-700/50 shadow-sm',
+          dot: 'bg-amber-500',
           label: t('wine_pairing.types.white')
         };
       case 'rose':
         return {
-          bg: 'bg-pink-950/80 text-pink-300 border-pink-700/50',
-          dot: 'bg-pink-400',
+          bg: 'wine-badge-rose bg-pink-50/95 dark:bg-pink-950/80 text-pink-900 dark:text-pink-200 border-pink-300/80 dark:border-pink-700/50 shadow-sm',
+          dot: 'bg-pink-500',
           label: t('wine_pairing.types.rose')
         };
       case 'sparkling':
         return {
-          bg: 'bg-yellow-950/80 text-yellow-300 border-yellow-600/50',
-          dot: 'bg-yellow-400',
+          bg: 'wine-badge-sparkling bg-yellow-50/95 dark:bg-yellow-950/80 text-yellow-900 dark:text-yellow-200 border-yellow-300/80 dark:border-yellow-600/50 shadow-sm',
+          dot: 'bg-yellow-500',
           label: t('wine_pairing.types.sparkling')
         };
       case 'dessert':
         return {
-          bg: 'bg-orange-950/80 text-orange-300 border-orange-700/50',
-          dot: 'bg-orange-400',
+          bg: 'wine-badge-dessert bg-orange-50/95 dark:bg-orange-950/80 text-orange-900 dark:text-orange-200 border-orange-300/80 dark:border-orange-700/50 shadow-sm',
+          dot: 'bg-orange-500',
           label: t('wine_pairing.types.dessert')
         };
       default:
         return {
-          bg: 'bg-primary/20 text-primary border-primary/40',
+          bg: 'bg-surface-dark/95 dark:bg-surface-dark/90 text-primary border-primary/40 shadow-sm',
           dot: 'bg-primary',
           label: t('wine_pairing.types.red')
         };
@@ -450,7 +472,7 @@ const WinePairing = () => {
           <div
             key={lvl}
             className={`h-1.5 flex-1 rounded-full transition-all ${
-              idx <= activeIdx ? activeColor : 'bg-slate-700/60'
+              idx <= activeIdx ? activeColor : 'bg-slate-300 dark:bg-slate-700/60'
             }`}
           />
         ))}
@@ -583,7 +605,7 @@ const WinePairing = () => {
                 {t('wine_pairing.selected_recipe')}
               </span>
               {cuisineName && (
-                <span className="text-slate-400 text-[10px] font-semibold bg-white/5 px-2 py-0.5 rounded border border-white/10 hidden sm:inline-block">
+                <span className="text-slate-600 dark:text-slate-400 text-[10px] font-semibold bg-surface-dark px-2 py-0.5 rounded border border-primary/20 hidden sm:inline-block">
                   {cuisineName}
                 </span>
               )}
@@ -638,7 +660,7 @@ const WinePairing = () => {
               className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all relative ${
                 selectedRole === 'gold'
                   ? 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black shadow-lg scale-[1.02]'
-                  : 'hover:bg-primary/10 text-slate-300 font-bold'
+                  : 'hover:bg-primary/10 text-slate-700 dark:text-slate-300 font-bold'
               }`}
             >
               <div className="flex items-center gap-1">
@@ -647,8 +669,8 @@ const WinePairing = () => {
                   {t('wine_pairing.tabs.gold')}
                 </span>
               </div>
-              <span className={`text-[10px] truncate max-w-full mt-0.5 flex items-center justify-center gap-1 ${selectedRole === 'gold' ? 'text-background-dark/90 font-extrabold' : 'text-slate-400'}`}>
-                {pairingResults.gold?.wine?.flag && <span>{pairingResults.gold.wine.flag}</span>}
+              <span className={`text-[10px] truncate max-w-full mt-0.5 flex items-center justify-center gap-1.5 ${selectedRole === 'gold' ? 'text-background-dark/90 font-extrabold' : 'text-slate-500 dark:text-slate-400'}`}>
+                <WineFlag wine={pairingResults.gold?.wine} className="h-2.5 w-3.5 object-cover rounded-[1.5px] border border-black/15 dark:border-white/20 shadow-xs inline-block shrink-0" />
                 <span className="truncate">{wineTitle(pairingResults.gold?.wine)}</span>
               </span>
             </button>
@@ -659,7 +681,7 @@ const WinePairing = () => {
               className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all relative ${
                 selectedRole === 'alternative'
                   ? 'bg-gradient-to-r from-rose-600 to-rose-800 text-white font-black shadow-lg scale-[1.02]'
-                  : 'hover:bg-primary/10 text-slate-300 font-bold'
+                  : 'hover:bg-primary/10 text-slate-700 dark:text-slate-300 font-bold'
               }`}
             >
               <div className="flex items-center gap-1">
@@ -668,8 +690,8 @@ const WinePairing = () => {
                   {t('wine_pairing.tabs.alternative')}
                 </span>
               </div>
-              <span className={`text-[10px] truncate max-w-full mt-0.5 flex items-center justify-center gap-1 ${selectedRole === 'alternative' ? 'text-white/90 font-extrabold' : 'text-slate-400'}`}>
-                {pairingResults.alternative?.wine?.flag && <span>{pairingResults.alternative.wine.flag}</span>}
+              <span className={`text-[10px] truncate max-w-full mt-0.5 flex items-center justify-center gap-1.5 ${selectedRole === 'alternative' ? 'text-white/90 font-extrabold' : 'text-slate-500 dark:text-slate-400'}`}>
+                <WineFlag wine={pairingResults.alternative?.wine} className="h-2.5 w-3.5 object-cover rounded-[1.5px] border border-black/15 dark:border-white/20 shadow-xs inline-block shrink-0" />
                 <span className="truncate">{wineTitle(pairingResults.alternative?.wine)}</span>
               </span>
             </button>
@@ -680,7 +702,7 @@ const WinePairing = () => {
               className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all relative ${
                 selectedRole === 'wildcard'
                   ? 'bg-gradient-to-r from-amber-500 via-purple-600 to-pink-600 text-white font-black shadow-lg scale-[1.02]'
-                  : 'hover:bg-primary/10 text-slate-300 font-bold'
+                  : 'hover:bg-primary/10 text-slate-700 dark:text-slate-300 font-bold'
               }`}
             >
               <div className="flex items-center gap-1">
@@ -689,8 +711,8 @@ const WinePairing = () => {
                   {t('wine_pairing.tabs.wildcard')}
                 </span>
               </div>
-              <span className={`text-[10px] truncate max-w-full mt-0.5 flex items-center justify-center gap-1 ${selectedRole === 'wildcard' ? 'text-white/90 font-extrabold' : 'text-slate-400'}`}>
-                {pairingResults.wildcard?.wine?.flag && <span>{pairingResults.wildcard.wine.flag}</span>}
+              <span className={`text-[10px] truncate max-w-full mt-0.5 flex items-center justify-center gap-1.5 ${selectedRole === 'wildcard' ? 'text-white/90 font-extrabold' : 'text-slate-500 dark:text-slate-400'}`}>
+                <WineFlag wine={pairingResults.wildcard?.wine} className="h-2.5 w-3.5 object-cover rounded-[1.5px] border border-black/15 dark:border-white/20 shadow-xs inline-block shrink-0" />
                 <span className="truncate">{wineTitle(pairingResults.wildcard?.wine)}</span>
               </span>
             </button>
@@ -716,8 +738,8 @@ const WinePairing = () => {
                     selectedRole === 'gold'
                       ? 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark border-amber-300/40'
                       : selectedRole === 'alternative'
-                      ? 'bg-rose-900/90 text-rose-100 border-rose-500/40'
-                      : 'bg-purple-900/90 text-purple-100 border-purple-500/40'
+                      ? 'bg-gradient-to-r from-rose-600 to-rose-800 text-white border-rose-400/50'
+                      : 'bg-gradient-to-r from-purple-700 via-purple-600 to-pink-600 text-white border-purple-400/50'
                   }`}
                 >
                   <span>{selectedRole === 'gold' ? '🏆' : selectedRole === 'alternative' ? '🍷' : '✨'}</span>
@@ -736,10 +758,10 @@ const WinePairing = () => {
                 })()}
 
                 {/* Wine Origin / Terroir Badge */}
-                {activeWine.flag && (
-                  <div className="px-2.5 py-1 rounded-full text-[10px] font-bold border border-white/20 bg-black/60 backdrop-blur-md text-slate-200 flex items-center gap-1.5 shadow-sm">
-                    <span className="text-xs">{activeWine.flag}</span>
-                    <span>
+                {(activeWine.flag || activeWine.origin) && (
+                  <div className="px-2.5 py-1 rounded-full text-[10px] font-bold border border-primary/30 bg-surface-dark/90 dark:bg-black/60 backdrop-blur-md text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shadow-sm">
+                    <WineFlag wine={activeWine} className="h-3.5 w-5 object-cover rounded-[2px] border border-black/15 dark:border-white/20 shadow-xs inline-block shrink-0" />
+                    <span className="font-semibold">
                       {activeWine.region?.[currentLang] || activeWine.region?.bg
                         ? `${activeWine.region[currentLang] || activeWine.region.bg}, `
                         : ''}
@@ -754,12 +776,12 @@ const WinePairing = () => {
                 onClick={() => handleToggleFavorite(activeWine.id)}
                 className={`absolute top-4 right-4 size-10 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-lg active:scale-90 border ${
                   favorites.includes(activeWine.id)
-                    ? 'bg-rose-600/90 border-rose-400 text-white'
-                    : 'bg-black/50 border-white/20 text-white hover:bg-black/70'
+                    ? 'bg-rose-600/90 border-rose-400 text-white shadow-rose-500/30'
+                    : 'bg-surface-dark/90 border-primary/25 text-slate-400 hover:text-rose-500 hover:border-rose-400/50 shadow-md'
                 }`}
                 aria-label="Favorite"
               >
-                <span className={`material-symbols-outlined text-lg ${favorites.includes(activeWine.id) ? 'font-fill' : ''}`}>
+                <span className={`material-symbols-outlined text-lg ${favorites.includes(activeWine.id) ? 'font-fill text-white' : ''}`}>
                   favorite
                 </span>
               </button>
@@ -767,15 +789,15 @@ const WinePairing = () => {
               {/* Title & Harmony Pill inside Bottom Cover */}
               <div className="absolute bottom-4 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2.5 sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white drop-shadow-md leading-tight break-words">
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white dark:drop-shadow-md leading-tight break-words">
                     {wineTitle(activeWine)}
                   </h3>
                 </div>
 
-                <div className="self-start sm:self-auto bg-black/60 sm:bg-primary/20 border border-primary/50 backdrop-blur-md px-3 py-1.5 rounded-xl flex items-center gap-1.5 shrink-0 shadow-lg max-w-full">
+                <div className="self-start sm:self-auto bg-surface-dark/90 border border-primary/40 backdrop-blur-md px-3 py-1.5 rounded-xl flex items-center gap-1.5 shrink-0 shadow-lg max-w-full">
                   <span className="material-symbols-outlined text-primary text-base">verified</span>
                   <div className="text-left sm:text-right">
-                    <span className="text-[10px] block text-primary/80 font-bold uppercase tracking-wider leading-none">
+                    <span className="text-[10px] block text-primary font-bold uppercase tracking-wider leading-none">
                       {t('wine_pairing.match_score')}
                     </span>
                     <span className="text-sm font-black text-primary leading-tight">
@@ -1000,10 +1022,10 @@ const WinePairing = () => {
                         <h5 className="text-white text-sm font-extrabold truncate group-hover:text-primary transition-colors">
                           {wineTitle(cWine)}
                         </h5>
-                        <p className="text-slate-400 text-[11px] truncate mt-0.5 flex items-center gap-1">
+                        <p className="text-slate-500 dark:text-slate-400 text-[11px] truncate mt-0.5 flex items-center gap-1.5 font-medium">
                           <span>{cBadge.label}</span>
                           <span>•</span>
-                          {cWine.flag && <span>{cWine.flag}</span>}
+                          <WineFlag wine={cWine} className="h-2.5 w-3.5 object-cover rounded-[1.5px] border border-black/15 dark:border-white/20 shadow-xs inline-block shrink-0" />
                           <span>{cWine.country?.[currentLang] || cWine.country?.bg}</span>
                         </p>
                       </div>
@@ -1012,7 +1034,7 @@ const WinePairing = () => {
                         <span className="text-xs font-black text-primary block">
                           {candidate.harmonyScore || candidate.score}%
                         </span>
-                        <span className="text-[9px] text-slate-400 uppercase tracking-tighter block">
+                        <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter block font-bold">
                           {t('wine_pairing.match_score')}
                         </span>
                       </div>

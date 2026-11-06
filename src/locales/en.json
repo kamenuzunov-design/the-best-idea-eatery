@@ -983,7 +983,8 @@
     "tabs": {
       "all": "All",
       "translation": "Needs Translation",
-      "approval": "Pending Approval"
+      "approval": "Pending Approval",
+      "community": "Gourmet Community"
     },
     "empty_translation": "No items pending translation.",
     "empty_approval": "No pending content for approval.",
@@ -1007,7 +1008,30 @@
       "reject": "Reject"
     },
     "error_action": "Moderation error.",
-    "error_mark_translated": "Error updating status."
+    "error_mark_translated": "Error updating status.",
+    "community": {
+      "alert_banner_title": "Gourmet Community Reports",
+      "alert_banner_desc": "There are {{count}} pending reports for profane or inappropriate content.",
+      "subtab_reports": "Reported Items",
+      "subtab_feed": "All Posts & Comments",
+      "open_community": "Open Community",
+      "empty_reports": "No pending community reports.",
+      "empty_reports_hint": "You can inspect all active discussions from the \"All Posts & Comments\" tab.",
+      "type_comment": "Comment",
+      "type_post": "Post",
+      "author_label": "Author",
+      "reported_by": "Reported by",
+      "reporter_note": "Reporter note",
+      "rank_restriction_notice": "The author has an equal or higher rank than yours. Only a higher-ranked user can delete this content.",
+      "insufficient_rank": "You do not have permission to moderate content from a user with equal or higher rank.",
+      "confirm_delete": "Are you sure you want to permanently delete this content?",
+      "btn_delete": "Delete",
+      "btn_delete_cascade": "Delete + thread",
+      "btn_delete_cascade_hint": "Deletes this comment and all subsequent replies after it (stops hate chains)",
+      "btn_hide": "Hide from community",
+      "btn_dismiss": "Dismiss report (Clean)",
+      "comments_header": "Post Comments"
+    }
   },
   "manage_users": {
     "title": "Manage Users",
@@ -1333,7 +1357,15 @@
       "max_clicks": "Max Clicks",
       "zero_unlimited": "0 = Unlimited",
       "is_active": "Is Active?",
-      "save_btn": "Save Campaign"
+      "save_btn": "Save Campaign",
+      "assign_ads_label": "Ads in Campaign (at least one required)",
+      "selected_ads_count": "Selected ads: {{count}}",
+      "no_ads_available": "No ads available. Please create at least one ad via the \"New Ad\" button before creating a campaign.",
+      "ad_in_other_campaign": "In another campaign: {{name}}",
+      "ad_in_this_campaign": "In this campaign",
+      "select_all": "Select All",
+      "deselect_all": "Deselect All",
+      "saving_ai": "Saving & AI translating..."
     },
     "ad_modal": {
       "new_title": "New Ad",
@@ -1367,7 +1399,8 @@
       "max_clicks": "Max Clicks",
       "zero_unlimited": "* 0 means unlimited (no limit)",
       "active_immediately": "Active Immediately?",
-      "save_btn": "Save Ad"
+      "save_btn": "Save Ad",
+      "saving_ai": "Saving & AI translating..."
     },
     "settings_modal": {
       "title": "Advertising Rules",
@@ -1391,7 +1424,9 @@
       "reset_stats_error": "Error resetting stats",
       "save_settings_success": "Rules saved successfully!",
       "save_settings_error": "Error saving rules",
-      "link_copied": "Link copied! Paste it in the 'Target Link URL' field."
+      "link_copied": "Link copied! Paste it in the 'Target Link URL' field.",
+      "campaign_name_required": "Please enter a campaign name!",
+      "campaign_ads_required": "Please add at least one ad to the campaign! A campaign cannot be empty."
     },
     "confirms": {
       "delete_campaign": "Are you sure you want to delete campaign \"{{name}}\"?",
@@ -2063,15 +2098,38 @@
         "is_featured_label": "Featured (Hero Banner)",
         "is_active_label": "Active (Visible to users)",
         "save_btn": "Save Event",
-        "cancel_btn": "Cancel"
+        "cancel_btn": "Cancel",
+        "online_section_title": "Live Stream & Meeting Link",
+        "online_platform_label": "Streaming Platform",
+        "meeting_access_label": "Link Access Mode",
+        "access_registered_only": "🔒 Registered participants only (Hidden link)",
+        "access_public": "🌐 Public link (Visible to everyone)",
+        "meeting_url_label": "Meeting / Stream Link (URL)",
+        "meeting_url_placeholder": "https://meet.google.com/... or https://zoom.us/j/..."
       },
       "participants_modal": {
         "title": "Registered Participants",
         "total_booked": "Booked seats: {{booked}} of {{capacity}}",
         "empty": "No participants registered for this event yet.",
         "seats_count": "{{count}} seats",
-        "remove_participant_confirm": "Are you sure you want to remove this booking?"
+        "remove_participant_confirm": "Are you sure you want to remove this booking?",
+        "copy_emails_btn": "Copy Participant Emails",
+        "emails_copied": "Participant emails copied to clipboard!"
       }
+    },
+    "online_access_heading": "Online Event Access",
+    "join_online_event_btn": "Join Meeting",
+    "copy_link_btn": "Copy Link",
+    "link_copied_toast": "Meeting link copied to clipboard!",
+    "access_unlocked_hint": "Your seat is confirmed. You can join at the scheduled time.",
+    "link_pending_hint": "The meeting link will be activated here before the event starts.",
+    "link_locked_hint": "The meeting link (Google Meet / Zoom) will unlock automatically once you book a seat.",
+    "platforms": {
+      "google_meet": "Google Meet",
+      "zoom": "Zoom",
+      "youtube": "YouTube Live",
+      "teams": "Microsoft Teams",
+      "other": "Other Platform"
     }
   },
   "gourmet_community": {
@@ -2138,6 +2196,46 @@
     "link_copied": "Link copied to clipboard!",
     "profile_shared_title": "Shared in Gourmet Community",
     "open_community_btn": "Go to Community",
-    "no_profile_posts": "No posts shared in the community yet."
+    "no_profile_posts": "No posts shared in the community yet.",
+    "moderation": {
+      "safety_blocked": "This content contains inappropriate, rude, or profane language and cannot be published in the Gourmet Community.",
+      "confirm_delete_post": "Are you sure you want to delete this post?",
+      "confirm_delete_comment": "Are you sure you want to delete this comment?",
+      "confirm_delete_cascade": "Are you sure you want to delete this comment and all subsequent replies/arguments after it?",
+      "post_deleted": "The post was deleted.",
+      "comment_deleted": "The comment was deleted.",
+      "cascade_deleted": "The comment and subsequent discussion were cleared.",
+      "comments_locked_toast": "Comments on this post are now locked.",
+      "comments_unlocked_toast": "Comments on this post are now unlocked.",
+      "comments_are_locked": "Comments on this post are temporarily locked.",
+      "comments_locked_banner": "Discussion on this post is temporarily locked.",
+      "lock_comments": "Lock comments",
+      "unlock_comments": "Unlock comments",
+      "report_post": "Report post",
+      "report_comment": "Report comment",
+      "hide_comment_local": "Hide comment for me",
+      "comment_hidden_local": "Comment hidden for you",
+      "show_comment": "Show",
+      "delete_cascade_tooltip": "Delete comment + all subsequent arguments after it",
+      "post_quarantined_notice": "This post has been reported by the community and awaits moderator review.",
+      "comment_quarantined_notice": "This comment has been reported by the community and is temporarily hidden pending moderator review.",
+      "quarantined_badge": "Reported / Hidden",
+      "open_panel": "To Moderation",
+      "report_modal_comment_title": "Report Comment",
+      "report_modal_post_title": "Report Post",
+      "reported_author": "Author",
+      "select_reason_label": "Reason for reporting",
+      "reason_hate_speech": "Rude language, insults, or aggression",
+      "reason_profanity": "Profanity or vulgar expressions",
+      "reason_inappropriate": "Inappropriate content or spam",
+      "reason_other": "Other reason",
+      "additional_details_label": "Additional details (optional)",
+      "additional_details_placeholder": "Briefly describe why this content violates community standards...",
+      "submit_report_btn": "Submit Report",
+      "already_reported": "You have already reported this content.",
+      "report_quarantined_toast": "Thank you! Due to multiple reports, this content is temporarily hidden pending moderator review.",
+      "report_submitted_toast": "Report submitted for moderator review.",
+      "report_error": "An error occurred while submitting the report."
+    }
   }
 }

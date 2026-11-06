@@ -1,9 +1,76 @@
 # Активен План
 
 ## Предстояща задача (Приоритет за следваща стъпка)
-Очаква се избор от възложителя за следващия фокусен модул или функционалност за разработка.
+Очаква се следващо указание или заявка от възложителя.
 
 ## Наскоро завършени задачи
+Успешно реализирано интелигентното управление на линкове за онлайн събития и защита на достъпа, оптимизацията на хедъра на страница „Събития“ в 3 самостоятелни реда, Модераторски и администраторски модул за контрол на съдържанието в „Гурме Общност“ с йерархия на ранговете, докладване и анти-хейт защита, динамично зареждане и синхронизиране на актуалното изображение на рецептите в „Гурме Общност“, коригиран и гарантиран AI преводът на английски при не-английски езици, опростяване на формата за въвеждане на рецепти, автоматично изчисляване на макронутриенти, козметични подобрения в Светла тема, Винено съчетание, раздел Рецепти, Профил, валидация, визуално преструктуриране и AI превод на кампании и реклами:
+1. **Интелигентно управление на линкове за онлайн събития и защита на достъпа ([GourmetEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetEvents.jsx), [ManageEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageEvents.jsx), [defaultEvents.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/defaultEvents.js))**:
+   - Защита на линковете за срещи в Google Meet, Zoom, Teams (`meeting_access: 'registered_only'`): линкът е скрит за незаписани потребители и се активира автоматично в модала и на картата само след потвърдена резервация.
+   - VIP зона за достъп в модала с бутони „Влез в срещата“ и „Копирай линка“, както и информационен статус, ако организаторът още не е настроил срещата.
+   - Бърз бутон за вход на живо от списъка със събития и таб „Моите резервации“.
+   - Административен модул за избор на платформа (Google Meet, Zoom, YouTube Live, Teams, Друга), линк и режим на достъп (Само за записани / Публичен), плюс бутон „Копирай имейлите за покана“ в списъка на участниците.
+2. **Оптимизация на хедъра на страница „Събития“ в 3 самостоятелни реда ([GourmetEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetEvents.jsx))**:
+   - 1-ви ред: Заглавие „Гурме събития & Мастъркласове“ с намален шрифт с над 4 пункта (`text-lg` / 18px вместо H1 `text-2xl` / 24px).
+   - 2-ри ред: Подзаглавие „Кулинарни академии, дегустации и срещи с шеф-готвачи“ с намален шрифт с 2 пункта (`text-[10px]` вместо `text-xs`) с елегантен смесен регистър и златна акцентна окраска.
+   - 3-ти ред: Бутон за действие „edit_calendar Управление на събития“ (за модератори, администратори и собственик), разположен самостоятелно на трети ред на пълна ширина (`w-full`) за максимално удобство при мобилни екрани.
+2. **Система за докладване, йерархично изтриване по ранг, локално скриване, анти-хейт защита и Администраторски модул за контрол на съдържанието в „Гурме Общност“ ([roles.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/constants/roles.js), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js), [GourmetCommunity.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetCommunity.jsx), [Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx), [AdminDashboard.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AdminDashboard.jsx))**:
+   - Въведена йерархия на ролите (`ROLE_HIERARCHY`: `owner: 4`, `admin: 3`, `moderator: 2`, `user: 1`, `guest: 0`) и проверка `canDeleteContentByRank`: чужда публикация или коментар може да се трие само от потребител с по-висок ранг от автора.
+   - Разделено е локалното скриване (`visibility_off` — свива коментара само за текущия потребител с бутон „Покажи“) от окончателното изтриване (`delete` — икона кошче с диалог за потвърждение).
+   - Добавено докладване на публикации и коментари (`flag`) с избор на причина (Груб език, Нецензурни изрази, Некоректно съдържание/Спам, Друго) и запис в `campaigns/community_reports`.
+   - Многослойна защита срещу вериги от „хейт“: проактивна AI + речникова проверка преди публикуване (`checkCommunityTextSafety`), автоматична карантина при $\ge 2$ независими сигнала (`AUTO_QUARANTINE_THRESHOLD = 2`), каскадно изтриване на провокативен коментар + всички последващи спорове след него (`delete_sweep`), и заключване на коментарите (`lock` / `lock_open`).
+   - В `/admin/moderation` е добавен таб **„Гурме Общност“** с 2 режима („Докладвани сигнали“ и „Всички публикации и коментари“) за Модератор, Администратор и Собственик.
+2. **Динамично зареждане и синхронизация на актуалните снимки на рецептите в „Гурме Общност“ и защита на емисията ([GourmetCommunity.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetCommunity.jsx), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+   - Емисията в `/community` динамично визуализира актуалната снимка от живия запис на рецептата (`getRecipeImageUrl(linkedRecipeObj)`). Ако рецепта е създадена първоначално без снимка и впоследствие редактирана с ново изображение, картата в общността незабавно отразява реалната снимка.
+   - Реализирана `syncRecipeCommunityPost(recipeData, recipeId)` в `communityUtils.js`, която актуализира публикацията в `campaigns/community_feed` във Firestore с новия адрес на снимката, заглавията и преводите при всяка редакция в `ManageRecipes.jsx`.
+   - Защита срещу презаписване на публикациите от служебни примерни постове при първоначално зареждане или временни мрежови грешки.
+   - Възстановена публикацията за авторската рецепта „Мичиронес“ в `campaigns/community_feed` с реалната ѝ снимка и 5-езикови преводи.
+   - При създаване или редактиране на публикация в модала, изборът на рецепта автоматично попълва актуалната снимка, ако потребителят не е качил личен файл.
+2. **Корекция и гарантиране на AI превод на английски език ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js))**:
+   - Премахнат бъгът, при който стари/празни стойности за английски език в компонентния state блокираха прилагането на генерирания превод за `en`.
+   - При източник, различен от английски (напр. Български), английският превод задължително се попълва от AI превода на автора.
+   - Подсилена устойчивостта на `translateRecipeTo5Languages`: безопасен парсинг на стъпки и бележки (предотвратяване на сривове при връщане на обекти), увеличен тайм-аут и поддръжка на алтернативни JSON ключове.
+2. **Опростяване на формата за рецепти при не-английски езици ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+   - Премахнати са объркващите дублиращи се английски полета („Заглавие (EN) * (автоматично)“ и „Описание (EN) (автоматично)“) когато интерфейсът е на език, различен от английски (напр. Български).
+   - При съставките е премахнато второто поле за бележка на английски, оставяйки чиста бележка на работния език на цялата ширина.
+   - При стъпките е премахнато второто текстово поле за инструкция на английски – всяка стъпка има само едно описание на активния език.
+   - Запазена пълна функционалност: при запазване или AI превод Chef AI превежда автоматично съдържанието на всички 5 езика.
+2. **Автоматично изчисляване и показване на хранителни стойности (Протеини, Мазнини, Калории, Въглехидрати) ([recipeNutrition.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/recipeNutrition.js), [RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+   - Премахнати са фиксираните нули (`0g Протеин, 0g Мазнини`) в прегледа на рецептата.
+   - Създаден помощен модул `recipeNutrition.js` за прецизно изчисляване на грамове за всякакви мерни единици (тегло, обем, брой, щипка, скилидка и др.) спрямо базата със съставки и таблицата с мерни единици.
+   - Всички съществуващи рецепти в каталога вече динамично показват реални протеини и мазнини (с адаптивно преизчисляване при промяна на порциите в прегледа на рецептата).
+   - При запис и редактиране в `ManageRecipes.jsx` стойностите за `protein`, `fat`, `carbs` и `calories_per_serving` се записват във Firestore и се визуализират в реално време в таба за съставки.
+2. **Хармония на етикетите и векторни флагове във „Винено съчетание“ ([WinePairing.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/WinePairing.jsx), `public/flags/`, [index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css))**:
+   - Въведен векторен компонент `WineFlag` с реални SVG знамена (`de.svg`, `fr.svg`, `it.svg`, `bg.svg`, `es.svg`, `pt.svg`, `ar.svg`, `at.svg`), елиминиращ рендирането на съкращения като текст („DE“, „FR“, „BG“) в браузърите под Windows.
+   - Премахнати са фиксираните тъмни фонове на етикетите за тип вино (`getWineTypeBadge`), заменени с пастелни подложки (`wine-badge-*`) с тъмен висококонтрастен текст в светла тема.
+   - Етикетът за произход и регион (Terroir) вече е бял стъклен пил (`bg-surface-dark/90 text-slate-800 border-primary/30`), отстранявайки проблема с черен текст върху черен фон.
+   - Бутонът за любими и значката за съвместимост са унифицирани със стъклен контейнер (`bg-surface-dark/90 backdrop-blur-md border-primary/40`), елиминирайки грубия черен фон на мобилни екрани.
+   - Индикаторите за органолептични нива вече имат контрастни неактивни чертички (`bg-slate-300 dark:bg-slate-700/60`).
+2. **Хармония на картите с рецепти в Светла тема ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx), [index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css))**:
+   - Плавен светъл градиент над снимката (`from-surface-dark via-surface-dark/40 to-transparent`), сливащ се естествено с белия фон на картата.
+   - Чист, четим шрифт за заглавието на рецептата без замъгляващ drop-shadow в светла тема.
+   - Елегантен стъклен пил контейнер за бутоните за управление (`visibility`, `edit`, `power_settings_new`, `delete`) с фини икони и плавни ховър ефекти.
+2. **Автоматичен 5-езиков AI превод при запазване на Реклама и Кампания ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx), [geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js))**:
+   - При наличен Google Gemini API ключ, името на кампанията и заглавието на рекламата се превеждат на 5 езика (`BG`, `EN`, `IT`, `FR`, `DE`) чрез `translateTextTo5Languages`.
+   - Индикатор за запазване и AI превод по време на записа с предотвратяване на повторно кликване.
+3. **Визуално подреждане на картите на кампаниите ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx))**:
+   - 1-ви ред: Име на кампанията;
+   - 2-ри ред: Етикети „N реклами“, „Активна/На пауза“, бутони „edit“ и „delete“;
+   - 3-ти ред: Модел на ротация;
+   - Зона за статистика: Показвания и Кликове разположени един до друг хоризонтално (`Показвания: X / Y | Кликове: A / B`).
+4. **Валидация и селектор на реклами в кампании ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx))**:
+   - Добавен селектор за реклами в модала за създаване/редакция на кампания с брояч и бързи бутони „Избери всички“ / „Изчисти избора“.
+   - Валидация при запазване: изисква въведено име и поне 1 добавена реклама (забрана за празни кампании).
+   - Двупосочно синхронизиране на `campaignId` за всички реклами във Firestore и каскадно разкачане при изтриване на кампания.
+5. **Омекотяване на червените цветове в Светлата тема ([index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css))**:
+   - Заменени неоновите червено-розови тонове с пастелна палитра от мутед рубинени тонове (`#b34451` текст, `#c04d5a` бутони/значки, фин руж за фонове).
+6. **Подобрен контраст на имената на кампаниите в раздел Реклами ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx))**:
+   - Отчетлив тъмен фон и кехлибарен цвят за имената и баджовете на кампаниите.
+7. **Уеднаквяване на цветовете в Профил ([ProfileSettings.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/ProfileSettings.jsx))**:
+   - Червеният цвят от бутона „Изход“ и картите на „Администрация“ е премахнат и приведен към стандартния стил на приложението.
+8. **Изсветляване на златистия фон на бутоните и затъмняване на зеления текст в Светла тема ([index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css))**:
+   - Златистият фон е заменен с топъл свеж градиент (`#f8dc7a` → `#ebb93e`), а зеленият текст е потъмнен до дълбок изумруд (`#047857`) за четимост.
+
 Успешно реализирана **Гурме „Светла тема“ (Light Theme)** и кулинарна социална мрежа **„Гурме Общност“ (`GourmetCommunity.jsx` `/community`)**:
 1. **Гурме „Светла тема“ с черен текст за рецептите и тъмно злато ([index.css](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/index.css), [ThemeContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/ThemeContext.jsx))**:
    - `ThemeProvider` и `useTheme()` с управление на темата (`dark` по подразбиране | `light`), запис в `localStorage` (`app_theme`) и синхронизация с `users/{uid}.preferences.theme`.

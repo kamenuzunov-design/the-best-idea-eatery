@@ -472,6 +472,71 @@ export async function callGemini({
   throw lastError || new Error("Failed to contact Gemini API.");
 }
 
+/**
+ * Translates a short text (title, name, phrase) into all 5 supported languages (bg, en, it, fr, de)
+ * using the configured Gemini AI client.
+ * Returns an object { bg: '...', en: '...', it: '...', fr: '...', de: '...' }.
+ * Never throws — if API key is missing or call fails, gracefully returns fallback mapping.
+ */
+export async function translateTextTo5Languages({ text = '', sourceLang = 'bg' }) {
+  const cleanText = (text || '').trim();
+  const baseMap = {
+    bg: cleanText,
+    en: cleanText,
+    it: cleanText,
+    fr: cleanText,
+    de: cleanText
+  };
+  if (!cleanText) return baseMap;
+
+  try {
+    await getRemoteAIConfig();
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) return baseMap;
+
+    const prompt = `You are a professional multilingual translator.
+Translate the following short title or campaign name from "${sourceLang}" into all 5 languages: bg (Bulgarian), en (English), it (Italian), fr (French), and de (German).
+Keep the translations natural, concise, and accurate for culinary products, restaurant promotions, or advertisements.
+
+Input text: "${cleanText}"
+
+Return ONLY valid JSON with this exact structure:
+{
+  "bg": "...",
+  "en": "...",
+  "it": "...",
+  "fr": "...",
+  "de": "..."
+}`;
+
+    const res = await callGemini({
+      apiKey,
+      prompt,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.1
+      },
+      timeoutMs: 8000
+    });
+
+    if (res?.data && typeof res.data === 'object') {
+      const result = { ...baseMap };
+      ['bg', 'en', 'it', 'fr', 'de'].forEach(lang => {
+        if (typeof res.data[lang] === 'string' && res.data[lang].trim()) {
+          result[lang] = res.data[lang].trim();
+        }
+      });
+      // Always retain user's exact input for sourceLang
+      result[sourceLang] = cleanText;
+      return result;
+    }
+  } catch (err) {
+    console.warn('translateTextTo5Languages skipped or failed:', err.message);
+  }
+
+  return baseMap;
+}
+
 // Pre-fetch remote AI configuration on module import in browser
 if (typeof window !== 'undefined') {
   setTimeout(() => {

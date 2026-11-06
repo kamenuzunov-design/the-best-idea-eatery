@@ -247,6 +247,28 @@ const GourmetEvents = () => {
     }
   };
 
+  const getPlatformLabel = (platformKey) => {
+    if (!platformKey) return 'Google Meet';
+    switch (platformKey) {
+      case 'google_meet':
+        return 'Google Meet';
+      case 'zoom':
+        return 'Zoom';
+      case 'youtube':
+        return 'YouTube Live';
+      case 'teams':
+        return 'Microsoft Teams';
+      default:
+        return t('gourmet_events.platforms.other', 'Друга платформа');
+    }
+  };
+
+  const handleCopyMeetingLink = (linkUrl) => {
+    if (!linkUrl) return;
+    navigator.clipboard.writeText(linkUrl);
+    showToast(t('gourmet_events.link_copied_toast', 'Линкът за срещата е копиран в клипборда!'));
+  };
+
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32 overflow-x-hidden">
       {/* Toast Notification */}
@@ -259,12 +281,12 @@ const GourmetEvents = () => {
 
       <main className="flex-1 px-4 pt-5 space-y-5">
         {/* Page Heading + Admin Shortcut */}
-        <section className="flex items-start justify-between gap-3">
+        <section className="flex flex-col gap-2.5">
           <div>
-            <h1 className="text-slate-100 text-2xl font-extrabold leading-tight tracking-tight">
+            <h1 className="text-slate-100 text-lg font-extrabold leading-tight tracking-tight">
               {t('gourmet_events.title')}
             </h1>
-            <p className="text-primary text-xs font-bold uppercase tracking-widest mt-1">
+            <p className="text-primary text-[10px] font-bold mt-1">
               {t('gourmet_events.subtitle')}
             </p>
           </div>
@@ -273,9 +295,9 @@ const GourmetEvents = () => {
             <button
               type="button"
               onClick={() => navigate('/admin/events')}
-              className="px-3 py-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 text-xs font-extrabold uppercase tracking-wider shadow-sm transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-sm">edit_calendar</span>
+              <span className="material-symbols-outlined text-base">edit_calendar</span>
               <span>{t('gourmet_events.manage_btn')}</span>
             </button>
           )}
@@ -379,26 +401,42 @@ const GourmetEvents = () => {
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-primary/15">
+                    <div className="flex items-center justify-between pt-2 border-t border-primary/15 gap-2 flex-wrap">
                       <span className="text-primary font-extrabold text-xl">
                         {Number(featuredEvent.price_eur) > 0
                           ? t('gourmet_events.price_eur', { price: featuredEvent.price_eur })
                           : t('gourmet_events.free_price')}
                       </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEventModal(featuredEvent);
-                        }}
-                        className={`px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-lg cursor-pointer ${
-                          existingBooking
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                            : 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark hover:scale-105'
-                        }`}
-                      >
-                        {existingBooking ? t('gourmet_events.manage_booking_btn') : t('gourmet_events.book_btn')}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {featuredEvent.category === 'online' &&
+                          existingBooking &&
+                          (featuredEvent.meeting_url || featuredEvent.external_url) && (
+                            <a
+                              href={featuredEvent.meeting_url || featuredEvent.external_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="px-3.5 py-2.5 rounded-xl bg-emerald-500 text-background-dark font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md hover:brightness-110 active:scale-95 transition-all"
+                            >
+                              <span className="material-symbols-outlined text-sm">videocam</span>
+                              <span>{t('gourmet_events.join_online_event_btn', 'Влез в срещата')}</span>
+                            </a>
+                          )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEventModal(featuredEvent);
+                          }}
+                          className={`px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-lg cursor-pointer ${
+                            existingBooking
+                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                              : 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark hover:scale-105'
+                          }`}
+                        >
+                          {existingBooking ? t('gourmet_events.manage_booking_btn') : t('gourmet_events.book_btn')}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -485,7 +523,7 @@ const GourmetEvents = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2.5 border-t border-primary/10">
+                    <div className="flex items-center justify-between pt-2.5 border-t border-primary/10 gap-2 flex-wrap">
                       <div className="flex items-center gap-2.5">
                         <span className="text-primary font-extrabold text-sm">
                           {Number(ev.price_eur) > 0
@@ -500,20 +538,34 @@ const GourmetEvents = () => {
                         </span>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEventModal(ev);
-                        }}
-                        className={`text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                          existingBooking
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'border border-primary/50 text-primary hover:bg-primary hover:text-background-dark'
-                        }`}
-                      >
-                        {existingBooking ? t('gourmet_events.manage_booking_btn') : t('gourmet_events.book_btn')}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        {ev.category === 'online' && existingBooking && (ev.meeting_url || ev.external_url) && (
+                          <a
+                            href={ev.meeting_url || ev.external_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 text-[10px] font-extrabold uppercase flex items-center gap-1 transition-all"
+                          >
+                            <span className="material-symbols-outlined text-xs">videocam</span>
+                            <span>{t('gourmet_events.join_online_event_btn', 'Влез')}</span>
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEventModal(ev);
+                          }}
+                          className={`text-[10px] font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                            existingBooking
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : 'border border-primary/50 text-primary hover:bg-primary hover:text-background-dark'
+                          }`}
+                        >
+                          {existingBooking ? t('gourmet_events.manage_booking_btn') : t('gourmet_events.book_btn')}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -603,17 +655,89 @@ const GourmetEvents = () => {
                 )}
               </div>
 
-              {/* Optional External Link Button */}
-              {selectedEvent.external_url && (
-                <a
-                  href={selectedEvent.external_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 px-4 rounded-xl bg-primary/10 border border-primary/30 text-primary font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-primary/20 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-base">open_in_new</span>
-                  <span>{t('gourmet_events.external_link_btn')}</span>
-                </a>
+              {/* Online Access & Meeting Link Zone */}
+              {selectedEvent.category === 'online' ? (
+                <div className="p-3.5 rounded-2xl bg-background-dark/90 border border-primary/25 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-xs font-extrabold text-primary">
+                      <span className="material-symbols-outlined text-base">videocam</span>
+                      <span>{t('gourmet_events.online_access_heading', 'Онлайн достъп до събитието')}</span>
+                    </div>
+                    {selectedEvent.online_platform && (
+                      <span className="px-2 py-0.5 rounded-md bg-primary/15 text-primary text-[10px] font-black uppercase tracking-wider border border-primary/20">
+                        {getPlatformLabel(selectedEvent.online_platform)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* If user is booked OR meeting link is public */}
+                  {Boolean(myBookingByEventId[selectedEvent.id]) || selectedEvent.meeting_access === 'public' ? (
+                    (selectedEvent.meeting_url || selectedEvent.external_url) ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={selectedEvent.meeting_url || selectedEvent.external_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:brightness-110 active:scale-95 transition-all"
+                          >
+                            <span className="material-symbols-outlined text-base">login</span>
+                            <span>{t('gourmet_events.join_online_event_btn', 'Влез в срещата')}</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyMeetingLink(selectedEvent.meeting_url || selectedEvent.external_url)}
+                            className="p-2.5 rounded-xl bg-surface-dark border border-primary/30 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                            title={t('gourmet_events.copy_link_btn', 'Копирай линка')}
+                          >
+                            <span className="material-symbols-outlined text-base">content_copy</span>
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">verified</span>
+                          <span>
+                            {t(
+                              'gourmet_events.access_unlocked_hint',
+                              'Вашето място е потвърдено. Можете да се присъедините в началния час.'
+                            )}
+                          </span>
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-200 text-xs flex items-center gap-2">
+                        <span className="material-symbols-outlined text-amber-400 text-base shrink-0">hourglass_top</span>
+                        <p className="text-[11px] leading-snug">
+                          {t(
+                            'gourmet_events.link_pending_hint',
+                            'Линкът за срещата ще бъде активиран тук преди началото на събитието.'
+                          )}
+                        </p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs text-slate-300 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-base shrink-0">lock</span>
+                      <p className="text-[11px] leading-snug">
+                        {t(
+                          'gourmet_events.link_locked_hint',
+                          'Линкът за срещата (Google Meet / Zoom) се отключва автоматично след резервация.'
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                selectedEvent.external_url && (
+                  <a
+                    href={selectedEvent.external_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-4 rounded-xl bg-primary/10 border border-primary/30 text-primary font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-primary/20 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-base">open_in_new</span>
+                    <span>{t('gourmet_events.external_link_btn')}</span>
+                  </a>
+                )
               )}
 
               {/* Seats & Contact Inputs */}

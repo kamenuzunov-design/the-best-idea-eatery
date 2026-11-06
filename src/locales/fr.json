@@ -983,7 +983,8 @@
     "tabs": {
       "all": "Tous",
       "translation": "À traduire",
-      "approval": "En attente d'approbation"
+      "approval": "En attente d'approbation",
+      "community": "Communauté Gourmet"
     },
     "empty_translation": "Aucun élément en attente de traduction.",
     "empty_approval": "Aucun contenu en attente d'approbation.",
@@ -1007,7 +1008,30 @@
       "reject": "Rejeter"
     },
     "error_action": "Erreur lors de la modération.",
-    "error_mark_translated": "Erreur lors de la mise à jour du statut."
+    "error_mark_translated": "Erreur lors de la mise à jour du statut.",
+    "community": {
+      "alert_banner_title": "Signalements Communauté Gourmet",
+      "alert_banner_desc": "Il y a {{count}} signalements en attente.",
+      "subtab_reports": "Signalements",
+      "subtab_feed": "Toutes les publications & commentaires",
+      "open_community": "Ouvrir la communauté",
+      "empty_reports": "Aucun signalement en attente.",
+      "empty_reports_hint": "Vous pouvez inspecter toutes les discussions dans l’onglet « Toutes les publications ».",
+      "type_comment": "Commentaire",
+      "type_post": "Publication",
+      "author_label": "Auteur",
+      "reported_by": "Signalé par",
+      "reporter_note": "Note",
+      "rank_restriction_notice": "L’auteur a un rang égal ou supérieur au vôtre.",
+      "insufficient_rank": "Vous ne pouvez pas modérer un utilisateur de rang égal ou supérieur.",
+      "confirm_delete": "Voulez-vous vraiment supprimer définitivement ce contenu ?",
+      "btn_delete": "Supprimer",
+      "btn_delete_cascade": "Supprimer + suite",
+      "btn_delete_cascade_hint": "Supprime ce commentaire et toutes les réponses suivantes",
+      "btn_hide": "Masquer",
+      "btn_dismiss": "Rejeter le signalement",
+      "comments_header": "Commentaires de la publication"
+    }
   },
   "manage_users": {
     "title": "Gestion des Utilisateurs",
@@ -1333,7 +1357,15 @@
       "max_clicks": "Clics Max",
       "zero_unlimited": "0 = Illimité",
       "is_active": "Campagne active ?",
-      "save_btn": "Enregistrer la Campagne"
+      "save_btn": "Enregistrer la Campagne",
+      "assign_ads_label": "Publicités dans la campagne (au moins une requise)",
+      "selected_ads_count": "Sélectionnées : {{count}}",
+      "no_ads_available": "Aucune publicité disponible. Veuillez créer d'abord une publicité via le bouton \"Nouvelle Publicité\" avant de créer une campagne.",
+      "ad_in_other_campaign": "Dans une autre campagne : {{name}}",
+      "ad_in_this_campaign": "Dans cette campagne",
+      "select_all": "Tout sélectionner",
+      "deselect_all": "Tout désélectionner",
+      "saving_ai": "Enregistrement et traduction AI..."
     },
     "ad_modal": {
       "new_title": "Nouvelle Publicité",
@@ -1367,7 +1399,8 @@
       "max_clicks": "Clics Max",
       "zero_unlimited": "* 0 signifie illimité (aucune limite)",
       "active_immediately": "Active immédiatement ?",
-      "save_btn": "Enregistrer la Publicité"
+      "save_btn": "Enregistrer la Publicité",
+      "saving_ai": "Enregistrement et traduction AI..."
     },
     "settings_modal": {
       "title": "Règles Publicitaires",
@@ -1391,7 +1424,9 @@
       "reset_stats_error": "Erreur lors de la réinitialisation des statistiques",
       "save_settings_success": "Règles enregistrées avec succès !",
       "save_settings_error": "Erreur lors de l'enregistrement des règles",
-      "link_copied": "Lien copié ! Vous pouvez le coller dans le champ 'URL de Destination'."
+      "link_copied": "Lien copié ! Vous pouvez le coller dans le champ 'URL de Destination'.",
+      "campaign_name_required": "Veuillez saisir un nom de campagne !",
+      "campaign_ads_required": "Veuillez ajouter au moins une publicité à la campagne ! Une campagne ne peut pas être vide."
     },
     "confirms": {
       "delete_campaign": "Êtes-vous sûr de vouloir supprimer la campagne \"{{name}}\" ?",
@@ -2063,15 +2098,38 @@
         "is_featured_label": "À la une (Bannière Principale)",
         "is_active_label": "Actif (Visible par les utilisateurs)",
         "save_btn": "Enregistrer l'Événement",
-        "cancel_btn": "Annuler"
+        "cancel_btn": "Annuler",
+        "online_section_title": "Diffusion en direct & Lien de réunion",
+        "online_platform_label": "Plateforme de diffusion",
+        "meeting_access_label": "Mode d’accès au lien",
+        "access_registered_only": "🔒 Participants inscrits uniquement (Lien masqué)",
+        "access_public": "🌐 Lien public (Visible par tous)",
+        "meeting_url_label": "Lien de la réunion / stream (URL)",
+        "meeting_url_placeholder": "https://meet.google.com/... ou https://zoom.us/j/..."
       },
       "participants_modal": {
         "title": "Participants Inscrits",
         "total_booked": "Places réservées : {{booked}} sur {{capacity}}",
         "empty": "Aucun participant inscrit pour le moment.",
         "seats_count": "{{count}} places",
-        "remove_participant_confirm": "Êtes-vous sûr de vouloir supprimer cette réservation ?"
+        "remove_participant_confirm": "Êtes-vous sûr de vouloir supprimer cette réservation ?",
+        "copy_emails_btn": "Copier les e-mails des participants",
+        "emails_copied": "E-mails des participants copiés dans le presse-papiers !"
       }
+    },
+    "online_access_heading": "Accès à l’événement en ligne",
+    "join_online_event_btn": "Rejoindre la réunion",
+    "copy_link_btn": "Copier le lien",
+    "link_copied_toast": "Lien de la réunion copié dans le presse-papiers !",
+    "access_unlocked_hint": "Votre place est confirmée. Vous pouvez rejoindre à l’heure prévue.",
+    "link_pending_hint": "Le lien de la réunion sera activé ici avant le début de l’événement.",
+    "link_locked_hint": "Le lien de la réunion (Google Meet / Zoom) sera débloqué après votre réservation.",
+    "platforms": {
+      "google_meet": "Google Meet",
+      "zoom": "Zoom",
+      "youtube": "YouTube Live",
+      "teams": "Microsoft Teams",
+      "other": "Autre plateforme"
     }
   },
   "gourmet_community": {
@@ -2138,6 +2196,46 @@
     "link_copied": "Lien copié dans le presse-papiers !",
     "profile_shared_title": "Partagés dans la Communauté Gourmet",
     "open_community_btn": "Vers la Communauté",
-    "no_profile_posts": "Aucune publication partagée dans la communauté."
+    "no_profile_posts": "Aucune publication partagée dans la communauté.",
+    "moderation": {
+      "safety_blocked": "Ce contenu contient un langage inapproprié ou vulgaire et ne peut pas être publié.",
+      "confirm_delete_post": "Voulez-vous vraiment supprimer cette publication ?",
+      "confirm_delete_comment": "Voulez-vous vraiment supprimer ce commentaire ?",
+      "confirm_delete_cascade": "Voulez-vous vraiment supprimer ce commentaire et toutes les réponses suivantes ?",
+      "post_deleted": "La publication a été supprimée.",
+      "comment_deleted": "Le commentaire a été supprimé.",
+      "cascade_deleted": "Le commentaire et la discussion suivante ont été supprimés.",
+      "comments_locked_toast": "Les commentaires sont verrouillés.",
+      "comments_unlocked_toast": "Les commentaires sont déverrouillés.",
+      "comments_are_locked": "Les commentaires sont temporairement verrouillés.",
+      "comments_locked_banner": "La discussion sur cette publication est temporairement verrouillée.",
+      "lock_comments": "Verrouiller les commentaires",
+      "unlock_comments": "Déverrouiller les commentaires",
+      "report_post": "Signaler la publication",
+      "report_comment": "Signaler le commentaire",
+      "hide_comment_local": "Masquer ce commentaire pour moi",
+      "comment_hidden_local": "Commentaire masqué pour vous",
+      "show_comment": "Afficher",
+      "delete_cascade_tooltip": "Supprimer le commentaire + les réponses suivantes",
+      "post_quarantined_notice": "Cette publication a été signalée et attend l’examen d’un modérateur.",
+      "comment_quarantined_notice": "Ce commentaire a été signalé et est temporairement masqué.",
+      "quarantined_badge": "Signalé / Masqué",
+      "open_panel": "Vers Modération",
+      "report_modal_comment_title": "Signaler un commentaire",
+      "report_modal_post_title": "Signaler une publication",
+      "reported_author": "Auteur",
+      "select_reason_label": "Motif du signalement",
+      "reason_hate_speech": "Langage grossier, insultes ou agression",
+      "reason_profanity": "Expressions obscènes ou vulgaires",
+      "reason_inappropriate": "Contenu inapproprié ou spam",
+      "reason_other": "Autre motif",
+      "additional_details_label": "Détails supplémentaires (facultatif)",
+      "additional_details_placeholder": "Décrivez brièvement le problème...",
+      "submit_report_btn": "Envoyer le signalement",
+      "already_reported": "Vous avez déjà signalé ce contenu.",
+      "report_quarantined_toast": "Merci ! Suite à plusieurs signalements, ce contenu est temporairement masqué.",
+      "report_submitted_toast": "Signalement envoyé aux modérateurs.",
+      "report_error": "Erreur lors de l’envoi du signalement."
+    }
   }
 }

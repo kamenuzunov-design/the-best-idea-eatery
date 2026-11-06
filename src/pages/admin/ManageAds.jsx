@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { logActivity } from '../../lib/activityLogger';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, getLocalizedField } from '../../lib/localeUtils';
 import { extractYouTubeId, isYouTubeUrl, getYouTubeThumbnail } from '../../lib/videoUtils';
+import { translateTextTo5Languages, getGeminiApiKey } from '../../lib/geminiClient';
 
 const ManageAds = () => {
   const { isAdmin, isOwner, user } = useAuth();
@@ -102,6 +103,8 @@ const ManageAds = () => {
   // Ad Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAd, setEditingAd] = useState(null);
+  const [savingAd, setSavingAd] = useState(false);
+  const [savingCampaign, setSavingCampaign] = useState(false);
 
   // Campaign Modal State
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
@@ -116,7 +119,8 @@ const ManageAds = () => {
     timerIntervalSeconds: 10,
     maxViews: 0,
     maxClicks: 0,
-    isActive: true
+    isActive: true,
+    selectedAdIds: []
   });
 
   // Settings Modal State
@@ -322,6 +326,8 @@ const ManageAds = () => {
         localName = enName || campaign.name_bg || (typeof campaign.name === 'string' ? campaign.name : '');
       }
 
+      const currentAdIds = ads.filter(a => a.campaignId === campaign.id).map(a => a.id);
+
       setCampaignFormData({
         name_local: localName,
         name_en: enName,
@@ -332,7 +338,8 @@ const ManageAds = () => {
         timerIntervalSeconds: campaign.timerIntervalSeconds || 10,
         maxViews: campaign.maxViews || 0,
         maxClicks: campaign.maxClicks || 0,
-        isActive: campaign.isActive ?? true
+        isActive: campaign.isActive ?? true,
+        selectedAdIds: currentAdIds
       });
     } else {
       setEditingCampaign(null);
@@ -346,64 +353,105 @@ const ManageAds = () => {
         timerIntervalSeconds: 10,
         maxViews: 0,
         maxClicks: 0,
-        isActive: true
+        isActive: true,
+        selectedAdIds: []
       });
     }
     setIsCampaignModalOpen(true);
   };
 
+  const handleToggleAdInCampaign = (adId) => {
+    setCampaignFormData(prev => {
+      const currentIds = Array.isArray(prev.selectedAdIds) ? prev.selectedAdIds : [];
+      if (currentIds.includes(adId)) {
+        return { ...prev, selectedAdIds: currentIds.filter(id => id !== adId) };
+      } else {
+        return { ...prev, selectedAdIds: [...currentIds, adId] };
+      }
+    });
+  };
+
+  const handleSelectAllAdsForCampaign = () => {
+    setCampaignFormData(prev => ({
+      ...prev,
+      selectedAdIds: ads.map(a => a.id)
+    }));
+  };
+
+  const handleDeselectAllAdsForCampaign = () => {
+    setCampaignFormData(prev => ({
+      ...prev,
+      selectedAdIds: []
+    }));
+  };
+
   const handleSaveCampaign = async (e) => {
     e.preventDefault();
     try {
+      setSavingCampaign(true);
       const enName = (campaignFormData.name_en || '').trim();
+      const localName = (campaignFormData.name_local || '').trim();
+      const resolvedName = isEn ? enName : (localName || enName);
+
+      if (!resolvedName) {
+        alert(t('manage_ads.alerts.campaign_name_required', 'Моля, въведете име на кампанията!'));
+        setSavingCampaign(false);
+        return;
+      }
+
+      const selectedIds = Array.isArray(campaignFormData.selectedAdIds) ? campaignFormData.selectedAdIds : [];
+      if (selectedIds.length === 0) {
+        alert(t('manage_ads.alerts.campaign_ads_required', 'Моля, добавете поне една реклама към кампанията! Кампанията не може да бъде празна.'));
+        setSavingCampaign(false);
+        return;
+      }
+
       const existingCamp = editingCampaign || {};
       const existingNameMap = typeof existingCamp.name === 'object' && existingCamp.name ? existingCamp.name : {};
 
-      const updatedNameMap = {
-        ...existingNameMap,
-        en: enName
-      };
-
-      const nameUpdates = {
-        name_en: enName
-      };
-
-      if (isEn) {
-        // English user: propagate EN name if other language names are empty
-        for (const lang of SUPPORTED_LANGUAGES) {
-          if (!updatedNameMap[lang]) {
-            updatedNameMap[lang] = enName;
-          }
-          if (!existingCamp[`name_${lang}`]) {
-            nameUpdates[`name_${lang}`] = enName;
-          }
-        }
-        nameUpdates.name_bg = existingCamp.name_bg || enName;
-      } else {
-        // Non-English user (BG, IT, FR, DE):
-        // If local name is empty, fallback to enName
-        const finalLocalName = (campaignFormData.name_local || '').trim() || enName;
-        nameUpdates[`name_${currentLang}`] = finalLocalName;
-        updatedNameMap[currentLang] = finalLocalName;
-
-        if (currentLang === 'bg') {
-          nameUpdates.name_bg = finalLocalName;
-        } else {
-          nameUpdates.name_bg = existingCamp.name_bg || enName;
-        }
-
-        // Preserve other existing languages or fallback to en
-        for (const lang of SUPPORTED_LANGUAGES) {
-          if (lang !== currentLang && lang !== 'en') {
-            if (existingCamp[`name_${lang}`]) {
-              nameUpdates[`name_${lang}`] = existingCamp[`name_${lang}`];
-            } else if (!updatedNameMap[lang]) {
-              updatedNameMap[lang] = enName;
-            }
-          }
-        }
+      // Auto-translate using Google Gemini API Key if available
+      let aiTranslations = null;
+      const apiKey = getGeminiApiKey();
+      if (apiKey) {
+        const sourceLang = isEn ? 'en' : (localName ? currentLang : 'en');
+        const sourceText = isEn ? enName : (localName || enName);
+        aiTranslations = await translateTextTo5Languages({ text: sourceText, sourceLang });
       }
 
+      const updatedNameMap = {
+        ...existingNameMap
+      };
+
+      const nameUpdates = {};
+
+      for (const lang of SUPPORTED_LANGUAGES) {
+        let val = '';
+        if (isEn) {
+          if (lang === 'en') {
+            val = enName;
+          } else if (aiTranslations && aiTranslations[lang]) {
+            val = aiTranslations[lang];
+          } else {
+            val = existingCamp[`name_${lang}`] || updatedNameMap[lang] || enName;
+          }
+        } else {
+          if (lang === currentLang) {
+            val = localName || enName;
+          } else if (lang === 'en' && enName) {
+            val = enName;
+          } else if (aiTranslations && aiTranslations[lang]) {
+            val = aiTranslations[lang];
+          } else {
+            val = existingCamp[`name_${lang}`] || updatedNameMap[lang] || enName || localName;
+          }
+        }
+
+        updatedNameMap[lang] = val;
+        nameUpdates[`name_${lang}`] = val;
+      }
+
+      nameUpdates.name_bg = updatedNameMap.bg || resolvedName;
+      nameUpdates.name_en = updatedNameMap.en || resolvedName;
       nameUpdates.name = updatedNameMap;
 
       const data = {
@@ -418,25 +466,48 @@ const ManageAds = () => {
         updatedAt: serverTimestamp()
       };
 
-      const logCampName = (isEn ? enName : (campaignFormData.name_local || enName)) || 'Кампания';
+      const logCampName = resolvedName || 'Кампания';
 
+      let targetCampId;
       if (editingCampaign) {
-        await updateDoc(doc(db, 'campaigns', editingCampaign.id), data);
+        targetCampId = editingCampaign.id;
+        await updateDoc(doc(db, 'campaigns', targetCampId), data);
         await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'UPDATE_CAMPAIGN', `Редактирана кампания: ${logCampName}`);
+
+        // Sync ads in this campaign
+        // 1. Assign newly selected ads
+        const adsToAssign = ads.filter(a => selectedIds.includes(a.id) && a.campaignId !== targetCampId);
+        for (const ad of adsToAssign) {
+          await updateDoc(doc(db, 'ads', ad.id), { campaignId: targetCampId });
+        }
+        // 2. Unassign deselected ads from this campaign
+        const adsToUnassign = ads.filter(a => !selectedIds.includes(a.id) && a.campaignId === targetCampId);
+        for (const ad of adsToUnassign) {
+          await updateDoc(doc(db, 'ads', ad.id), { campaignId: '' });
+        }
       } else {
-        await addDoc(collection(db, 'campaigns'), {
+        const docRef = await addDoc(collection(db, 'campaigns'), {
           ...data,
           viewsCount: 0,
           clicksCount: 0,
           createdAt: serverTimestamp()
         });
+        targetCampId = docRef.id;
         await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'CREATE_CAMPAIGN', `Създадена кампания: ${logCampName}`);
+
+        // Assign selected ads to this newly created campaign
+        const adsToAssign = ads.filter(a => selectedIds.includes(a.id));
+        for (const ad of adsToAssign) {
+          await updateDoc(doc(db, 'ads', ad.id), { campaignId: targetCampId });
+        }
       }
       setIsCampaignModalOpen(false);
       setEditingCampaign(null);
     } catch (err) {
       console.error("Save campaign error:", err);
       alert(t('manage_ads.alerts.save_campaign_error', { message: err.message }));
+    } finally {
+      setSavingCampaign(false);
     }
   };
 
@@ -444,6 +515,11 @@ const ManageAds = () => {
     if (window.confirm(t('manage_ads.confirms.delete_campaign', { name }))) {
       try {
         await deleteDoc(doc(db, 'campaigns', id));
+        // Unassign ads that were attached to the deleted campaign
+        const associatedAds = ads.filter(a => a.campaignId === id);
+        for (const ad of associatedAds) {
+          await updateDoc(doc(db, 'ads', ad.id), { campaignId: '' });
+        }
         await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'DELETE_CAMPAIGN', `Изтрита кампания: ${name}`);
       } catch (err) {
         console.error(err);
@@ -482,6 +558,7 @@ const ManageAds = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setSavingAd(true);
       let keywordsArr = [];
       if (formData.type === 'native' && formData.targetKeywords) {
         keywordsArr = formData.targetKeywords.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -491,51 +568,49 @@ const ManageAds = () => {
       const existingAd = editingAd || {};
       const existingTitleMap = typeof existingAd.title === 'object' && existingAd.title ? existingAd.title : {};
 
-      const updatedTitleMap = {
-        ...existingTitleMap,
-        en: enTitle
-      };
-
-      const titleUpdates = {
-        title_en: enTitle
-      };
-
-      if (isEn) {
-        // English user: propagate EN title if other language titles are empty
-        for (const lang of SUPPORTED_LANGUAGES) {
-          if (!updatedTitleMap[lang]) {
-            updatedTitleMap[lang] = enTitle;
-          }
-          if (!existingAd[`title_${lang}`]) {
-            titleUpdates[`title_${lang}`] = enTitle;
-          }
-        }
-        titleUpdates.title_bg = existingAd.title_bg || enTitle;
-      } else {
-        // Non-English user (BG, IT, FR, DE):
-        // If local title is empty, fallback to enTitle
-        const finalLocalTitle = (formData.title_local || '').trim() || enTitle;
-        titleUpdates[`title_${currentLang}`] = finalLocalTitle;
-        updatedTitleMap[currentLang] = finalLocalTitle;
-
-        if (currentLang === 'bg') {
-          titleUpdates.title_bg = finalLocalTitle;
-        } else {
-          titleUpdates.title_bg = existingAd.title_bg || enTitle;
-        }
-
-        // Preserve other existing languages or fallback to en
-        for (const lang of SUPPORTED_LANGUAGES) {
-          if (lang !== currentLang && lang !== 'en') {
-            if (existingAd[`title_${lang}`]) {
-              titleUpdates[`title_${lang}`] = existingAd[`title_${lang}`];
-            } else if (!updatedTitleMap[lang]) {
-              updatedTitleMap[lang] = enTitle;
-            }
-          }
-        }
+      // Auto-translate using Google Gemini API Key if available
+      let aiTranslations = null;
+      const apiKey = getGeminiApiKey();
+      if (apiKey) {
+        const sourceLang = isEn ? 'en' : (formData.title_local ? currentLang : 'en');
+        const sourceText = isEn ? enTitle : (formData.title_local || enTitle);
+        aiTranslations = await translateTextTo5Languages({ text: sourceText, sourceLang });
       }
 
+      const updatedTitleMap = {
+        ...existingTitleMap
+      };
+
+      const titleUpdates = {};
+
+      for (const lang of SUPPORTED_LANGUAGES) {
+        let val = '';
+        if (isEn) {
+          if (lang === 'en') {
+            val = enTitle;
+          } else if (aiTranslations && aiTranslations[lang]) {
+            val = aiTranslations[lang];
+          } else {
+            val = existingAd[`title_${lang}`] || updatedTitleMap[lang] || enTitle;
+          }
+        } else {
+          if (lang === currentLang) {
+            val = (formData.title_local || '').trim() || enTitle;
+          } else if (lang === 'en' && enTitle) {
+            val = enTitle;
+          } else if (aiTranslations && aiTranslations[lang]) {
+            val = aiTranslations[lang];
+          } else {
+            val = existingAd[`title_${lang}`] || updatedTitleMap[lang] || enTitle || (formData.title_local || '').trim();
+          }
+        }
+
+        updatedTitleMap[lang] = val;
+        titleUpdates[`title_${lang}`] = val;
+      }
+
+      titleUpdates.title_bg = updatedTitleMap.bg || enTitle || formData.title_local;
+      titleUpdates.title_en = updatedTitleMap.en || enTitle || formData.title_local;
       titleUpdates.title = updatedTitleMap;
 
       const data = {
@@ -570,6 +645,8 @@ const ManageAds = () => {
     } catch (err) {
       console.error("Save ad error:", err);
       alert(t('manage_ads.alerts.save_ad_error', { message: err.message }));
+    } finally {
+      setSavingAd(false);
     }
   };
 
@@ -910,20 +987,20 @@ const ManageAds = () => {
                         </div>
                       )}
                       <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
-                        <span className="bg-background-dark/90 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-black uppercase text-primary border border-primary/30">
+                        <span className="bg-background-dark/90 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-black uppercase text-primary border border-primary/30 shadow-sm">
                           {ad.type}
                         </span>
                         {assignedCampaign && (
-                          <span className="bg-amber-500/20 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold text-amber-400 border border-amber-500/30 truncate max-w-[200px]">
+                          <span className="bg-background-dark/90 backdrop-blur-md px-2.5 py-0.5 rounded text-[10px] font-extrabold text-amber-400 border border-amber-500/40 shadow-sm truncate max-w-[220px]">
                             📁 {getLocalizedField(assignedCampaign, 'name', currentLang) || assignedCampaign.name_bg || assignedCampaign.name_en || (typeof assignedCampaign.name === 'string' ? assignedCampaign.name : '')}
                           </span>
                         )}
                       </div>
                       <div onClick={(e) => e.stopPropagation()} className="absolute top-3 right-3 flex gap-1.5">
-                        <button onClick={() => handleEdit(ad)} className="size-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all cursor-pointer" title={t('manage_ads.card.edit_tooltip')}>
+                        <button onClick={() => handleEdit(ad)} className="size-8 rounded-lg bg-background-dark/90 backdrop-blur-md border border-emerald-500/40 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all cursor-pointer shadow-sm" title={t('manage_ads.card.edit_tooltip')}>
                           <span className="material-symbols-outlined text-sm">edit</span>
                         </button>
-                        <button onClick={() => handleDelete(ad.id)} className="size-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer" title={t('manage_ads.card.delete_tooltip')}>
+                        <button onClick={() => handleDelete(ad.id)} className="size-8 rounded-lg bg-background-dark/90 backdrop-blur-md border border-rose-500/40 text-rose-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer shadow-sm" title={t('manage_ads.card.delete_tooltip')}>
                           <span className="material-symbols-outlined text-sm">delete</span>
                         </button>
                       </div>
@@ -997,7 +1074,7 @@ const ManageAds = () => {
         </section>
 
         {/* SECTION 2: Campaign List Section - SECOND (Distinct Amber Theme & 2px Border) */}
-        <section className="bg-gradient-to-b from-amber-500/10 via-surface-dark/90 to-surface-dark rounded-3xl border-2 border-amber-500/50 p-5 shadow-2xl space-y-4">
+        <section className="bg-surface-dark/80 rounded-3xl border-2 border-amber-500/50 p-5 shadow-2xl space-y-4">
           {/* Header Row 1: Title */}
           <div className="pb-2 border-b border-amber-500/20">
             <h2 className="text-sm font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
@@ -1060,67 +1137,101 @@ const ManageAds = () => {
                       : t('manage_ads.rotation.sequential');
 
                 return (
-                  <div key={c.id} className="bg-surface-dark/95 rounded-2xl border border-amber-500/20 p-4 shadow-lg flex flex-col gap-3 hover:border-amber-500/40 transition-all">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-slate-100 text-sm leading-snug flex items-center gap-2">
-                          <span 
-                            onClick={() => handleOpenCampaignModal(c)}
-                            className="cursor-pointer hover:text-amber-400 transition-colors"
-                            title={t('manage_ads.card.edit_campaign_tooltip')}
-                          >
-                            {getLocalizedField(c, 'name', currentLang) || c.name_bg || c.name_en || (typeof c.name === 'string' ? c.name : '')}
-                          </span>
-                          <span className="bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase px-2 py-0.5 rounded border border-amber-500/20">
-                            {assignedAdsCount} {t('manage_ads.campaigns_list.ads_count_label')}
-                          </span>
-                        </h3>
-                        <p className="text-[10px] text-slate-400 font-medium mt-1">
-                          {t('manage_ads.campaigns_list.rotation_model')}: <strong className="text-slate-300">{rotationLabel}</strong>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
+                  <div key={c.id} className="bg-surface-dark/95 rounded-2xl border border-amber-500/20 p-4 shadow-lg flex flex-col gap-2.5 hover:border-amber-500/40 transition-all">
+                    {/* Row 1: Campaign Name */}
+                    <div className="flex items-center justify-between">
+                      <h3 
+                        onClick={() => handleOpenCampaignModal(c)}
+                        className="font-bold text-slate-100 text-sm sm:text-base leading-snug cursor-pointer hover:text-amber-400 transition-colors"
+                        title={t('manage_ads.card.edit_campaign_tooltip')}
+                      >
+                        {getLocalizedField(c, 'name', currentLang) || c.name_bg || c.name_en || (typeof c.name === 'string' ? c.name : '')}
+                      </h3>
+                    </div>
+
+                    {/* Row 2: Badges ("3 реклами", "Активна/На пауза") and Action buttons (edit, delete) */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-amber-500/10 text-amber-400 text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border border-amber-500/20">
+                          {assignedAdsCount} {t('manage_ads.campaigns_list.ads_count_label')}
+                        </span>
                         <button
                           onClick={() => handleToggleCampaignStatus(c)}
-                          className={`px-2 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer transition-all ${
-                            c.isActive ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                          className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase cursor-pointer transition-all ${
+                            c.isActive ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30' : 'bg-slate-700 text-slate-300 hover:bg-slate-600 border border-slate-600'
                           }`}
                         >
                           {c.isActive ? t('manage_ads.status.active') : t('manage_ads.status.paused')}
                         </button>
-                        <button onClick={() => handleOpenCampaignModal(c)} className="p-1 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer" title={t('manage_ads.card.edit_campaign_tooltip')}>
-                          <span className="material-symbols-outlined text-base">edit</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <button 
+                          onClick={() => handleOpenCampaignModal(c)} 
+                          className="size-7 rounded-lg bg-background-dark/80 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-background-dark flex items-center justify-center transition-all cursor-pointer shadow-sm" 
+                          title={t('manage_ads.card.edit_campaign_tooltip')}
+                        >
+                          <span className="material-symbols-outlined text-sm">edit</span>
                         </button>
-                        <button onClick={() => handleDeleteCampaign(c.id, getLocalizedField(c, 'name', currentLang) || (typeof c.name === 'string' ? c.name : ''))} className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer" title={t('manage_ads.card.delete_campaign_tooltip')}>
-                          <span className="material-symbols-outlined text-base">delete</span>
+                        <button 
+                          onClick={() => handleDeleteCampaign(c.id, getLocalizedField(c, 'name', currentLang) || (typeof c.name === 'string' ? c.name : ''))} 
+                          className="size-7 rounded-lg bg-background-dark/80 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm" 
+                          title={t('manage_ads.card.delete_campaign_tooltip')}
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Dates & Stats */}
-                    <div className="grid grid-cols-2 gap-2 text-[10px] bg-background-dark/50 p-2.5 rounded-xl border border-amber-500/10">
-                      <div>
-                        <span className="text-slate-500 font-bold uppercase tracking-wider block">{t('manage_ads.stats.views')}</span>
-                        <span className="text-slate-200 font-bold">
-                          {c.viewsCount || 0} / {c.maxViews > 0 ? c.maxViews : '∞'}
-                        </span>
-                        {viewsPct !== null && (
-                          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-1 overflow-hidden">
-                            <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${viewsPct}%` }}></div>
-                          </div>
-                        )}
+                    {/* Row 3: Rotation Model */}
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      {t('manage_ads.campaigns_list.rotation_model')}: <strong className="text-slate-200">{rotationLabel}</strong>
+                    </p>
+
+                    {/* Row 4: Stats Zone - Views and Clicks side by side */}
+                    <div className="bg-background-dark/50 p-2.5 rounded-xl border border-amber-500/10 space-y-1.5">
+                      <div className="flex items-center gap-3 text-xs flex-wrap">
+                        {/* Views */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                            {t('manage_ads.stats.views')}:
+                          </span>
+                          <span className="text-slate-100 font-extrabold text-xs">
+                            {c.viewsCount || 0} / {c.maxViews > 0 ? c.maxViews : '∞'}
+                          </span>
+                        </div>
+
+                        <span className="text-slate-600 font-bold">|</span>
+
+                        {/* Clicks */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                            {t('manage_ads.stats.clicks')}:
+                          </span>
+                          <span className="text-slate-100 font-extrabold text-xs">
+                            {c.clicksCount || 0} / {c.maxClicks > 0 ? c.maxClicks : '∞'}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-slate-500 font-bold uppercase tracking-wider block">{t('manage_ads.stats.clicks')}</span>
-                        <span className="text-slate-200 font-bold">
-                          {c.clicksCount || 0} / {c.maxClicks > 0 ? c.maxClicks : '∞'}
-                        </span>
-                        {clicksPct !== null && (
-                          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-1 overflow-hidden">
-                            <div className="bg-amber-500 h-full rounded-full transition-all" style={{ width: `${clicksPct}%` }}></div>
+
+                      {/* Progress bars if configured */}
+                      {(viewsPct !== null || clicksPct !== null) && (
+                        <div className="grid grid-cols-2 gap-2 pt-0.5">
+                          <div>
+                            {viewsPct !== null && (
+                              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden" title={`${viewsPct}%`}>
+                                <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${viewsPct}%` }}></div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                          <div>
+                            {clicksPct !== null && (
+                              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden" title={`${clicksPct}%`}>
+                                <div className="bg-amber-500 h-full rounded-full transition-all" style={{ width: `${clicksPct}%` }}></div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-amber-500/10">
@@ -1194,6 +1305,120 @@ const ManageAds = () => {
                   </div>
                 </div>
               )}
+
+              {/* Ad Selection Section (Required: At least 1 ad) */}
+              <div className="flex flex-col gap-2 p-3.5 bg-background-dark/60 rounded-2xl border border-primary/20">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-amber-400 text-base">campaign</span>
+                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                      {t('manage_ads.campaign_modal.assign_ads_label')}
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                      {t('manage_ads.campaign_modal.selected_ads_count', { count: (campaignFormData.selectedAdIds || []).length })}
+                    </span>
+                    {ads.length > 0 && (
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={handleSelectAllAdsForCampaign}
+                          className="text-primary hover:underline cursor-pointer"
+                        >
+                          {t('manage_ads.campaign_modal.select_all')}
+                        </button>
+                        <span className="text-slate-600">|</span>
+                        <button
+                          type="button"
+                          onClick={handleDeselectAllAdsForCampaign}
+                          className="text-slate-400 hover:text-rose-400 cursor-pointer"
+                        >
+                          {t('manage_ads.campaign_modal.deselect_all')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {ads.length === 0 ? (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center">
+                    <p className="text-xs text-amber-300/90 font-medium leading-relaxed">
+                      {t('manage_ads.campaign_modal.no_ads_available')}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                    {ads.map(ad => {
+                      const isSelected = (campaignFormData.selectedAdIds || []).includes(ad.id);
+                      const adTitle = getLocalizedField(ad, 'title', currentLang) || ad.title_bg || ad.title_en || ad.title || 'Реклама';
+                      const otherCamp = ad.campaignId && ad.campaignId !== editingCampaign?.id 
+                        ? campaigns.find(c => c.id === ad.campaignId) 
+                        : null;
+                      const otherCampName = otherCamp 
+                        ? (getLocalizedField(otherCamp, 'name', currentLang) || otherCamp.name_bg || otherCamp.name_en || (typeof otherCamp.name === 'string' ? otherCamp.name : ''))
+                        : '';
+
+                      return (
+                        <div
+                          key={ad.id}
+                          onClick={() => handleToggleAdInCampaign(ad.id)}
+                          className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-amber-500/15 border-amber-500/40 text-slate-100 shadow-sm'
+                              : 'bg-background-dark/40 border-primary/10 text-slate-400 hover:bg-primary/5 hover:border-primary/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {/* Checkbox indicator */}
+                            <div className={`size-4 rounded flex items-center justify-center shrink-0 transition-colors ${
+                              isSelected ? 'bg-amber-500 text-background-dark font-black' : 'border border-slate-600 bg-background-dark'
+                            }`}>
+                              {isSelected && <span className="material-symbols-outlined text-[13px] font-black">check</span>}
+                            </div>
+
+                            {/* Thumbnail / Type Icon */}
+                            <div className="size-8 rounded-lg overflow-hidden shrink-0 bg-background-dark border border-white/10 flex items-center justify-center">
+                              {ad.contentUrl && (ad.type === 'image' || ad.type === 'native') ? (
+                                <img src={ad.contentUrl} alt="" className="size-full object-cover" />
+                              ) : ad.type === 'video' && isYouTubeUrl(ad.contentUrl) ? (
+                                <img src={getYouTubeThumbnail(ad.contentUrl)} alt="" className="size-full object-cover" />
+                              ) : (
+                                <span className="material-symbols-outlined text-xs text-slate-400">
+                                  {ad.type === 'video' ? 'videocam' : ad.type === 'html' ? 'code' : 'ad'}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Title & Type */}
+                            <div className="flex flex-col min-w-0">
+                              <span className={`text-xs font-bold truncate ${isSelected ? 'text-amber-200' : 'text-slate-200'}`}>
+                                {adTitle}
+                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] uppercase font-black tracking-wider text-slate-400">
+                                  {ad.type}
+                                </span>
+                                {otherCampName && (
+                                  <span className="text-[9px] text-amber-400/80 font-medium truncate max-w-[150px]" title={otherCampName}>
+                                    • {t('manage_ads.campaign_modal.ad_in_other_campaign', { name: otherCampName })}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <span className={`text-[10px] font-bold shrink-0 uppercase tracking-widest px-2 py-0.5 rounded ${
+                            isSelected ? 'bg-amber-500/20 text-amber-300' : 'text-slate-500'
+                          }`}>
+                            {isSelected ? '✓' : '+'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
@@ -1296,8 +1521,13 @@ const ManageAds = () => {
                 </button>
               </div>
 
-              <button type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer">
-                {t('manage_ads.campaign_modal.save_btn')}
+              <button 
+                disabled={savingCampaign} 
+                type="submit" 
+                className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {savingCampaign && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}
+                <span>{savingCampaign ? t('manage_ads.campaign_modal.saving_ai') : t('manage_ads.campaign_modal.save_btn')}</span>
               </button>
             </form>
           </div>
@@ -1569,8 +1799,13 @@ const ManageAds = () => {
                 </button>
               </div>
 
-              <button disabled={uploading} type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer">
-                {t('manage_ads.ad_modal.save_btn')}
+              <button 
+                disabled={uploading || savingAd} 
+                type="submit" 
+                className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {savingAd && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}
+                <span>{savingAd ? t('manage_ads.ad_modal.saving_ai') : t('manage_ads.ad_modal.save_btn')}</span>
               </button>
             </form>
           </div>

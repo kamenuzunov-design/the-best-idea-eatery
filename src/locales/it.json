@@ -983,7 +983,8 @@
     "tabs": {
       "all": "Tutti",
       "translation": "Da tradurre",
-      "approval": "In attesa di approvazione"
+      "approval": "In attesa di approvazione",
+      "community": "Comunità Gourmet"
     },
     "empty_translation": "Nessun elemento in attesa di traduzione.",
     "empty_approval": "Nessun contenuto in attesa di approvazione.",
@@ -1007,7 +1008,30 @@
       "reject": "Rifiuta"
     },
     "error_action": "Errore durante la moderazione.",
-    "error_mark_translated": "Errore durante l'aggiornamento dello stato."
+    "error_mark_translated": "Errore durante l'aggiornamento dello stato.",
+    "community": {
+      "alert_banner_title": "Segnalazioni Comunità Gourmet",
+      "alert_banner_desc": "Ci sono {{count}} segnalazioni in attesa.",
+      "subtab_reports": "Segnalazioni",
+      "subtab_feed": "Tutti i post e commenti",
+      "open_community": "Apri Comunità",
+      "empty_reports": "Nessuna segnalazione in attesa.",
+      "empty_reports_hint": "Puoi ispezionare tutte le discussioni nella scheda \"Tutti i post e commenti\".",
+      "type_comment": "Commento",
+      "type_post": "Post",
+      "author_label": "Autore",
+      "reported_by": "Segnalato da",
+      "reporter_note": "Nota",
+      "rank_restriction_notice": "L’autore ha un grado uguale o superiore al tuo.",
+      "insufficient_rank": "Non hai i permessi per moderare un utente di grado uguale o superiore.",
+      "confirm_delete": "Sei sicuro di voler eliminare definitivamente questo contenuto?",
+      "btn_delete": "Elimina",
+      "btn_delete_cascade": "Elimina + catena",
+      "btn_delete_cascade_hint": "Elimina questo commento e tutte le risposte successive",
+      "btn_hide": "Nascondi",
+      "btn_dismiss": "Ignora segnalazione",
+      "comments_header": "Commenti al post"
+    }
   },
   "manage_users": {
     "title": "Gestione Utenti",
@@ -1333,7 +1357,15 @@
       "max_clicks": "Clic Massimi",
       "zero_unlimited": "0 = Illimitato",
       "is_active": "Campagna attiva?",
-      "save_btn": "Salva Campagna"
+      "save_btn": "Salva Campagna",
+      "assign_ads_label": "Annunci nella campagna (almeno uno richiesto)",
+      "selected_ads_count": "Selezionati: {{count}}",
+      "no_ads_available": "Nessun annuncio disponibile. Crea prima un annuncio tramite il pulsante \"Nuovo Annuncio\" prima di creare una campagna.",
+      "ad_in_other_campaign": "In un'altra campagna: {{name}}",
+      "ad_in_this_campaign": "In questa campagna",
+      "select_all": "Seleziona tutti",
+      "deselect_all": "Deseleziona tutti",
+      "saving_ai": "Salvataggio e traduzione AI..."
     },
     "ad_modal": {
       "new_title": "Nuovo Annuncio",
@@ -1367,7 +1399,8 @@
       "max_clicks": "Max Clic",
       "zero_unlimited": "* 0 significa illimitato (nessun limite)",
       "active_immediately": "Attivo immediatamente?",
-      "save_btn": "Salva Annuncio"
+      "save_btn": "Salva Annuncio",
+      "saving_ai": "Salvataggio e traduzione AI..."
     },
     "settings_modal": {
       "title": "Regole Pubblicitarie",
@@ -1391,7 +1424,9 @@
       "reset_stats_error": "Errore durante la reimpostazione delle statistiche",
       "save_settings_success": "Regole salvate con successo!",
       "save_settings_error": "Errore durante il salvataggio delle regole",
-      "link_copied": "Link copiato! Puoi incollarlo nel campo 'URL di Destinazione'."
+      "link_copied": "Link copiato! Puoi incollarlo nel campo 'URL di Destinazione'.",
+      "campaign_name_required": "Inserisci un nome per la campagna!",
+      "campaign_ads_required": "Aggiungi almeno un annuncio alla campagna! Una campagna non può essere vuota."
     },
     "confirms": {
       "delete_campaign": "Sei sicuro di voler eliminare la campagna \"{{name}}\"?",
@@ -2063,15 +2098,38 @@
         "is_featured_label": "In evidenza (Banner Principale)",
         "is_active_label": "Attivo (Visibile agli utenti)",
         "save_btn": "Salva Evento",
-        "cancel_btn": "Annulla"
+        "cancel_btn": "Annulla",
+        "online_section_title": "Diretta streaming & Link riunione",
+        "online_platform_label": "Piattaforma di trasmissione",
+        "meeting_access_label": "Modalità di accesso al link",
+        "access_registered_only": "🔒 Solo per i partecipanti registrati (Link nascosto)",
+        "access_public": "🌐 Link pubblico (Visibile a tutti)",
+        "meeting_url_label": "Link della riunione / stream (URL)",
+        "meeting_url_placeholder": "https://meet.google.com/... oppure https://zoom.us/j/..."
       },
       "participants_modal": {
         "title": "Partecipanti Registrati",
         "total_booked": "Posti prenotati: {{booked}} su {{capacity}}",
         "empty": "Nessun partecipante registrato per questo evento.",
         "seats_count": "{{count}} posti",
-        "remove_participant_confirm": "Sei sicuro di voler rimuovere questa prenotazione?"
+        "remove_participant_confirm": "Sei sicuro di voler rimuovere questa prenotazione?",
+        "copy_emails_btn": "Copia le email dei partecipanti",
+        "emails_copied": "Email dei partecipanti copiate negli appunti!"
       }
+    },
+    "online_access_heading": "Accesso all’evento online",
+    "join_online_event_btn": "Partecipa alla riunione",
+    "copy_link_btn": "Copia link",
+    "link_copied_toast": "Link della riunione copiato negli appunti!",
+    "access_unlocked_hint": "Il tuo posto è confermato. Puoi accedere all’orario stabilito.",
+    "link_pending_hint": "Il link della riunione verrà attivato qui prima dell’inizio dell’evento.",
+    "link_locked_hint": "Il link della riunione (Google Meet / Zoom) si sbloccherà dopo la prenotazione.",
+    "platforms": {
+      "google_meet": "Google Meet",
+      "zoom": "Zoom",
+      "youtube": "YouTube Live",
+      "teams": "Microsoft Teams",
+      "other": "Altra piattaforma"
     }
   },
   "gourmet_community": {
@@ -2138,6 +2196,46 @@
     "link_copied": "Link copiato negli appunti!",
     "profile_shared_title": "Condivisi nella Comunità Gourmet",
     "open_community_btn": "Vai alla Community",
-    "no_profile_posts": "Nessun post condiviso nella community."
+    "no_profile_posts": "Nessun post condiviso nella community.",
+    "moderation": {
+      "safety_blocked": "Questo contenuto contiene linguaggio inappropriato o volgare e non può essere pubblicato.",
+      "confirm_delete_post": "Sei sicuro di voler eliminare questo post?",
+      "confirm_delete_comment": "Sei sicuro di voler eliminare questo commento?",
+      "confirm_delete_cascade": "Sei sicuro di voler eliminare questo commento e tutte le risposte successive?",
+      "post_deleted": "Il post è stato eliminato.",
+      "comment_deleted": "Il commento è stato eliminato.",
+      "cascade_deleted": "Il commento e la discussione successiva sono stati rimossi.",
+      "comments_locked_toast": "I commenti sono bloccati.",
+      "comments_unlocked_toast": "I commenti sono sbloccati.",
+      "comments_are_locked": "I commenti sono temporaneamente bloccati.",
+      "comments_locked_banner": "La discussione su questo post è temporaneamente bloccata.",
+      "lock_comments": "Blocca commenti",
+      "unlock_comments": "Sblocca commenti",
+      "report_post": "Segnala post",
+      "report_comment": "Segnala commento",
+      "hide_comment_local": "Nascondi commento per me",
+      "comment_hidden_local": "Commento nascosto per te",
+      "show_comment": "Mostra",
+      "delete_cascade_tooltip": "Elimina commento + risposte successive",
+      "post_quarantined_notice": "Questo post è stato segnalato e attende la revisione di un moderatore.",
+      "comment_quarantined_notice": "Questo commento è stato segnalato ed è temporaneamente nascosto.",
+      "quarantined_badge": "Segnalato / Nascosto",
+      "open_panel": "Alla Moderazione",
+      "report_modal_comment_title": "Segnala commento",
+      "report_modal_post_title": "Segnala post",
+      "reported_author": "Autore",
+      "select_reason_label": "Motivo della segnalazione",
+      "reason_hate_speech": "Linguaggio offensivo, insulti o aggressione",
+      "reason_profanity": "Espressioni oscene o volgari",
+      "reason_inappropriate": "Contenuto inappropriato o spam",
+      "reason_other": "Altro motivo",
+      "additional_details_label": "Dettagli aggiuntivi (opzionale)",
+      "additional_details_placeholder": "Descrivi brevemente il problema...",
+      "submit_report_btn": "Invia segnalazione",
+      "already_reported": "Hai già segnalato questo contenuto.",
+      "report_quarantined_toast": "Grazie! A causa di più segnalazioni, il contenuto è temporaneamente nascosto.",
+      "report_submitted_toast": "Segnalazione inviata ai moderatori.",
+      "report_error": "Errore durante l’invio della segnalazione."
+    }
   }
 }

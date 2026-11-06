@@ -19,9 +19,11 @@ import { seedCleanRecipesToFirestore, CLEAN_RECIPES_COUNT } from '../../lib/reci
 import { parseCSV, formatCSV, downloadCSV } from '../../lib/csvUtils';
 import {
   publishNewRecipeAnnouncement,
+  syncRecipeCommunityPost,
   translateRecipeTo5Languages,
   slugifyRecipeTitle
 } from '../../lib/communityUtils';
+import { calculateNutritionFromIngredients } from '../../lib/recipeNutrition';
 
 const ManageRecipes = () => {
   const { t, i18n } = useTranslation();
@@ -126,39 +128,14 @@ const ManageRecipes = () => {
     return () => { unsubRecipes(); unsubIng(); unsubMeas(); };
   }, []);
 
-  const calculatedCalories = React.useMemo(() => {
-    let totalCalories = 0;
-    recipeIngredients.forEach(ing => {
-      if (ing.type === 'recipe') {
-        const subRec = recipes.find(r => r.id === (ing.recipe_id || ing.ingredient_id) || r.slug === (ing.recipe_id || ing.ingredient_id));
-        if (subRec && (subRec.calories_per_serving || subRec.calories)) {
-          const subCals = parseFloat(subRec.calories_per_serving || subRec.calories) || 0;
-          const amt = parseFloat(ing.amount) || 1;
-          totalCalories += subCals * amt;
-        }
-        return;
-      }
-      const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id);
-      if (dbIng && dbIng.nutrition_per_100 && ing.amount && ing.unit_id) {
-        let weightGrams = 0;
-        const mapping = dbIng.units_mapping?.find(m => m.unit_id === ing.unit_id);
-        if (mapping && mapping.weight_grams) {
-          weightGrams = parseFloat(mapping.weight_grams) * parseFloat(ing.amount);
-        } else {
-          const unitObj = measurementsList.find(m => m.id === ing.unit_id);
-          if (unitObj && (unitObj.unit_id === 'g' || unitObj.unit_id === 'ml' || unitObj.base_unit === 'g' || unitObj.base_unit === 'ml')) {
-            weightGrams = parseFloat(ing.amount);
-          } else if (ing.unit_id === 'g' || ing.unit_id === 'ml') {
-            weightGrams = parseFloat(ing.amount);
-          }
-        }
-        if (weightGrams > 0) {
-          totalCalories += (parseFloat(dbIng.nutrition_per_100.calories) / 100) * weightGrams;
-        }
-      }
+  const calculatedNutrition = React.useMemo(() => {
+    return calculateNutritionFromIngredients({
+      ingredients: recipeIngredients,
+      servings: parseInt(servings) || 1,
+      ingredientsList,
+      measurements: measurementsList,
+      subRecipes: recipes
     });
-    const srv = parseInt(servings) || 1;
-    return Math.round(totalCalories / srv);
   }, [recipeIngredients, ingredientsList, measurementsList, servings, recipes]);
 
   const handleTitleEnChange = (e) => {
@@ -175,7 +152,7 @@ const ManageRecipes = () => {
   const handleLocalTitleChange = (e) => {
     const val = e.target.value;
     setTitlesByLang(prev => ({ ...prev, [currentLang]: val }));
-    if (!editingId && !titlesByLang.en) {
+    if (!editingId) {
       setSlug(slugifyRecipeTitle(val));
     }
   };
@@ -194,7 +171,8 @@ const ManageRecipes = () => {
   };
 
   const handleTranslateRecipeWithAI = async () => {
-    const sourceLang = titlesByLang[currentLang]?.trim()
+    const isCurrentEn = currentLang === 'en';
+    const sourceLang = (!isCurrentEn && titlesByLang[currentLang]?.trim())
       ? currentLang
       : (titlesByLang.en?.trim() ? 'en' : currentLang);
     const sourceTitle = (titlesByLang[sourceLang] || titlesByLang[currentLang] || titlesByLang.en || '').trim();
@@ -222,34 +200,50 @@ const ManageRecipes = () => {
       });
 
       if (sourceTitle) {
-        setTitlesByLang(aiRes.title);
+        setTitlesByLang(prev => ({
+          ...prev,
+          ...aiRes.title,
+          [sourceLang]: sourceTitle
+        }));
         if (!editingId) {
-          const nextSlug = slugifyRecipeTitle(aiRes.title.en || sourceTitle);
+          const nextSlug = slugifyRecipeTitle(aiRes.title?.en || sourceTitle);
           if (nextSlug) setSlug(nextSlug);
         }
       }
       if (sourceDesc) {
-        setDescsByLang(aiRes.description);
+        setDescsByLang(prev => ({
+          ...prev,
+          ...aiRes.description,
+          [sourceLang]: sourceDesc
+        }));
       }
       if (notesList.some(Boolean)) {
         setRecipeIngredients(prev => prev.map((ing, idx) => {
           const noteMap = aiRes.notes[idx] || {};
+          const noteAuthor = (sourceLang === 'en' ? (ing.notes_en || ing.notes_local || '') : (ing.notes_local || ing.notes_en || '')).trim();
           return {
             ...ing,
-            notes: noteMap,
-            notes_local: noteMap[currentLang] ?? ing.notes_local,
-            notes_en: noteMap.en ?? ing.notes_en
+            notes: {
+              ...noteMap,
+              [sourceLang]: noteAuthor
+            },
+            notes_local: sourceLang === currentLang ? noteAuthor : (noteMap[currentLang] || ing.notes_local),
+            notes_en: sourceLang === 'en' ? noteAuthor : (noteMap.en || '')
           };
         }));
       }
       if (stepsList.some(Boolean)) {
         setRecipeSteps(prev => prev.map((step, idx) => {
           const stepMap = aiRes.steps[idx] || {};
+          const stepAuthor = (sourceLang === 'en' ? (step.instruction_en || step.instruction_local || '') : (step.instruction_local || step.instruction_en || '')).trim();
           return {
             ...step,
-            instruction: stepMap,
-            instruction_local: stepMap[currentLang] ?? step.instruction_local,
-            instruction_en: stepMap.en ?? step.instruction_en
+            instruction: {
+              ...stepMap,
+              [sourceLang]: stepAuthor
+            },
+            instruction_local: sourceLang === currentLang ? stepAuthor : (stepMap[currentLang] || step.instruction_local),
+            instruction_en: sourceLang === 'en' ? stepAuthor : (stepMap.en || '')
           };
         }));
       }
@@ -483,7 +477,8 @@ const ManageRecipes = () => {
       const existingTitle = (typeof originalRecipe?.title === 'object' && originalRecipe?.title !== null) ? originalRecipe.title : {};
       const existingDesc = (typeof originalRecipe?.description === 'object' && originalRecipe?.description !== null) ? originalRecipe.description : {};
 
-      const sourceLang = titlesByLang[currentLang]?.trim()
+      const isCurrentEn = currentLang === 'en';
+      const sourceLang = (!isCurrentEn && titlesByLang[currentLang]?.trim())
         ? currentLang
         : (titlesByLang.en?.trim() ? 'en' : currentLang);
       const sourceTitle = (titlesByLang[sourceLang] || titlesByLang[currentLang] || titlesByLang.en || '').trim();
@@ -497,7 +492,7 @@ const ManageRecipes = () => {
 
       const all5Langs = ['bg', 'en', 'it', 'fr', 'de'];
       const hasAllTitleLangs = all5Langs.every(l => (titlesByLang[l] || existingTitle[l] || '').trim());
-      const shouldRunAiTranslation = !hasAllTitleLangs || !editingId || originalRecipe?.needs_translation;
+      const shouldRunAiTranslation = sourceLang !== 'en' || !hasAllTitleLangs || !editingId || originalRecipe?.needs_translation;
 
       let aiTranslated = null;
       if (shouldRunAiTranslation) {
@@ -511,22 +506,22 @@ const ManageRecipes = () => {
       }
 
       const finalTitleObj = {
-        bg: (titlesByLang.bg || aiTranslated?.title?.bg || existingTitle.bg || originalRecipe?.title_bg || sourceTitle).trim(),
-        en: (titlesByLang.en || aiTranslated?.title?.en || existingTitle.en || originalRecipe?.title_en || sourceTitle).trim(),
-        it: (titlesByLang.it || aiTranslated?.title?.it || existingTitle.it || sourceTitle).trim(),
-        fr: (titlesByLang.fr || aiTranslated?.title?.fr || existingTitle.fr || sourceTitle).trim(),
-        de: (titlesByLang.de || aiTranslated?.title?.de || existingTitle.de || sourceTitle).trim()
+        bg: (sourceLang === 'bg' ? sourceTitle : (aiTranslated?.title?.bg || titlesByLang.bg || existingTitle.bg || originalRecipe?.title_bg || sourceTitle)).trim(),
+        en: (sourceLang === 'en' ? sourceTitle : (aiTranslated?.title?.en || (isCurrentEn ? titlesByLang.en : '') || existingTitle.en || originalRecipe?.title_en || sourceTitle)).trim(),
+        it: (sourceLang === 'it' ? sourceTitle : (aiTranslated?.title?.it || titlesByLang.it || existingTitle.it || sourceTitle)).trim(),
+        fr: (sourceLang === 'fr' ? sourceTitle : (aiTranslated?.title?.fr || titlesByLang.fr || existingTitle.fr || sourceTitle)).trim(),
+        de: (sourceLang === 'de' ? sourceTitle : (aiTranslated?.title?.de || titlesByLang.de || existingTitle.de || sourceTitle)).trim()
       };
       if (sourceTitle) {
         finalTitleObj[sourceLang] = sourceTitle;
       }
 
       const finalDescObj = {
-        bg: (descsByLang.bg || aiTranslated?.description?.bg || existingDesc.bg || originalRecipe?.description_bg || sourceDesc).trim(),
-        en: (descsByLang.en || aiTranslated?.description?.en || existingDesc.en || originalRecipe?.description_en || sourceDesc).trim(),
-        it: (descsByLang.it || aiTranslated?.description?.it || existingDesc.it || sourceDesc).trim(),
-        fr: (descsByLang.fr || aiTranslated?.description?.fr || existingDesc.fr || sourceDesc).trim(),
-        de: (descsByLang.de || aiTranslated?.description?.de || existingDesc.de || sourceDesc).trim()
+        bg: (sourceLang === 'bg' ? sourceDesc : (aiTranslated?.description?.bg || descsByLang.bg || existingDesc.bg || originalRecipe?.description_bg || sourceDesc)).trim(),
+        en: (sourceLang === 'en' ? sourceDesc : (aiTranslated?.description?.en || (isCurrentEn ? descsByLang.en : '') || existingDesc.en || originalRecipe?.description_en || sourceDesc)).trim(),
+        it: (sourceLang === 'it' ? sourceDesc : (aiTranslated?.description?.it || descsByLang.it || existingDesc.it || sourceDesc)).trim(),
+        fr: (sourceLang === 'fr' ? sourceDesc : (aiTranslated?.description?.fr || descsByLang.fr || existingDesc.fr || sourceDesc)).trim(),
+        de: (sourceLang === 'de' ? sourceDesc : (aiTranslated?.description?.de || descsByLang.de || existingDesc.de || sourceDesc)).trim()
       };
       if (sourceDesc) {
         finalDescObj[sourceLang] = sourceDesc;
@@ -564,7 +559,10 @@ const ManageRecipes = () => {
         category_id: categoryIds[0] || categoryId || '',
         category_ids: categoryIds.length > 0 ? categoryIds : (categoryId ? [categoryId] : []),
         sub_category_id: subCategoryId,
-        calories_per_serving: calculatedCalories,
+        calories_per_serving: calculatedNutrition.calories,
+        protein: calculatedNutrition.protein,
+        fat: calculatedNutrition.fat,
+        carbs: calculatedNutrition.carbs,
         video_url: videoUrl,
         original_author: originalAuthor,
         source_link: sourceLink,
@@ -576,16 +574,32 @@ const ManageRecipes = () => {
         ingredients: recipeIngredients.map((i, idx) => {
           const existingNotes = (typeof i.notes === 'object' && i.notes !== null) ? i.notes : {};
           const aiNoteObj = aiTranslated?.notes?.[idx] || {};
-          const noteEn = (i.notes_en || aiNoteObj.en || existingNotes.en || i.notes_local || '').trim();
-          const noteLocal = (i.notes_local || aiNoteObj[currentLang] || existingNotes[currentLang] || noteEn).trim();
+          const noteAuthor = (sourceLang === 'en' ? (i.notes_en || i.notes_local || '') : (i.notes_local || i.notes_en || '')).trim();
+
+          const noteEn = (sourceLang === 'en'
+            ? noteAuthor
+            : (aiNoteObj.en || (existingNotes.en && existingNotes.en !== '[object Object]' ? existingNotes.en : '') || noteAuthor)).trim();
+          const noteBg = (sourceLang === 'bg'
+            ? noteAuthor
+            : (aiNoteObj.bg || (existingNotes.bg && existingNotes.bg !== '[object Object]' ? existingNotes.bg : '') || noteEn)).trim();
+          const noteIt = (sourceLang === 'it'
+            ? noteAuthor
+            : (aiNoteObj.it || (existingNotes.it && existingNotes.it !== '[object Object]' ? existingNotes.it : '') || noteEn)).trim();
+          const noteFr = (sourceLang === 'fr'
+            ? noteAuthor
+            : (aiNoteObj.fr || (existingNotes.fr && existingNotes.fr !== '[object Object]' ? existingNotes.fr : '') || noteEn)).trim();
+          const noteDe = (sourceLang === 'de'
+            ? noteAuthor
+            : (aiNoteObj.de || (existingNotes.de && existingNotes.de !== '[object Object]' ? existingNotes.de : '') || noteEn)).trim();
 
           const notesObj = {
             en: noteEn,
-            bg: currentLang === 'bg' ? noteLocal : (aiNoteObj.bg || existingNotes.bg || (typeof i.notes_bg === 'string' ? i.notes_bg : '') || noteEn),
-            it: currentLang === 'it' ? noteLocal : (aiNoteObj.it || existingNotes.it || noteEn),
-            fr: currentLang === 'fr' ? noteLocal : (aiNoteObj.fr || existingNotes.fr || noteEn),
-            de: currentLang === 'de' ? noteLocal : (aiNoteObj.de || existingNotes.de || noteEn)
+            bg: noteBg,
+            it: noteIt,
+            fr: noteFr,
+            de: noteDe
           };
+          notesObj[sourceLang] = noteAuthor;
 
           if (i.type === 'recipe') {
             const subRec = recipes.find(r => r.id === (i.recipe_id || i.ingredient_id) || r.slug === (i.recipe_id || i.ingredient_id));
@@ -639,16 +653,32 @@ const ManageRecipes = () => {
             ? origStep.instruction
             : ((typeof s.instruction === 'object' && s.instruction !== null) ? s.instruction : {});
           const aiStepObj = aiTranslated?.steps?.[idx] || {};
-          const stepInstEn = (s.instruction_en || aiStepObj.en || existingInstruction.en || s.instruction_local || '').trim();
-          const stepInstLocal = (s.instruction_local || aiStepObj[currentLang] || existingInstruction[currentLang] || stepInstEn).trim();
+          const stepAuthor = (sourceLang === 'en' ? (s.instruction_en || s.instruction_local || '') : (s.instruction_local || s.instruction_en || '')).trim();
+
+          const stepInstEn = (sourceLang === 'en'
+            ? stepAuthor
+            : (aiStepObj.en || (existingInstruction.en && existingInstruction.en !== '[object Object]' ? existingInstruction.en : '') || stepAuthor)).trim();
+          const stepInstBg = (sourceLang === 'bg'
+            ? stepAuthor
+            : (aiStepObj.bg || (existingInstruction.bg && existingInstruction.bg !== '[object Object]' ? existingInstruction.bg : '') || stepInstEn)).trim();
+          const stepInstIt = (sourceLang === 'it'
+            ? stepAuthor
+            : (aiStepObj.it || (existingInstruction.it && existingInstruction.it !== '[object Object]' ? existingInstruction.it : '') || stepInstEn)).trim();
+          const stepInstFr = (sourceLang === 'fr'
+            ? stepAuthor
+            : (aiStepObj.fr || (existingInstruction.fr && existingInstruction.fr !== '[object Object]' ? existingInstruction.fr : '') || stepInstEn)).trim();
+          const stepInstDe = (sourceLang === 'de'
+            ? stepAuthor
+            : (aiStepObj.de || (existingInstruction.de && existingInstruction.de !== '[object Object]' ? existingInstruction.de : '') || stepInstEn)).trim();
 
           const instructionObj = {
             en: stepInstEn,
-            bg: currentLang === 'bg' ? stepInstLocal : (aiStepObj.bg || existingInstruction.bg || origStep?.instruction_bg || stepInstEn),
-            it: currentLang === 'it' ? stepInstLocal : (aiStepObj.it || existingInstruction.it || stepInstEn),
-            fr: currentLang === 'fr' ? stepInstLocal : (aiStepObj.fr || existingInstruction.fr || stepInstEn),
-            de: currentLang === 'de' ? stepInstLocal : (aiStepObj.de || existingInstruction.de || stepInstEn)
+            bg: stepInstBg,
+            it: stepInstIt,
+            fr: stepInstFr,
+            de: stepInstDe
           };
+          instructionObj[sourceLang] = stepAuthor;
 
           return {
             instruction: instructionObj,
@@ -656,7 +686,7 @@ const ManageRecipes = () => {
             instruction_en: instructionObj.en,
             timer_minutes: parseInt(s.timer_minutes) || null
           };
-        }).filter(s => s.instruction_bg || s.instruction_en || s.instruction?.en || s.instruction?.bg),
+        }).filter(s => s.instruction_bg || s.instruction_en || s.instruction?.en || s.instruction?.bg || (s.instruction && Object.values(s.instruction).some(Boolean))),
         needs_translation: needsTranslation,
         translation_reason: translationReason,
         updatedAt: new Date().toISOString()
@@ -675,6 +705,12 @@ const ManageRecipes = () => {
         
         await updateDoc(doc(db, 'recipes', editingId), recipeData);
         await logActivity(user.uid, user.email, 'edit_recipe', `Edited recipe: ${finalTitleObj.en}`);
+
+        // Sync community post if it exists (update image, titles, caption), or announce if newly approved
+        await syncRecipeCommunityPost({ ...recipeData, id: editingId, slug: editingId }, editingId);
+        if (recipeData.is_active && recipeData.status === 'approved') {
+          await publishNewRecipeAnnouncement(recipeData, editingId, user);
+        }
       } else {
         recipeData.createdAt = new Date().toISOString();
         recipeData.publish_date = new Date().toISOString();
@@ -1137,6 +1173,7 @@ const ManageRecipes = () => {
         const targetRec = recipes.find(r => r.id === targetId || r.slug === targetId);
         if (targetRec) {
           await publishNewRecipeAnnouncement(targetRec, targetId);
+          await syncRecipeCommunityPost(targetRec, targetId);
         }
       }
       await logActivity(user.uid, user.email, 'recipe_status_change', `${!currentActiveStatus ? 'Activated' : 'Deactivated'} recipe ${targetName}`);
@@ -1333,24 +1370,40 @@ const ManageRecipes = () => {
       return null;
     }
     return (
-      <div className="flex gap-1">
+      <div className="flex items-center gap-1">
         <button 
           onClick={() => navigate(`/recipe/${r.id}`)} 
-          className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-background-dark/50 rounded-lg"
+          className="size-7 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors flex items-center justify-center cursor-pointer"
           title={t('recipes.view_public')}
         >
           <span className="material-symbols-outlined text-[16px]">visibility</span>
         </button>
-        <button onClick={() => handleEditClick(r)} className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg" title={t('recipes.edit')}>
+        <button 
+          onClick={() => handleEditClick(r)} 
+          className="size-7 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 transition-colors flex items-center justify-center cursor-pointer" 
+          title={t('recipes.edit')}
+        >
           <span className="material-symbols-outlined text-[16px]">edit</span>
         </button>
         {isPowerUser && (
-          <button onClick={() => handleToggleActive(r.id, rName, isActive)} className={`p-1.5 rounded-lg transition-colors ${isActive ? 'bg-background-dark/50 text-amber-500 hover:bg-amber-500/20' : 'bg-background-dark/50 text-emerald-500 hover:bg-emerald-500/20'}`}>
+          <button 
+            onClick={() => handleToggleActive(r.id, rName, isActive)} 
+            className={`size-7 rounded-lg transition-colors flex items-center justify-center cursor-pointer ${
+              isActive 
+                ? 'text-amber-500 hover:bg-amber-500/15' 
+                : 'text-emerald-500 hover:bg-emerald-500/15'
+            }`}
+            title={isActive ? t('recipes.deactivate') : t('recipes.activate')}
+          >
             <span className="material-symbols-outlined text-[16px]">{isActive ? 'power_settings_new' : 'play_arrow'}</span>
           </button>
         )}
         {!isModerator && (
-          <button onClick={() => handleDelete(r.id, rName)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg">
+          <button 
+            onClick={() => handleDelete(r.id, rName)} 
+            className="size-7 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors flex items-center justify-center cursor-pointer" 
+            title={t('recipes.delete')}
+          >
             <span className="material-symbols-outlined text-[16px]">delete</span>
           </button>
         )}
@@ -1595,27 +1648,28 @@ const ManageRecipes = () => {
           {activeTab === 'basic' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {!isEn && (
-                  <div>
+                {isEn ? (
+                  <div className="col-span-2">
+                    <label className="text-xs text-slate-300 font-bold">{t('recipes.title_en')} *</label>
+                    <input
+                      value={currentEnTitle}
+                      onChange={handleTitleEnChange}
+                      required
+                      placeholder="e.g. Classic Beef Burger"
+                      className="w-full bg-background-dark border border-primary/30 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none"
+                    />
+                  </div>
+                ) : (
+                  <div className="col-span-2">
                     <label className="text-xs text-slate-300 font-bold">{localLangMeta.flag} {t('recipes.title_local', { lang: localLangMeta.code.toUpperCase() })} *</label>
                     <input
                       value={currentLocalTitle}
                       onChange={handleLocalTitleChange}
-                      required={!currentEnTitle}
+                      required
                       className="w-full bg-background-dark border border-primary/30 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none"
                     />
                   </div>
                 )}
-                <div className={isEn ? "col-span-2" : ""}>
-                  <label className="text-xs text-slate-400">{t('recipes.title_en')} {isEn ? '*' : `(${t('common.optional', 'автоматично')})`}</label>
-                  <input
-                    value={currentEnTitle}
-                    onChange={handleTitleEnChange}
-                    required={isEn && !currentLocalTitle}
-                    placeholder={!isEn ? t('recipes.auto_translated_placeholder', 'Автоматично от Chef AI...') : ''}
-                    className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none placeholder:text-slate-600"
-                  />
-                </div>
                 <div className="col-span-2">
                   <label className="text-xs text-slate-400">{t('recipes.slug_id')}</label>
                   <input value={slug} onChange={(e) => setSlug(e.target.value)} disabled={!!editingId} placeholder="auto-generated-slug" className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm opacity-70" />
@@ -1623,22 +1677,27 @@ const ManageRecipes = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                {!isEn && (
+                {isEn ? (
+                  <div>
+                    <label className="text-xs text-slate-300 font-bold">{t('recipes.desc_en')}</label>
+                    <textarea
+                      value={currentEnDesc}
+                      onChange={handleDescEnChange}
+                      rows="4"
+                      className="w-full bg-background-dark border border-primary/30 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"
+                    ></textarea>
+                  </div>
+                ) : (
                   <div>
                     <label className="text-xs text-slate-300 font-bold">{localLangMeta.flag} {t('recipes.desc_local', { lang: localLangMeta.code.toUpperCase() })}</label>
-                    <textarea value={currentLocalDesc} onChange={handleLocalDescChange} rows="4" className="w-full bg-background-dark border border-primary/30 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"></textarea>
+                    <textarea
+                      value={currentLocalDesc}
+                      onChange={handleLocalDescChange}
+                      rows="4"
+                      className="w-full bg-background-dark border border-primary/30 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none"
+                    ></textarea>
                   </div>
                 )}
-                <div>
-                  <label className="text-xs text-slate-400">{t('recipes.desc_en')} {!isEn && `(${t('common.optional', 'автоматично')})`}</label>
-                  <textarea
-                    value={currentEnDesc}
-                    onChange={handleDescEnChange}
-                    rows="3"
-                    placeholder={!isEn ? t('recipes.auto_translated_placeholder', 'Автоматично от Chef AI...') : ''}
-                    className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none resize-none placeholder:text-slate-600"
-                  ></textarea>
-                </div>
               </div>
 
               <div className="grid grid-cols-4 gap-4">
@@ -1818,9 +1877,12 @@ const ManageRecipes = () => {
                 <div className="flex justify-between items-center">
                   <div className="flex flex-col">
                     <p className="text-xs text-slate-400">{t('recipes.ingredients_subtitle')}</p>
-                    <div className="text-[10px] text-amber-500 font-bold mt-0.5">
-                      {t('recipes.calculated_calories')}
-                      {calculatedCalories} kcal
+                    <div className="text-[10px] text-amber-500 font-bold mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <span>{t('recipes.calculated_calories')} {calculatedNutrition.calories} kcal</span>
+                      <span>•</span>
+                      <span>{calculatedNutrition.protein}g {t('recipe_detail.nutrition.protein')}</span>
+                      <span>•</span>
+                      <span>{calculatedNutrition.fat}g {t('recipe_detail.nutrition.fat')}</span>
                     </div>
                   </div>
                   {/* Servings */}
@@ -1982,8 +2044,8 @@ const ManageRecipes = () => {
                       </div>
 
                       {/* Notes Inputs */}
-                      {isEn ? (
-                        <div className="flex-grow">
+                      <div className="flex-grow">
+                        {isEn ? (
                           <input
                             type="text"
                             value={typeof ing.notes_en === 'string' && ing.notes_en !== '[object Object]' ? ing.notes_en : ''}
@@ -1991,25 +2053,16 @@ const ManageRecipes = () => {
                             placeholder={t('recipes.note_en_placeholder')}
                             className="bg-surface-dark/50 border border-primary/10 rounded px-2 py-1 text-slate-300 text-[10px] w-full"
                           />
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-1.5 flex-grow">
+                        ) : (
                           <input
                             type="text"
                             value={typeof ing.notes_local === 'string' && ing.notes_local !== '[object Object]' ? ing.notes_local : ''}
                             onChange={(e) => updateIngredientRow(ing.id, 'notes_local', e.target.value)}
                             placeholder={t('recipes.note_local_placeholder', { lang: localLangMeta.code.toUpperCase() })}
-                            className="bg-surface-dark/50 border border-primary/10 rounded px-2 py-1 text-slate-300 text-[10px]"
-                          />
-                          <input
-                            type="text"
-                            value={typeof ing.notes_en === 'string' && ing.notes_en !== '[object Object]' ? ing.notes_en : ''}
-                            onChange={(e) => updateIngredientRow(ing.id, 'notes_en', e.target.value)}
-                            placeholder={t('recipes.note_en_placeholder')}
                             className="bg-surface-dark/50 border border-primary/10 rounded px-2 py-1 text-slate-300 text-[10px] w-full"
                           />
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -2048,8 +2101,8 @@ const ManageRecipes = () => {
                       <span className="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                   </div>
-                  {isEn ? (
-                    <div className="grid grid-cols-1 gap-2">
+                  <div className="grid grid-cols-1 gap-2">
+                    {isEn ? (
                       <textarea 
                         value={step.instruction_en || ''} 
                         onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
@@ -2057,9 +2110,7 @@ const ManageRecipes = () => {
                         rows="4" 
                         className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
                       ></textarea>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-2">
+                    ) : (
                       <textarea 
                         value={step.instruction_local || ''} 
                         onChange={(e) => updateStepRow(step.id, 'instruction_local', e.target.value)} 
@@ -2067,15 +2118,8 @@ const ManageRecipes = () => {
                         rows="4" 
                         className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
                       ></textarea>
-                      <textarea 
-                        value={step.instruction_en || ''} 
-                        onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
-                        placeholder={t('recipes.instruction_en_placeholder')} 
-                        rows="4" 
-                        className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
-                      ></textarea>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -2201,27 +2245,27 @@ const ManageRecipes = () => {
                 const placeholderImg = "/images/recipe-placeholder.png";
 
                 return (
-                  <div key={r.id} className={`bg-surface-dark/50 border rounded-xl overflow-hidden flex flex-col group transition-colors ${isDeleted ? 'border-rose-500/30 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/10 hover:border-[#b8860b]/30'}`}>
-                    <div className="h-24 w-full relative">
-                      <img src={getRecipeImageUrl(r)} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholderImg; }} alt={rName} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background-dark to-transparent"></div>
-                      {!isActive && !isDeleted && <div className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-background-dark text-[10px] font-bold rounded-full">{user?.role === ROLES.USER ? t('recipes.badge_pending') : t('recipes.badge_inactive')}</div>}
+                  <div key={r.id} className={`bg-surface-dark/90 border rounded-2xl overflow-hidden flex flex-col group transition-all shadow-sm ${isDeleted ? 'border-rose-500/30 opacity-60' : !isActive ? 'border-amber-500/30 opacity-75' : 'border-primary/20 hover:border-primary/40'}`}>
+                    <div className="h-28 w-full relative overflow-hidden bg-background-dark">
+                      <img src={getRecipeImageUrl(r)} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholderImg; }} alt={rName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-surface-dark via-surface-dark/40 to-transparent"></div>
+                      {!isActive && !isDeleted && <div className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-background-dark text-[10px] font-bold rounded-full shadow">{user?.role === ROLES.USER ? t('recipes.badge_pending') : t('recipes.badge_inactive')}</div>}
                       {r.needs_translation && (
                         <div className="absolute top-2 left-2 px-2 py-0.5 bg-blue-500/90 text-white text-[10px] font-bold rounded-full shadow">
                           {t('recipes.badge_translation')}
                         </div>
                       )}
                     </div>
-                    <div className="p-3 flex justify-between items-center -mt-6 relative z-10">
+                    <div className="p-3.5 flex justify-between items-center -mt-6 relative z-10">
                       <div className="flex-1 min-w-0 pr-2">
-                        <h4 onClick={() => handleEditClick(r)} className="font-bold text-slate-100 truncate hover:text-[#b8860b] cursor-pointer drop-shadow-md text-sm">{rName}</h4>
-                        <div className="flex gap-2 text-[10px] text-slate-400 mt-1 items-center">
-                          <span className="flex items-center"><span className="material-symbols-outlined text-[12px] mr-0.5">schedule</span>{r.prep_time + r.cook_time}m</span>
-                          <span className="flex items-center text-[#b8860b]"><span className="material-symbols-outlined text-[12px] mr-0.5 text-amber-500">star</span>{r.rating || 0}</span>
-                          <span className="flex items-center"><span className="material-symbols-outlined text-[12px] mr-0.5">visibility</span>{r.views_count || 0}</span>
+                        <h4 onClick={() => handleEditClick(r)} className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer text-sm dark:drop-shadow-md">{rName}</h4>
+                        <div className="flex gap-2.5 text-[10px] text-slate-400 mt-1 items-center font-medium">
+                          <span className="flex items-center"><span className="material-symbols-outlined text-[13px] mr-0.5 text-primary">schedule</span>{r.prep_time + r.cook_time}m</span>
+                          <span className="flex items-center text-amber-500 font-bold"><span className="material-symbols-outlined text-[13px] mr-0.5 text-amber-500">star</span>{r.rating || 0}</span>
+                          <span className="flex items-center"><span className="material-symbols-outlined text-[13px] mr-0.5">visibility</span>{r.views_count || 0}</span>
                         </div>
                       </div>
-                      <div className="shrink-0 bg-background-dark/80 backdrop-blur-md rounded-lg p-1 border border-primary/20">
+                      <div className="shrink-0 bg-surface-dark/90 backdrop-blur-md rounded-xl p-1 border border-primary/20 shadow-sm">
                         {renderManageButtons(r, isActive, rName)}
                       </div>
                     </div>

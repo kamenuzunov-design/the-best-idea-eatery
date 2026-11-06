@@ -5,14 +5,18 @@ import { collection, doc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { ROLES } from '../constants/roles';
+import { ROLES, canDeleteContentByRank, hasHigherRole } from '../constants/roles';
 import { resizeImage, getRecipeImageUrl } from '../lib/imageUtils';
 import { getLocalizedField } from '../lib/localeUtils';
 import { DEFAULT_COMMUNITY_POSTS, DEFAULT_COMMUNITY_OWNER_EMAIL } from '../data/defaultCommunityPosts';
 import {
   saveCommunityPosts,
   translatePostTo5Languages,
-  translateTextOnDemand
+  translateTextOnDemand,
+  checkCommunityTextSafety,
+  submitCommunityReport,
+  moderateCommunityItem,
+  REPORT_REASONS
 } from '../lib/communityUtils';
 
 const BADGE_OPTIONS = [
@@ -72,13 +76,15 @@ function extractUserProfile(u, currentLang = 'bg') {
   const location = isLocationPublic
     ? [city, country].filter(Boolean).join(', ')
     : '';
+  const role = String(u.status?.level || u.role || ROLES.USER).toLowerCase();
   return {
     id: u.id,
     email,
     name,
     avatar,
     score,
-    location
+    location,
+    role
   };
 }
 
@@ -113,7 +119,15 @@ const GourmetCommunity = () => {
   const [translatingPostId, setTranslatingPostId] = useState(null);
   const [showOriginalCommentMap, setShowOriginalCommentMap] = useState({});
   const [translatingCommentKey, setTranslatingCommentKey] = useState(null);
+  const [hiddenCommentsMap, setHiddenCommentsMap] = useState({});
+  const [checkingCommentPostId, setCheckingCommentPostId] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
+
+  // Report Modal State
+  const [reportModalTarget, setReportModalTarget] = useState(null);
+  const [reportReason, setReportReason] = useState('hate_speech');
+  const [reportDetails, setReportDetails] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   // Share / Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -130,6 +144,7 @@ const GourmetCommunity = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const fileInputRef = useRef(null);
   const migratedSamplePostsRef = useRef(false);
+  const feedLoadedFromFirestoreRef = useRef(false);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -142,9 +157,11 @@ const GourmetCommunity = () => {
       doc(db, 'campaigns', 'community_feed'),
       async (snap) => {
         if (snap.exists() && Array.isArray(snap.data()?.posts) && snap.data().posts.length > 0) {
+          feedLoadedFromFirestoreRef.current = true;
           setPosts(snap.data().posts);
           setLoading(false);
-        } else {
+        } else if (!snap.exists()) {
+          feedLoadedFromFirestoreRef.current = true;
           setPosts(DEFAULT_COMMUNITY_POSTS);
           setLoading(false);
           try {
@@ -152,10 +169,14 @@ const GourmetCommunity = () => {
           } catch {
             // ignore initial seed error if offline
           }
+        } else {
+          feedLoadedFromFirestoreRef.current = true;
+          setPosts(Array.isArray(snap.data()?.posts) ? snap.data().posts : []);
+          setLoading(false);
         }
       },
-      () => {
-        setPosts(DEFAULT_COMMUNITY_POSTS);
+      (err) => {
+        console.warn('Could not subscribe to community feed:', err);
         setLoading(false);
       }
     );
@@ -183,9 +204,9 @@ const GourmetCommunity = () => {
     };
   }, []);
 
-  // Automatically attach sample posts to kamen.uzunov@gmail.com once usersList & posts are loaded
+  // Automatically attach sample posts to kamen.uzunov@gmail.com once usersList & posts are loaded from Firestore
   useEffect(() => {
-    if (migratedSamplePostsRef.current || usersList.length === 0 || posts.length === 0) return;
+    if (migratedSamplePostsRef.current || !feedLoadedFromFirestoreRef.current || usersList.length === 0 || posts.length === 0) return;
 
     const ownerDoc = usersList.find(
       u => (u.auth?.email || u.email || '').trim().toLowerCase() === DEFAULT_COMMUNITY_OWNER_EMAIL
@@ -420,7 +441,15 @@ const GourmetCommunity = () => {
     setFormRating(post.rating || 5);
     setFormBadge(post.badge || 'masterpiece');
     setFormLocation(post.authorLocation || '');
-    setFormImageUrl(post.image || '');
+    const linkedRec = post.recipeId ? recipes.find(r => r.id === post.recipeId || r.slug === post.recipeId) : null;
+    let initialImg = post.image || '';
+    if (linkedRec && (!initialImg || initialImg === '/images/recipe-placeholder.png' || post.postType === 'new_recipe')) {
+      const liveImg = getRecipeImageUrl(linkedRec);
+      if (liveImg && liveImg !== '/images/recipe-placeholder.png') {
+        initialImg = liveImg;
+      }
+    }
+    setFormImageUrl(initialImg);
     setFormImageFile(null);
     setIsModalOpen(true);
   };
@@ -432,8 +461,11 @@ const GourmetCommunity = () => {
       if (!formTitle.trim()) {
         setFormTitle(getLocalizedField(rec, 'title', currentLang));
       }
-      if (!formImageUrl && !formImageFile) {
-        setFormImageUrl(getRecipeImageUrl(rec));
+      if ((!formImageUrl || formImageUrl === '/images/recipe-placeholder.png') && !formImageFile) {
+        const liveImg = getRecipeImageUrl(rec);
+        if (liveImg && liveImg !== '/images/recipe-placeholder.png') {
+          setFormImageUrl(liveImg);
+        }
       }
     }
   };
@@ -459,6 +491,18 @@ const GourmetCommunity = () => {
 
     setIsPublishing(true);
     try {
+      const safety = await checkCommunityTextSafety(`${formTitle.trim()} ${formCaption.trim()}`);
+      if (!safety.safe) {
+        alert(
+          t(
+            'gourmet_community.moderation.post_profanity_blocked',
+            'Публикацията съдържа думи или изрази, които нарушават добрия тон в кулинарната общност. Моля, редактирайте текста си с уважение към колегите готвачи.'
+          )
+        );
+        setIsPublishing(false);
+        return;
+      }
+
       let finalImageUrl = formImageUrl;
       const linkedRecipe = recipes.find(r => r.id === formRecipeId || r.slug === formRecipeId);
 
@@ -505,6 +549,7 @@ const GourmetCommunity = () => {
         user.displayName ||
         (user.email ? user.email.split('@')[0] : 'Chef');
       const authorAvatar = myProfile?.avatar || user.profile?.avatar || user.photoURL || '';
+      const authorRole = myProfile?.role || user.role || ROLES.USER;
 
       let nextPosts;
       let targetSavedPost;
@@ -539,6 +584,7 @@ const GourmetCommunity = () => {
           authorEmail: user.email || '',
           authorName,
           authorAvatar,
+          authorRole,
           authorLocation: formLocation.trim(),
           lang: currentLang,
           recipeId: linkedRecipe ? (linkedRecipe.slug || linkedRecipe.id) : formRecipeId,
@@ -591,6 +637,23 @@ const GourmetCommunity = () => {
     showToast(t('gourmet_community.post_deleted', 'Публикацията беше изтрита.'));
   };
 
+  const handleToggleLockComments = async (post) => {
+    const nextLocked = !post.commentsLocked;
+    let updatedPost = null;
+    const nextPosts = posts.map(p => {
+      if (p.id !== post.id) return p;
+      updatedPost = { ...p, commentsLocked: nextLocked };
+      return updatedPost;
+    });
+    setPosts(nextPosts);
+    await saveCommunityPosts(nextPosts, updatedPost);
+    showToast(
+      nextLocked
+        ? t('gourmet_community.moderation.comments_locked_toast', 'Дискусията под публикацията беше заключена.')
+        : t('gourmet_community.moderation.comments_unlocked_toast', 'Дискусията под публикацията беше отключена.')
+    );
+  };
+
   const handleToggleLike = async (post) => {
     if (isGuest) {
       navigate('/login');
@@ -621,41 +684,67 @@ const GourmetCommunity = () => {
     const text = (commentInputs[postId] || '').trim();
     if (!text) return;
 
-    const myProfile = usersByIdOrEmail.get(user.uid);
-    const newComment = {
-      id: `cmt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      userId: user.uid,
-      userEmail: user.email || '',
-      userName:
-        myProfile?.name ||
-        user.profile?.nickname ||
-        user.displayName ||
-        (user.email ? user.email.split('@')[0] : 'Chef'),
-      userAvatar: myProfile?.avatar || user.profile?.avatar || user.photoURL || '',
-      lang: currentLang,
-      text,
-      translations: {
-        [currentLang]: text
-      },
-      createdAt: new Date().toISOString()
-    };
+    const targetPost = posts.find(p => p.id === postId);
+    if (targetPost?.commentsLocked && !isModeratorOrPower && targetPost.authorId !== currentUserId) {
+      showToast(t('gourmet_community.moderation.comments_are_locked', 'Дискусията към тази публикация е заключена.'));
+      return;
+    }
 
-    let updatedPost = null;
-    const nextPosts = posts.map(p => {
-      if (p.id !== postId) return p;
-      updatedPost = {
-        ...p,
-        comments: [...(Array.isArray(p.comments) ? p.comments : []), newComment]
+    setCheckingCommentPostId(postId);
+    try {
+      const safety = await checkCommunityTextSafety(text);
+      if (!safety.safe) {
+        alert(
+          t(
+            'gourmet_community.moderation.comment_profanity_blocked',
+            'Коментарът съдържа думи или изрази, които нарушават добрия тон в кулинарната общност. Моля, редактирайте го с уважение към колегите готвачи.'
+          )
+        );
+        return;
+      }
+
+      const myProfile = usersByIdOrEmail.get(user.uid);
+      const newComment = {
+        id: `cmt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        userId: user.uid,
+        userEmail: user.email || '',
+        userRole: myProfile?.role || user.role || ROLES.USER,
+        userName:
+          myProfile?.name ||
+          user.profile?.nickname ||
+          user.displayName ||
+          (user.email ? user.email.split('@')[0] : 'Chef'),
+        userAvatar: myProfile?.avatar || user.profile?.avatar || user.photoURL || '',
+        lang: currentLang,
+        text,
+        translations: {
+          [currentLang]: text
+        },
+        createdAt: new Date().toISOString()
       };
-      return updatedPost;
-    });
 
-    setCommentInputs(prev => ({ ...prev, [postId]: '' }));
-    setPosts(nextPosts);
-    await saveCommunityPosts(nextPosts, updatedPost);
+      let updatedPost = null;
+      const nextPosts = posts.map(p => {
+        if (p.id !== postId) return p;
+        updatedPost = {
+          ...p,
+          comments: [...(Array.isArray(p.comments) ? p.comments : []), newComment]
+        };
+        return updatedPost;
+      });
+
+      setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+      setPosts(nextPosts);
+      await saveCommunityPosts(nextPosts, updatedPost);
+    } finally {
+      setCheckingCommentPostId(null);
+    }
   };
 
   const handleDeleteComment = async (postId, commentId) => {
+    if (!window.confirm(t('gourmet_community.moderation.confirm_delete_comment', 'Сигурни ли сте, че искате да изтриете този коментар?'))) {
+      return;
+    }
     let updatedPost = null;
     const nextPosts = posts.map(p => {
       if (p.id !== postId) return p;
@@ -667,6 +756,91 @@ const GourmetCommunity = () => {
     });
     setPosts(nextPosts);
     await saveCommunityPosts(nextPosts, updatedPost);
+    showToast(t('gourmet_community.moderation.comment_deleted', 'Коментарът беше изтрит.'));
+  };
+
+  const handleDeleteCommentCascade = async (postId, commentId) => {
+    if (
+      !window.confirm(
+        t(
+          'gourmet_community.moderation.confirm_delete_cascade',
+          'Сигурни ли сте, че искате да изтриете този коментар и всички последващи отговори/спорове след него?'
+        )
+      )
+    ) {
+      return;
+    }
+    const res = await moderateCommunityItem({
+      action: 'delete_cascade',
+      postId,
+      commentId,
+      targetType: 'comment',
+      moderatorId: currentUserId,
+      moderatorEmail: user?.email || ''
+    });
+    if (res?.nextPosts) {
+      setPosts(res.nextPosts);
+    }
+    showToast(t('gourmet_community.moderation.cascade_deleted', 'Коментарът и последващата дискусия бяха изчистени.'));
+  };
+
+  const handleOpenReportModal = (target) => {
+    if (isGuest) {
+      navigate('/login');
+      return;
+    }
+    setReportModalTarget(target);
+    setReportReason('hate_speech');
+    setReportDetails('');
+  };
+
+  const handleSubmitReport = async (e) => {
+    e.preventDefault();
+    if (!reportModalTarget || !currentUserId) return;
+
+    setIsSubmittingReport(true);
+    try {
+      const myProfile = usersByIdOrEmail.get(currentUserId);
+      const reporterName =
+        myProfile?.name ||
+        user?.profile?.nickname ||
+        user?.displayName ||
+        (user?.email ? user.email.split('@')[0] : 'Chef');
+
+      const res = await submitCommunityReport({
+        ...reportModalTarget,
+        reporterId: currentUserId,
+        reporterName,
+        reporterEmail: user?.email || '',
+        reason: reportReason,
+        details: reportDetails
+      });
+
+      if (!res.ok && res.reason === 'already_reported') {
+        showToast(t('gourmet_community.moderation.already_reported', 'Вече сте изпратили сигнал за това съдържание.'));
+        setReportModalTarget(null);
+        return;
+      }
+
+      if (res.updatedPosts) {
+        setPosts(res.updatedPosts);
+      }
+
+      setReportModalTarget(null);
+      showToast(
+        res.quarantined
+          ? t(
+              'gourmet_community.moderation.report_quarantined_toast',
+              'Благодарим ви! Поради натрупани сигнали съдържанието е временно скрито до преглед от модератор.'
+            )
+          : t('gourmet_community.moderation.report_submitted_toast', 'Сигналът е изпратен за преглед от модератор.')
+      );
+    } catch (err) {
+      console.error('Error submitting report:', err);
+      alert(t('gourmet_community.moderation.report_error', 'Възникна грешка при изпращане на сигнала.'));
+    } finally {
+      setIsSubmittingReport(false);
+    }
   };
 
   const handleTranslatePostOnDemand = async (post) => {
@@ -1081,8 +1255,19 @@ const GourmetCommunity = () => {
               );
               const effectiveAuthorLocation = resolvedAuthor ? resolvedAuthor.location : '';
 
-              const isPostAuthor = currentUserId && effectiveAuthorId === currentUserId;
-              const canManagePost = isPostAuthor || isModeratorOrPower;
+              const isPostAuthor = Boolean(currentUserId && effectiveAuthorId === currentUserId);
+              const effectiveAuthorRole = resolvedAuthor?.role || post.authorRole || ROLES.USER;
+              const canEditPost = isPostAuthor || isOwner;
+              const canDeletePost = canDeleteContentByRank({
+                actorId: currentUserId,
+                actorRole: user?.role,
+                targetAuthorId: effectiveAuthorId,
+                targetAuthorRole: effectiveAuthorRole
+              });
+              const canLockComments = isPostAuthor || isModeratorOrPower;
+              const canReportPost = !isGuest && !isPostAuthor;
+              const isPostQuarantinedOrHidden = Boolean(post.isQuarantined || post.isHiddenByModerator);
+
               const likesList = Array.isArray(post.likes) ? post.likes : [];
               const hasLiked = currentUserId && likesList.includes(currentUserId);
               const commentsList = Array.isArray(post.comments) ? post.comments : [];
@@ -1116,6 +1301,26 @@ const GourmetCommunity = () => {
 
               const badgeMeta = BADGE_OPTIONS.find(b => b.id === post.badge) || BADGE_OPTIONS[0];
               const isNewRecipeAnnouncement = post.postType === 'new_recipe' || post.badge === 'new_recipe';
+
+              // Dynamically resolve post image:
+              // For recipe announcement posts or posts where the stored image is missing/placeholder,
+              // dynamically display the actual linked recipe photo if available.
+              let postDisplayImage = post.image;
+              if (linkedRecipeObj) {
+                const liveRecipeImage = getRecipeImageUrl(linkedRecipeObj);
+                if (isNewRecipeAnnouncement) {
+                  if (liveRecipeImage && liveRecipeImage !== '/images/recipe-placeholder.png') {
+                    postDisplayImage = liveRecipeImage;
+                  } else if (!postDisplayImage || postDisplayImage === '/images/recipe-placeholder.png') {
+                    postDisplayImage = liveRecipeImage || '/images/recipe-placeholder.png';
+                  }
+                } else if (!postDisplayImage || postDisplayImage === '/images/recipe-placeholder.png') {
+                  postDisplayImage = liveRecipeImage || '/images/recipe-placeholder.png';
+                }
+              }
+              if (!postDisplayImage) {
+                postDisplayImage = '/images/recipe-placeholder.png';
+              }
 
               return (
                 <article
@@ -1189,100 +1394,177 @@ const GourmetCommunity = () => {
                       </div>
                     </div>
 
-                    {canManagePost && (
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
+                      {canLockComments && (
                         <button
+                          type="button"
+                          onClick={() => handleToggleLockComments(post)}
+                          title={
+                            post.commentsLocked
+                              ? t('gourmet_community.moderation.unlock_comments', 'Отключи коментарите')
+                              : t('gourmet_community.moderation.lock_comments', 'Заключи коментарите')
+                          }
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            post.commentsLocked
+                              ? 'text-amber-400 bg-amber-500/15 hover:bg-amber-500/25'
+                              : 'text-slate-400 hover:text-amber-300 hover:bg-amber-500/10'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-lg">
+                            {post.commentsLocked ? 'lock' : 'lock_open'}
+                          </span>
+                        </button>
+                      )}
+
+                      {canEditPost && (
+                        <button
+                          type="button"
                           onClick={() => handleOpenEditModal(post)}
                           title={t('common.buttons.edit', 'Редактирай')}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </button>
+                      )}
+
+                      {canReportPost && (
                         <button
+                          type="button"
+                          onClick={() =>
+                            handleOpenReportModal({
+                              targetType: 'post',
+                              postId: post.id,
+                              commentId: null,
+                              postTitle: post.title || '',
+                              contentText: `${post.title || ''} — ${post.caption || ''}`,
+                              targetAuthorId: effectiveAuthorId || '',
+                              targetAuthorName: effectiveAuthorName || 'Chef',
+                              targetAuthorEmail: resolvedAuthor?.email || post.authorEmail || '',
+                              targetAuthorRole: effectiveAuthorRole
+                            })
+                          }
+                          title={t('gourmet_community.moderation.report_post', 'Докладвай публикацията')}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-lg">flag</span>
+                        </button>
+                      )}
+
+                      {canDeletePost && (
+                        <button
+                          type="button"
                           onClick={() => handleDeletePost(post)}
                           title={t('common.buttons.delete', 'Изтрий')}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-lg">delete</span>
                         </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Dish Image - Compact 60% height with breathing room, subtle border and rounded corners */}
-                  <div className="mx-4 relative h-52 sm:h-56 bg-surface-dark overflow-hidden rounded-2xl border border-primary/25 shadow-lg">
-                    <div
-                      className="absolute inset-0 bg-center bg-no-repeat bg-cover transition-transform duration-700 hover:scale-105"
-                      style={{ backgroundImage: `url("${post.image || '/images/recipe-placeholder.png'}")` }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20 pointer-events-none" />
-
-                    {/* Top Right Rating Stars */}
-                    {post.rating > 0 && (
-                      <div className="absolute top-3 right-3 bg-background-dark/85 backdrop-blur-md border border-primary/40 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
-                        <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          star
-                        </span>
-                        <span className="text-xs font-black text-slate-100">{Number(post.rating).toFixed(1)}</span>
-                      </div>
-                    )}
-
-                    {/* Bottom Left Badge & Linked Recipe Chip */}
-                    <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2">
-                      <span
-                        className={`bg-gradient-to-r ${badgeMeta.color} text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest shadow-md flex items-center gap-1`}
-                      >
-                        <span className="material-symbols-outlined text-xs">{badgeMeta.icon}</span>
-                        {getBadgeLabel(post.badge)}
-                      </span>
-
-                      {post.recipeId && (
-                        <button
-                          onClick={() => navigate(`/recipe/${post.recipeId}`)}
-                          className="bg-background-dark/90 hover:bg-primary hover:text-background-dark text-primary border border-primary/40 text-[11px] font-extrabold px-3 py-1 rounded-full shadow-md flex items-center gap-1.5 transition-all cursor-pointer max-w-[65%]"
-                        >
-                          <span className="material-symbols-outlined text-sm shrink-0">menu_book</span>
-                          <span className="truncate">
-                            {linkedRecipeTitle || t('gourmet_community.open_recipe', 'Виж рецептата')}
-                          </span>
-                        </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Title, Caption & Multilingual Translation Bar */}
-                  <div className="px-4 pt-1">
-                    {displayedTitle && (
-                      <h4 className="text-slate-100 text-base font-extrabold mb-1 tracking-tight">
-                        {displayedTitle}
-                      </h4>
-                    )}
-                    {displayedCaption && (
-                      <p className="text-slate-300 text-sm font-medium leading-relaxed whitespace-pre-line">
-                        {displayedCaption}
-                      </p>
-                    )}
-
-                    {postSourceLang !== currentLang && (
-                      <div className="mt-2 flex items-center gap-2">
+                  {/* Quarantine / Hidden Notice for Post */}
+                  {isPostQuarantinedOrHidden && (
+                    <div className="mx-4 px-3.5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs text-amber-200">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-amber-400 text-base shrink-0">shield</span>
+                        <span>
+                          {t(
+                            'gourmet_community.moderation.post_quarantined_notice',
+                            'Тази публикация е докладвана от общността и очаква преглед от модератор.'
+                          )}
+                        </span>
+                      </div>
+                      {isModeratorOrPower && (
                         <button
                           type="button"
-                          disabled={translatingPostId === post.id}
-                          onClick={() => handleTranslatePostOnDemand(post)}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary hover:underline cursor-pointer disabled:opacity-50"
+                          onClick={() => navigate('/admin/moderation')}
+                          className="text-[11px] font-extrabold text-primary underline shrink-0 cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-sm">translate</span>
-                          {translatingPostId === post.id
-                            ? t('gourmet_community.translating', 'Превеждане с Chef AI...')
-                            : hasTranslationForCurrentLang
-                            ? showOriginal
-                              ? t('gourmet_community.show_translation', 'Виж превода')
-                              : t('gourmet_community.translated_show_original', 'Преведено автоматично · Виж оригинала')
-                            : t('gourmet_community.translate_post_btn', 'Преведи публикацията')}
+                          {t('gourmet_community.moderation.open_panel', 'Към Модерация')}
                         </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Dish Image - Compact 60% height with breathing room, subtle border and rounded corners */}
+                  {(!isPostQuarantinedOrHidden || isModeratorOrPower) && (
+                    <div className="mx-4 relative h-52 sm:h-56 bg-surface-dark overflow-hidden rounded-2xl border border-primary/25 shadow-lg">
+                      <div
+                        className="absolute inset-0 bg-center bg-no-repeat bg-cover transition-transform duration-700 hover:scale-105"
+                        style={{ backgroundImage: `url("${postDisplayImage}")` }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20 pointer-events-none" />
+
+                      {/* Top Right Rating Stars */}
+                      {post.rating > 0 && (
+                        <div className="absolute top-3 right-3 bg-background-dark/85 backdrop-blur-md border border-primary/40 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
+                          <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
+                            star
+                          </span>
+                          <span className="text-xs font-black text-slate-100">{Number(post.rating).toFixed(1)}</span>
+                        </div>
+                      )}
+
+                      {/* Bottom Left Badge & Linked Recipe Chip */}
+                      <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2">
+                        <span
+                          className={`bg-gradient-to-r ${badgeMeta.color} text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest shadow-md flex items-center gap-1`}
+                        >
+                          <span className="material-symbols-outlined text-xs">{badgeMeta.icon}</span>
+                          {getBadgeLabel(post.badge)}
+                        </span>
+
+                        {post.recipeId && (
+                          <button
+                            onClick={() => navigate(`/recipe/${post.recipeId}`)}
+                            className="bg-background-dark/90 hover:bg-primary hover:text-background-dark text-primary border border-primary/40 text-[11px] font-extrabold px-3 py-1 rounded-full shadow-md flex items-center gap-1.5 transition-all cursor-pointer max-w-[65%]"
+                          >
+                            <span className="material-symbols-outlined text-sm shrink-0">menu_book</span>
+                            <span className="truncate">
+                              {linkedRecipeTitle || t('gourmet_community.open_recipe', 'Виж рецептата')}
+                            </span>
+                          </button>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Title, Caption & Multilingual Translation Bar */}
+                  {(!isPostQuarantinedOrHidden || isModeratorOrPower) && (
+                    <div className="px-4 pt-1">
+                      {displayedTitle && (
+                        <h4 className="text-slate-100 text-base font-extrabold mb-1 tracking-tight">
+                          {displayedTitle}
+                        </h4>
+                      )}
+                      {displayedCaption && (
+                        <p className="text-slate-300 text-sm font-medium leading-relaxed whitespace-pre-line">
+                          {displayedCaption}
+                        </p>
+                      )}
+
+                      {postSourceLang !== currentLang && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={translatingPostId === post.id}
+                            onClick={() => handleTranslatePostOnDemand(post)}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary hover:underline cursor-pointer disabled:opacity-50"
+                          >
+                            <span className="material-symbols-outlined text-sm">translate</span>
+                            {translatingPostId === post.id
+                              ? t('gourmet_community.translating', 'Превеждане с Chef AI...')
+                              : hasTranslationForCurrentLang
+                              ? showOriginal
+                                ? t('gourmet_community.show_translation', 'Виж превода')
+                                : t('gourmet_community.translated_show_original', 'Преведено автоматично · Виж оригинала')
+                              : t('gourmet_community.translate_post_btn', 'Преведи публикацията')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Social Action Bar - Positioned at the bottom of the post under the text */}
                   <div className="px-4 pt-2 border-t border-primary/10 flex items-center justify-between">
@@ -1359,25 +1641,86 @@ const GourmetCommunity = () => {
                             {t('gourmet_community.no_comments_yet', 'Все още няма коментари. Напишете първия!')}
                           </p>
                         ) : (
-                          commentsList.map((cmt) => {
+                          commentsList.map((cmt, cmtIdx) => {
                             const cmtKey = `${post.id}_${cmt.id}`;
                             const cmtLang = cmt.lang || 'bg';
                             const hasCmtTranslation = !!cmt.translations?.[currentLang];
                             const showOrigCmt = !!showOriginalCommentMap[cmtKey];
                             const displayedCmtText =
                               !showOrigCmt && hasCmtTranslation ? cmt.translations[currentLang] : cmt.text;
-                            const canDeleteCmt =
-                              (currentUserId && cmt.userId === currentUserId) || isPostAuthor || isModeratorOrPower;
 
                             const resolvedCmtUser = usersByIdOrEmail.get(cmt.userId);
                             const cmtAvatar = resolvedCmtUser?.avatar || cmt.userAvatar || '';
                             const cmtName = resolvedCmtUser?.name || cmt.userName || 'Chef';
                             const cmtInitial = getLatinInitial(cmtName, resolvedCmtUser?.email || cmt.userEmail || '');
+                            const cmtAuthorRole = resolvedCmtUser?.role || cmt.userRole || ROLES.USER;
+
+                            const isCmtAuthor = Boolean(currentUserId && cmt.userId === currentUserId);
+                            const canDeleteCmt = canDeleteContentByRank({
+                              actorId: currentUserId,
+                              actorRole: user?.role,
+                              targetAuthorId: cmt.userId,
+                              targetAuthorRole: cmtAuthorRole
+                            });
+                            const canCascadeCmt =
+                              hasHigherRole(user?.role, cmtAuthorRole) && cmtIdx < commentsList.length - 1;
+                            const canReportCmt = !isGuest && !isCmtAuthor;
+
+                            const isLocallyHidden = !!hiddenCommentsMap[cmtKey];
+                            const isCmtQuarantinedOrHidden = Boolean(
+                              cmt.isQuarantined || cmt.isHiddenByModerator
+                            );
+
+                            if (isLocallyHidden) {
+                              return (
+                                <div
+                                  key={cmt.id}
+                                  className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-surface-dark/40 border border-primary/10 text-[11px] text-slate-400"
+                                >
+                                  <span className="italic flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-xs">visibility_off</span>
+                                    {t('gourmet_community.moderation.comment_hidden_local', 'Коментарът е скрит за вас')}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setHiddenCommentsMap(prev => ({ ...prev, [cmtKey]: false }))
+                                    }
+                                    className="text-primary font-bold hover:underline cursor-pointer"
+                                  >
+                                    {t('gourmet_community.moderation.show_comment', 'Покажи')}
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            if (isCmtQuarantinedOrHidden && !isModeratorOrPower) {
+                              return (
+                                <div
+                                  key={cmt.id}
+                                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-200/90 italic"
+                                >
+                                  <span className="material-symbols-outlined text-amber-400 text-sm shrink-0">
+                                    shield
+                                  </span>
+                                  <span>
+                                    {t(
+                                      'gourmet_community.moderation.comment_quarantined_notice',
+                                      'Този коментар е докладван от общността и е временно скрит до преглед от модератор.'
+                                    )}
+                                  </span>
+                                </div>
+                              );
+                            }
 
                             return (
                               <div
                                 key={cmt.id}
-                                className="flex items-start justify-between gap-2.5 bg-surface-dark/60 p-2.5 rounded-xl border border-primary/10"
+                                className={`flex items-start justify-between gap-2.5 p-2.5 rounded-xl border ${
+                                  isCmtQuarantinedOrHidden
+                                    ? 'bg-amber-500/10 border-amber-500/30'
+                                    : 'bg-surface-dark/60 border-primary/10'
+                                }`}
                               >
                                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
                                   <div className="size-7 rounded-full overflow-hidden bg-background-dark border border-primary/30 flex items-center justify-center shrink-0">
@@ -1402,9 +1745,14 @@ const GourmetCommunity = () => {
                                     </div>
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                       <span className="text-xs font-extrabold text-slate-200">{cmtName}</span>
                                       <span className="text-[10px] text-slate-500">{formatDate(cmt.createdAt)}</span>
+                                      {isCmtQuarantinedOrHidden && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                          {t('gourmet_community.moderation.quarantined_badge', 'Докладван / Скрит')}
+                                        </span>
+                                      )}
                                     </div>
                                     <p className="text-xs text-slate-300 mt-0.5 break-words">{displayedCmtText}</p>
 
@@ -1428,45 +1776,114 @@ const GourmetCommunity = () => {
                                   </div>
                                 </div>
 
-                                {canDeleteCmt && (
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  {/* Local Hide Button (never deletes from DB) */}
                                   <button
-                                    onClick={() => handleDeleteComment(post.id, cmt.id)}
-                                    className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer"
-                                    title={t('common.buttons.delete', 'Изтрий')}
+                                    type="button"
+                                    onClick={() =>
+                                      setHiddenCommentsMap(prev => ({ ...prev, [cmtKey]: true }))
+                                    }
+                                    className="text-slate-500 hover:text-slate-300 p-1 rounded-lg hover:bg-white/5 cursor-pointer"
+                                    title={t('gourmet_community.moderation.hide_comment_local', 'Скрий коментара за мен')}
                                   >
-                                    <span className="material-symbols-outlined text-sm">close</span>
+                                    <span className="material-symbols-outlined text-sm">visibility_off</span>
                                   </button>
-                                )}
+
+                                  {/* Report Button */}
+                                  {canReportCmt && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleOpenReportModal({
+                                          targetType: 'comment',
+                                          postId: post.id,
+                                          commentId: cmt.id,
+                                          postTitle: post.title || '',
+                                          contentText: cmt.text || '',
+                                          targetAuthorId: cmt.userId || '',
+                                          targetAuthorName: cmtName,
+                                          targetAuthorEmail: resolvedCmtUser?.email || cmt.userEmail || '',
+                                          targetAuthorRole: cmtAuthorRole
+                                        })
+                                      }
+                                      className="text-slate-500 hover:text-amber-400 p-1 rounded-lg hover:bg-amber-500/10 cursor-pointer"
+                                      title={t('gourmet_community.moderation.report_comment', 'Докладвай нередност')}
+                                    >
+                                      <span className="material-symbols-outlined text-sm">flag</span>
+                                    </button>
+                                  )}
+
+                                  {/* Cascade Delete Button (Moderator/Admin/Owner with higher rank) */}
+                                  {canCascadeCmt && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteCommentCascade(post.id, cmt.id)}
+                                      className="text-slate-500 hover:text-orange-400 p-1 rounded-lg hover:bg-orange-500/10 cursor-pointer"
+                                      title={t(
+                                        'gourmet_community.moderation.delete_cascade_tooltip',
+                                        'Изтрий коментара + всички спорове след него'
+                                      )}
+                                    >
+                                      <span className="material-symbols-outlined text-sm">delete_sweep</span>
+                                    </button>
+                                  )}
+
+                                  {/* Permanent Delete Button (Trash icon, only author or strictly higher rank) */}
+                                  {canDeleteCmt && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteComment(post.id, cmt)}
+                                      className="text-slate-500 hover:text-rose-400 p-1 rounded-lg hover:bg-rose-500/10 cursor-pointer"
+                                      title={t('common.buttons.delete', 'Изтрий')}
+                                    >
+                                      <span className="material-symbols-outlined text-sm">delete</span>
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             );
                           })
                         )}
 
-                        {/* Add Comment Input */}
-                        <div className="flex items-center gap-2 pt-1">
-                          <input
-                            type="text"
-                            value={commentInputs[post.id] || ''}
-                            onChange={(e) =>
-                              setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddComment(post.id);
+                        {/* Locked Comments Banner or Add Comment Input */}
+                        {post.commentsLocked && !isModeratorOrPower ? (
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-300 font-semibold">
+                            <span className="material-symbols-outlined text-sm">lock</span>
+                            <span>
+                              {t(
+                                'gourmet_community.moderation.comments_locked_banner',
+                                'Дискусията към тази публикация е временно заключена.'
+                              )}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 pt-1">
+                            <input
+                              type="text"
+                              disabled={checkingCommentPostId === post.id}
+                              value={commentInputs[post.id] || ''}
+                              onChange={(e) =>
+                                setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))
                               }
-                            }}
-                            placeholder={t('gourmet_community.add_comment_placeholder', 'Напишете коментар...')}
-                            className="flex-1 bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-primary"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAddComment(post.id)}
-                            className="px-3 py-2 rounded-xl bg-primary text-background-dark font-extrabold text-xs cursor-pointer hover:brightness-110"
-                          >
-                            <span className="material-symbols-outlined text-base leading-none">send</span>
-                          </button>
-                        </div>
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddComment(post.id);
+                                }
+                              }}
+                              placeholder={t('gourmet_community.add_comment_placeholder', 'Напишете коментар...')}
+                              className="flex-1 bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-primary disabled:opacity-50"
+                            />
+                            <button
+                              type="button"
+                              disabled={checkingCommentPostId === post.id}
+                              onClick={() => handleAddComment(post.id)}
+                              className="px-3 py-2 rounded-xl bg-primary text-background-dark font-extrabold text-xs cursor-pointer hover:brightness-110 disabled:opacity-50"
+                            >
+                              <span className="material-symbols-outlined text-base leading-none">send</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1691,6 +2108,116 @@ const GourmetCommunity = () => {
                     : editingPostId
                     ? t('common.buttons.save', 'Запази')
                     : t('gourmet_community.publish_btn', 'Публикувай (+10 XP)')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Report Content Modal */}
+      {reportModalTarget && (
+        <div className="fixed inset-0 z-[85] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-surface-dark border border-amber-500/35 rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-primary/15 pb-3">
+              <h2 className="text-slate-100 font-extrabold text-base flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-400">flag</span>
+                {reportModalTarget.targetType === 'comment'
+                  ? t('gourmet_community.moderation.report_modal_comment_title', 'Докладвай коментар')
+                  : t('gourmet_community.moderation.report_modal_post_title', 'Докладвай публикация')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setReportModalTarget(null)}
+                className="text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-background-dark/80 border border-primary/15 text-xs text-slate-300 space-y-1">
+              <div className="text-[11px] font-bold text-slate-400">
+                {t('gourmet_community.moderation.reported_author', 'Автор')}:{' '}
+                <span className="text-slate-200">{reportModalTarget.targetAuthorName}</span>
+              </div>
+              <p className="italic text-slate-300 line-clamp-3">
+                &ldquo;{reportModalTarget.contentText}&rdquo;
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmitReport} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  {t('gourmet_community.moderation.select_reason_label', 'Причина за докладване')} *
+                </label>
+                <div className="space-y-2">
+                  {REPORT_REASONS.map((r) => {
+                    const reasonLabel =
+                      r.id === 'hate_speech'
+                        ? t('gourmet_community.moderation.reason_hate_speech', 'Груб език, обиди или агресия')
+                        : r.id === 'profanity'
+                        ? t('gourmet_community.moderation.reason_profanity', 'Нецензурни или вулгарни изрази')
+                        : r.id === 'inappropriate'
+                        ? t('gourmet_community.moderation.reason_inappropriate', 'Некоректно съдържание или спам')
+                        : t('gourmet_community.moderation.reason_other', 'Друга причина');
+                    return (
+                      <label
+                        key={r.id}
+                        onClick={() => setReportReason(r.id)}
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                          reportReason === r.id
+                            ? 'bg-amber-500/15 border-amber-400 text-amber-200'
+                            : 'bg-background-dark border-primary/15 text-slate-300 hover:border-primary/40'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="reportReason"
+                          value={r.id}
+                          checked={reportReason === r.id}
+                          onChange={() => setReportReason(r.id)}
+                          className="accent-amber-400"
+                        />
+                        <span className="material-symbols-outlined text-base text-amber-400">{r.icon}</span>
+                        <span className="text-xs font-bold">{reasonLabel}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                  {t('gourmet_community.moderation.additional_details_label', 'Допълнително пояснение (по желание)')}
+                </label>
+                <textarea
+                  rows={2}
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder={t(
+                    'gourmet_community.moderation.additional_details_placeholder',
+                    'Опишете накратко защо това съдържание нарушава добрия тон...'
+                  )}
+                  className="w-full bg-background-dark border border-primary/20 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setReportModalTarget(null)}
+                  className="flex-1 py-3 rounded-xl bg-background-dark border border-primary/20 text-slate-300 font-bold text-xs uppercase cursor-pointer"
+                >
+                  {t('common.buttons.cancel', 'Отказ')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReport}
+                  className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-background-dark font-extrabold text-xs uppercase tracking-wider shadow-lg cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmittingReport
+                    ? t('common.loading', 'Изпращане...')
+                    : t('gourmet_community.moderation.submit_report_btn', 'Изпрати сигнал')}
                 </button>
               </div>
             </form>

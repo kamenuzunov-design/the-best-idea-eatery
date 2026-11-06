@@ -22,6 +22,7 @@ import {
 } from '../lib/unitConverter';
 import { isWinePairingApplicable } from '../lib/wineMatcher.js';
 import { matchesPantryItem } from '../lib/recipeMatcherEngine.js';
+import { getRecipeNutritionDisplay } from '../lib/recipeNutrition';
 
 const RecipeDetail = () => {
   const { id } = useParams();
@@ -57,6 +58,10 @@ const RecipeDetail = () => {
   const [nativeAds, setNativeAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [rotationTick, setRotationTick] = useState(0);
+
+  const displayNutrition = useMemo(() => {
+    return getRecipeNutritionDisplay(recipe, currentServings, ingredientsList, units);
+  }, [recipe, currentServings, ingredientsList, units]);
   const trackedNativeAds = useRef(new Set());
 
   const handleOpenSubRecipePreview = async (ing) => {
@@ -1230,17 +1235,17 @@ const RecipeDetail = () => {
       <div className="px-4 py-2">
         <div className="flex justify-between items-center bg-surface-dark/80 backdrop-blur-md rounded-2xl p-4 border border-primary/10 shadow-inner">
           <div className="text-center w-1/3">
-            <p className="text-primary text-lg font-extrabold">{Math.round((recipe.calories_per_serving || recipe.calories || 0) * currentServings)}</p>
+            <p className="text-primary text-lg font-extrabold">{displayNutrition.calories}</p>
             <p className="text-slate-400 text-[10px] uppercase tracking-widest">{t('recipe_detail.nutrition.calories')}</p>
           </div>
           <div className="w-px h-8 bg-primary/20"></div>
           <div className="text-center w-1/3">
-            <p className="text-primary text-lg font-extrabold">{Math.round((recipe.protein || 0) * currentServings)}g</p>
+            <p className="text-primary text-lg font-extrabold">{displayNutrition.protein}g</p>
             <p className="text-slate-400 text-[10px] uppercase tracking-widest">{t('recipe_detail.nutrition.protein')}</p>
           </div>
           <div className="w-px h-8 bg-primary/20"></div>
           <div className="text-center w-1/3">
-            <p className="text-primary text-lg font-extrabold">{Math.round((recipe.fat || 0) * currentServings)}g</p>
+            <p className="text-primary text-lg font-extrabold">{displayNutrition.fat}g</p>
             <p className="text-slate-400 text-[10px] uppercase tracking-widest">{t('recipe_detail.nutrition.fat')}</p>
           </div>
         </div>

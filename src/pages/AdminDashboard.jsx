@@ -11,17 +11,32 @@ const AdminDashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingRecipesCount, setPendingRecipesCount] = useState(0);
+  const [pendingReportsCount, setPendingReportsCount] = useState(0);
+  const pendingCount = pendingRecipesCount + pendingReportsCount;
 
   useEffect(() => {
     const qRecipes = query(collection(db, 'recipes'), where('status', '==', 'pending'));
     const unsubRecipes = onSnapshot(qRecipes, (snapshot) => {
-      setPendingCount(snapshot.docs.length);
+      setPendingRecipesCount(snapshot.docs.length);
     }, (err) => {
       console.warn("Could not fetch pending items count:", err.message);
     });
 
-    return () => unsubRecipes();
+    const reportsRef = doc(db, 'campaigns', 'community_reports');
+    const unsubReports = onSnapshot(reportsRef, (snap) => {
+      if (snap.exists() && Array.isArray(snap.data().reports)) {
+        const pending = snap.data().reports.filter(r => r.status === 'pending').length;
+        setPendingReportsCount(pending);
+      } else {
+        setPendingReportsCount(0);
+      }
+    }, () => {});
+
+    return () => {
+      unsubRecipes();
+      unsubReports();
+    };
   }, []);
 
   const handleClaimOwnership = async () => {

@@ -137,6 +137,9 @@ export const DEFAULT_GOURMET_EVENTS = [
     price_eur: 0,
     capacity: 50,
     image: 'https://images.unsplash.com/photo-1556761223-4c4282c73f77?auto=format&fit=crop&q=80&w=1000',
-    external_url: ''
+    online_platform: 'google_meet',
+    meeting_access: 'registered_only',
+    meeting_url: 'https://meet.google.com/abc-culinary-pasta',
+    external_url: 'https://meet.google.com/abc-culinary-pasta'
   }
 ];
