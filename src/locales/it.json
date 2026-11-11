@@ -1231,7 +1231,7 @@
     },
     "ai_migration": {
       "title": "Traduzione Batch AI e Migrazione",
-      "desc": "Compila in modo intelligente i campi linguistici mancanti (IT, FR, DE, BG, EN) nel database tramite Gemini AI.",
+      "desc": "Compila in modo intelligente i campi linguistici mancanti (ES, IT, FR, DE, BG, EN) nel database tramite Gemini AI.",
       "api_key_title": "Chiave Gemini API",
       "api_key_placeholder": "Inserisci la tua chiave Gemini API...",
       "save_key": "Salva",
@@ -1242,7 +1242,8 @@
       "scanning": "Scansione Firestore in corso...",
       "scan_results": "Risultati della scansione",
       "total_missing": "Trovati {{count}} record da tradurre",
-      "all_complete": "Tutti i record dispongono di traduzioni complete nelle 5 lingue!",
+      "all_complete": "Tutti i record dispongono di traduzioni complete nelle 6 lingue!",
+      "cuisines": "Cucine (Origine)",
       "groups": "Gruppi di ingredienti",
       "measurements": "Unità di misura",
       "ingredients": "Ingredienti",
@@ -1250,7 +1251,7 @@
       "missing_badge": "{{count}} da tradurre",
       "complete_badge": "Completamente tradotti",
       "select_collections": "Seleziona le collezioni da tradurre:",
-      "batch_info": "Ritmo sicuro: 15 ingredienti / 2 ricette per lotto con intervallo di 2,5 sec per rispettare le quote.",
+      "batch_info": "Ritmo sicuro: 25 elementi / 2 ricette per lotto con fallback automatico 1 a 1 e protezione quote.",
       "dry_run_btn": "Simulazione (Dry Run)",
       "start_btn": "Avvia traduzione AI",
       "pause_btn": "Pausa",
@@ -1273,7 +1274,14 @@
       "throttling_title": "Pausa tra le richieste (Throttling):",
       "throttle_recommended": "4.5s (Consigliato per Free Tier / ~12 RPM)",
       "throttle_safe": "6.0s (Ultra-Sicuro / ~9 RPM)",
-      "throttle_fast": "3.0s (Veloce / ~16 RPM)"
+      "throttle_fast": "3.0s (Veloce / ~16 RPM)",
+      "temp_buffer_title": "Buffer Temporaneo e File JSON Traduzioni (Checkpoint)",
+      "temp_buffer_desc": "Ogni ricetta/record tradotto viene salvato automaticamente in un buffer temporaneo. Anche in caso di interruzione, puoi scaricare un file JSON temporaneo e aggiornare il database con 1 clic.",
+      "buffer_only_mode": "Salva prima solo nel file/buffer temporaneo (senza scrivere direttamente nel database durante la traduzione)",
+      "download_temp_btn": "Scarica file temp. ({{count}})",
+      "apply_buffer_btn": "Aggiorna DB dal buffer ({{count}})",
+      "upload_temp_btn": "Carica file JSON temp. e aggiorna DB",
+      "clear_buffer_btn": "Svuota buffer"
     }
   },
   "manage_ads": {

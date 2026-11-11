@@ -1231,7 +1231,7 @@
     },
     "ai_migration": {
       "title": "AI Batch Translation & Migration",
-      "desc": "Intelligently populate missing language fields (IT, FR, DE, BG, EN) in the database via Gemini AI.",
+      "desc": "Intelligently populate missing language fields (ES, IT, FR, DE, BG, EN) in the database via Gemini AI.",
       "api_key_title": "Gemini API Key",
       "api_key_placeholder": "Enter your Gemini API key...",
       "save_key": "Save",
@@ -1242,7 +1242,8 @@
       "scanning": "Scanning Firestore...",
       "scan_results": "Scan Results",
       "total_missing": "Found {{count}} records needing translation",
-      "all_complete": "All database records have full translations across 5 languages!",
+      "all_complete": "All database records have full translations across 6 languages!",
+      "cuisines": "Cuisines (Origin)",
       "groups": "Ingredient Groups",
       "measurements": "Measurement Units",
       "ingredients": "Ingredients",
@@ -1250,7 +1251,7 @@
       "missing_badge": "{{count}} to translate",
       "complete_badge": "Fully translated",
       "select_collections": "Select collections to translate:",
-      "batch_info": "Safe pacing: 15 ingredients / 2 recipes per batch with 2.5s cooldown to protect API quotas.",
+      "batch_info": "Safe pacing: 25 items / 2 recipes per batch with automatic 1-by-1 fallback and quota protection.",
       "dry_run_btn": "Simulation (Dry Run)",
       "start_btn": "Start AI Translation",
       "pause_btn": "Pause",
@@ -1273,7 +1274,14 @@
       "throttling_title": "Pacing between requests (Throttling):",
       "throttle_recommended": "4.5s (Recommended for Free Tier / ~12 RPM)",
       "throttle_safe": "6.0s (Ultra-Safe / ~9 RPM)",
-      "throttle_fast": "3.0s (Fast / ~16 RPM)"
+      "throttle_fast": "3.0s (Fast / ~16 RPM)",
+      "temp_buffer_title": "Temporary Buffer & JSON Translation File (Checkpoint)",
+      "temp_buffer_desc": "Every translated recipe/item is automatically saved in a temporary buffer. Even if interrupted, you can download a temporary JSON file and update the database from it with 1 click.",
+      "buffer_only_mode": "Save only to temporary file/buffer first (without writing directly to database during translation)",
+      "download_temp_btn": "Download Temp File ({{count}})",
+      "apply_buffer_btn": "Update DB from Buffer ({{count}})",
+      "upload_temp_btn": "Load Temp JSON File & Update DB",
+      "clear_buffer_btn": "Clear Buffer"
     }
   },
   "manage_ads": {

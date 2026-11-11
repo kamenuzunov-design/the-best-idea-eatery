@@ -1231,7 +1231,7 @@
     },
     "ai_migration": {
       "title": "AI-Batch-Übersetzung & Migration",
-      "desc": "Intelligentes Ausfüllen fehlender Sprachfelder (IT, FR, DE, BG, EN) in der Datenbank über Gemini AI.",
+      "desc": "Intelligentes Ausfüllen fehlender Sprachfelder (ES, IT, FR, DE, BG, EN) in der Datenbank über Gemini AI.",
       "api_key_title": "Gemini API-Schlüssel",
       "api_key_placeholder": "Geben Sie Ihren Gemini API-Schlüssel ein...",
       "save_key": "Speichern",
@@ -1242,7 +1242,8 @@
       "scanning": "Firestore wird gescannt...",
       "scan_results": "Scan-Ergebnisse",
       "total_missing": "Insgesamt {{count}} Einträge zur Übersetzung gefunden",
-      "all_complete": "Alle Datenbankeinträge verfügen über vollständige Übersetzungen in den 5 Sprachen!",
+      "all_complete": "Alle Datenbankeinträge verfügen über vollständige Übersetzungen in den 6 Sprachen!",
+      "cuisines": "Küchen (Herkunft)",
       "groups": "Zutatengruppen",
       "measurements": "Maßeinheiten",
       "ingredients": "Zutaten",
@@ -1250,7 +1251,7 @@
       "missing_badge": "{{count}} zu übersetzen",
       "complete_badge": "Vollständig übersetzt",
       "select_collections": "Zu übersetzende Sammlungen auswählen:",
-      "batch_info": "Sicherer Rhythmus: 15 Zutaten / 2 Rezepte pro Charge mit 2,5 Sek. Intervall zum Schutz der Quoten.",
+      "batch_info": "Sicherer Rhythmus: 25 Elemente / 2 Rezepte pro Charge mit automatischem 1-zu-1-Fallback und Quotenschutz.",
       "dry_run_btn": "Simulation (Dry Run)",
       "start_btn": "AI-Übersetzung starten",
       "pause_btn": "Pause",
@@ -1273,7 +1274,14 @@
       "throttling_title": "Pause zwischen Anfragen (Throttling):",
       "throttle_recommended": "4.5 Sek. (Empfohlen für Free Tier / ~12 RPM)",
       "throttle_safe": "6.0 Sek. (Ultra-Sicher / ~9 RPM)",
-      "throttle_fast": "3.0 Sek. (Schnell / ~16 RPM)"
+      "throttle_fast": "3.0 Sek. (Schnell / ~16 RPM)",
+      "temp_buffer_title": "Temporärer Puffer & JSON-Übersetzungsdatei (Checkpoint)",
+      "temp_buffer_desc": "Jedes übersetzte Rezept wird automatisch in einem temporären Puffer gespeichert. Selbst bei einer Unterbrechung können Sie eine temporäre JSON-Datei herunterladen und die Datenbank mit 1 Klick daraus aktualisieren.",
+      "buffer_only_mode": "Zuerst nur in temporärer Datei/Puffer speichern (ohne direktes Schreiben in die Datenbank während der Übersetzung)",
+      "download_temp_btn": "Temp-Datei herunterladen ({{count}})",
+      "apply_buffer_btn": "DB aus Puffer aktualisieren ({{count}})",
+      "upload_temp_btn": "Temp-JSON-Datei laden & DB aktualisieren",
+      "clear_buffer_btn": "Puffer leeren"
     }
   },
   "manage_ads": {

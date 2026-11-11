@@ -6,8 +6,22 @@ import { logActivity } from '../../lib/activityLogger';
 import { getRemoteAIConfig } from '../../lib/geminiClient';
 import { 
   scanDatabaseForMissingTranslations, 
-  runBatchTranslation
+  runBatchTranslation,
+  applyTempTranslationOperations
 } from '../../lib/aiTranslationMigrator';
+
+const TEMP_BUFFER_STORAGE_KEY = 'ai_migrator_temp_buffer_v1';
+
+const loadInitialTempBuffer = () => {
+  try {
+    const raw = localStorage.getItem(TEMP_BUFFER_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.operations) ? parsed.operations : []);
+  } catch {
+    return [];
+  }
+};
 
 const AIMultilingualMigrator = () => {
   const { t } = useTranslation();
@@ -28,6 +42,7 @@ const AIMultilingualMigrator = () => {
   const [scanning, setScanning] = useState(false);
   const [scanSummary, setScanSummary] = useState(null);
   const [selectedCollections, setSelectedCollections] = useState([
+    'cuisines',
     'ingredient_groups',
     'measurements',
     'ingredients',
@@ -37,7 +52,14 @@ const AIMultilingualMigrator = () => {
   // Execution state: 'idle' | 'running' | 'paused' | 'stopped' | 'completed'
   const [executionState, setExecutionState] = useState('idle');
   const [isDryRun, setIsDryRun] = useState(false);
+  const [bufferOnlyMode, setBufferOnlyMode] = useState(false);
   const [delayMs, setDelayMs] = useState(6000);
+
+  // Temporary checkpoint buffer (for saving/downloading/restoring translated items)
+  const [tempBuffer, setTempBuffer] = useState(loadInitialTempBuffer);
+  const tempBufferRef = useRef(tempBuffer);
+  const tempFileInputRef = useRef(null);
+  const [applyingBuffer, setApplyingBuffer] = useState(false);
 
   // Progress state
   const [progress, setProgress] = useState({
@@ -88,6 +110,183 @@ const AIMultilingualMigrator = () => {
     setLogs(prev => [...prev, { id: Math.random().toString(36).substring(2, 9), timestamp, message, type }]);
   };
 
+  // Merge newly translated batch operations into the persistent temporary buffer
+  const mergeOperationsIntoBuffer = (newOps = []) => {
+    if (!Array.isArray(newOps) || newOps.length === 0) return;
+
+    const map = new Map();
+    for (const existing of tempBufferRef.current) {
+      if (existing?.collection && existing?.id) {
+        map.set(`${existing.collection}::${existing.id}`, existing);
+      }
+    }
+    for (const op of newOps) {
+      if (op?.collection && op?.id && op?.data) {
+        map.set(`${op.collection}::${op.id}`, {
+          collection: op.collection,
+          id: String(op.id),
+          source: op.source || String(op.id),
+          data: op.data,
+          savedAt: new Date().toISOString()
+        });
+      }
+    }
+
+    const merged = Array.from(map.values());
+    tempBufferRef.current = merged;
+    setTempBuffer(merged);
+
+    try {
+      localStorage.setItem(TEMP_BUFFER_STORAGE_KEY, JSON.stringify(merged));
+    } catch (storageErr) {
+      console.warn('Temp buffer exceeded localStorage quota, kept in memory:', storageErr);
+    }
+  };
+
+  const handleDownloadTempFile = () => {
+    const ops = tempBufferRef.current;
+    if (!ops || ops.length === 0) {
+      addLog("Временният буфер е празен — все още няма преведени записи за изтегляне.", "warn");
+      return;
+    }
+
+    const countsByCollection = ops.reduce((acc, op) => {
+      acc[op.collection] = (acc[op.collection] || 0) + 1;
+      return acc;
+    }, {});
+
+    const payload = {
+      meta: {
+        type: 'ai_translation_checkpoint',
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        totalItems: ops.length,
+        countsByCollection
+      },
+      operations: ops
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
+    link.href = url;
+    link.download = `ai_translations_temp_${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    addLog(`Изтеглен е временен JSON файл с ${ops.length} преведени записа.`, "success");
+  };
+
+  const handleApplyBufferToDb = async () => {
+    const ops = tempBufferRef.current;
+    if (!ops || ops.length === 0) {
+      addLog("Временният буфер е празен.", "warn");
+      return;
+    }
+
+    setApplyingBuffer(true);
+    try {
+      const res = await applyTempTranslationOperations({
+        db,
+        operations: ops,
+        onLog: addLog,
+        onProgress: setProgress
+      });
+      if (res.success) {
+        await logActivity(
+          user?.uid || 'admin',
+          user?.email || 'admin',
+          'ai_temp_buffer_apply',
+          `Applied ${res.applied} translated records from temporary buffer to Firestore`
+        );
+        const refreshed = await scanDatabaseForMissingTranslations(db);
+        setScanSummary(refreshed);
+        addLog(`Успешно обновени ${res.applied} записа в базата данни от временния буфер!`, "success");
+      }
+    } catch (err) {
+      addLog(`Грешка при запис от буфера към базата: ${err.message}`, "error");
+    } finally {
+      setApplyingBuffer(false);
+    }
+  };
+
+  const handleUploadTempFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    setApplyingBuffer(true);
+    addLog(`Четене на временен файл "${file.name}"...`, "info");
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      let operations = [];
+
+      if (Array.isArray(parsed)) {
+        operations = parsed;
+      } else if (Array.isArray(parsed?.operations)) {
+        operations = parsed.operations;
+      } else if (parsed && typeof parsed === 'object') {
+        // Also support collection-mapped files { recipes: [...], cuisines: [...] }
+        for (const coll of ['cuisines', 'ingredient_groups', 'measurements', 'ingredients', 'recipes']) {
+          if (Array.isArray(parsed[coll])) {
+            parsed[coll].forEach(docItem => {
+              if (docItem && docItem.id) {
+                const { id, ...cleanData } = docItem;
+                operations.push({ collection: coll, id: String(id), data: cleanData });
+              }
+            });
+          }
+        }
+      }
+
+      if (operations.length === 0) {
+        throw new Error("Не са открити валидни преведени записи във файла.");
+      }
+
+      mergeOperationsIntoBuffer(operations);
+
+      const res = await applyTempTranslationOperations({
+        db,
+        operations,
+        onLog: addLog,
+        onProgress: setProgress
+      });
+
+      if (res.success) {
+        await logActivity(
+          user?.uid || 'admin',
+          user?.email || 'admin',
+          'ai_temp_file_restore',
+          `Updated ${res.applied} records in Firestore from temporary translation file ${file.name}`
+        );
+        const refreshed = await scanDatabaseForMissingTranslations(db);
+        setScanSummary(refreshed);
+        addLog(`Файлът "${file.name}" беше приложен успешно! Обновени са ${res.applied} записа в базата данни.`, "success");
+      }
+    } catch (err) {
+      console.error("Temp file restore error:", err);
+      addLog(`Грешка при зареждане на временния файл: ${err.message}`, "error");
+    } finally {
+      setApplyingBuffer(false);
+    }
+  };
+
+  const handleClearBuffer = () => {
+    tempBufferRef.current = [];
+    setTempBuffer([]);
+    try {
+      localStorage.removeItem(TEMP_BUFFER_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+    addLog("Временният буфер с преводи беше изчистен.", "info");
+  };
+
   const handleSaveKey = (e) => {
     e.preventDefault();
     const trimmed = keyInputVal.trim();
@@ -112,7 +311,7 @@ const AIMultilingualMigrator = () => {
       const summary = await scanDatabaseForMissingTranslations(db);
       setScanSummary(summary);
       addLog(
-        `Сканирането завърши: открити общо ${summary.totalMissing} записа, нуждаещи се от превод (Групи: ${summary.ingredient_groups.missing}, Мерки: ${summary.measurements.missing}, Продукти: ${summary.ingredients.missing}, Рецепти: ${summary.recipes.missing}).`,
+        `Сканирането завърши: открити общо ${summary.totalMissing} записа за превод (Кухни: ${summary.cuisines.missing}, Групи: ${summary.ingredient_groups.missing}, Мерки: ${summary.measurements.missing}, Продукти: ${summary.ingredients.missing}, Рецепти: ${summary.recipes.missing}).`,
         summary.totalMissing > 0 ? "warn" : "success"
       );
     } catch (err) {
@@ -131,19 +330,36 @@ const AIMultilingualMigrator = () => {
       return;
     }
 
-    let activeScan = scanSummary;
-    if (!activeScan) {
-      setScanning(true);
-      addLog("Автоматично сканиране на базата преди стартиране...", "info");
-      try {
-        activeScan = await scanDatabaseForMissingTranslations(db);
-        setScanSummary(activeScan);
-      } catch (err) {
-        addLog(`Грешка при първоначално сканиране: ${err.message}`, "error");
-        setScanning(false);
-        return;
-      }
+    // Always re-scan Firestore right before starting so previously saved recipes are not re-translated from 0%
+    setScanning(true);
+    addLog("Актуално сканиране на базата за оставащи непреведени записи...", "info");
+    let activeScan = null;
+    try {
+      activeScan = await scanDatabaseForMissingTranslations(db);
+      setScanSummary(activeScan);
+    } catch (err) {
+      addLog(`Грешка при сканиране: ${err.message}`, "error");
       setScanning(false);
+      return;
+    }
+    setScanning(false);
+
+    // If working in buffer-only mode and there are already translated items in tempBuffer, exclude them so we resume cleanly
+    if (bufferOnlyMode && tempBufferRef.current.length > 0) {
+      const bufferedKeys = new Set(tempBufferRef.current.map(op => `${op.collection}::${op.id}`));
+      const filteredScan = { ...activeScan, totalMissing: 0 };
+      for (const coll of ['cuisines', 'ingredient_groups', 'measurements', 'ingredients', 'recipes']) {
+        const remainingItems = (activeScan[coll]?.items || []).filter(
+          item => !bufferedKeys.has(`${coll}::${item.id}`)
+        );
+        filteredScan[coll] = {
+          total: activeScan[coll]?.total || 0,
+          missing: remainingItems.length,
+          items: remainingItems
+        };
+        filteredScan.totalMissing += remainingItems.length;
+      }
+      activeScan = filteredScan;
     }
 
     const missingInSelected = selectedCollections.reduce(
@@ -152,7 +368,7 @@ const AIMultilingualMigrator = () => {
     );
 
     if (missingInSelected === 0) {
-      addLog("Всички избрани колекции вече разполагат с пълни преводи за 5-те езика!", "success");
+      addLog("Всички избрани колекции вече разполагат с пълни преводи за 6-те езика!", "success");
       return;
     }
 
@@ -173,10 +389,12 @@ const AIMultilingualMigrator = () => {
         scanResults: activeScan,
         selectedCollections,
         dryRun,
+        bufferOnly: bufferOnlyMode,
         selectedModel: activeModelToUse,
         onProgress: (p) => setProgress(p),
         onLog: (msg, type) => addLog(msg, type),
         onPreview: (item) => setPreviews(prev => [item, ...prev].slice(0, 30)),
+        onBatchTranslated: (ops) => mergeOperationsIntoBuffer(ops),
         isCancelled: () => isCancelledRef.current,
         isPaused: () => isPausedRef.current,
         delayMs
@@ -184,25 +402,31 @@ const AIMultilingualMigrator = () => {
 
       if (result.success) {
         setExecutionState('completed');
-        if (!dryRun) {
+        if (!dryRun && !bufferOnlyMode) {
           await logActivity(
             user?.uid || 'admin', 
             user?.email || 'admin', 
             'ai_batch_translation', 
             `AI Batch translation updated ${result.processed} items in Firestore`
           );
-          // Re-scan to refresh counters
-          const refreshed = await scanDatabaseForMissingTranslations(db);
-          setScanSummary(refreshed);
         }
       }
     } catch (err) {
       if (isCancelledRef.current) {
         setExecutionState('stopped');
-        addLog("Процесът беше спрян от администратора.", "warn");
+        addLog("Процесът беше спрян от администратора. Всички преведени до момента записи са запазени!", "warn");
       } else {
         setExecutionState('idle');
-        addLog(`Критична грешка при превода: ${err.message}`, "error");
+        addLog(`Грешка при превода: ${err.message}. Всички преведени до момента записи са запазени във временния буфер и в базата!`, "error");
+      }
+    } finally {
+      if (!dryRun && !bufferOnlyMode) {
+        try {
+          const refreshed = await scanDatabaseForMissingTranslations(db);
+          setScanSummary(refreshed);
+        } catch {
+          // ignore refresh error
+        }
       }
     }
   };
@@ -333,6 +557,7 @@ const AIMultilingualMigrator = () => {
         {/* Collection Cards Grid */}
         <div className="grid grid-cols-1 gap-3">
           {[
+            { id: 'cuisines', label: t('backup_recovery.ai_migration.cuisines', { defaultValue: 'Кухни (Произход)' }), icon: 'public' },
             { id: 'ingredient_groups', label: t('backup_recovery.ai_migration.groups'), icon: 'category' },
             { id: 'measurements', label: t('backup_recovery.ai_migration.measurements'), icon: 'straighten' },
             { id: 'ingredients', label: t('backup_recovery.ai_migration.ingredients'), icon: 'nutrition' },
@@ -425,6 +650,115 @@ const AIMultilingualMigrator = () => {
         <p className="text-slate-400 italic">
           {t('backup_recovery.ai_migration.auto_backup_recommendation')}
         </p>
+      </div>
+
+      {/* Temporary Checkpoint Buffer & JSON File Section */}
+      <div className="p-4 bg-background-dark/60 rounded-2xl border border-amber-500/20 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-base text-amber-400">save</span>
+            <span className="text-xs font-bold text-slate-200">
+              {t('backup_recovery.ai_migration.temp_buffer_title', {
+                defaultValue: 'Временен буфер & JSON файл с преводи (Checkpoint)'
+              })}
+            </span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+            {tempBuffer.length} в буфера
+          </span>
+        </div>
+
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          {t('backup_recovery.ai_migration.temp_buffer_desc', {
+            defaultValue: 'Всяка преведена рецепта/запис автоматично се пази във временен буфер. Дори при прекъсване можете да изтеглите временен JSON файл и от него да обновите базата с 1 клик.'
+          })}
+        </p>
+
+        {/* Option: Save to buffer only first */}
+        <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer select-none bg-surface-dark/60 p-2.5 rounded-xl border border-primary/10">
+          <input
+            type="checkbox"
+            checked={bufferOnlyMode}
+            onChange={(e) => setBufferOnlyMode(e.target.checked)}
+            disabled={executionState === 'running'}
+            className="size-4 rounded accent-amber-500 cursor-pointer shrink-0"
+          />
+          <span className="leading-snug">
+            {t('backup_recovery.ai_migration.buffer_only_mode', {
+              defaultValue: 'Записвай първо само във временен файл/буфер (без директно записване в базата по време на превода)'
+            })}
+          </span>
+        </label>
+
+        {/* Buffer / Temp File Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleDownloadTempFile}
+            disabled={tempBuffer.length === 0}
+            className="py-2.5 px-3 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-bold text-xs rounded-xl transition-all cursor-pointer active:scale-95 disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-sm">download</span>
+            <span>
+              {t('backup_recovery.ai_migration.download_temp_btn', {
+                count: tempBuffer.length,
+                defaultValue: `Изтегли временен файл (${tempBuffer.length})`
+              })}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleApplyBufferToDb}
+            disabled={tempBuffer.length === 0 || applyingBuffer || executionState === 'running'}
+            className="py-2.5 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold text-xs rounded-xl transition-all cursor-pointer active:scale-95 disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            <span className={`material-symbols-outlined text-sm ${applyingBuffer ? 'animate-spin' : ''}`}>
+              {applyingBuffer ? 'refresh' : 'cloud_upload'}
+            </span>
+            <span>
+              {t('backup_recovery.ai_migration.apply_buffer_btn', {
+                count: tempBuffer.length,
+                defaultValue: `Обнови базата от буфера (${tempBuffer.length})`
+              })}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => tempFileInputRef.current?.click()}
+            disabled={applyingBuffer || executionState === 'running'}
+            className="py-2.5 px-3 bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary font-bold text-xs rounded-xl transition-all cursor-pointer active:scale-95 disabled:opacity-40 flex items-center justify-center gap-1.5 sm:col-span-2"
+          >
+            <span className="material-symbols-outlined text-sm">upload_file</span>
+            <span>
+              {t('backup_recovery.ai_migration.upload_temp_btn', {
+                defaultValue: 'Зареди временен JSON файл и обнови базата'
+              })}
+            </span>
+          </button>
+
+          <input
+            type="file"
+            ref={tempFileInputRef}
+            accept=".json,application/json"
+            onChange={handleUploadTempFile}
+            className="hidden"
+          />
+        </div>
+
+        {tempBuffer.length > 0 && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleClearBuffer}
+              disabled={executionState === 'running' || applyingBuffer}
+              className="text-[10px] text-rose-400 hover:text-rose-300 underline cursor-pointer disabled:opacity-40"
+            >
+              {t('backup_recovery.ai_migration.clear_buffer_btn', { defaultValue: 'Изчисти буфера' })}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Progress Bar (Visible when active) */}
@@ -547,7 +881,8 @@ const AIMultilingualMigrator = () => {
                     {item.collection}
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-400 grid grid-cols-3 gap-1">
+                <div className="text-[10px] text-slate-400 grid grid-cols-2 sm:grid-cols-4 gap-1">
+                  <span>🇪🇸 {typeof item.translations === 'object' ? item.translations?.es || '-' : '-'}</span>
                   <span>🇮🇹 {typeof item.translations === 'object' ? item.translations?.it || '-' : '-'}</span>
                   <span>🇫🇷 {typeof item.translations === 'object' ? item.translations?.fr || '-' : '-'}</span>
                   <span>🇩🇪 {typeof item.translations === 'object' ? item.translations?.de || '-' : '-'}</span>

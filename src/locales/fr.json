@@ -1231,7 +1231,7 @@
     },
     "ai_migration": {
       "title": "Traduction Batch AI & Migration",
-      "desc": "Remplissage intelligent des champs linguistiques manquants (IT, FR, DE, BG, EN) dans la base de données via Gemini AI.",
+      "desc": "Remplissage intelligent des champs linguistiques manquants (ES, IT, FR, DE, BG, EN) dans la base de données via Gemini AI.",
       "api_key_title": "Clé Gemini API",
       "api_key_placeholder": "Entrez votre clé API Gemini...",
       "save_key": "Enregistrer",
@@ -1242,7 +1242,8 @@
       "scanning": "Analyse de Firestore en cours...",
       "scan_results": "Résultats de l'analyse",
       "total_missing": "{{count}} enregistrements trouvés à traduire",
-      "all_complete": "Tous les enregistrements disposent de traductions complètes dans les 5 langues !",
+      "all_complete": "Tous les enregistrements disposent de traductions complètes dans les 6 langues !",
+      "cuisines": "Cuisines (Origine)",
       "groups": "Groupes d'ingrédients",
       "measurements": "Unités de mesure",
       "ingredients": "Ingrédients",
@@ -1250,7 +1251,7 @@
       "missing_badge": "{{count}} à traduire",
       "complete_badge": "Entièrement traduit",
       "select_collections": "Sélectionnez les collections à traduire :",
-      "batch_info": "Cadence sécurisée : 15 ingrédients / 2 recettes par lot avec 2,5 s d'intervalle pour respecter les quotas.",
+      "batch_info": "Cadence sécurisée : 25 éléments / 2 recettes par lot avec repli automatique 1 par 1 et protection des quotas.",
       "dry_run_btn": "Simulation (Dry Run)",
       "start_btn": "Lancer la traduction AI",
       "pause_btn": "Pause",
@@ -1273,7 +1274,14 @@
       "throttling_title": "Pause entre les requêtes (Throttling) :",
       "throttle_recommended": "4.5s (Recommandé pour Free Tier / ~12 RPM)",
       "throttle_safe": "6.0s (Ultra-Sécurisé / ~9 RPM)",
-      "throttle_fast": "3.0s (Rapide / ~16 RPM)"
+      "throttle_fast": "3.0s (Rapide / ~16 RPM)",
+      "temp_buffer_title": "Tampon temporaire & Fichier JSON de traductions (Checkpoint)",
+      "temp_buffer_desc": "Chaque recette/enregistrement traduit est automatiquement conservé dans un tampon temporaire. Même en cas d'interruption, vous pouvez télécharger un fichier JSON temporaire et mettre à jour la base en 1 clic.",
+      "buffer_only_mode": "Enregistrer d'abord uniquement dans le fichier/tampon temporaire (sans écriture directe en base pendant la traduction)",
+      "download_temp_btn": "Télécharger fichier temp. ({{count}})",
+      "apply_buffer_btn": "Mettre à jour la base depuis le tampon ({{count}})",
+      "upload_temp_btn": "Charger un fichier JSON temp. et mettre à jour la base",
+      "clear_buffer_btn": "Vider le tampon"
     }
   },
   "manage_ads": {

@@ -1231,7 +1231,7 @@
     },
     "ai_migration": {
       "title": "Traducción y migración por lotes con IA",
-      "desc": "Completa de forma inteligente los campos de idioma faltantes (IT, FR, DE, BG, EN) en la base de datos mediante Gemini AI.",
+      "desc": "Completa de forma inteligente los campos de idioma faltantes (ES, IT, FR, DE, BG, EN) en la base de datos mediante Gemini AI.",
       "api_key_title": "Clave API de Gemini",
       "api_key_placeholder": "Introduce tu clave API de Gemini...",
       "save_key": "Guardar",
@@ -1242,7 +1242,8 @@
       "scanning": "Escaneando Firestore...",
       "scan_results": "Resultados del escaneo",
       "total_missing": "Se encontraron {{count}} registros que necesitan traducción",
-      "all_complete": "¡Todos los registros de la base de datos tienen traducciones completas en los 5 idiomas!",
+      "all_complete": "¡Todos los registros de la base de datos tienen traducciones completas en los 6 idiomas!",
+      "cuisines": "Cocinas (Origen)",
       "groups": "Grupos de ingredientes",
       "measurements": "Unidades de medida",
       "ingredients": "Ingredientes",
@@ -1250,7 +1251,7 @@
       "missing_badge": "{{count}} por traducir",
       "complete_badge": "Totalmente traducido",
       "select_collections": "Selecciona las colecciones a traducir:",
-      "batch_info": "Ritmo seguro: 15 ingredientes / 2 recetas por lote con pausa de 2.5s para proteger las cuotas de la API.",
+      "batch_info": "Ritmo seguro: 25 elementos / 2 recetas por lote con respaldo automático 1 por 1 y protección de cuotas.",
       "dry_run_btn": "Simulación (Prueba en seco)",
       "start_btn": "Iniciar traducción con IA",
       "pause_btn": "Pausar",
@@ -1273,7 +1274,14 @@
       "throttling_title": "Intervalo entre solicitudes (Throttling):",
       "throttle_recommended": "4.5s (Recomendado para nivel gratuito / ~12 RPM)",
       "throttle_safe": "6.0s (Ultraseguro / ~9 RPM)",
-      "throttle_fast": "3.0s (Rápido / ~16 RPM)"
+      "throttle_fast": "3.0s (Rápido / ~16 RPM)",
+      "temp_buffer_title": "Búfer temporal y archivo JSON de traducciones (Punto de control)",
+      "temp_buffer_desc": "Cada receta/registro traducido se guarda automáticamente en un búfer temporal. Incluso si se interrumpe, puedes descargar un archivo JSON temporal y actualizar la base de datos desde él con 1 clic.",
+      "buffer_only_mode": "Guardar primero solo en archivo/búfer temporal (sin escribir directamente en la base de datos durante la traducción)",
+      "download_temp_btn": "Descargar archivo temp. ({{count}})",
+      "apply_buffer_btn": "Actualizar BD desde búfer ({{count}})",
+      "upload_temp_btn": "Cargar archivo JSON temp. y actualizar BD",
+      "clear_buffer_btn": "Limpiar búfer"
     }
   },
   "manage_ads": {
