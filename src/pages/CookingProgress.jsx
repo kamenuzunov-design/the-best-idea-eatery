@@ -190,7 +190,7 @@ const CookingProgress = () => {
             <section className="p-6 bg-gradient-to-b from-surface-dark to-transparent border-b border-primary/10">
               <div className="flex items-center gap-5 mb-5">
                 <div className="relative shrink-0">
-                  <div className="size-20 rounded-full border-2 border-primary p-1 shadow-[0_0_20px_rgba(212,175,53,0.3)] bg-background-dark overflow-hidden flex items-center justify-center">
+                  <div className="size-20 rounded-full border-2 border-primary shadow-[0_0_20px_rgba(212,175,53,0.3)] bg-background-dark overflow-hidden flex items-center justify-center">
                     {chefAvatar ? (
                       <img src={chefAvatar} alt={chefName} className="size-full rounded-full object-cover" />
                     ) : (

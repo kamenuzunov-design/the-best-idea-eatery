@@ -1479,7 +1479,7 @@ const RecipeDetail = () => {
                 className="relative shrink-0 cursor-pointer group/avatar"
                 title={t('recipe_detail.author.view_profile_tooltip')}
               >
-                <div className="size-16 rounded-full border-2 border-primary p-0.5 shadow-[0_0_15px_rgba(212,175,53,0.3)] bg-background-dark overflow-hidden flex items-center justify-center">
+                <div className="size-16 rounded-full border-2 border-primary shadow-[0_0_15px_rgba(212,175,53,0.3)] bg-background-dark overflow-hidden flex items-center justify-center">
                   {authorData.profile?.avatar ? (
                     <img src={authorData.profile.avatar} alt="Avatar" className="w-full h-full object-cover group-hover/avatar:scale-105 transition-transform" />
                   ) : (
