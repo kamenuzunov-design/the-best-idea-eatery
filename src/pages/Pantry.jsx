@@ -29,7 +29,7 @@ const getGroupIcon = (val) => {
 
 const Pantry = () => {
   const { user } = useAuth();
-  const { pantry, addPantryItem, updatePantryItem, removePantryItem } = useAppContext();
+  const { pantry, addPantryItem, upsertPantryItem, updatePantryItem, removePantryItem } = useAppContext();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const currentLang = i18n.language || 'bg';
@@ -134,22 +134,33 @@ const Pantry = () => {
     e.preventDefault();
     if (!selectedIngredient || !newItem.quantity || !newItem.expirationDate) return;
     
-    addPantryItem({
+    const payload = {
       ingredientId: selectedIngredient.id,
       nameBg: selectedIngredient.name_bg || selectedIngredient.name?.bg || selectedIngredient.name_en || selectedIngredient.name,
       nameEn: selectedIngredient.name_en || selectedIngredient.name?.en || selectedIngredient.name_bg || selectedIngredient.name,
+      nameEs: selectedIngredient.name_es || selectedIngredient.name?.es,
       nameIt: selectedIngredient.name_it || selectedIngredient.name?.it,
       nameFr: selectedIngredient.name_fr || selectedIngredient.name?.fr,
       nameDe: selectedIngredient.name_de || selectedIngredient.name?.de,
       name: selectedIngredient.name || {
         bg: selectedIngredient.name_bg,
-        en: selectedIngredient.name_en
+        en: selectedIngredient.name_en,
+        es: selectedIngredient.name_es,
+        it: selectedIngredient.name_it,
+        fr: selectedIngredient.name_fr,
+        de: selectedIngredient.name_de
       },
       category: selectedIngredient.classification?.main_group || 'other',
       quantity: Number(newItem.quantity),
       unit: newItem.unit,
       expirationDate: newItem.expirationDate
-    });
+    };
+
+    if (upsertPantryItem) {
+      upsertPantryItem(payload, selectedIngredient);
+    } else {
+      addPantryItem(payload);
+    }
     
     setSearchQuery('');
     setSelectedIngredient(null);
@@ -333,12 +344,54 @@ const Pantry = () => {
               <span className="material-symbols-outlined text-[16px] font-black">add</span>
               <span>{t('pantry.add_btn')}</span>
             </button>
+            <button
+              type="button"
+              onClick={() => navigate('/scanner?mode=receipt')}
+              className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/35 hover:bg-amber-500/25 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px] font-black">receipt_long</span>
+              <span>{t('pantry.scan_receipt_btn')}</span>
+            </button>
           </div>
         </div>
         <div className="text-xs text-slate-400 font-bold bg-surface-dark border border-primary/20 px-3 py-1 rounded-full shadow-inner">
           {pantry.length === 1 ? t('pantry.items_count_one', { count: pantry.length }) : t('pantry.items_count_other', { count: pantry.length })}
         </div>
       </div>
+
+      {/* Zero-Waste Expiring Soon Rescue Banner */}
+      {(() => {
+        const expiringSoonList = pantry.filter(item => {
+          if (!item.expirationDate) return false;
+          const d = getDaysUntilExpiration(item.expirationDate);
+          return d >= 0 && d <= 3;
+        });
+        if (expiringSoonList.length === 0) return null;
+        const expiringNames = expiringSoonList.map(getItemName).filter(Boolean).slice(0, 4).join(', ');
+        return (
+          <div className="mx-4 mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-rose-500/15 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-start gap-2.5 text-xs text-slate-200">
+              <span className="material-symbols-outlined text-amber-400 text-xl shrink-0 mt-0.5">hourglass_bottom</span>
+              <div>
+                <p className="font-black text-amber-400 uppercase tracking-wide">
+                  {t('pantry.rescue_banner_title', { count: expiringSoonList.length })}
+                </p>
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  {t('pantry.rescue_banner_desc', { names: expiringNames })}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/ai-search?filter=expiring')}
+              className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <span className="material-symbols-outlined text-base font-black">saved_search</span>
+              <span>{t('pantry.rescue_banner_btn')}</span>
+            </button>
+          </div>
+        );
+      })()}
 
       <div className="px-4 py-6 space-y-6">
         {pantry.length === 0 ? (

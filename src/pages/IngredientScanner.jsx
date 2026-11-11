@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -10,15 +10,30 @@ import { callGemini, getGeminiApiKey, setGeminiApiKey } from '../lib/geminiClien
 import { findBestIngredientMatch } from '../lib/ingredientMatcher';
 import { resizeImage } from '../lib/imageUtils';
 
+const normalizeReceiptUnit = (u) => {
+  const s = String(u || '').toLowerCase().trim();
+  if (s === 'g' || s === 'gr' || s === 'гр' || s === 'гр.' || s === 'грам' || s === 'грама') return 'g';
+  if (s === 'kg' || s === 'кг' || s === 'кг.' || s === 'килограм') return 'kg';
+  if (s === 'ml' || s === 'мл' || s === 'мл.') return 'ml';
+  if (s === 'l' || s === 'л' || s === 'л.' || s === 'литър') return 'l';
+  return 'pcs';
+};
+
 const IngredientScanner = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.language || 'bg';
-  const { addPantryItem } = useAppContext();
+  const { addPantryItem, upsertPantryItem } = useAppContext();
   const { user } = useAuth();
   
   const fileInputRef = useRef(null);
   const [lastFile, setLastFile] = useState(null);
+
+  // 'photo' (ingredients/dish) | 'receipt' (supermarket receipt OCR)
+  const [scanMode, setScanMode] = useState(() =>
+    searchParams.get('mode') === 'receipt' ? 'receipt' : 'photo'
+  );
 
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState(null);
@@ -35,6 +50,18 @@ const IngredientScanner = () => {
   // API Key Quick Entry Modal
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(getGeminiApiKey());
+
+  const handleSwitchMode = (nextMode) => {
+    setScanMode(nextMode);
+    if (nextMode === 'receipt') {
+      setSearchParams({ mode: 'receipt' }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+    if (lastFile) {
+      runAIDetection(lastFile, masterIngredients, nextMode);
+    }
+  };
 
   // Category Priority for Main Product selection:
   // 1: Meat, Poultry, Fish, Seafood
@@ -66,7 +93,7 @@ const IngredientScanner = () => {
       n.includes('мляко') || n.includes('сметана') || n.includes('яйц') ||
       n.includes('cheese') || n.includes('mozzarella') || n.includes('milk') || n.includes('egg') || n.includes('cream') ||
       n.includes('formaggio') || n.includes('latte') || n.includes('uova') || n.includes('fromage') || n.includes('lait') ||
-      n.includes('oeuf') || n.includes('käse') || n.includes('milch') || n.includes('eier')
+      n.includes('oeuf') || n.includes('käse') || n.includes('milch') || n.includes('eier') || n.includes('queso') || n.includes('leche')
     ) {
       return 2;
     }
@@ -76,7 +103,7 @@ const IngredientScanner = () => {
       n.includes('картоф') || n.includes('тесто') || n.includes('тост') ||
       n.includes('bread') || n.includes('pasta') || n.includes('rice') || n.includes('potato') || n.includes('toast') ||
       n.includes('pane') || n.includes('patate') || n.includes('riso') || n.includes('pain') || n.includes('pâtes') ||
-      n.includes('riz') || n.includes('pomme de terre') || n.includes('brot') || n.includes('kartoffel') || n.includes('reis')
+      n.includes('riz') || n.includes('pomme de terre') || n.includes('brot') || n.includes('kartoffel') || n.includes('reis') || n.includes('arroz') || n.includes('pan')
     ) {
       return 3;
     }
@@ -151,7 +178,7 @@ const IngredientScanner = () => {
   });
 
   // Run real Gemini Vision detection with intelligent DB matching
-  const runAIDetection = async (file, list = masterIngredients) => {
+  const runAIDetection = async (file, list = masterIngredients, modeOverride = scanMode) => {
     if (!file) return;
     setLastFile(file);
 
@@ -169,15 +196,36 @@ const IngredientScanner = () => {
 
     try {
       let fileToProcess = file;
+      const targetMaxDim = modeOverride === 'receipt' ? 1200 : 800;
       try {
-        fileToProcess = await resizeImage(file, 800);
+        fileToProcess = await resizeImage(file, targetMaxDim);
       } catch (resizeErr) {
         console.warn("Could not resize image, using original:", resizeErr);
       }
 
       const base64Data = await fileToBase64(fileToProcess);
 
-      const prompt = `You are an expert culinary vision AI. Inspect this food, pantry, or meal photo.
+      const prompt = modeOverride === 'receipt'
+        ? `You are an expert supermarket receipt OCR and culinary parser.
+Inspect this shopping receipt image (it may be in Bulgarian, English, Spanish, Italian, French, German, or another language, often with abbreviated receipt lines like "КРАВЕ СИРЕНЕ 0.400 КГ", "ДОМАТИ РОЗОВИ 1.250", "ПРЯСНО МЛЯКО 3.6% 1Л", "ЯЙЦА М 10БР").
+Extract ONLY edible food/beverage ingredients and culinary products. Ignore non-food items (bags, detergent, napkins, discounts, VAT lines, totals, store headers).
+For each food item, determine its generic canonical culinary ingredient name in all 6 languages AND extract the purchased quantity and unit ("g", "kg", "ml", "l", or "pcs").
+Note: If a receipt shows a decimal weight like 0.400 kg, convert it to quantity: 400, unit: "g" (or if >= 1 kg, keep in "kg" or "g"). If a pack size is shown in the title (e.g. "400g", "1L", "10бр"), use that quantity and unit. Otherwise default to quantity: 1, unit: "pcs".
+Respond ONLY with a valid JSON array of objects:
+[
+  {
+    "raw_receipt_text": "КРАВЕ СИРЕНЕ 0.400 КГ",
+    "name_en": "White Brine Cheese",
+    "name_bg": "Краве сирене",
+    "name_es": "Queso blanco en salmuera",
+    "name_it": "Formaggio bianco in salamoia",
+    "name_fr": "Fromage blanc en saumure",
+    "name_de": "Salzlakenkäse",
+    "quantity": 400,
+    "unit": "g"
+  }
+]`
+        : `You are an expert culinary vision AI. Inspect this food, pantry, or meal photo.
 Identify the real visible food ingredients (vegetables, fruits, seafood, meat, poultry, dairy, bakery, herbs, spices).
 If it is a finished dish (e.g. seafood pasta, mussels in broth, steak with salad), identify the main components and key culinary ingredients.
 If it is a single product (e.g. pear, tomato, steak cut), identify the exact product.
@@ -186,6 +234,7 @@ Respond ONLY with a JSON array of objects with the exact schema:
   {
     "name_en": "Mussels",
     "name_bg": "Миди",
+    "name_es": "Mejillones",
     "name_it": "Cozze",
     "name_fr": "Moules",
     "name_de": "Miesmuscheln"
@@ -200,7 +249,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
         generationConfig: {
           responseMimeType: "application/json"
         },
-        timeoutMs: 15000
+        timeoutMs: 18000
       });
 
       if (Array.isArray(res.data) && res.data.length > 0) {
@@ -211,12 +260,23 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
             ? (getLocalizedField(dbMatch, 'name', currentLang) || dbMatch.name_en || dbMatch.name_bg) 
             : (itemObj[`name_${currentLang}`] || itemObj.name_en || itemObj.name_bg || itemObj.name || 'Ingredient');
 
+          const parsedQty = Number(itemObj.quantity);
+          const defaultUnit = dbMatch?.units_mapping?.[0]?.unit_id || 'pcs';
+          const resolvedUnit = itemObj.unit ? normalizeReceiptUnit(itemObj.unit) : defaultUnit;
+
           return {
             id: dbMatch ? dbMatch.id : `detected_${idx}_${Date.now()}`,
             name: localizedName,
+            nameBg: dbMatch?.name_bg || itemObj.name_bg || localizedName,
+            nameEn: dbMatch?.name_en || itemObj.name_en || localizedName,
+            nameEs: dbMatch?.name_es || itemObj.name_es || localizedName,
+            nameIt: dbMatch?.name_it || itemObj.name_it || localizedName,
+            nameFr: dbMatch?.name_fr || itemObj.name_fr || localizedName,
+            nameDe: dbMatch?.name_de || itemObj.name_de || localizedName,
+            rawReceiptText: itemObj.raw_receipt_text || '',
             dbIngredient: dbMatch || null,
-            quantity: 1,
-            unit: dbMatch?.units_mapping?.[0]?.unit_id || 'бр',
+            quantity: parsedQty > 0 ? parsedQty : 1,
+            unit: resolvedUnit,
             checked: true
           };
         });
@@ -245,7 +305,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
     if (file) {
       const url = URL.createObjectURL(file);
       setCapturedImage(url);
-      runAIDetection(file, masterIngredients);
+      runAIDetection(file, masterIngredients, scanMode);
     }
   };
 
@@ -256,13 +316,21 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
       setShowApiKeyModal(false);
       setScanError(null);
       if (lastFile) {
-        runAIDetection(lastFile, masterIngredients);
+        runAIDetection(lastFile, masterIngredients, scanMode);
       }
     }
   };
 
   const toggleItem = (id) => {
     setDetectedItems(prev => prev.map(item => item.id === id ? { ...item, checked: !item.checked } : item));
+  };
+
+  const handleItemQtyChange = (id, newQty) => {
+    setDetectedItems(prev => prev.map(item => item.id === id ? { ...item, quantity: Number(newQty) || 0 } : item));
+  };
+
+  const handleItemUnitChange = (id, newUnit) => {
+    setDetectedItems(prev => prev.map(item => item.id === id ? { ...item, unit: newUnit } : item));
   };
 
   const handleRemoveItem = (id, e) => {
@@ -278,9 +346,11 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
         {
           id: ing.id,
           name: ingName,
+          nameBg: ing.name_bg || ing.name?.bg || ingName,
+          nameEn: ing.name_en || ing.name?.en || ingName,
           dbIngredient: ing,
           quantity: 1,
-          unit: ing?.units_mapping?.[0]?.unit_id || 'бр',
+          unit: ing?.units_mapping?.[0]?.unit_id || 'pcs',
           checked: true
         }
       ]);
@@ -305,12 +375,30 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
     setAddingToPantry(true);
     try {
       for (const item of selected) {
-        await addPantryItem({
-          ingredientId: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          unit: item.unit
-        });
+        if (upsertPantryItem) {
+          await upsertPantryItem(
+            {
+              ingredientId: item.id,
+              name: item.name,
+              nameBg: item.nameBg || item.name,
+              nameEn: item.nameEn || item.name,
+              nameEs: item.nameEs,
+              nameIt: item.nameIt,
+              nameFr: item.nameFr,
+              nameDe: item.nameDe,
+              quantity: Number(item.quantity) || 1,
+              unit: item.unit || 'pcs'
+            },
+            item.dbIngredient
+          );
+        } else {
+          await addPantryItem({
+            ingredientId: item.id,
+            name: item.name,
+            quantity: Number(item.quantity) || 1,
+            unit: item.unit || 'pcs'
+          });
+        }
       }
       alert(t('ingredient_scanner.added_success', { count: selected.length }));
       navigate('/pantry');
@@ -365,7 +453,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h2 className="text-slate-100 text-sm font-extrabold tracking-widest uppercase flex-1 text-center">
-          {t('ingredient_scanner.title')}
+          {scanMode === 'receipt' ? t('ingredient_scanner.receipt_mode_title') : t('ingredient_scanner.title')}
         </h2>
         <button 
           onClick={() => setShowApiKeyModal(true)} 
@@ -376,6 +464,34 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
         </button>
       </div>
 
+      {/* Mode Switcher: Photo vs Receipt */}
+      <div className="px-4 pt-3 pb-1 bg-surface-dark border-b border-primary/10 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => handleSwitchMode('photo')}
+          className={`py-2.5 px-3 rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+            scanMode === 'photo'
+              ? 'bg-primary text-background-dark border-primary shadow-md'
+              : 'bg-background-dark/60 text-slate-300 border-primary/20 hover:border-primary/40'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">photo_camera</span>
+          <span>{t('ingredient_scanner.mode_photo')}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSwitchMode('receipt')}
+          className={`py-2.5 px-3 rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+            scanMode === 'receipt'
+              ? 'bg-primary text-background-dark border-primary shadow-md'
+              : 'bg-background-dark/60 text-slate-300 border-primary/20 hover:border-primary/40'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">receipt_long</span>
+          <span>{t('ingredient_scanner.mode_receipt')}</span>
+        </button>
+      </div>
+
       {/* 1. Action Button ABOVE Viewfinder */}
       <div className="p-4 bg-surface-dark border-b border-primary/10 z-20">
         <button 
@@ -383,8 +499,16 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
           disabled={scanning}
           className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer border border-primary/30 disabled:opacity-50"
         >
-          <span className="material-symbols-outlined text-[20px]">photo_camera</span>
-          <span>{capturedImage ? t('ingredient_scanner.rescan_btn') : t('ingredient_scanner.take_photo_prompt')}</span>
+          <span className="material-symbols-outlined text-[20px]">
+            {scanMode === 'receipt' ? 'receipt_long' : 'photo_camera'}
+          </span>
+          <span>
+            {capturedImage
+              ? t('ingredient_scanner.rescan_btn')
+              : scanMode === 'receipt'
+              ? t('ingredient_scanner.take_receipt_prompt')
+              : t('ingredient_scanner.take_photo_prompt')}
+          </span>
         </button>
       </div>
 
@@ -433,13 +557,15 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
           className="relative w-full h-64 bg-neutral-950/80 hover:bg-neutral-900 border-b border-primary/20 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-colors group"
         >
           <div className="size-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary group-hover:scale-110 group-hover:border-primary transition-all shadow-lg mb-3">
-            <span className="material-symbols-outlined text-3xl">add_a_photo</span>
+            <span className="material-symbols-outlined text-3xl">
+              {scanMode === 'receipt' ? 'receipt_long' : 'add_a_photo'}
+            </span>
           </div>
           <p className="text-xs font-extrabold text-slate-100 uppercase tracking-wider mb-1">
-            {t('ingredient_scanner.take_photo_prompt')}
+            {scanMode === 'receipt' ? t('ingredient_scanner.take_receipt_prompt') : t('ingredient_scanner.take_photo_prompt')}
           </p>
           <p className="text-[11px] text-slate-400 max-w-xs">
-            {t('ingredient_scanner.take_photo_sub')}
+            {scanMode === 'receipt' ? t('ingredient_scanner.take_receipt_sub') : t('ingredient_scanner.take_photo_sub')}
           </p>
         </div>
       )}
@@ -452,7 +578,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
             {t('ingredient_scanner.notice_title')}
           </span>
           <span>
-            {t('ingredient_scanner.notice_desc')}
+            {scanMode === 'receipt' ? t('ingredient_scanner.receipt_notice_desc') : t('ingredient_scanner.notice_desc')}
           </span>
         </div>
       </div>
@@ -479,7 +605,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
             </button>
             {lastFile && (
               <button
-                onClick={() => runAIDetection(lastFile, masterIngredients)}
+                onClick={() => runAIDetection(lastFile, masterIngredients, scanMode)}
                 className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 rounded-xl text-rose-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">refresh</span>
@@ -495,7 +621,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
             <span className="material-symbols-outlined text-primary text-base">auto_awesome</span>
-            <span>{t('ingredient_scanner.found_ingredients')}</span>
+            <span>{t('ingredient_scanner.found_ingredients')} ({detectedItems.length})</span>
           </h3>
           {!scanning && (
             <button 
@@ -517,10 +643,82 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
           </div>
         ) : detectedItems.length === 0 ? (
           <div className="p-8 bg-surface-dark border border-primary/20 rounded-2xl text-center space-y-2">
-            <span className="material-symbols-outlined text-slate-500 text-3xl">image_search</span>
+            <span className="material-symbols-outlined text-slate-500 text-3xl">
+              {scanMode === 'receipt' ? 'receipt_long' : 'image_search'}
+            </span>
             <p className="text-xs text-slate-400">
-              {capturedImage ? t('ingredient_scanner.empty_detected') : t('ingredient_scanner.take_photo_prompt')}
+              {capturedImage
+                ? t('ingredient_scanner.empty_detected')
+                : scanMode === 'receipt'
+                ? t('ingredient_scanner.take_receipt_prompt')
+                : t('ingredient_scanner.take_photo_prompt')}
             </p>
+          </div>
+        ) : scanMode === 'receipt' ? (
+          /* RECEIPT MODE: Editable list with quantities and units for direct Pantry import */
+          <div className="bg-surface-dark border border-primary/30 rounded-2xl p-3 shadow-lg space-y-2.5">
+            {detectedItems.map((item) => (
+              <div
+                key={item.id}
+                className={`flex flex-col gap-2 p-2.5 rounded-xl border transition-all ${
+                  item.checked
+                    ? 'bg-background-dark/80 border-primary/30'
+                    : 'bg-background-dark/30 border-slate-800 opacity-50'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleItem(item.id)}
+                    className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer"
+                  >
+                    <span className={`material-symbols-outlined text-lg ${item.checked ? 'text-emerald-400' : 'text-slate-500'}`}>
+                      {item.checked ? 'check_box' : 'check_box_outline_blank'}
+                    </span>
+                    <div className="min-w-0">
+                      <p className={`text-xs font-extrabold truncate ${item.checked ? 'text-slate-100' : 'line-through text-slate-400'}`}>
+                        {item.name}
+                      </p>
+                      {item.rawReceiptText && (
+                        <p className="text-[10px] text-slate-400 truncate">
+                          🧾 {item.rawReceiptText}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={item.quantity}
+                      onChange={(e) => handleItemQtyChange(item.id, e.target.value)}
+                      className="w-16 bg-surface-dark border border-primary/30 rounded-lg px-2 py-1 text-xs font-bold text-slate-100 text-center focus:border-primary outline-none"
+                    />
+                    <select
+                      value={item.unit || 'pcs'}
+                      onChange={(e) => handleItemUnitChange(item.id, e.target.value)}
+                      className="bg-surface-dark border border-primary/30 rounded-lg px-1.5 py-1 text-xs font-bold text-primary focus:border-primary outline-none"
+                    >
+                      <option value="g">{t('pantry.units.g')}</option>
+                      <option value="kg">{t('pantry.units.kg')}</option>
+                      <option value="ml">{t('pantry.units.ml')}</option>
+                      <option value="l">{t('pantry.units.l')}</option>
+                      <option value="pcs">{t('pantry.units.pcs')}</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={(e) => handleRemoveItem(item.id, e)}
+                      className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer"
+                      title={t('ingredient_scanner.remove_tooltip')}
+                    >
+                      <span className="material-symbols-outlined text-base">delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-3.5">

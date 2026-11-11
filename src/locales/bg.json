@@ -235,7 +235,11 @@
     "exclusions_placeholder": "Потърсете и изберете продукт за изключване...",
     "exclusions_empty": "Няма изключени продукти",
     "diet_saved_success": "Диетичният профил е записан успешно!",
-    "diet_saved_error": "Възникна грешка при запазване."
+    "diet_saved_error": "Възникна грешка при запазване.",
+    "scan_receipt_btn": "Касов бон",
+    "rescue_banner_title": "⏳ {{count}} продукта с изтичащ срок (до 3 дни)",
+    "rescue_banner_desc": "Използвайте приоритетно: {{names}}",
+    "rescue_banner_btn": "Спаси с рецепта"
   },
   "scanner": {
     "title": "Скенер за продукти",
@@ -358,6 +362,14 @@
     "remove_from_saved": "Премахни от запазени",
     "currency_eur": "Евро",
     "video_badge": "Видео",
+    "scan_receipt_btn": "Сканирай бон",
+    "select_all_btn": "Маркирай всички",
+    "deselect_all_btn": "Размаркирай",
+    "move_to_pantry_hint": "Маркирахте {{count}} закупени продукта. Прехвърлете ги директно в Килера!",
+    "move_to_pantry_btn": "Прехвърли ({{count}}) в Килера",
+    "moving_to_pantry": "Прехвърляне...",
+    "moved_to_pantry_success": "Успешно прехвърлихте {{count}} продукта в Килера!",
+    "open_pantry_btn": "Виж Килера",
     "difficulty": {
       "easy": "Лесно",
       "medium": "Средно",
@@ -1695,7 +1707,13 @@
     "retry_btn": "Опитай отново",
     "api_key_modal_title": "Google Gemini API Ключ",
     "api_key_modal_desc": "Въведете вашия Gemini API ключ за автоматично сканиране на снимки.",
-    "api_key_saved_success": "API ключът е запазен успешно!"
+    "api_key_saved_success": "API ключът е запазен успешно!",
+    "receipt_mode_title": "Скенер на касова бележка",
+    "mode_photo": "Продукти / Ястие",
+    "mode_receipt": "Касова бележка",
+    "take_receipt_prompt": "Заснемете или качете снимка на касова бележка",
+    "take_receipt_sub": "AI ще разпознае хранителните продукти и количествата им за директен запис в Килера",
+    "receipt_notice_desc": "AI извлича само хранителните продукти от бележката. Можете да коригирате количеството и мярката на всеки ред преди запис в Килера."
   },
   "wine_pairing": {
     "header_title": "The Best Idea Eatery",
@@ -2024,7 +2042,8 @@
     "toast_updated": "Записът в дневника е обновен!",
     "toast_deleted": "Записът е изтрит от дневника.",
     "chef_ai_prompt": "На база последните сготвени от мен рецепти в кулинарния ми дневник ({{recipes}}), предложи ми какво ново и интересно ястие да приготвя тази седмица!",
-    "share_in_community_btn": "Сподели в Общността"
+    "share_in_community_btn": "Сподели в Общността",
+    "pantry_deducted_badge": "Килерът е обновен автоматично (приспаднати {{count}} съставки)"
   },
   "gourmet_events": {
     "title": "Гурме събития & Мастъркласове",

@@ -235,7 +235,11 @@
     "exclusions_placeholder": "Buscar y seleccionar producto a excluir...",
     "exclusions_empty": "No hay productos excluidos",
     "diet_saved_success": "¡Perfil dietético guardado con éxito!",
-    "diet_saved_error": "Error al guardar el perfil."
+    "diet_saved_error": "Error al guardar el perfil.",
+    "scan_receipt_btn": "Escanear ticket",
+    "rescue_banner_title": "⏳ {{count}} productos próximos a caducar (en 3 días)",
+    "rescue_banner_desc": "Úsalos primero: {{names}}",
+    "rescue_banner_btn": "Salvar con receta"
   },
   "scanner": {
     "title": "Escáner de Alimentos",
@@ -358,6 +362,14 @@
     "remove_from_saved": "Quitar de guardados",
     "currency_eur": "EUR",
     "video_badge": "Vídeo",
+    "scan_receipt_btn": "Escanear ticket",
+    "select_all_btn": "Marcar todo",
+    "deselect_all_btn": "Desmarcar",
+    "move_to_pantry_hint": "Has marcado {{count}} productos comprados. ¡Muévelos directamente a tu Despensa!",
+    "move_to_pantry_btn": "Mover ({{count}}) a Despensa",
+    "moving_to_pantry": "Moviendo...",
+    "moved_to_pantry_success": "¡Se movieron {{count}} productos a tu Despensa con éxito!",
+    "open_pantry_btn": "Ver Despensa",
     "difficulty": {
       "easy": "Fácil",
       "medium": "Media",
@@ -1695,7 +1707,13 @@
     "retry_btn": "Intentar de nuevo",
     "api_key_modal_title": "Clave API de Google Gemini",
     "api_key_modal_desc": "Introduce tu clave API de Gemini de Google AI Studio para el escaneo automático de fotos.",
-    "api_key_saved_success": "¡Clave API guardada con éxito!"
+    "api_key_saved_success": "¡Clave API guardada con éxito!",
+    "receipt_mode_title": "Escáner de ticket de compra",
+    "mode_photo": "Productos / Plato",
+    "mode_receipt": "Ticket de compra",
+    "take_receipt_prompt": "Toma o sube una foto de tu ticket de compra",
+    "take_receipt_sub": "La IA extraerá los alimentos y sus cantidades para añadirlos directamente a tu Despensa",
+    "receipt_notice_desc": "La IA extrae solo los alimentos del ticket. Puedes ajustar la cantidad y unidad de cada fila antes de guardar en la Despensa."
   },
   "wine_pairing": {
     "header_title": "The Best Idea Eatery",
@@ -2024,7 +2042,8 @@
     "toast_updated": "¡Entrada del diario actualizada!",
     "toast_deleted": "Entrada eliminada de tu diario.",
     "chef_ai_prompt": "Basándote en los platos recientes de mi Diario Culinario ({{recipes}}), ¡sugiéreme una nueva y emocionante receta para cocinar esta semana!",
-    "share_in_community_btn": "Compartir en la Comunidad"
+    "share_in_community_btn": "Compartir en la Comunidad",
+    "pantry_deducted_badge": "Despensa actualizada automáticamente ({{count}} ingredientes descontados)"
   },
   "gourmet_events": {
     "title": "Eventos Gourmet y Masterclasses",

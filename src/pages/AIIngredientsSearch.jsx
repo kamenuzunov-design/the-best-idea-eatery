@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -12,6 +12,7 @@ const getFallbackId = (prefix = 'item') => `${prefix}_${Math.random().toString(3
 
 const AIIngredientsSearch = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.language || 'bg';
   const { pantry, shoppingList, setShoppingList } = useAppContext();
@@ -26,7 +27,10 @@ const AIIngredientsSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Active Quick Filter: 'all' | 'quick' | 'expiring' | 'light'
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState(() => {
+    const f = searchParams.get('filter');
+    return ['all', 'quick', 'expiring', 'light'].includes(f) ? f : 'all';
+  });
 
   // Shuffle / Batch rotation offsets
   const [offsets, setOffsets] = useState({

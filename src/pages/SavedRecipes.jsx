@@ -10,6 +10,7 @@ import { translateTag, getRecipeTags } from '../lib/recipeMetaUtils';
 import { calculateEstimatedPrice } from '../lib/priceUtils';
 import { getLocalizedField } from '../lib/localeUtils';
 import { getRecipeImageUrl } from '../lib/imageUtils';
+import { findBestIngredientMatch } from '../lib/ingredientMatcher';
 import { 
   normalizeUnitId, 
   convertQuantityToSystem, 
@@ -18,7 +19,7 @@ import {
 } from '../lib/unitConverter';
 
 const SavedRecipes = () => {
-  const { shoppingList, setShoppingList } = useAppContext();
+  const { shoppingList, setShoppingList, upsertPantryItem } = useAppContext();
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -32,6 +33,8 @@ const SavedRecipes = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempList, setTempList] = useState([]);
   const [checkedItems, setCheckedItems] = useState(new Set());
+  const [movingToPantry, setMovingToPantry] = useState(false);
+  const [pantrySuccessCount, setPantrySuccessCount] = useState(0);
   const [customName, setCustomName] = useState('');
   const [customQty, setCustomQty] = useState('1');
   const [customUnit, setCustomUnit] = useState('pcs');
@@ -352,57 +355,172 @@ const SavedRecipes = () => {
     setCustomUnit('pcs');
   };
 
+  const handleToggleAllChecked = () => {
+    if (checkedItems.size === shoppingList.length) {
+      setCheckedItems(new Set());
+    } else {
+      setCheckedItems(new Set(shoppingList.map((_, i) => i)));
+    }
+  };
+
+  const handleMoveCheckedToPantry = async () => {
+    if (checkedItems.size === 0 || movingToPantry) return;
+    setMovingToPantry(true);
+    try {
+      const indicesToMove = Array.from(checkedItems);
+      let moved = 0;
+
+      for (const idx of indicesToMove) {
+        const item = shoppingList[idx];
+        if (!item) continue;
+        let dbIng = ingredientsList.find(
+          i => i.id === item.ingredient_id || i.id === item.id || i.id === item.ingredientId
+        );
+        if (!dbIng && ingredientsList.length > 0) {
+          dbIng = findBestIngredientMatch(
+            {
+              name_bg: item.nameBg || item.name_bg || item.name,
+              name_en: item.nameEn || item.name_en || item.name
+            },
+            ingredientsList
+          );
+        }
+        await upsertPantryItem(
+          {
+            ...item,
+            quantity: item.quantityToBuy !== undefined ? item.quantityToBuy : (item.amount || 1),
+            unit: item.unit || item.unit_id || 'pcs'
+          },
+          dbIng
+        );
+        moved++;
+      }
+
+      const remainingList = shoppingList.filter((_, idx) => !checkedItems.has(idx));
+      await setShoppingList(remainingList);
+      setCheckedItems(new Set());
+      setPantrySuccessCount(moved);
+      setTimeout(() => setPantrySuccessCount(0), 6000);
+    } catch (err) {
+      console.error('Error moving checked items to pantry:', err);
+    } finally {
+      setMovingToPantry(false);
+    }
+  };
+
   return (
     <div className="flex-1 pb-32 px-4 py-8">
       <h2 className="text-3xl font-extrabold text-slate-100 mb-8 tracking-tight">{t('saved.title')}</h2>
       
       {/* Shopping List Section */}
       <div className="mb-10">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h3 className="text-xl font-bold text-primary flex items-center gap-2 drop-shadow-sm">
             <span className="material-symbols-outlined text-2xl">shopping_cart</span>
             {t('saved.shopping_list')}
           </h3>
-          {shoppingList.length > 0 && (
-            <div>
-              {!isEditing ? (
-                <div className="flex gap-2 flex-wrap justify-end">
+          <div className="flex gap-2 flex-wrap justify-end items-center">
+            <button
+              type="button"
+              onClick={() => navigate('/scanner?mode=receipt')}
+              className="text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/35 hover:bg-amber-500/25 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title={t('saved.scan_receipt_btn')}
+            >
+              <span className="material-symbols-outlined text-sm">receipt_long</span>
+              <span>{t('saved.scan_receipt_btn')}</span>
+            </button>
+
+            {shoppingList.length > 0 && (
+              !isEditing ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleToggleAllChecked}
+                    className="text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      {checkedItems.size === shoppingList.length ? 'deselect' : 'done_all'}
+                    </span>
+                    {checkedItems.size === shoppingList.length ? t('saved.deselect_all_btn') : t('saved.select_all_btn')}
+                  </button>
                   <button 
                     onClick={handleClearShoppingList}
-                    className="text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
+                    className="text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm">delete_sweep</span>
                     {t('saved.clear_btn')}
                   </button>
                   <button 
                     onClick={handleStartEdit}
-                    className="text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
+                    className="text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm">edit</span>
                     {t('saved.edit_btn')}
                   </button>
-                </div>
+                </>
               ) : (
                 <div className="flex gap-2">
                   <button 
                     onClick={handleSaveEdit}
-                    className="text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
+                    className="text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm">save</span>
                     {t('saved.save_btn')}
                   </button>
                   <button 
                     onClick={handleCancelEdit}
-                    className="text-xs font-bold uppercase tracking-wider bg-slate-700/50 text-slate-300 border border-white/10 hover:bg-slate-700 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm"
+                    className="text-xs font-bold uppercase tracking-wider bg-slate-700/50 text-slate-300 border border-white/10 hover:bg-slate-700 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm">cancel</span>
                     {t('saved.cancel_btn')}
                   </button>
                 </div>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
         </div>
+
+        {/* 1-Click Move Checked Items to Pantry Action Banner */}
+        {!isEditing && checkedItems.size > 0 && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-primary/15 border border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5 text-xs text-slate-200 font-semibold">
+              <span className="material-symbols-outlined text-emerald-400 text-xl shrink-0">inventory_2</span>
+              <span>{t('saved.move_to_pantry_hint', { count: checkedItems.size })}</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleMoveCheckedToPantry}
+              disabled={movingToPantry}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+            >
+              <span className="material-symbols-outlined text-base font-black">
+                {movingToPantry ? 'sync' : 'kitchen'}
+              </span>
+              <span>
+                {movingToPantry
+                  ? t('saved.moving_to_pantry')
+                  : t('saved.move_to_pantry_btn', { count: checkedItems.size })}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* Success Toast after moving items to Pantry */}
+        {pantrySuccessCount > 0 && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-between gap-3 text-emerald-300 shadow-md animate-in fade-in duration-200">
+            <div className="flex items-center gap-2 text-xs font-bold">
+              <span className="material-symbols-outlined text-emerald-400 text-lg">check_circle</span>
+              <span>{t('saved.moved_to_pantry_success', { count: pantrySuccessCount })}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/pantry')}
+              className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-[11px] font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer"
+            >
+              {t('saved.open_pantry_btn')}
+            </button>
+          </div>
+        )}
         
         {shoppingList.length === 0 ? (
           <div className="space-y-4">

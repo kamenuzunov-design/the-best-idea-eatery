@@ -235,7 +235,11 @@
     "exclusions_placeholder": "Cerca e seleziona un ingrediente da escludere...",
     "exclusions_empty": "Nessun prodotto escluso",
     "diet_saved_success": "Profilo dietetico salvato con successo!",
-    "diet_saved_error": "Si è verificato un errore durante il salvataggio."
+    "diet_saved_error": "Si è verificato un errore durante il salvataggio.",
+    "scan_receipt_btn": "Scansiona scontrino",
+    "rescue_banner_title": "{{count}} prodotti in scadenza a breve!",
+    "rescue_banner_desc": "Scadono a breve: {{items}}. Usali oggi stesso!",
+    "rescue_banner_btn": "Salva con una ricetta"
   },
   "scanner": {
     "title": "Scanner Alimenti",
@@ -358,6 +362,14 @@
     "remove_from_saved": "Rimuovi dai salvati",
     "currency_eur": "EUR",
     "video_badge": "Video",
+    "scan_receipt_btn": "Scansiona scontrino",
+    "select_all_btn": "Seleziona tutto",
+    "deselect_all_btn": "Deseleziona",
+    "move_to_pantry_hint": "Sposta i prodotti acquistati nella Dispensa:",
+    "move_to_pantry_btn": "Sposta nella Dispensa",
+    "moving_to_pantry": "Trasferimento in corso...",
+    "moved_to_pantry_success": "{{count}} prodotti spostati nella Dispensa!",
+    "open_pantry_btn": "Apri la Dispensa",
     "difficulty": {
       "easy": "Facile",
       "medium": "Medio",
@@ -1695,7 +1707,13 @@
     "retry_btn": "Riprova",
     "api_key_modal_title": "Chiave API Google Gemini",
     "api_key_modal_desc": "Inserisci la tua chiave API Gemini per la scansione automatica delle foto.",
-    "api_key_saved_success": "Chiave API salvata con successo!"
+    "api_key_saved_success": "Chiave API salvata con successo!",
+    "receipt_mode_title": "Scanner Scontrini",
+    "mode_photo": "Ingredienti / Piatto",
+    "mode_receipt": "Scontrino",
+    "take_receipt_prompt": "Scatta o carica una foto dello scontrino del supermercato",
+    "take_receipt_sub": "L'IA riconoscerà i prodotti alimentari, le quantità e le unità per la tua Dispensa",
+    "receipt_notice_desc": "Controlla o modifica le quantità e le unità prima di salvarle nella Dispensa."
   },
   "wine_pairing": {
     "header_title": "The Best Idea Eatery",
@@ -2024,7 +2042,8 @@
     "toast_updated": "Voce del diario aggiornata!",
     "toast_deleted": "Voce rimossa dal diario.",
     "chef_ai_prompt": "In base agli ultimi piatti nel mio Diario Culinario ({{recipes}}), consigliami una nuova ricetta interessante da cucinare questa settimana!",
-    "share_in_community_btn": "Condividi nella Community"
+    "share_in_community_btn": "Condividi nella Community",
+    "pantry_deducted_badge": "{{count}} prodotti scalati dalla Dispensa"
   },
   "gourmet_events": {
     "title": "Eventi Gourmet & Masterclass",

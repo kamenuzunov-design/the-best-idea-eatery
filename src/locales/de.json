@@ -235,7 +235,11 @@
     "exclusions_placeholder": "Suchen und wählen Sie eine Zutat zum Ausschließen...",
     "exclusions_empty": "Keine ausgeschlossenen Produkte",
     "diet_saved_success": "Ernährungsprofil erfolgreich gespeichert!",
-    "diet_saved_error": "Beim Speichern ist ein Fehler aufgetreten."
+    "diet_saved_error": "Beim Speichern ist ein Fehler aufgetreten.",
+    "scan_receipt_btn": "Kassenbon scannen",
+    "rescue_banner_title": "{{count}} Produkte laufen bald ab!",
+    "rescue_banner_desc": "Ablaufend: {{items}}. Verwenden Sie sie noch heute!",
+    "rescue_banner_btn": "Mit Rezept retten"
   },
   "scanner": {
     "title": "Lebensmittel-Scanner",
@@ -358,6 +362,14 @@
     "remove_from_saved": "Aus Gespeicherten entfernen",
     "currency_eur": "EUR",
     "video_badge": "Video",
+    "scan_receipt_btn": "Kassenbon scannen",
+    "select_all_btn": "Alle auswählen",
+    "deselect_all_btn": "Auswahl aufheben",
+    "move_to_pantry_hint": "Gekaufte Produkte in die Vorratskammer verschieben:",
+    "move_to_pantry_btn": "In die Vorratskammer",
+    "moving_to_pantry": "Wird verschoben...",
+    "moved_to_pantry_success": "{{count}} Produkte in die Vorratskammer verschoben!",
+    "open_pantry_btn": "Vorratskammer öffnen",
     "difficulty": {
       "easy": "Einfach",
       "medium": "Mittel",
@@ -1695,7 +1707,13 @@
     "retry_btn": "Erneut versuchen",
     "api_key_modal_title": "Google Gemini-API-Schlüssel",
     "api_key_modal_desc": "Geben Sie Ihren Gemini-API-Schlüssel für das automatische Fotoscannen ein.",
-    "api_key_saved_success": "API-Schlüssel erfolgreich gespeichert!"
+    "api_key_saved_success": "API-Schlüssel erfolgreich gespeichert!",
+    "receipt_mode_title": "Kassenbon-Scanner",
+    "mode_photo": "Zutaten / Gericht",
+    "mode_receipt": "Kassenbon",
+    "take_receipt_prompt": "Foto eines Supermarkt-Kassenbons aufnehmen oder hochladen",
+    "take_receipt_sub": "Die KI erkennt Lebensmittel, Mengen und Einheiten für Ihre Vorratskammer",
+    "receipt_notice_desc": "Überprüfen oder bearbeiten Sie Mengen und Einheiten vor dem Speichern in der Vorratskammer."
   },
   "wine_pairing": {
     "header_title": "The Best Idea Eatery",
@@ -2024,7 +2042,8 @@
     "toast_updated": "Tagebucheintrag aktualisiert!",
     "toast_deleted": "Eintrag aus dem Tagebuch gelöscht.",
     "chef_ai_prompt": "Basierend auf den letzten Gerichten in meinem Kochtagebuch ({{recipes}}), schlage mir ein spannendes neues Rezept für diese Woche vor!",
-    "share_in_community_btn": "In der Community teilen"
+    "share_in_community_btn": "In der Community teilen",
+    "pantry_deducted_badge": "{{count}} Produkte aus der Vorratskammer abgezogen"
   },
   "gourmet_events": {
     "title": "Gourmet-Events & Meisterkurse",

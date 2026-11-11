@@ -235,7 +235,11 @@
     "exclusions_placeholder": "Search and select product to exclude...",
     "exclusions_empty": "No excluded products",
     "diet_saved_success": "Dietary profile saved successfully!",
-    "diet_saved_error": "Error saving profile."
+    "diet_saved_error": "Error saving profile.",
+    "scan_receipt_btn": "Scan Receipt",
+    "rescue_banner_title": "⏳ {{count}} items expiring soon (within 3 days)",
+    "rescue_banner_desc": "Use first: {{names}}",
+    "rescue_banner_btn": "Rescue with Recipe"
   },
   "scanner": {
     "title": "Food Scanner",
@@ -358,6 +362,14 @@
     "remove_from_saved": "Remove from saved",
     "currency_eur": "EUR",
     "video_badge": "Video",
+    "scan_receipt_btn": "Scan Receipt",
+    "select_all_btn": "Select All",
+    "deselect_all_btn": "Deselect",
+    "move_to_pantry_hint": "You checked {{count}} purchased items. Move them directly to your Pantry!",
+    "move_to_pantry_btn": "Move ({{count}}) to Pantry",
+    "moving_to_pantry": "Moving...",
+    "moved_to_pantry_success": "Successfully moved {{count}} items to your Pantry!",
+    "open_pantry_btn": "Open Pantry",
     "difficulty": {
       "easy": "Easy",
       "medium": "Medium",
@@ -1695,7 +1707,13 @@
     "retry_btn": "Try Again",
     "api_key_modal_title": "Google Gemini API Key",
     "api_key_modal_desc": "Enter your Gemini API key from Google AI Studio for automated photo scanning.",
-    "api_key_saved_success": "API key saved successfully!"
+    "api_key_saved_success": "API key saved successfully!",
+    "receipt_mode_title": "Receipt Scanner",
+    "mode_photo": "Products / Dish",
+    "mode_receipt": "Shopping Receipt",
+    "take_receipt_prompt": "Take or upload a photo of a shopping receipt",
+    "take_receipt_sub": "AI will extract food items and quantities to add directly to your Pantry",
+    "receipt_notice_desc": "AI extracts only food items from the receipt. You can adjust the quantity and unit on each row before saving to your Pantry."
   },
   "wine_pairing": {
     "header_title": "The Best Idea Eatery",
@@ -2024,7 +2042,8 @@
     "toast_updated": "Journal entry updated!",
     "toast_deleted": "Entry removed from your journal.",
     "chef_ai_prompt": "Based on the recent dishes in my Culinary Journal ({{recipes}}), suggest an exciting new recipe I should cook this week!",
-    "share_in_community_btn": "Share in Community"
+    "share_in_community_btn": "Share in Community",
+    "pantry_deducted_badge": "Pantry updated automatically (deducted {{count}} ingredients)"
   },
   "gourmet_events": {
     "title": "Gourmet Events & Masterclasses",

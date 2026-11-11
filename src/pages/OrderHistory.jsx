@@ -16,6 +16,7 @@ const OrderHistory = () => {
   const currentLang = i18n.language || 'bg';
 
   const justCookedId = searchParams.get('justCooked');
+  const pantryDeductedCount = Number(searchParams.get('pantryDeducted') || 0);
 
   const [history, setHistory] = useState(() => {
     try {
@@ -474,6 +475,12 @@ const OrderHistory = () => {
                   <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
                     {t('cooking_journal.just_cooked_desc')}
                   </p>
+                  {pantryDeductedCount > 0 && (
+                    <p className="text-[11px] font-bold text-amber-400 mt-1.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">inventory_2</span>
+                      <span>{t('cooking_journal.pantry_deducted_badge', { count: pantryDeductedCount })}</span>
+                    </p>
+                  )}
                 </div>
               </div>
               <button

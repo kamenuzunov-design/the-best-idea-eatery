@@ -235,7 +235,11 @@
     "exclusions_placeholder": "Recherchez et sélectionnez un ingrédient à exclure...",
     "exclusions_empty": "Aucun produit exclu",
     "diet_saved_success": "Profil diététique enregistré avec succès !",
-    "diet_saved_error": "Une erreur est survenue lors de l'enregistrement."
+    "diet_saved_error": "Une erreur est survenue lors de l'enregistrement.",
+    "scan_receipt_btn": "Ticket de caisse",
+    "rescue_banner_title": "{{count}} produits expirent bientôt !",
+    "rescue_banner_desc": "Expirent prochainement : {{items}}. Utilisez-les dès aujourd'hui !",
+    "rescue_banner_btn": "Sauver avec une recette"
   },
   "scanner": {
     "title": "Scanner d'aliments",
@@ -358,6 +362,14 @@
     "remove_from_saved": "Retirer des favoris",
     "currency_eur": "EUR",
     "video_badge": "Vidéo",
+    "scan_receipt_btn": "Ticket de caisse",
+    "select_all_btn": "Tout sélectionner",
+    "deselect_all_btn": "Désélectionner",
+    "move_to_pantry_hint": "Déplacez les produits achetés vers le Garde-manger :",
+    "move_to_pantry_btn": "Vers le Garde-manger",
+    "moving_to_pantry": "Transfert en cours...",
+    "moved_to_pantry_success": "{{count}} produits transférés au Garde-manger !",
+    "open_pantry_btn": "Ouvrir le Garde-manger",
     "difficulty": {
       "easy": "Facile",
       "medium": "Moyen",
@@ -1695,7 +1707,13 @@
     "retry_btn": "Réessayer",
     "api_key_modal_title": "Clé API Google Gemini",
     "api_key_modal_desc": "Entrez votre clé API Gemini pour la numérisation automatique des photos.",
-    "api_key_saved_success": "Clé API enregistrée avec succès !"
+    "api_key_saved_success": "Clé API enregistrée avec succès !",
+    "receipt_mode_title": "Scanner de Tickets",
+    "mode_photo": "Ingrédients / Plat",
+    "mode_receipt": "Ticket de caisse",
+    "take_receipt_prompt": "Prenez ou téléchargez une photo du ticket de caisse",
+    "take_receipt_sub": "L'IA reconnaîtra les produits alimentaires, quantités et unités pour votre Garde-manger",
+    "receipt_notice_desc": "Vérifiez ou modifiez les quantités et unités avant d'enregistrer au Garde-manger."
   },
   "wine_pairing": {
     "header_title": "The Best Idea Eatery",
@@ -2024,7 +2042,8 @@
     "toast_updated": "Entrée du journal mise à jour !",
     "toast_deleted": "Entrée supprimée du journal.",
     "chef_ai_prompt": "D'après les derniers plats de mon Journal Culinaire ({{recipes}}), propose-moi une nouvelle recette originale à cuisiner cette semaine !",
-    "share_in_community_btn": "Partager dans la Communauté"
+    "share_in_community_btn": "Partager dans la Communauté",
+    "pantry_deducted_badge": "{{count}} produits déduits du Garde-manger"
   },
   "gourmet_events": {
     "title": "Événements & Masterclass",

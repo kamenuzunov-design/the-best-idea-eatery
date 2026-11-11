@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import { getRecipeImageUrl } from '../lib/imageUtils';
 import { getLocalizedField } from '../lib/localeUtils';
 
@@ -100,6 +101,7 @@ const CookingMode = () => {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const { deductRecipeFromPantry } = useAppContext();
   const currentLang = i18n.language || 'bg';
 
   const [recipe, setRecipe] = useState(null);
@@ -604,7 +606,18 @@ const CookingMode = () => {
       }
     }
 
-    navigate(`/orders?justCooked=${encodeURIComponent(entryId)}`);
+    let deductedCount = 0;
+    if (deductRecipeFromPantry && Array.isArray(recipe?.ingredients) && recipe.ingredients.length > 0) {
+      try {
+        const res = await deductRecipeFromPantry(recipe.ingredients, 1);
+        deductedCount = res?.deductedCount || 0;
+      } catch (pErr) {
+        console.warn('Could not deduct used ingredients from Pantry:', pErr);
+      }
+    }
+
+    const querySuffix = deductedCount > 0 ? `&pantryDeducted=${deductedCount}` : '';
+    navigate(`/orders?justCooked=${encodeURIComponent(entryId)}${querySuffix}`);
   };
 
   if (loading) {
