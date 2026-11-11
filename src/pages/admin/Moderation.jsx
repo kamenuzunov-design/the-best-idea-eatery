@@ -285,7 +285,7 @@ const Moderation = () => {
         }
 
         const updatedIngredients = rawIngs.map((ing, idx) => {
-          const noteMap = aiRes.notes[idx] || { bg: '', en: '', it: '', fr: '', de: '' };
+          const noteMap = aiRes.notes[idx] || { bg: '', en: '', es: '', it: '', fr: '', de: '' };
           return {
             ...ing,
             notes: noteMap,
@@ -295,7 +295,7 @@ const Moderation = () => {
         });
 
         const updatedSteps = rawSteps.map((st, idx) => {
-          const stepMap = aiRes.steps[idx] || { bg: '', en: '', it: '', fr: '', de: '' };
+          const stepMap = aiRes.steps[idx] || { bg: '', en: '', es: '', it: '', fr: '', de: '' };
           return {
             ...st,
             instruction: stepMap,
@@ -323,11 +323,11 @@ const Moderation = () => {
           user.uid,
           user.email,
           'ai_translate_recipe',
-          `Auto-translated recipe into 5 languages: ${aiRes.title.en || sourceTitle}`
+          `Auto-translated recipe into 6 languages: ${aiRes.title.en || sourceTitle}`
         );
         return { ...item, ...updatedPayload };
       } else {
-        // Ingredient translation into 5 languages
+        // Ingredient translation into 6 languages
         const cleanStr = (val) => (typeof val === 'string' && !val.includes('[за превод]') && !val.includes('[needs translation]') ? val.trim() : '');
         const bgName = cleanStr(item.name?.bg || item.name_bg);
         const enName = cleanStr(item.name?.en || item.name_en);
@@ -340,7 +340,7 @@ const Moderation = () => {
           sourceLang
         });
 
-        const langsPresent = ['bg', 'en', 'it', 'fr', 'de'].every(l => postTrans[l]?.title);
+        const langsPresent = ['bg', 'en', 'es', 'it', 'fr', 'de'].every(l => postTrans[l]?.title);
         if (!langsPresent) {
           if (!silent) {
             alert(t('moderation.ai_translate_failed', 'Преводът с Chef AI не успя (проверете интернет връзката или Gemini API ключа).'));
@@ -351,6 +351,7 @@ const Moderation = () => {
         const nameObj = {
           bg: postTrans.bg.title,
           en: postTrans.en.title,
+          es: postTrans.es.title,
           it: postTrans.it.title,
           fr: postTrans.fr.title,
           de: postTrans.de.title
@@ -360,6 +361,10 @@ const Moderation = () => {
           name: nameObj,
           name_bg: nameObj.bg,
           name_en: nameObj.en,
+          name_es: nameObj.es,
+          name_it: nameObj.it,
+          name_fr: nameObj.fr,
+          name_de: nameObj.de,
           needs_translation: false,
           translation_reason: null,
           updatedAt: new Date().toISOString()
@@ -370,7 +375,7 @@ const Moderation = () => {
           user.uid,
           user.email,
           'ai_translate_ingredient',
-          `Auto-translated ingredient into 5 languages: ${nameObj.en || sourceName}`
+          `Auto-translated ingredient into 6 languages: ${nameObj.en || sourceName}`
         );
         return { ...item, ...updatedPayload };
       }

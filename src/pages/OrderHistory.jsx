@@ -332,6 +332,7 @@ const OrderHistory = () => {
           title: {
             bg: getLocalizedField(selectedRecipe, 'title', 'bg') || selectedRecipe.title_bg || selectedRecipe.title_en || '',
             en: getLocalizedField(selectedRecipe, 'title', 'en') || selectedRecipe.title_en || selectedRecipe.title_bg || '',
+            es: getLocalizedField(selectedRecipe, 'title', 'es') || selectedRecipe.title_es || selectedRecipe.title_en || '',
             it: getLocalizedField(selectedRecipe, 'title', 'it') || selectedRecipe.title_it || selectedRecipe.title_en || '',
             fr: getLocalizedField(selectedRecipe, 'title', 'fr') || selectedRecipe.title_fr || selectedRecipe.title_en || '',
             de: getLocalizedField(selectedRecipe, 'title', 'de') || selectedRecipe.title_de || selectedRecipe.title_en || ''

@@ -7,12 +7,12 @@ import {
 } from 'firebase/firestore';
 
 /**
- * System prompt ensuring high-quality gourmet culinary translations for 5 languages
+ * System prompt ensuring high-quality gourmet culinary translations for 6 languages
  */
-export const CULINARY_TRANSLATION_SYSTEM_INSTRUCTION = `You are an executive master chef and certified culinary translator specializing in authentic Bulgarian, English, Italian, French, and German gastronomy.
+export const CULINARY_TRANSLATION_SYSTEM_INSTRUCTION = `You are an executive master chef and certified culinary translator specializing in authentic Bulgarian, English, Spanish, Italian, French, and German gastronomy.
 Translate culinary terms, ingredient names, measurement units, recipe titles, descriptions, culinary notes, and cooking steps accurately and appetizingly.
 Requirements:
-1. Always output authentic, culturally appropriate culinary terminology in Italian ('it'), French ('fr'), and German ('de').
+1. Always output authentic, culturally appropriate culinary terminology in Spanish ('es'), Italian ('it'), French ('fr'), and German ('de').
 2. For Bulgarian ('bg') and English ('en'), preserve the original authentic wording if already provided, or provide accurate culinary terms if missing.
 3. Keep cooking times, numbers, and measurement units consistent.
 4. Output MUST BE valid, parseable JSON conforming strictly to the requested schema. No conversational filler or markdown markers.`;
@@ -317,7 +317,7 @@ const isMissingOrPlaceholder = (val) => {
 };
 
 /**
- * Helper to check if entity needs translation for target languages ('it', 'fr', 'de')
+ * Helper to check if entity needs translation for target languages ('es', 'it', 'fr', 'de')
  */
 export function entityNeedsTranslation(item, type) {
   if (!item) return false;
@@ -325,40 +325,45 @@ export function entityNeedsTranslation(item, type) {
 
   if (type === 'ingredient_groups' || type === 'ingredients') {
     const nameMap = typeof item.name === 'object' && item.name !== null ? item.name : {};
+    const hasEs = !isMissingOrPlaceholder(nameMap.es || item.name_es);
     const hasIt = !isMissingOrPlaceholder(nameMap.it || item.name_it);
     const hasFr = !isMissingOrPlaceholder(nameMap.fr || item.name_fr);
     const hasDe = !isMissingOrPlaceholder(nameMap.de || item.name_de);
-    return !hasIt || !hasFr || !hasDe;
+    return !hasEs || !hasIt || !hasFr || !hasDe;
   }
 
   if (type === 'measurements') {
+    const hasEs = !isMissingOrPlaceholder(item.name_es) && !isMissingOrPlaceholder(item.short_es);
     const hasIt = !isMissingOrPlaceholder(item.name_it) && !isMissingOrPlaceholder(item.short_it);
     const hasFr = !isMissingOrPlaceholder(item.name_fr) && !isMissingOrPlaceholder(item.short_fr);
     const hasDe = !isMissingOrPlaceholder(item.name_de) && !isMissingOrPlaceholder(item.short_de);
-    return !hasIt || !hasFr || !hasDe;
+    return !hasEs || !hasIt || !hasFr || !hasDe;
   }
 
   if (type === 'recipes') {
     const titleMap = typeof item.title === 'object' && item.title !== null ? item.title : {};
     const descMap = typeof item.description === 'object' && item.description !== null ? item.description : {};
     
+    const hasTitleEs = !isMissingOrPlaceholder(titleMap.es || item.title_es);
     const hasTitleIt = !isMissingOrPlaceholder(titleMap.it || item.title_it);
     const hasTitleFr = !isMissingOrPlaceholder(titleMap.fr || item.title_fr);
     const hasTitleDe = !isMissingOrPlaceholder(titleMap.de || item.title_de);
 
-    if (!hasTitleIt || !hasTitleFr || !hasTitleDe) return true;
+    if (!hasTitleEs || !hasTitleIt || !hasTitleFr || !hasTitleDe) return true;
 
     // Check description
+    const hasDescEs = !isMissingOrPlaceholder(descMap.es || item.description_es);
     const hasDescIt = !isMissingOrPlaceholder(descMap.it || item.description_it);
     const hasDescFr = !isMissingOrPlaceholder(descMap.fr || item.description_fr);
     const hasDescDe = !isMissingOrPlaceholder(descMap.de || item.description_de);
-    if (!hasDescIt || !hasDescFr || !hasDescDe) return true;
+    if (!hasDescEs || !hasDescIt || !hasDescFr || !hasDescDe) return true;
 
     // Check steps
     if (Array.isArray(item.steps) && item.steps.length > 0) {
       const stepNeeds = item.steps.some(st => {
         const instMap = typeof st.instruction === 'object' && st.instruction !== null ? st.instruction : {};
-        return isMissingOrPlaceholder(instMap.it || st.instruction_it) ||
+        return isMissingOrPlaceholder(instMap.es || st.instruction_es) ||
+               isMissingOrPlaceholder(instMap.it || st.instruction_it) ||
                isMissingOrPlaceholder(instMap.fr || st.instruction_fr) ||
                isMissingOrPlaceholder(instMap.de || st.instruction_de);
       });
@@ -482,7 +487,7 @@ export async function runBatchTranslation({
         source_bg: g.name?.bg || g.name_bg || g.name?.en || g.name_en || g.id
       }));
 
-      const prompt = `Translate these culinary ingredient groups into authentic Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
+      const prompt = `Translate these culinary ingredient groups into authentic Spanish ('es'), Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
 Input: ${JSON.stringify(promptInput)}
 
 Expected JSON schema:
@@ -492,6 +497,7 @@ Expected JSON schema:
     "name": {
       "en": "...",
       "bg": "...",
+      "es": "...",
       "it": "...",
       "fr": "...",
       "de": "..."
@@ -510,15 +516,17 @@ Expected JSON schema:
           const updatedName = {
             en: res.name?.en || original.name?.en || original.name_en || '',
             bg: res.name?.bg || original.name?.bg || original.name_bg || '',
-            it: res.name?.it || '',
-            fr: res.name?.fr || '',
-            de: res.name?.de || ''
+            es: res.name?.es || original.name?.es || original.name_es || '',
+            it: res.name?.it || original.name?.it || original.name_it || '',
+            fr: res.name?.fr || original.name?.fr || original.name_fr || '',
+            de: res.name?.de || original.name?.de || original.name_de || ''
           };
 
           const updateData = {
             name: updatedName,
             name_en: updatedName.en,
             name_bg: updatedName.bg,
+            name_es: updatedName.es,
             name_it: updatedName.it,
             name_fr: updatedName.fr,
             name_de: updatedName.de,
@@ -576,7 +584,7 @@ Expected JSON schema:
         short_bg: m.short_bg || m.short_en || ''
       }));
 
-      const prompt = `Translate culinary measurement units (full name and abbreviated symbol) into Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
+      const prompt = `Translate culinary measurement units (full name and abbreviated symbol) into Spanish ('es'), Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
 Input: ${JSON.stringify(promptInput)}
 
 Expected JSON schema:
@@ -585,11 +593,13 @@ Expected JSON schema:
     "id": "unit_id",
     "name_en": "...",
     "name_bg": "...",
+    "name_es": "...",
     "name_it": "...",
     "name_fr": "...",
     "name_de": "...",
     "short_en": "...",
     "short_bg": "...",
+    "short_es": "...",
     "short_it": "...",
     "short_fr": "...",
     "short_de": "..."
@@ -607,14 +617,16 @@ Expected JSON schema:
           const updateData = {
             name_en: res.name_en || original.name_en || '',
             name_bg: res.name_bg || original.name_bg || '',
-            name_it: res.name_it || '',
-            name_fr: res.name_fr || '',
-            name_de: res.name_de || '',
+            name_es: res.name_es || original.name_es || '',
+            name_it: res.name_it || original.name_it || '',
+            name_fr: res.name_fr || original.name_fr || '',
+            name_de: res.name_de || original.name_de || '',
             short_en: res.short_en || original.short_en || '',
             short_bg: res.short_bg || original.short_bg || '',
-            short_it: res.short_it || '',
-            short_fr: res.short_fr || '',
-            short_de: res.short_de || '',
+            short_es: res.short_es || original.short_es || '',
+            short_it: res.short_it || original.short_it || '',
+            short_fr: res.short_fr || original.short_fr || '',
+            short_de: res.short_de || original.short_de || '',
             updatedAt: new Date().toISOString()
           };
 
@@ -624,6 +636,7 @@ Expected JSON schema:
             id: res.id,
             source: `${original.name_en} (${original.short_en})`,
             translations: {
+              es: `${res.name_es} (${res.short_es})`,
               it: `${res.name_it} (${res.short_it})`,
               fr: `${res.name_fr} (${res.short_fr})`,
               de: `${res.name_de} (${res.short_de})`
@@ -671,7 +684,7 @@ Expected JSON schema:
         name_bg: ing.name?.bg || ing.name_bg || ing.name?.en || ing.name_en || ing.slug || ing.id
       }));
 
-      const prompt = `Translate these culinary master ingredients into authentic culinary Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
+      const prompt = `Translate these culinary master ingredients into authentic culinary Spanish ('es'), Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
 Input: ${JSON.stringify(promptInput)}
 
 Expected JSON schema:
@@ -681,6 +694,7 @@ Expected JSON schema:
     "name": {
       "en": "...",
       "bg": "...",
+      "es": "...",
       "it": "...",
       "fr": "...",
       "de": "..."
@@ -699,15 +713,17 @@ Expected JSON schema:
           const updatedName = {
             en: res.name?.en || original.name?.en || original.name_en || '',
             bg: res.name?.bg || original.name?.bg || original.name_bg || '',
-            it: res.name?.it || '',
-            fr: res.name?.fr || '',
-            de: res.name?.de || ''
+            es: res.name?.es || original.name?.es || original.name_es || '',
+            it: res.name?.it || original.name?.it || original.name_it || '',
+            fr: res.name?.fr || original.name?.fr || original.name_fr || '',
+            de: res.name?.de || original.name?.de || original.name_de || ''
           };
 
           const updateData = {
             name: updatedName,
             name_en: updatedName.en,
             name_bg: updatedName.bg,
+            name_es: updatedName.es,
             name_it: updatedName.it,
             name_fr: updatedName.fr,
             name_de: updatedName.de,
@@ -779,26 +795,26 @@ Expected JSON schema:
         })).filter(i => Boolean(i.notes_en || i.notes_bg))
       }));
 
-      const prompt = `Translate recipe details into authentic culinary Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
+      const prompt = `Translate recipe details into authentic culinary Spanish ('es'), Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
 Input: ${JSON.stringify(promptInput)}
 
 Expected JSON schema:
 [
   {
     "id": "recipe_id",
-    "title": { "en": "...", "bg": "...", "it": "...", "fr": "...", "de": "..." },
-    "description": { "en": "...", "bg": "...", "it": "...", "fr": "...", "de": "..." },
+    "title": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." },
+    "description": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." },
     "steps": [
       {
         "step": 1,
-        "phase": { "en": "...", "bg": "...", "it": "...", "fr": "...", "de": "..." },
-        "instruction": { "en": "...", "bg": "...", "it": "...", "fr": "...", "de": "..." }
+        "phase": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." },
+        "instruction": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." }
       }
     ],
     "ingredients": [
       {
         "ingredient_id": "...",
-        "notes": { "en": "...", "bg": "...", "it": "...", "fr": "...", "de": "..." }
+        "notes": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." }
       }
     ]
   }
@@ -815,17 +831,19 @@ Expected JSON schema:
           const updatedTitle = {
             en: res.title?.en || original.title?.en || original.title_en || '',
             bg: res.title?.bg || original.title?.bg || original.title_bg || '',
-            it: res.title?.it || '',
-            fr: res.title?.fr || '',
-            de: res.title?.de || ''
+            es: res.title?.es || original.title?.es || original.title_es || '',
+            it: res.title?.it || original.title?.it || original.title_it || '',
+            fr: res.title?.fr || original.title?.fr || original.title_fr || '',
+            de: res.title?.de || original.title?.de || original.title_de || ''
           };
 
           const updatedDesc = {
             en: res.description?.en || original.description?.en || original.description_en || '',
             bg: res.description?.bg || original.description?.bg || original.description_bg || '',
-            it: res.description?.it || '',
-            fr: res.description?.fr || '',
-            de: res.description?.de || ''
+            es: res.description?.es || original.description?.es || original.description_es || '',
+            it: res.description?.it || original.description?.it || original.description_it || '',
+            fr: res.description?.fr || original.description?.fr || original.description_fr || '',
+            de: res.description?.de || original.description?.de || original.description_de || ''
           };
 
           // Merge steps
@@ -837,17 +855,19 @@ Expected JSON schema:
             const phObj = {
               en: trStep.phase?.en || origStep.phase?.en || origStep.phase_en || '',
               bg: trStep.phase?.bg || origStep.phase?.bg || origStep.phase_bg || '',
-              it: trStep.phase?.it || '',
-              fr: trStep.phase?.fr || '',
-              de: trStep.phase?.de || ''
+              es: trStep.phase?.es || origStep.phase?.es || origStep.phase_es || '',
+              it: trStep.phase?.it || origStep.phase?.it || origStep.phase_it || '',
+              fr: trStep.phase?.fr || origStep.phase?.fr || origStep.phase_fr || '',
+              de: trStep.phase?.de || origStep.phase?.de || origStep.phase_de || ''
             };
 
             const instObj = {
               en: trStep.instruction?.en || origStep.instruction?.en || origStep.instruction_en || '',
               bg: trStep.instruction?.bg || origStep.instruction?.bg || origStep.instruction_bg || '',
-              it: trStep.instruction?.it || '',
-              fr: trStep.instruction?.fr || '',
-              de: trStep.instruction?.de || ''
+              es: trStep.instruction?.es || origStep.instruction?.es || origStep.instruction_es || '',
+              it: trStep.instruction?.it || origStep.instruction?.it || origStep.instruction_it || '',
+              fr: trStep.instruction?.fr || origStep.instruction?.fr || origStep.instruction_fr || '',
+              de: trStep.instruction?.de || origStep.instruction?.de || origStep.instruction_de || ''
             };
 
             return {
@@ -855,12 +875,14 @@ Expected JSON schema:
               phase: phObj,
               phase_en: phObj.en,
               phase_bg: phObj.bg,
+              phase_es: phObj.es,
               phase_it: phObj.it,
               phase_fr: phObj.fr,
               phase_de: phObj.de,
               instruction: instObj,
               instruction_en: instObj.en,
               instruction_bg: instObj.bg,
+              instruction_es: instObj.es,
               instruction_it: instObj.it,
               instruction_fr: instObj.fr,
               instruction_de: instObj.de
@@ -876,9 +898,10 @@ Expected JSON schema:
             const notesObj = {
               en: trIng.notes?.en || origIng.notes?.en || origIng.notes_en || '',
               bg: trIng.notes?.bg || origIng.notes?.bg || origIng.notes_bg || '',
-              it: trIng.notes?.it || '',
-              fr: trIng.notes?.fr || '',
-              de: trIng.notes?.de || ''
+              es: trIng.notes?.es || origIng.notes?.es || origIng.notes_es || '',
+              it: trIng.notes?.it || origIng.notes?.it || origIng.notes_it || '',
+              fr: trIng.notes?.fr || origIng.notes?.fr || origIng.notes_fr || '',
+              de: trIng.notes?.de || origIng.notes?.de || origIng.notes_de || ''
             };
 
             return {
@@ -886,6 +909,7 @@ Expected JSON schema:
               notes: notesObj,
               notes_en: notesObj.en,
               notes_bg: notesObj.bg,
+              notes_es: notesObj.es,
               notes_it: notesObj.it,
               notes_fr: notesObj.fr,
               notes_de: notesObj.de
@@ -896,12 +920,14 @@ Expected JSON schema:
             title: updatedTitle,
             title_en: updatedTitle.en,
             title_bg: updatedTitle.bg,
+            title_es: updatedTitle.es,
             title_it: updatedTitle.it,
             title_fr: updatedTitle.fr,
             title_de: updatedTitle.de,
             description: updatedDesc,
             description_en: updatedDesc.en,
             description_bg: updatedDesc.bg,
+            description_es: updatedDesc.es,
             description_it: updatedDesc.it,
             description_fr: updatedDesc.fr,
             description_de: updatedDesc.de,

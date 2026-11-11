@@ -94,7 +94,7 @@ const GourmetCommunity = () => {
   const { t, i18n } = useTranslation();
   const { user, isAdmin, isOwner, awardPoints } = useAuth();
 
-  const currentLang = ['bg', 'en', 'it', 'fr', 'de'].includes(i18n.language) ? i18n.language : 'bg';
+  const currentLang = ['bg', 'en', 'es', 'it', 'fr', 'de'].includes(i18n.language) ? i18n.language : 'bg';
   const isGuest = !user || user.role === ROLES.GUEST;
   const currentUserId = user?.uid || '';
   const isModeratorOrPower = isAdmin || isOwner || user?.role === ROLES.MODERATOR;

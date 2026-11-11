@@ -228,8 +228,8 @@ const ManageMeasurements = () => {
   const handleExportCSV = () => {
     const exportable = measurements.filter(m => !m.is_deleted);
     const headers = [
-      'unit_id', 'name_en', 'name_bg', 'name_it', 'name_fr', 'name_de',
-      'short_en', 'short_bg', 'short_it', 'short_fr', 'short_de',
+      'unit_id', 'name_en', 'name_bg', 'name_es', 'name_it', 'name_fr', 'name_de',
+      'short_en', 'short_bg', 'short_es', 'short_it', 'short_fr', 'short_de',
       'category', 'is_standard',
       'to_ml', 'to_g_average', 'imperial_equivalent', 'conversion_factor'
     ];
@@ -237,11 +237,13 @@ const ManageMeasurements = () => {
       m.unit_id || m.id,
       m.name_en || m.name?.en || m[`name_${currentLang}`] || '',
       m.name_bg || m.name?.bg || '',
+      m.name_es || m.name?.es || '',
       m.name_it || m.name?.it || '',
       m.name_fr || m.name?.fr || '',
       m.name_de || m.name?.de || '',
       m.short_en || m.short_name?.en || m.short?.en || '',
       m.short_bg || m.short_name?.bg || m.short?.bg || '',
+      m.short_es || m.short_name?.es || m.short?.es || '',
       m.short_it || m.short_name?.it || m.short?.it || '',
       m.short_fr || m.short_name?.fr || m.short?.fr || '',
       m.short_de || m.short_name?.de || m.short?.de || '',
@@ -286,12 +288,14 @@ const ManageMeasurements = () => {
         const rawId    = cols[idx('unit_id')]?.trim();
         const name_en  = cols[idx('name_en')]?.trim();
         const name_bg  = cols[idx('name_bg')]?.trim() || name_en;
+        const name_es  = (idx('name_es') !== -1 && cols[idx('name_es')]?.trim()) || name_en;
         const name_it  = cols[idx('name_it')]?.trim() || name_en;
         const name_fr  = cols[idx('name_fr')]?.trim() || name_en;
         const name_de  = cols[idx('name_de')]?.trim() || name_en;
 
         const short_en = cols[idx('short_en')]?.trim() || name_en;
         const short_bg = cols[idx('short_bg')]?.trim() || short_en;
+        const short_es = (idx('short_es') !== -1 && cols[idx('short_es')]?.trim()) || short_en;
         const short_it = cols[idx('short_it')]?.trim() || short_en;
         const short_fr = cols[idx('short_fr')]?.trim() || short_en;
         const short_de = cols[idx('short_de')]?.trim() || short_en;
@@ -314,24 +318,28 @@ const ManageMeasurements = () => {
           name: {
             en: finalNameEn,
             bg: name_bg,
+            es: name_es,
             it: name_it,
             fr: name_fr,
             de: name_de
           },
           name_en: finalNameEn,
           name_bg,
+          name_es,
           name_it,
           name_fr,
           name_de,
           short_name: {
             en: short_en,
             bg: short_bg,
+            es: short_es,
             it: short_it,
             fr: short_fr,
             de: short_de
           },
           short_en,
           short_bg,
+          short_es,
           short_it,
           short_fr,
           short_de,

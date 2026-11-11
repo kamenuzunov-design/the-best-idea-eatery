@@ -34,6 +34,7 @@ const ManageCuisines = () => {
   const [namesByLang, setNamesByLang] = useState({
     bg: '',
     en: '',
+    es: '',
     it: '',
     fr: '',
     de: ''
@@ -77,6 +78,7 @@ const ManageCuisines = () => {
           ...c,
           name_bg: c.name?.bg || '',
           name_en: c.name?.en || '',
+          name_es: c.name?.es || '',
           name_it: c.name?.it || '',
           name_fr: c.name?.fr || '',
           name_de: c.name?.de || '',
@@ -124,6 +126,8 @@ const ManageCuisines = () => {
           en: finalNameEn,
           bg: isEn ? (namesByLang.bg?.trim() || existing?.name?.bg || existing?.name_bg || finalNameEn)
                    : (currentLang === 'bg' ? finalNameLocal : (namesByLang.bg?.trim() || existing?.name?.bg || existing?.name_bg || finalNameEn)),
+          es: isEn ? (namesByLang.es?.trim() || existing?.name?.es || existing?.name_es || finalNameEn)
+                   : (currentLang === 'es' ? finalNameLocal : (namesByLang.es?.trim() || existing?.name?.es || existing?.name_es || finalNameEn)),
           it: isEn ? (namesByLang.it?.trim() || existing?.name?.it || existing?.name_it || finalNameEn)
                    : (currentLang === 'it' ? finalNameLocal : (namesByLang.it?.trim() || existing?.name?.it || existing?.name_it || finalNameEn)),
           fr: isEn ? (namesByLang.fr?.trim() || existing?.name?.fr || existing?.name_fr || finalNameEn)
@@ -134,6 +138,8 @@ const ManageCuisines = () => {
         name_en: finalNameEn,
         name_bg: isEn ? (namesByLang.bg?.trim() || existing?.name?.bg || existing?.name_bg || finalNameEn)
                       : (currentLang === 'bg' ? finalNameLocal : (namesByLang.bg?.trim() || existing?.name?.bg || existing?.name_bg || finalNameEn)),
+        name_es: isEn ? (namesByLang.es?.trim() || existing?.name?.es || existing?.name_es || finalNameEn)
+                      : (currentLang === 'es' ? finalNameLocal : (namesByLang.es?.trim() || existing?.name?.es || existing?.name_es || finalNameEn)),
         name_it: isEn ? (namesByLang.it?.trim() || existing?.name?.it || existing?.name_it || finalNameEn)
                       : (currentLang === 'it' ? finalNameLocal : (namesByLang.it?.trim() || existing?.name?.it || existing?.name_it || finalNameEn)),
         name_fr: isEn ? (namesByLang.fr?.trim() || existing?.name?.fr || existing?.name_fr || finalNameEn)
@@ -166,6 +172,7 @@ const ManageCuisines = () => {
     setNamesByLang({
       en: item.name?.en || item.name_en || '',
       bg: item.name?.bg || item.name_bg || '',
+      es: item.name?.es || item.name_es || '',
       it: item.name?.it || item.name_it || '',
       fr: item.name?.fr || item.name_fr || '',
       de: item.name?.de || item.name_de || ''
@@ -178,7 +185,7 @@ const ManageCuisines = () => {
     setEditingId(null);
     setShowForm(false);
     setSlugId('');
-    setNamesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
+    setNamesByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
     setParentId('');
   };
 
@@ -195,11 +202,12 @@ const ManageCuisines = () => {
 
   // ── CSV Export ────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
-    const headers = ['id', 'name_en', 'name_bg', 'name_it', 'name_fr', 'name_de', 'parentId', 'level'];
+    const headers = ['id', 'name_en', 'name_bg', 'name_es', 'name_it', 'name_fr', 'name_de', 'parentId', 'level'];
     const rows = cuisines.map(c => [
       c.id,
       c.name_en || c.name?.en || '',
       c.name_bg || c.name?.bg || '',
+      c.name_es || c.name?.es || '',
       c.name_it || c.name?.it || '',
       c.name_fr || c.name?.fr || '',
       c.name_de || c.name?.de || '',
@@ -241,6 +249,7 @@ const ManageCuisines = () => {
         const rawId = cols[idx('id')]?.trim();
         const name_en = cols[idx('name_en')]?.trim();
         const name_bg = cols[idx('name_bg')]?.trim() || name_en;
+        const name_es = (idx('name_es') !== -1 && cols[idx('name_es')]?.trim()) || name_en;
         const name_it = cols[idx('name_it')]?.trim() || name_en;
         const name_fr = cols[idx('name_fr')]?.trim() || name_en;
         const name_de = cols[idx('name_de')]?.trim() || name_en;
@@ -256,10 +265,11 @@ const ManageCuisines = () => {
           id: cleanId,
           name_en: finalNameEn,
           name_bg,
+          name_es,
           name_it,
           name_fr,
           name_de,
-          name: { en: finalNameEn, bg: name_bg, it: name_it, fr: name_fr, de: name_de },
+          name: { en: finalNameEn, bg: name_bg, es: name_es, it: name_it, fr: name_fr, de: name_de },
           parentId,
           level
         };

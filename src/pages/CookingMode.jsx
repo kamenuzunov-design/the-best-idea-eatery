@@ -521,6 +521,7 @@ const CookingMode = () => {
     const langCodeMap = {
       bg: 'bg-BG',
       en: 'en-US',
+      es: 'es-ES',
       it: 'it-IT',
       fr: 'fr-FR',
       de: 'de-DE'
@@ -558,6 +559,7 @@ const CookingMode = () => {
       title: {
         bg: getLocalizedField(recipe, 'title', 'bg') || recipe?.title_bg || recipe?.title_en || 'Рецепта',
         en: getLocalizedField(recipe, 'title', 'en') || recipe?.title_en || recipe?.title_bg || 'Recipe',
+        es: getLocalizedField(recipe, 'title', 'es') || recipe?.title_es || recipe?.title_en || 'Receta',
         it: getLocalizedField(recipe, 'title', 'it') || recipe?.title_it || recipe?.title_en || 'Ricetta',
         fr: getLocalizedField(recipe, 'title', 'fr') || recipe?.title_fr || recipe?.title_en || 'Recette',
         de: getLocalizedField(recipe, 'title', 'de') || recipe?.title_de || recipe?.title_en || 'Rezept'

@@ -3,10 +3,11 @@
  * Designed to support BG, EN, and ready for IT, FR, DE and beyond.
  */
 
-export const SUPPORTED_LANGUAGES = ['en', 'it', 'fr', 'de', 'bg'];
+export const SUPPORTED_LANGUAGES = ['en', 'es', 'it', 'fr', 'de', 'bg'];
 
 export const LANGUAGE_LABELS = {
   en: { name: 'EN', flagUrl: '/flags/gb.svg', flag: '🇬🇧', fullName: 'English' },
+  es: { name: 'ES', flagUrl: '/flags/es.svg', flag: '🇪🇸', fullName: 'Español' },
   it: { name: 'IT', flagUrl: '/flags/it.svg', flag: '🇮🇹', fullName: 'Italiano' },
   fr: { name: 'FR', flagUrl: '/flags/fr.svg', flag: '🇫🇷', fullName: 'Français' },
   de: { name: 'DE', flagUrl: '/flags/de.svg', flag: '🇩🇪', fullName: 'Deutsch' },

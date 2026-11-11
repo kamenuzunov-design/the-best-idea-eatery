@@ -31,10 +31,11 @@ const ManageRecipes = () => {
   const [searchParams] = useSearchParams();
   const editIdFromUrl = searchParams.get('edit');
   const { user, isAdmin, isOwner, awardPoints } = useAuth();
-  const currentLang = ['bg', 'en', 'it', 'fr', 'de'].includes(i18n.language) ? i18n.language : 'bg';
+  const currentLang = ['bg', 'en', 'es', 'it', 'fr', 'de'].includes(i18n.language) ? i18n.language : 'bg';
   const isEn = currentLang === 'en';
   const localLangMeta = {
     bg: { code: 'bg', label: 'Български', flag: '🇧🇬' },
+    es: { code: 'es', label: 'Español', flag: '🇪🇸' },
     it: { code: 'it', label: 'Italiano', flag: '🇮🇹' },
     fr: { code: 'fr', label: 'Français', flag: '🇫🇷' },
     de: { code: 'de', label: 'Deutsch', flag: '🇩🇪' }
@@ -66,9 +67,9 @@ const ManageRecipes = () => {
   const [isSavingRecipe, setIsSavingRecipe] = useState(false);
   const [aiTranslateSuccessMsg, setAiTranslateSuccessMsg] = useState('');
 
-  // Basic Info - Reactive 5-language map
-  const [titlesByLang, setTitlesByLang] = useState({ bg: '', en: '', it: '', fr: '', de: '' });
-  const [descsByLang, setDescsByLang] = useState({ bg: '', en: '', it: '', fr: '', de: '' });
+  // Basic Info - Reactive 6-language map
+  const [titlesByLang, setTitlesByLang] = useState({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
+  const [descsByLang, setDescsByLang] = useState({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
   const currentLocalTitle = isEn ? titlesByLang.en : (titlesByLang[currentLang] || '');
   const currentEnTitle = titlesByLang.en || '';
   const currentLocalDesc = isEn ? descsByLang.en : (descsByLang[currentLang] || '');
@@ -318,6 +319,7 @@ const ManageRecipes = () => {
       updateIngredientRow(activeTargetRowId, 'name', {
         bg: subTitleBg,
         en: subTitleEn,
+        es: subRecipe.title?.es || '',
         it: subRecipe.title?.it || '',
         fr: subRecipe.title?.fr || '',
         de: subRecipe.title?.de || ''
@@ -337,6 +339,7 @@ const ManageRecipes = () => {
           name: {
             bg: subTitleBg,
             en: subTitleEn,
+            es: subRecipe.title?.es || '',
             it: subRecipe.title?.it || '',
             fr: subRecipe.title?.fr || '',
             de: subRecipe.title?.de || ''
@@ -490,7 +493,7 @@ const ManageRecipes = () => {
         sourceLang === 'en' ? (s.instruction_en || s.instruction_local || '') : (s.instruction_local || s.instruction_en || '')
       ).trim());
 
-      const all5Langs = ['bg', 'en', 'it', 'fr', 'de'];
+      const all5Langs = ['bg', 'en', 'es', 'it', 'fr', 'de'];
       const hasAllTitleLangs = all5Langs.every(l => (titlesByLang[l] || existingTitle[l] || '').trim());
       const shouldRunAiTranslation = sourceLang !== 'en' || !hasAllTitleLangs || !editingId || originalRecipe?.needs_translation;
 
@@ -508,6 +511,7 @@ const ManageRecipes = () => {
       const finalTitleObj = {
         bg: (sourceLang === 'bg' ? sourceTitle : (aiTranslated?.title?.bg || titlesByLang.bg || existingTitle.bg || originalRecipe?.title_bg || sourceTitle)).trim(),
         en: (sourceLang === 'en' ? sourceTitle : (aiTranslated?.title?.en || (isCurrentEn ? titlesByLang.en : '') || existingTitle.en || originalRecipe?.title_en || sourceTitle)).trim(),
+        es: (sourceLang === 'es' ? sourceTitle : (aiTranslated?.title?.es || titlesByLang.es || existingTitle.es || sourceTitle)).trim(),
         it: (sourceLang === 'it' ? sourceTitle : (aiTranslated?.title?.it || titlesByLang.it || existingTitle.it || sourceTitle)).trim(),
         fr: (sourceLang === 'fr' ? sourceTitle : (aiTranslated?.title?.fr || titlesByLang.fr || existingTitle.fr || sourceTitle)).trim(),
         de: (sourceLang === 'de' ? sourceTitle : (aiTranslated?.title?.de || titlesByLang.de || existingTitle.de || sourceTitle)).trim()
@@ -519,6 +523,7 @@ const ManageRecipes = () => {
       const finalDescObj = {
         bg: (sourceLang === 'bg' ? sourceDesc : (aiTranslated?.description?.bg || descsByLang.bg || existingDesc.bg || originalRecipe?.description_bg || sourceDesc)).trim(),
         en: (sourceLang === 'en' ? sourceDesc : (aiTranslated?.description?.en || (isCurrentEn ? descsByLang.en : '') || existingDesc.en || originalRecipe?.description_en || sourceDesc)).trim(),
+        es: (sourceLang === 'es' ? sourceDesc : (aiTranslated?.description?.es || descsByLang.es || existingDesc.es || sourceDesc)).trim(),
         it: (sourceLang === 'it' ? sourceDesc : (aiTranslated?.description?.it || descsByLang.it || existingDesc.it || sourceDesc)).trim(),
         fr: (sourceLang === 'fr' ? sourceDesc : (aiTranslated?.description?.fr || descsByLang.fr || existingDesc.fr || sourceDesc)).trim(),
         de: (sourceLang === 'de' ? sourceDesc : (aiTranslated?.description?.de || descsByLang.de || existingDesc.de || sourceDesc)).trim()
@@ -582,6 +587,9 @@ const ManageRecipes = () => {
           const noteBg = (sourceLang === 'bg'
             ? noteAuthor
             : (aiNoteObj.bg || (existingNotes.bg && existingNotes.bg !== '[object Object]' ? existingNotes.bg : '') || noteEn)).trim();
+          const noteEs = (sourceLang === 'es'
+            ? noteAuthor
+            : (aiNoteObj.es || (existingNotes.es && existingNotes.es !== '[object Object]' ? existingNotes.es : '') || noteEn)).trim();
           const noteIt = (sourceLang === 'it'
             ? noteAuthor
             : (aiNoteObj.it || (existingNotes.it && existingNotes.it !== '[object Object]' ? existingNotes.it : '') || noteEn)).trim();
@@ -595,6 +603,7 @@ const ManageRecipes = () => {
           const notesObj = {
             en: noteEn,
             bg: noteBg,
+            es: noteEs,
             it: noteIt,
             fr: noteFr,
             de: noteDe
@@ -613,6 +622,7 @@ const ManageRecipes = () => {
               name: {
                 bg: subNameBg,
                 en: subNameEn,
+                es: subRec?.title?.es || i.name?.es || '',
                 it: subRec?.title?.it || i.name?.it || '',
                 fr: subRec?.title?.fr || i.name?.fr || '',
                 de: subRec?.title?.de || i.name?.de || ''
@@ -634,6 +644,7 @@ const ManageRecipes = () => {
             name: {
               bg: dbIng?.name_bg || dbIng?.name?.bg || '',
               en: dbIng?.name_en || dbIng?.name?.en || '',
+              es: dbIng?.name?.es || '',
               it: dbIng?.name?.it || '',
               fr: dbIng?.name?.fr || '',
               de: dbIng?.name?.de || ''
@@ -661,6 +672,9 @@ const ManageRecipes = () => {
           const stepInstBg = (sourceLang === 'bg'
             ? stepAuthor
             : (aiStepObj.bg || (existingInstruction.bg && existingInstruction.bg !== '[object Object]' ? existingInstruction.bg : '') || stepInstEn)).trim();
+          const stepInstEs = (sourceLang === 'es'
+            ? stepAuthor
+            : (aiStepObj.es || (existingInstruction.es && existingInstruction.es !== '[object Object]' ? existingInstruction.es : '') || stepInstEn)).trim();
           const stepInstIt = (sourceLang === 'it'
             ? stepAuthor
             : (aiStepObj.it || (existingInstruction.it && existingInstruction.it !== '[object Object]' ? existingInstruction.it : '') || stepInstEn)).trim();
@@ -674,6 +688,7 @@ const ManageRecipes = () => {
           const instructionObj = {
             en: stepInstEn,
             bg: stepInstBg,
+            es: stepInstEs,
             it: stepInstIt,
             fr: stepInstFr,
             de: stepInstDe
@@ -754,6 +769,7 @@ const ManageRecipes = () => {
     setTitlesByLang({
       bg: recipe.title?.bg || recipe.title_bg || '',
       en: recipe.title?.en || recipe.title_en || '',
+      es: recipe.title?.es || recipe.title_es || '',
       it: recipe.title?.it || recipe.title_it || '',
       fr: recipe.title?.fr || recipe.title_fr || '',
       de: recipe.title?.de || recipe.title_de || ''
@@ -761,6 +777,7 @@ const ManageRecipes = () => {
     setDescsByLang({
       bg: recipe.description?.bg || recipe.description_bg || '',
       en: recipe.description?.en || recipe.description_en || '',
+      es: recipe.description?.es || recipe.description_es || '',
       it: recipe.description?.it || recipe.description_it || '',
       fr: recipe.description?.fr || recipe.description_fr || '',
       de: recipe.description?.de || recipe.description_de || ''
@@ -1137,8 +1154,8 @@ const ManageRecipes = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setTitlesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
-    setDescsByLang({ bg: '', en: '', it: '', fr: '', de: '' });
+    setTitlesByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
+    setDescsByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
     setSlug('');
     setCuisineId('');
     setCategoryId('');

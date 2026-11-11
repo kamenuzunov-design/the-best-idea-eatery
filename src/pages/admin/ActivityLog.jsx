@@ -128,6 +128,7 @@ const ActivityLog = () => {
     const date = new Date(isoString);
     return date.toLocaleString(
       currentLang === 'bg' ? 'bg-BG' :
+      currentLang === 'es' ? 'es-ES' :
       currentLang === 'de' ? 'de-DE' :
       currentLang === 'it' ? 'it-IT' :
       currentLang === 'fr' ? 'fr-FR' : 'en-US'

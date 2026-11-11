@@ -32,6 +32,7 @@ const ManageIngredientGroups = () => {
   const [namesByLang, setNamesByLang] = useState({
     bg: '',
     en: '',
+    es: '',
     it: '',
     fr: '',
     de: ''
@@ -75,6 +76,8 @@ const ManageIngredientGroups = () => {
           en: finalNameEn,
           bg: isEn ? (namesByLang.bg?.trim() || existingGroup?.name?.bg || existingGroup?.name_bg || finalNameEn)
                    : (currentLang === 'bg' ? finalNameLocal : (namesByLang.bg?.trim() || existingGroup?.name?.bg || existingGroup?.name_bg || finalNameEn)),
+          es: isEn ? (namesByLang.es?.trim() || existingGroup?.name?.es || existingGroup?.name_es || finalNameEn)
+                   : (currentLang === 'es' ? finalNameLocal : (namesByLang.es?.trim() || existingGroup?.name?.es || existingGroup?.name_es || finalNameEn)),
           it: isEn ? (namesByLang.it?.trim() || existingGroup?.name?.it || existingGroup?.name_it || finalNameEn)
                    : (currentLang === 'it' ? finalNameLocal : (namesByLang.it?.trim() || existingGroup?.name?.it || existingGroup?.name_it || finalNameEn)),
           fr: isEn ? (namesByLang.fr?.trim() || existingGroup?.name?.fr || existingGroup?.name_fr || finalNameEn)
@@ -85,6 +88,8 @@ const ManageIngredientGroups = () => {
         name_en: finalNameEn,
         name_bg: isEn ? (namesByLang.bg?.trim() || existingGroup?.name?.bg || existingGroup?.name_bg || finalNameEn)
                       : (currentLang === 'bg' ? finalNameLocal : (namesByLang.bg?.trim() || existingGroup?.name?.bg || existingGroup?.name_bg || finalNameEn)),
+        name_es: isEn ? (namesByLang.es?.trim() || existingGroup?.name?.es || existingGroup?.name_es || finalNameEn)
+                      : (currentLang === 'es' ? finalNameLocal : (namesByLang.es?.trim() || existingGroup?.name?.es || existingGroup?.name_es || finalNameEn)),
         name_it: isEn ? (namesByLang.it?.trim() || existingGroup?.name?.it || existingGroup?.name_it || finalNameEn)
                       : (currentLang === 'it' ? finalNameLocal : (namesByLang.it?.trim() || existingGroup?.name?.it || existingGroup?.name_it || finalNameEn)),
         name_fr: isEn ? (namesByLang.fr?.trim() || existingGroup?.name?.fr || existingGroup?.name_fr || finalNameEn)
@@ -139,6 +144,7 @@ const ManageIngredientGroups = () => {
     setNamesByLang({
       en: g.name?.en || g.name_en || '',
       bg: g.name?.bg || g.name_bg || '',
+      es: g.name?.es || g.name_es || '',
       it: g.name?.it || g.name_it || '',
       fr: g.name?.fr || g.name_fr || '',
       de: g.name?.de || g.name_de || ''
@@ -152,7 +158,7 @@ const ManageIngredientGroups = () => {
     setEditingId(null);
     setShowForm(false);
     setGroupId('');
-    setNamesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
+    setNamesByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
     setParentId('');
   };
 
@@ -179,12 +185,13 @@ const ManageIngredientGroups = () => {
   const handleExportCSV = () => {
     const exportable = groups.filter(g => !g.is_deleted);
     const headers = [
-      'id', 'name_en', 'name_bg', 'name_it', 'name_fr', 'name_de', 'parentId', 'level'
+      'id', 'name_en', 'name_bg', 'name_es', 'name_it', 'name_fr', 'name_de', 'parentId', 'level'
     ];
     const rows = exportable.map(g => [
       g.id,
       g.name_en || g.name?.en || '',
       g.name_bg || g.name?.bg || '',
+      g.name_es || g.name?.es || '',
       g.name_it || g.name?.it || '',
       g.name_fr || g.name?.fr || '',
       g.name_de || g.name?.de || '',
@@ -225,6 +232,7 @@ const ManageIngredientGroups = () => {
         const rawId    = cols[idx('id')]?.trim();
         const name_en  = cols[idx('name_en')]?.trim();
         const name_bg  = cols[idx('name_bg')]?.trim() || name_en;
+        const name_es  = (idx('name_es') !== -1 && cols[idx('name_es')]?.trim()) || name_en;
         const name_it  = cols[idx('name_it')]?.trim() || name_en;
         const name_fr  = cols[idx('name_fr')]?.trim() || name_en;
         const name_de  = cols[idx('name_de')]?.trim() || name_en;
@@ -240,12 +248,14 @@ const ManageIngredientGroups = () => {
           id: cleanId,
           name_en: finalNameEn,
           name_bg,
+          name_es,
           name_it,
           name_fr,
           name_de,
           name: {
             en: finalNameEn,
             bg: name_bg,
+            es: name_es,
             it: name_it,
             fr: name_fr,
             de: name_de

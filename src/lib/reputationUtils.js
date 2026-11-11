@@ -25,6 +25,7 @@ export const REPUTATION_TIERS = [
     label: { 
       bg: 'Легенда', 
       en: 'Legend', 
+      es: 'Leyenda',
       it: 'Leggenda', 
       fr: 'Légende', 
       de: 'Legende' 
@@ -35,6 +36,7 @@ export const REPUTATION_TIERS = [
     label: { 
       bg: 'Кулинарен гуру', 
       en: 'Culinary Guru', 
+      es: 'Gurú Culinario',
       it: 'Guru Culinario', 
       fr: 'Gourou Culinaire', 
       de: 'Kulinarischer Guru' 
@@ -45,6 +47,7 @@ export const REPUTATION_TIERS = [
     label: { 
       bg: 'Майстор-готвач', 
       en: 'Master Chef', 
+      es: 'Maestro Chef',
       it: 'Mastro Chef', 
       fr: 'Maître Cuisinier', 
       de: 'Meisterkoch' 
@@ -55,6 +58,7 @@ export const REPUTATION_TIERS = [
     label: { 
       bg: 'Ентусиаст', 
       en: 'Enthusiast', 
+      es: 'Entusiasta',
       it: 'Entusiasta', 
       fr: 'Enthousiaste', 
       de: 'Enthusiast' 
@@ -65,6 +69,7 @@ export const REPUTATION_TIERS = [
     label: { 
       bg: 'Новак', 
       en: 'Novice', 
+      es: 'Novato',
       it: 'Novizio', 
       fr: 'Novice', 
       de: 'Neuling' 

@@ -215,6 +215,8 @@ const AIIngredientsSearch = () => {
                           missingItem.name || missingItem.ingredient_id;
       if (currentLang === 'bg') {
         prompt = `Искам да сготвя "${title}", но нямам "${missingName}". С какво мога да го заменя от типични домашни продукти или как да адаптирам ястието?`;
+      } else if (currentLang === 'es') {
+        prompt = `Quiero cocinar "${title}", pero no tengo "${missingName}". ¿Con qué puedo sustituirlo usando ingredientes habituales de despensa?`;
       } else if (currentLang === 'it') {
         prompt = `Vorrei cucinare "${title}", ma non ho "${missingName}". Con cosa posso sostituirlo usando ingredienti comuni a casa?`;
       } else if (currentLang === 'fr') {
@@ -227,6 +229,8 @@ const AIIngredientsSearch = () => {
     } else if (contextType === 'ready') {
       if (currentLang === 'bg') {
         prompt = `Имам всички съставки за "${title}" и започвам готвене сега! Сподели ми своята висша Шеф тайна за перфектно изпълнение и сомелиерско съчетание.`;
+      } else if (currentLang === 'es') {
+        prompt = `¡Tengo todos los ingredientes para "${title}" y voy a empezar a cocinar ahora! Comparte tu secreto de chef y un maridaje perfecto.`;
       } else if (currentLang === 'it') {
         prompt = `Ho tutti gli ingredienti per "${title}" e inizio a cucinare ora! Condividi il tuo segreto da chef e un abbinamento perfetto di bevande.`;
       } else if (currentLang === 'fr') {
@@ -239,6 +243,8 @@ const AIIngredientsSearch = () => {
     } else {
       if (currentLang === 'bg') {
         prompt = `Планирам да сготвя "${title}". Дай ми готварски съвети, насоки за сервиране и сомелиерска идея за това ястие!`;
+      } else if (currentLang === 'es') {
+        prompt = `Planeo cocinar "${title}". ¡Comparte consejos profesionales de chef, ideas de emplatado y un maridaje de bebidas para este plato!`;
       } else {
         prompt = `I'm planning to cook "${title}". Please share culinary pro-tips, plating advice, and a beverage pairing for this dish!`;
       }

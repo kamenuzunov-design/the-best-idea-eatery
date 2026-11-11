@@ -263,6 +263,7 @@ const BackupRecovery = () => {
     const formattedDate = backup.timestamp?.toDate 
       ? new Date(backup.timestamp.toDate()).toLocaleString(
           currentLang === 'bg' ? 'bg-BG' :
+          currentLang === 'es' ? 'es-ES' :
           currentLang === 'de' ? 'de-DE' :
           currentLang === 'it' ? 'it-IT' :
           currentLang === 'fr' ? 'fr-FR' : 'en-US'
@@ -383,7 +384,7 @@ const BackupRecovery = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-200 truncate">
                       {backup.timestamp?.toDate ? new Date(backup.timestamp.toDate()).toLocaleString(
-                        currentLang === 'bg' ? 'bg-BG' : currentLang === 'de' ? 'de-DE' : currentLang === 'it' ? 'it-IT' : currentLang === 'fr' ? 'fr-FR' : 'en-US'
+                        currentLang === 'bg' ? 'bg-BG' : currentLang === 'es' ? 'es-ES' : currentLang === 'de' ? 'de-DE' : currentLang === 'it' ? 'it-IT' : currentLang === 'fr' ? 'fr-FR' : 'en-US'
                       ) : t('backup_recovery.cloud.pending')}
                     </p>
                     <p className="text-[10px] text-slate-500 font-mono">

@@ -236,7 +236,7 @@ const RecipeCustomization = () => {
         [currentLang]: finalTitleLocal
       };
       if (isEnOnly) {
-        ['bg', 'it', 'fr', 'de'].forEach(l => {
+        ['bg', 'es', 'it', 'fr', 'de'].forEach(l => {
           if (!titleMap[l]) titleMap[l] = finalTitleEn;
         });
       }

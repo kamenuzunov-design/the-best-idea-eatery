@@ -19,6 +19,7 @@ export const DEFAULT_COMMUNITY_POSTS = [
     recipeTitle: {
       bg: 'Телешки стек със сос от манатарки',
       en: 'Beef Steak with Mushroom Sauce',
+      es: 'Solomillo de ternera con salsa de boletus',
       it: 'Bistecca di manzo con salsa ai funghi',
       fr: 'Steak de bœuf sauce aux champignons',
       de: 'Rindersteak mit Pilzsauce'
@@ -33,6 +34,10 @@ export const DEFAULT_COMMUNITY_POSTS = [
       en: {
         title: 'Herb-Crusted Beef Steak with Fresh Porcini',
         caption: 'I let the meat rest for 7 minutes with clarified butter, crushed garlic, and fresh thyme. The outer crust and tender center pair flawlessly with the mushrooms!'
+      },
+      es: {
+        title: 'Solomillo de ternera en costra de hierbas con boletus frescos',
+        caption: 'Dejé reposar la carne 7 minutos con mantequilla clarificada, ajo machacado y tomillo fresco. ¡La costra crujiente por fuera y el interior jugoso combinan a la perfección con las setas!'
       },
       it: {
         title: 'Bistecca di manzo in crosta alle erbe con porcini freschi',
@@ -75,6 +80,10 @@ export const DEFAULT_COMMUNITY_POSTS = [
       en: {
         title: 'Modern Deconstruction of Classic Shopska Salad',
         caption: 'Heirloom pink tomatoes, ember-roasted peppers, aged sheep cheese mousse, and cold-pressed olive oil with fresh parsley. Traditional flavor in a gourmet presentation!'
+      },
+      es: {
+        title: 'Deconstrucción moderna de la clásica ensalada Shopska',
+        caption: 'Tomates rosas de huerta, pimientos asados a la brasa, mousse de queso de oveja curado y aceite de oliva virgen extra con perejil fresco. ¡Sabor tradicional en una presentación gourmet!'
       },
       it: {
         title: 'Decostruzione moderna della classica insalata Shopska',

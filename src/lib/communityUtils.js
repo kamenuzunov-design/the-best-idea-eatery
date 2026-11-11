@@ -4,11 +4,12 @@ import { callGemini, getGeminiApiKey, getRemoteAIConfig } from './geminiClient';
 import { DEFAULT_COMMUNITY_POSTS } from '../data/defaultCommunityPosts';
 import { getRecipeImageUrl } from './imageUtils';
 
-export const SUPPORTED_COMMUNITY_LANGS = ['bg', 'en', 'it', 'fr', 'de'];
+export const SUPPORTED_COMMUNITY_LANGS = ['bg', 'en', 'es', 'it', 'fr', 'de'];
 
 export const LANG_NAMES = {
   bg: 'Bulgarian (Български)',
   en: 'English',
+  es: 'Spanish (Español)',
   it: 'Italian (Italiano)',
   fr: 'French (Français)',
   de: 'German (Deutsch)'
@@ -55,7 +56,7 @@ export async function translatePostTo5Languages({ title = '', caption = '', sour
     if (!apiKey) return baseTranslations;
 
     const prompt = `You are a professional culinary translator for a gourmet cooking social network.
-Translate the following dish title and culinary review/caption from "${sourceLang}" into all 5 languages: bg (Bulgarian), en (English), it (Italian), fr (French), and de (German).
+Translate the following dish title and culinary review/caption from "${sourceLang}" into all 6 languages: bg (Bulgarian), en (English), es (Spanish), it (Italian), fr (French), and de (German).
 Keep the tone warm, appetizing, and authentic.
 
 Input JSON:
@@ -65,6 +66,7 @@ Return ONLY valid JSON with this exact structure:
 {
   "bg": { "title": "...", "caption": "..." },
   "en": { "title": "...", "caption": "..." },
+  "es": { "title": "...", "caption": "..." },
   "it": { "title": "...", "caption": "..." },
   "fr": { "title": "...", "caption": "..." },
   "de": { "title": "...", "caption": "..." }
@@ -152,6 +154,7 @@ export async function translateRecipeTo5Languages({
   const buildFallbackLangMap = (val) => ({
     bg: val,
     en: val,
+    es: val,
     it: val,
     fr: val,
     de: val
@@ -198,16 +201,17 @@ export async function translateRecipeTo5Languages({
 
     const prompt = `You are a professional executive chef and multilingual culinary translator.
 CRITICAL TASK:
-Translate the following recipe content from "${sourceLang}" into all 5 supported languages:
+Translate the following recipe content from "${sourceLang}" into all 6 supported languages:
 - "bg": Bulgarian (Български)
 - "en": English (Official Culinary English)
+- "es": Spanish (Español)
 - "it": Italian (Italiano)
 - "fr": French (Français)
 - "de": German (Deutsch)
 
 RULES:
 1. Every target language block must be completely translated into its corresponding language.
-2. The "en" block MUST be translated into pure, natural English (never leave it in Bulgarian, Italian or German).
+2. The "en" block MUST be translated into pure, natural English (never leave it in Bulgarian, Spanish, Italian or German).
 3. "notes" and "steps" must be arrays of plain strings (not objects).
 4. Preserve exact array lengths and indices for "notes" and "steps" (if an item is "", keep it as "").
 
@@ -223,6 +227,7 @@ Return ONLY valid JSON with this exact structure:
 {
   "bg": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
   "en": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
+  "es": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
   "it": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
   "fr": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
   "de": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] }
@@ -257,6 +262,7 @@ Return ONLY valid JSON with this exact structure:
         const aliases = {
           bg: ['bulgarian', 'bulgaria'],
           en: ['english', 'en-us', 'en-gb'],
+          es: ['spanish', 'espanol', 'español'],
           it: ['italian', 'italiano'],
           fr: ['french', 'francais'],
           de: ['german', 'deutsch']
@@ -403,6 +409,7 @@ export async function publishNewRecipeAnnouncement(recipeData, recipeId, fallbac
     const titleObj = {
       bg: recipeData.title?.bg || recipeData.title_bg || recipeData.title?.en || recipeData.title_en || '',
       en: recipeData.title?.en || recipeData.title_en || recipeData.title?.bg || recipeData.title_bg || '',
+      es: recipeData.title?.es || recipeData.title_es || recipeData.title?.en || recipeData.title?.bg || '',
       it: recipeData.title?.it || recipeData.title_it || recipeData.title?.en || recipeData.title?.bg || '',
       fr: recipeData.title?.fr || recipeData.title_fr || recipeData.title?.en || recipeData.title?.bg || '',
       de: recipeData.title?.de || recipeData.title_de || recipeData.title?.en || recipeData.title?.bg || ''
@@ -411,6 +418,7 @@ export async function publishNewRecipeAnnouncement(recipeData, recipeId, fallbac
     const descObj = {
       bg: recipeData.description?.bg || recipeData.description_bg || 'Нова авторска рецепта вече е достъпна в кулинарния каталог!',
       en: recipeData.description?.en || recipeData.description_en || 'A new signature recipe is now available in the culinary catalog!',
+      es: recipeData.description?.es || recipeData.description_es || '¡Una nueva receta de autor ya está disponible en el catálogo culinario!',
       it: recipeData.description?.it || recipeData.description_it || 'Una nuova ricetta d’autore è ora disponibile nel catalogo culinario!',
       fr: recipeData.description?.fr || recipeData.description_fr || 'Une nouvelle recette signature est désormais disponible dans le catalogue culinaire !',
       de: recipeData.description?.de || recipeData.description_de || 'Ein neues Signature-Rezept ist jetzt im kulinarischen Katalog verfügbar!'
@@ -419,6 +427,7 @@ export async function publishNewRecipeAnnouncement(recipeData, recipeId, fallbac
     const translations = {
       bg: { title: titleObj.bg, caption: descObj.bg },
       en: { title: titleObj.en, caption: descObj.en },
+      es: { title: titleObj.es, caption: descObj.es },
       it: { title: titleObj.it, caption: descObj.it },
       fr: { title: titleObj.fr, caption: descObj.fr },
       de: { title: titleObj.de, caption: descObj.de }
@@ -479,6 +488,7 @@ export async function syncRecipeCommunityPost(recipeData, recipeId) {
     const titleObj = {
       bg: recipeData.title?.bg || recipeData.title_bg || recipeData.title?.en || recipeData.title_en || '',
       en: recipeData.title?.en || recipeData.title_en || recipeData.title?.bg || recipeData.title_bg || '',
+      es: recipeData.title?.es || recipeData.title_es || recipeData.title?.en || recipeData.title?.bg || '',
       it: recipeData.title?.it || recipeData.title_it || recipeData.title?.en || recipeData.title?.bg || '',
       fr: recipeData.title?.fr || recipeData.title_fr || recipeData.title?.en || recipeData.title?.bg || '',
       de: recipeData.title?.de || recipeData.title_de || recipeData.title?.en || recipeData.title?.bg || ''
@@ -487,6 +497,7 @@ export async function syncRecipeCommunityPost(recipeData, recipeId) {
     const descObj = {
       bg: recipeData.description?.bg || recipeData.description_bg || '',
       en: recipeData.description?.en || recipeData.description_en || '',
+      es: recipeData.description?.es || recipeData.description_es || '',
       it: recipeData.description?.it || recipeData.description_it || '',
       fr: recipeData.description?.fr || recipeData.description_fr || '',
       de: recipeData.description?.de || recipeData.description_de || ''
@@ -539,6 +550,10 @@ export async function syncRecipeCommunityPost(recipeData, recipeId) {
             title: titleObj.en || post.translations?.en?.title || '',
             caption: descObj.en || post.translations?.en?.caption || ''
           },
+          es: {
+            title: titleObj.es || post.translations?.es?.title || '',
+            caption: descObj.es || post.translations?.es?.caption || ''
+          },
           it: {
             title: titleObj.it || post.translations?.it?.title || '',
             caption: descObj.it || post.translations?.it?.caption || ''
@@ -582,7 +597,7 @@ export const REPORT_REASONS = [
 const PROFANITY_PATTERNS = [
   /\b(fuck|shit|bitch|asshole|bastard|dick|pussy|cunt|whore|slut|retard|idiot|moron)\w*/i,
   /(педерас|педал|путка|курв|лайно|лайна|еба|еби|ебе|майка ти|да ти еба|боклук|идиот|кретен|дебил|тъпак|тъпанар|простак|мръсник|копеле|шибан|свиня|гадина)/i,
-  /\b(merde|putain|connard|salope|enculé|stronzo|cazzo|puttana|vaffanculo|scheiße|arschloch|hurensohn)\w*/i
+  /\b(merde|putain|connard|salope|enculé|stronzo|cazzo|puttana|vaffanculo|scheiße|arschloch|hurensohn|mierda|puta|puto|cabron|cabrón|gilipollas|pendejo|imbécil)\w*/i
 ];
 
 /**

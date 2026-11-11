@@ -5,6 +5,7 @@ export const CUISINES = [
     name: {
       bg: "Световна / Фюжън",
       en: "Global / Fusion",
+      es: "Global / Fusión",
       it: "Globale / Fusion",
       fr: "Cuisine du monde / Fusion",
       de: "Global / Fusion"
@@ -19,6 +20,7 @@ export const CUISINES = [
     name: {
       bg: "Европейска кухня",
       en: "European Cuisine",
+      es: "Cocina europea",
       it: "Cucina europea",
       fr: "Cuisine européenne",
       de: "Europäische Küche"
@@ -33,6 +35,7 @@ export const CUISINES = [
     name: {
       bg: "Балканска",
       en: "Balkan",
+      es: "Balcánica",
       it: "Balcanica",
       fr: "Balkanique",
       de: "Balkanische Küche"
@@ -45,6 +48,7 @@ export const CUISINES = [
     name: {
       bg: "Българска",
       en: "Bulgarian",
+      es: "Búlgara",
       it: "Bulgara",
       fr: "Bulgare",
       de: "Bulgarisch"
@@ -57,6 +61,7 @@ export const CUISINES = [
     name: {
       bg: "Гръцка",
       en: "Greek",
+      es: "Griega",
       it: "Greca",
       fr: "Grecque",
       de: "Griechisch"
@@ -69,6 +74,7 @@ export const CUISINES = [
     name: {
       bg: "Сръбска",
       en: "Serbian",
+      es: "Serbia",
       it: "Serba",
       fr: "Serbe",
       de: "Serbisch"
@@ -81,6 +87,7 @@ export const CUISINES = [
     name: {
       bg: "Турска",
       en: "Turkish",
+      es: "Turca",
       it: "Turca",
       fr: "Turque",
       de: "Türkisch"
@@ -95,6 +102,7 @@ export const CUISINES = [
     name: {
       bg: "Средиземноморска",
       en: "Mediterranean",
+      es: "Mediterránea",
       it: "Mediterranea",
       fr: "Méditerranéenne",
       de: "Mediterran"
@@ -107,6 +115,7 @@ export const CUISINES = [
     name: {
       bg: "Италианска",
       en: "Italian",
+      es: "Italiana",
       it: "Italiana",
       fr: "Italienne",
       de: "Italienisch"
@@ -119,6 +128,7 @@ export const CUISINES = [
     name: {
       bg: "Испанска",
       en: "Spanish",
+      es: "Española",
       it: "Spagnola",
       fr: "Espagnole",
       de: "Spanisch"
@@ -131,6 +141,7 @@ export const CUISINES = [
     name: {
       bg: "Португалска",
       en: "Portuguese",
+      es: "Portuguesa",
       it: "Portoghese",
       fr: "Portugaise",
       de: "Portugiesisch"
@@ -145,6 +156,7 @@ export const CUISINES = [
     name: {
       bg: "Западна",
       en: "Western European",
+      es: "Europa Occidental",
       it: "Europa occidentale",
       fr: "Europe de l'Ouest",
       de: "Westeuropäisch"
@@ -157,6 +169,7 @@ export const CUISINES = [
     name: {
       bg: "Френска",
       en: "French",
+      es: "Francesa",
       it: "Francese",
       fr: "Française",
       de: "Französisch"
@@ -169,6 +182,7 @@ export const CUISINES = [
     name: {
       bg: "Немска",
       en: "German",
+      es: "Alemana",
       it: "Tedesca",
       fr: "Allemande",
       de: "Deutsch"
@@ -181,6 +195,7 @@ export const CUISINES = [
     name: {
       bg: "Австрийска",
       en: "Austrian",
+      es: "Austriaca",
       it: "Austriaca",
       fr: "Autrichienne",
       de: "Österreichisch"
@@ -193,6 +208,7 @@ export const CUISINES = [
     name: {
       bg: "Белгийска",
       en: "Belgian",
+      es: "Belga",
       it: "Belga",
       fr: "Belge",
       de: "Belgisch"
@@ -207,6 +223,7 @@ export const CUISINES = [
     name: {
       bg: "Северна (Скандинавска)",
       en: "Nordic (Scandinavian)",
+      es: "Nórdica (Escandinava)",
       it: "Nordica (Scandinava)",
       fr: "Nordique (Scandinave)",
       de: "Nordisch (Skandinavisch)"
@@ -219,6 +236,7 @@ export const CUISINES = [
     name: {
       bg: "Шведска",
       en: "Swedish",
+      es: "Sueca",
       it: "Svedese",
       fr: "Suédoise",
       de: "Schwedisch"
@@ -231,6 +249,7 @@ export const CUISINES = [
     name: {
       bg: "Норвежка",
       en: "Norwegian",
+      es: "Noruega",
       it: "Norvegese",
       fr: "Norvégienne",
       de: "Norwegisch"
@@ -243,6 +262,7 @@ export const CUISINES = [
     name: {
       bg: "Датска",
       en: "Danish",
+      es: "Danesa",
       it: "Danese",
       fr: "Danoise",
       de: "Dänisch"
@@ -257,6 +277,7 @@ export const CUISINES = [
     name: {
       bg: "Източноевропейска",
       en: "Eastern European",
+      es: "Europa del Este",
       it: "Europa orientale",
       fr: "Europe de l'Est",
       de: "Osteuropäisch"
@@ -269,6 +290,7 @@ export const CUISINES = [
     name: {
       bg: "Руска",
       en: "Russian",
+      es: "Rusa",
       it: "Russa",
       fr: "Russe",
       de: "Russisch"
@@ -281,6 +303,7 @@ export const CUISINES = [
     name: {
       bg: "Полска",
       en: "Polish",
+      es: "Polaca",
       it: "Polacca",
       fr: "Polonaise",
       de: "Polnisch"
@@ -293,6 +316,7 @@ export const CUISINES = [
     name: {
       bg: "Украинска",
       en: "Ukrainian",
+      es: "Ucraniana",
       it: "Ucraina",
       fr: "Ukrainienne",
       de: "Ukrainisch"
@@ -305,6 +329,7 @@ export const CUISINES = [
     name: {
       bg: "Унгарска",
       en: "Hungarian",
+      es: "Húngara",
       it: "Ungherese",
       fr: "Hongroise",
       de: "Ungarisch"
@@ -319,6 +344,7 @@ export const CUISINES = [
     name: {
       bg: "Британска",
       en: "British",
+      es: "Británica",
       it: "Britannica",
       fr: "Britannique",
       de: "Britisch"
@@ -331,6 +357,7 @@ export const CUISINES = [
     name: {
       bg: "Английска",
       en: "English",
+      es: "Inglesa",
       it: "Inglese",
       fr: "Anglaise",
       de: "Englisch"
@@ -343,6 +370,7 @@ export const CUISINES = [
     name: {
       bg: "Ирландска",
       en: "Irish",
+      es: "Irlandesa",
       it: "Irlandese",
       fr: "Irlandaise",
       de: "Irisch"
@@ -357,6 +385,7 @@ export const CUISINES = [
     name: {
       bg: "Азиатска кухня",
       en: "Asian Cuisine",
+      es: "Cocina asiática",
       it: "Cucina asiatica",
       fr: "Cuisine asiatique",
       de: "Asiatische Küche"
@@ -371,6 +400,7 @@ export const CUISINES = [
     name: {
       bg: "Източноазиатска",
       en: "East Asian",
+      es: "Asia Oriental",
       it: "Asia orientale",
       fr: "Asie de l'Est",
       de: "Ostasien"
@@ -383,6 +413,7 @@ export const CUISINES = [
     name: {
       bg: "Китайска",
       en: "Chinese",
+      es: "China",
       it: "Cinese",
       fr: "Chinoise",
       de: "Chinesisch"
@@ -395,6 +426,7 @@ export const CUISINES = [
     name: {
       bg: "Кантонска",
       en: "Cantonese",
+      es: "Cantonesa",
       it: "Cantonese",
       fr: "Cantonaise",
       de: "Kantonesisch"
@@ -407,6 +439,7 @@ export const CUISINES = [
     name: {
       bg: "Съчуанска",
       en: "Sichuan",
+      es: "Sichuán",
       it: "Sichuan",
       fr: "Sichuan",
       de: "Sichuan"
@@ -419,6 +452,7 @@ export const CUISINES = [
     name: {
       bg: "Японска",
       en: "Japanese",
+      es: "Japonesa",
       it: "Giapponese",
       fr: "Japonaise",
       de: "Japanisch"
@@ -431,6 +465,7 @@ export const CUISINES = [
     name: {
       bg: "Корейска",
       en: "Korean",
+      es: "Coreana",
       it: "Coreana",
       fr: "Coréenne",
       de: "Koreanisch"
@@ -445,6 +480,7 @@ export const CUISINES = [
     name: {
       bg: "Югоизточна Азия",
       en: "Southeast Asian",
+      es: "Sudeste Asiático",
       it: "Sud-est asiatico",
       fr: "Asie du Sud-Est",
       de: "Südostasiatisch"
@@ -457,6 +493,7 @@ export const CUISINES = [
     name: {
       bg: "Тайландска",
       en: "Thai",
+      es: "Tailandesa",
       it: "Thailandese",
       fr: "Thaïlandaise",
       de: "Thailändisch"
@@ -469,6 +506,7 @@ export const CUISINES = [
     name: {
       bg: "Виетнамска",
       en: "Vietnamese",
+      es: "Vietnamita",
       it: "Vietnamita",
       fr: "Vietnamienne",
       de: "Vietnamesisch"
@@ -481,6 +519,7 @@ export const CUISINES = [
     name: {
       bg: "Индонезийска",
       en: "Indonesian",
+      es: "Indonesia",
       it: "Indonesiana",
       fr: "Indonésienne",
       de: "Indonesisch"
@@ -493,6 +532,7 @@ export const CUISINES = [
     name: {
       bg: "Малайзийска",
       en: "Malaysian",
+      es: "Malaya",
       it: "Malese",
       fr: "Malaise",
       de: "Malaysisch"
@@ -507,6 +547,7 @@ export const CUISINES = [
     name: {
       bg: "Южноазиатска",
       en: "South Asian",
+      es: "Asia del Sur",
       it: "Asia meridionale",
       fr: "Asie du Sud",
       de: "Südasiatisch"
@@ -519,6 +560,7 @@ export const CUISINES = [
     name: {
       bg: "Индийска",
       en: "Indian",
+      es: "India",
       it: "Indiana",
       fr: "Indienne",
       de: "Indisch"
@@ -531,6 +573,7 @@ export const CUISINES = [
     name: {
       bg: "Пенджабска",
       en: "Punjabi",
+      es: "Punyabí",
       it: "Punjabi",
       fr: "Pendjabi",
       de: "Panjabi"
@@ -543,6 +586,7 @@ export const CUISINES = [
     name: {
       bg: "Южноиндийска",
       en: "South Indian",
+      es: "India del Sur",
       it: "Indiana meridionale",
       fr: "Indienne du Sud",
       de: "Südindisch"
@@ -555,6 +599,7 @@ export const CUISINES = [
     name: {
       bg: "Пакистанска",
       en: "Pakistani",
+      es: "Pakistaní",
       it: "Pakistana",
       fr: "Pakistanaise",
       de: "Pakistanisch"
@@ -569,6 +614,7 @@ export const CUISINES = [
     name: {
       bg: "Централноазиатска",
       en: "Central Asian",
+      es: "Asia Central",
       it: "Asia centrale",
       fr: "Asie centrale",
       de: "Zentralasiatisch"
@@ -581,6 +627,7 @@ export const CUISINES = [
     name: {
       bg: "Узбекска",
       en: "Uzbek",
+      es: "Uzbeka",
       it: "Uzbeka",
       fr: "Ouzbèke",
       de: "Usbekisch"
@@ -593,6 +640,7 @@ export const CUISINES = [
     name: {
       bg: "Грузинска",
       en: "Georgian",
+      es: "Georgiana",
       it: "Georgiana",
       fr: "Géorgienne",
       de: "Georgisch"
@@ -605,6 +653,7 @@ export const CUISINES = [
     name: {
       bg: "Арменска",
       en: "Armenian",
+      es: "Armenia",
       it: "Armena",
       fr: "Arménienne",
       de: "Armenisch"
@@ -619,6 +668,7 @@ export const CUISINES = [
     name: {
       bg: "Американска кухня",
       en: "American Cuisine",
+      es: "Cocina americana",
       it: "Cucina americana",
       fr: "Cuisine américaine",
       de: "Amerikanische Küche"
@@ -633,6 +683,7 @@ export const CUISINES = [
     name: {
       bg: "Северноамериканска",
       en: "North American",
+      es: "Norteamericana",
       it: "Nordamericana",
       fr: "Nord-américaine",
       de: "Nordamerikanisch"
@@ -645,6 +696,7 @@ export const CUISINES = [
     name: {
       bg: "Американска (USA)",
       en: "American (USA)",
+      es: "Estadounidense (EE. UU.)",
       it: "Statunitense (USA)",
       fr: "Américaine (USA)",
       de: "Amerikanisch (USA)"
@@ -657,6 +709,7 @@ export const CUISINES = [
     name: {
       bg: "Барбекю (BBQ)",
       en: "BBQ",
+      es: "Barbacoa (BBQ)",
       it: "Barbecue (BBQ)",
       fr: "Barbecue (BBQ)",
       de: "Barbecue (BBQ)"
@@ -669,6 +722,7 @@ export const CUISINES = [
     name: {
       bg: "Бъргър",
       en: "Burger",
+      es: "Hamburguesas",
       it: "Burger",
       fr: "Burger",
       de: "Burger"
@@ -681,6 +735,7 @@ export const CUISINES = [
     name: {
       bg: "Канадска",
       en: "Canadian",
+      es: "Canadiense",
       it: "Canadese",
       fr: "Canadienne",
       de: "Kanadisch"
@@ -695,6 +750,7 @@ export const CUISINES = [
     name: {
       bg: "Латиноамериканска",
       en: "Latin American",
+      es: "Latinoamericana",
       it: "Latinoamericana",
       fr: "Amérique latine",
       de: "Lateinamerikanisch"
@@ -707,6 +763,7 @@ export const CUISINES = [
     name: {
       bg: "Мексиканска",
       en: "Mexican",
+      es: "Mexicana",
       it: "Messicana",
       fr: "Mexicaine",
       de: "Mexikanisch"
@@ -719,6 +776,7 @@ export const CUISINES = [
     name: {
       bg: "Бразилска",
       en: "Brazilian",
+      es: "Brasileña",
       it: "Brasiliana",
       fr: "Brésilienne",
       de: "Brasilianisch"
@@ -731,6 +789,7 @@ export const CUISINES = [
     name: {
       bg: "Аржентинска",
       en: "Argentine",
+      es: "Argentina",
       it: "Argentina",
       fr: "Argentine",
       de: "Argentinisch"
@@ -743,6 +802,7 @@ export const CUISINES = [
     name: {
       bg: "Перуанска",
       en: "Peruvian",
+      es: "Peruana",
       it: "Peruviana",
       fr: "Péruvienne",
       de: "Peruanisch"
@@ -757,6 +817,7 @@ export const CUISINES = [
     name: {
       bg: "Карибска",
       en: "Caribbean",
+      es: "Caribeña",
       it: "Caraibica",
       fr: "Caribéenne",
       de: "Karibisch"
@@ -769,6 +830,7 @@ export const CUISINES = [
     name: {
       bg: "Кубинска",
       en: "Cuban",
+      es: "Cubana",
       it: "Cubana",
       fr: "Cubaine",
       de: "Kubanisch"
@@ -781,6 +843,7 @@ export const CUISINES = [
     name: {
       bg: "Ямайска",
       en: "Jamaican",
+      es: "Jamaicana",
       it: "Giamaicana",
       fr: "Jamaïcaine",
       de: "Jamaikanisch"
@@ -795,6 +858,7 @@ export const CUISINES = [
     name: {
       bg: "Близкоизточна и Африканска кухня",
       en: "Middle Eastern & African Cuisine",
+      es: "Cocina de Oriente Medio y Africana",
       it: "Cucina mediorientale e africana",
       fr: "Cuisine moyen-orientale et africaine",
       de: "Nahöstliche und afrikanische Küche"
@@ -809,6 +873,7 @@ export const CUISINES = [
     name: {
       bg: "Близкоизточна",
       en: "Middle Eastern",
+      es: "Oriente Medio",
       it: "Mediorientale",
       fr: "Moyen-Orientale",
       de: "Nahöstlich"
@@ -821,6 +886,7 @@ export const CUISINES = [
     name: {
       bg: "Ливанска",
       en: "Lebanese",
+      es: "Libanesa",
       it: "Libanese",
       fr: "Libanaise",
       de: "Libanesisch"
@@ -833,6 +899,7 @@ export const CUISINES = [
     name: {
       bg: "Израелска",
       en: "Israeli",
+      es: "Israelí",
       it: "Israeliana",
       fr: "Israélienne",
       de: "Israelisch"
@@ -845,6 +912,7 @@ export const CUISINES = [
     name: {
       bg: "Арабска (Персийска)",
       en: "Arabic (Persian)",
+      es: "Árabe (Persa)",
       it: "Araba (Persiana)",
       fr: "Arabe (Persane)",
       de: "Arabisch (Persisch)"
@@ -859,6 +927,7 @@ export const CUISINES = [
     name: {
       bg: "Северноафриканска (Магреб)",
       en: "North African (Maghreb)",
+      es: "Norteafricana (Magreb)",
       it: "Nordafricana (Maghreb)",
       fr: "Nord-africaine (Maghreb)",
       de: "Nordafrikanisch (Maghreb)"
@@ -871,6 +940,7 @@ export const CUISINES = [
     name: {
       bg: "Мароканска",
       en: "Moroccan",
+      es: "Marroquí",
       it: "Marocchina",
       fr: "Marocaine",
       de: "Marokkanisch"
@@ -883,6 +953,7 @@ export const CUISINES = [
     name: {
       bg: "Тунизийска",
       en: "Tunisian",
+      es: "Tunecina",
       it: "Tunisina",
       fr: "Tunisienne",
       de: "Tunesisch"
@@ -895,6 +966,7 @@ export const CUISINES = [
     name: {
       bg: "Египетска",
       en: "Egyptian",
+      es: "Egipcia",
       it: "Egiziana",
       fr: "Égyptienne",
       de: "Ägyptisch"
@@ -909,6 +981,7 @@ export const CUISINES = [
     name: {
       bg: "Субсахарска Африка",
       en: "Sub-Saharan African",
+      es: "África Subsahariana",
       it: "Africa subsahariana",
       fr: "Afrique subsaharienne",
       de: "Subsahara-Afrika"
@@ -921,6 +994,7 @@ export const CUISINES = [
     name: {
       bg: "Етиопска",
       en: "Ethiopian",
+      es: "Etíope",
       it: "Etiope",
       fr: "Éthiopienne",
       de: "Äthiopisch"
@@ -933,6 +1007,7 @@ export const CUISINES = [
     name: {
       bg: "Нигерийска",
       en: "Nigerian",
+      es: "Nigeriana",
       it: "Nigeriana",
       fr: "Nigériane",
       de: "Nigerianisch"
@@ -945,6 +1020,7 @@ export const CUISINES = [
     name: {
       bg: "Южноафриканска",
       en: "South African",
+      es: "Sudafricana",
       it: "Sudafricana",
       fr: "Sud-africaine",
       de: "Südafrikanisch"
@@ -959,6 +1035,7 @@ export const CUISINES = [
     name: {
       bg: "Веган / Вегетарианска",
       en: "Vegan / Vegetarian",
+      es: "Vegana / Vegetariana",
       it: "Vegana / Vegetariana",
       fr: "Végétalienne / Végétarienne",
       de: "Vegan / Vegetarisch"
@@ -971,6 +1048,7 @@ export const CUISINES = [
     name: {
       bg: "Морска кухня",
       en: "Seafood",
+      es: "Mariscos",
       it: "Frutti di mare",
       fr: "Fruits de mer",
       de: "Meeresfrüchte"
@@ -983,6 +1061,7 @@ export const CUISINES = [
     name: {
       bg: "Улична храна",
       en: "Street Food",
+      es: "Comida Callejera",
       it: "Cibo da strada",
       fr: "Street Food",
       de: "Street Food"
@@ -995,6 +1074,7 @@ export const CUISINES = [
     name: {
       bg: "Тропическа",
       en: "Tropical",
+      es: "Tropical",
       it: "Tropicale",
       fr: "Tropicale",
       de: "Tropisch"
@@ -1257,6 +1337,7 @@ export const mergeCuisinesList = (firestoreDocs = []) => {
     const mergedName = {
       bg: docItem.name?.bg || docItem.name_bg || existing?.name?.bg || docItem.id,
       en: docItem.name?.en || docItem.name_en || existing?.name?.en || docItem.id,
+      es: docItem.name?.es || docItem.name_es || existing?.name?.es || docItem.name?.en || docItem.id,
       it: docItem.name?.it || docItem.name_it || existing?.name?.it || docItem.name?.en || docItem.id,
       fr: docItem.name?.fr || docItem.name_fr || existing?.name?.fr || docItem.name?.en || docItem.id,
       de: docItem.name?.de || docItem.name_de || existing?.name?.de || docItem.name?.en || docItem.id

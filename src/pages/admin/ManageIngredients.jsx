@@ -45,6 +45,7 @@ const ManageIngredients = () => {
   const [namesByLang, setNamesByLang] = useState({
     bg: '',
     en: '',
+    es: '',
     it: '',
     fr: '',
     de: ''
@@ -153,12 +154,15 @@ const ManageIngredients = () => {
       let needsTranslation = false;
       let translationReason = null;
 
-      // Multilingual Data Entry Paradigm: build robust map for 5 languages
+      // Multilingual Data Entry Paradigm: build robust map for 6 languages
       const updatedNameMap = {
         en: finalNameEn,
         bg: isEn
           ? (namesByLang.bg?.trim() || originalNameMap.bg || (editingId ? originalIng?.name_bg : '') || finalNameEn)
           : (currentLang === 'bg' ? finalNameLocal : (namesByLang.bg?.trim() || originalNameMap.bg || originalIng?.name_bg || finalNameEn)),
+        es: isEn
+          ? (namesByLang.es?.trim() || originalNameMap.es || (editingId ? originalIng?.name_es : '') || finalNameEn)
+          : (currentLang === 'es' ? finalNameLocal : (namesByLang.es?.trim() || originalNameMap.es || originalIng?.name_es || finalNameEn)),
         it: isEn
           ? (namesByLang.it?.trim() || originalNameMap.it || (editingId ? originalIng?.name_it : '') || finalNameEn)
           : (currentLang === 'it' ? finalNameLocal : (namesByLang.it?.trim() || originalNameMap.it || originalIng?.name_it || finalNameEn)),
@@ -195,6 +199,7 @@ const ManageIngredients = () => {
         name: updatedNameMap,
         name_en: updatedNameMap.en,
         name_bg: updatedNameMap.bg,
+        name_es: updatedNameMap.es,
         name_it: updatedNameMap.it,
         name_fr: updatedNameMap.fr,
         name_de: updatedNameMap.de,
@@ -251,6 +256,7 @@ const ManageIngredients = () => {
     const loadedNames = {
       en: ing.name_en || nameMap.en || '',
       bg: ing.name_bg || nameMap.bg || '',
+      es: ing.name_es || nameMap.es || '',
       it: ing.name_it || nameMap.it || '',
       fr: ing.name_fr || nameMap.fr || '',
       de: ing.name_de || nameMap.de || ''
@@ -325,7 +331,7 @@ const ManageIngredients = () => {
   const handleCancelEdit = () => {
     setEditingId(null);
     setShowForm(false);
-    setNamesByLang({ bg: '', en: '', it: '', fr: '', de: '' });
+    setNamesByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
     setSlug('');
     setMainGroup('');
     setSubGroup('');
@@ -454,6 +460,7 @@ const ManageIngredients = () => {
       const allNames = [
         ing.name_en,
         ing.name_bg,
+        ing.name_es,
         ing.name_it,
         ing.name_fr,
         ing.name_de,
@@ -472,7 +479,7 @@ const ManageIngredients = () => {
   const handleExportCSV = () => {
     const exportable = ingredients.filter(i => !i.is_deleted);
     const headers = [
-      'slug','name_en','name_bg','name_it','name_fr','name_de',
+      'slug','name_en','name_bg','name_es','name_it','name_fr','name_de',
       'main_group','sub_group','cuisine_origin',
       'calories','proteins','carbs','fats',
       'allergens','tags','shelf_life_days','is_liquid','price_per_100',
@@ -482,6 +489,7 @@ const ManageIngredients = () => {
       ing.slug || ing.id,
       ing.name_en || ing.name?.en || '',
       ing.name_bg || ing.name?.bg || '',
+      ing.name_es || ing.name?.es || '',
       ing.name_it || ing.name?.it || '',
       ing.name_fr || ing.name?.fr || '',
       ing.name_de || ing.name?.de || '',
@@ -536,6 +544,7 @@ const ManageIngredients = () => {
         if (slug === 'zucchini' && name_bg === 'Тиквичкi') {
           name_bg = 'Тиквички';
         }
+        const name_es = (idx('name_es') !== -1 && cols[idx('name_es')]?.trim()) || name_en;
         const name_it = (idx('name_it') !== -1 && cols[idx('name_it')]?.trim()) || name_en;
         const name_fr = (idx('name_fr') !== -1 && cols[idx('name_fr')]?.trim()) || name_en;
         const name_de = (idx('name_de') !== -1 && cols[idx('name_de')]?.trim()) || name_en;
@@ -592,12 +601,14 @@ const ManageIngredients = () => {
           slug,
           name_en,
           name_bg,
+          name_es,
           name_it,
           name_fr,
           name_de,
           name: {
             en: name_en,
             bg: name_bg,
+            es: name_es,
             it: name_it,
             fr: name_fr,
             de: name_de

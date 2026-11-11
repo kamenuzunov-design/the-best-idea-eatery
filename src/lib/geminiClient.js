@@ -483,6 +483,7 @@ export async function translateTextTo5Languages({ text = '', sourceLang = 'bg' }
   const baseMap = {
     bg: cleanText,
     en: cleanText,
+    es: cleanText,
     it: cleanText,
     fr: cleanText,
     de: cleanText
@@ -495,7 +496,7 @@ export async function translateTextTo5Languages({ text = '', sourceLang = 'bg' }
     if (!apiKey) return baseMap;
 
     const prompt = `You are a professional multilingual translator.
-Translate the following short title or campaign name from "${sourceLang}" into all 5 languages: bg (Bulgarian), en (English), it (Italian), fr (French), and de (German).
+Translate the following short title or campaign name from "${sourceLang}" into all 6 languages: bg (Bulgarian), en (English), es (Spanish), it (Italian), fr (French), and de (German).
 Keep the translations natural, concise, and accurate for culinary products, restaurant promotions, or advertisements.
 
 Input text: "${cleanText}"
@@ -504,6 +505,7 @@ Return ONLY valid JSON with this exact structure:
 {
   "bg": "...",
   "en": "...",
+  "es": "...",
   "it": "...",
   "fr": "...",
   "de": "..."
@@ -521,7 +523,7 @@ Return ONLY valid JSON with this exact structure:
 
     if (res?.data && typeof res.data === 'object') {
       const result = { ...baseMap };
-      ['bg', 'en', 'it', 'fr', 'de'].forEach(lang => {
+      ['bg', 'en', 'es', 'it', 'fr', 'de'].forEach(lang => {
         if (typeof res.data[lang] === 'string' && res.data[lang].trim()) {
           result[lang] = res.data[lang].trim();
         }
@@ -538,7 +540,7 @@ Return ONLY valid JSON with this exact structure:
 }
 
 /**
- * Translates advertising rules / page content / HTML into all 5 languages: bg, en, it, fr, de.
+ * Translates advertising rules / page content / HTML into all 6 languages: bg, en, es, it, fr, de.
  * Preserves all HTML tags, formatting, URLs, emails, phone numbers, and structural markup intact.
  */
 export async function translateAdvertisingPageTo5Languages({ content = '', sourceLang = 'bg' }) {
@@ -546,6 +548,7 @@ export async function translateAdvertisingPageTo5Languages({ content = '', sourc
   const baseMap = {
     bg: cleanContent,
     en: cleanContent,
+    es: cleanContent,
     it: cleanContent,
     fr: cleanContent,
     de: cleanContent
@@ -559,9 +562,10 @@ export async function translateAdvertisingPageTo5Languages({ content = '', sourc
 
     const prompt = `You are a professional multilingual translator and HTML localization specialist.
 CRITICAL TASK:
-Translate the following advertisement / advertising rules page content for a culinary web application from "${sourceLang}" into all 5 languages:
+Translate the following advertisement / advertising rules page content for a culinary web application from "${sourceLang}" into all 6 languages:
 - bg: Bulgarian
 - en: English
+- es: Spanish
 - it: Italian
 - fr: French
 - de: German
@@ -573,7 +577,7 @@ CRITICAL LOCALIZATION & FORMATTING RULES:
 4. If the text is plain text or Markdown rather than HTML, preserve all newlines, bullet points, and formatting cleanly.
 5. Provide professional, fluent, persuasive, and grammatically impeccable translations suited for culinary business promotions and advertising terms.
 6. The source language "${sourceLang}" must match the original input exactly.
-7. Return ONLY a valid JSON object with the exact keys: "bg", "en", "it", "fr", "de".
+7. Return ONLY a valid JSON object with the exact keys: "bg", "en", "es", "it", "fr", "de".
 
 Source content (${sourceLang}):
 ${cleanContent}`;
@@ -590,7 +594,7 @@ ${cleanContent}`;
 
     if (res?.data && typeof res.data === 'object') {
       const result = { ...baseMap };
-      ['bg', 'en', 'it', 'fr', 'de'].forEach(lang => {
+      ['bg', 'en', 'es', 'it', 'fr', 'de'].forEach(lang => {
         if (typeof res.data[lang] === 'string' && res.data[lang].trim()) {
           result[lang] = res.data[lang].trim();
         }

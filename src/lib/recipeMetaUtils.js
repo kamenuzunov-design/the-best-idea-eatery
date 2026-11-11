@@ -57,13 +57,13 @@ export const getRecipeTags = (recipe, ingredientsList) => {
 export const translateTag = (tag, langOrIsBg = 'bg') => {
   const lang = typeof langOrIsBg === 'string' ? langOrIsBg : (langOrIsBg ? 'bg' : 'en');
   const map = {
-    'vegan': { bg: 'Веган', en: 'Vegan', it: 'Vegano', fr: 'Végane', de: 'Vegan' },
-    'vegetarian': { bg: 'Вегетарианско', en: 'Vegetarian', it: 'Vegetariano', fr: 'Végétarien', de: 'Vegetarisch' },
-    'keto': { bg: 'Кето', en: 'Keto', it: 'Keto', fr: 'Céto', de: 'Keto' },
-    'pescatarian': { bg: 'Пескатерианско', en: 'Pescatarian', it: 'Pescatariano', fr: 'Pesco-végétarien', de: 'Pescetarisch' },
-    'gluten-free': { bg: 'Без глутен', en: 'Gluten-Free', it: 'Senza glutine', fr: 'Sans gluten', de: 'Glutenfrei' },
-    'superfood': { bg: 'Суперхрана', en: 'Superfood', it: 'Superfood', fr: 'Superaliment', de: 'Superfood' },
-    'high-protein': { bg: 'Високопротеиново', en: 'High-Protein', it: 'Alto proteico', fr: 'Riche en protéines', de: 'Proteinreich' }
+    'vegan': { bg: 'Веган', en: 'Vegan', es: 'Vegano', it: 'Vegano', fr: 'Végane', de: 'Vegan' },
+    'vegetarian': { bg: 'Вегетарианско', en: 'Vegetarian', es: 'Vegetariano', it: 'Vegetariano', fr: 'Végétarien', de: 'Vegetarisch' },
+    'keto': { bg: 'Кето', en: 'Keto', es: 'Keto', it: 'Keto', fr: 'Céto', de: 'Keto' },
+    'pescatarian': { bg: 'Пескатерианско', en: 'Pescatarian', es: 'Pescetariano', it: 'Pescatariano', fr: 'Pesco-végétarien', de: 'Pescetarisch' },
+    'gluten-free': { bg: 'Без глутен', en: 'Gluten-Free', es: 'Sin gluten', it: 'Senza glutine', fr: 'Sans gluten', de: 'Glutenfrei' },
+    'superfood': { bg: 'Суперхрана', en: 'Superfood', es: 'Superalimento', it: 'Superfood', fr: 'Superaliment', de: 'Superfood' },
+    'high-protein': { bg: 'Високопротеиново', en: 'High-Protein', es: 'Rico en proteínas', it: 'Alto proteico', fr: 'Riche en protéines', de: 'Proteinreich' }
   };
   
   if (map[tag]) return map[tag][lang] || map[tag].en || map[tag].bg;
@@ -96,20 +96,20 @@ export const normalizeMainGroup = (mg) => {
 export const getMainGroupLabel = (groupKey, langOrIsBg = 'bg') => {
   const lang = typeof langOrIsBg === 'string' ? langOrIsBg : (langOrIsBg ? 'bg' : 'en');
   const map = {
-    'vegetables': { bg: 'Зеленчуци', en: 'Vegetables', it: 'Verdure', fr: 'Légumes', de: 'Gemüse' },
-    'fruits': { bg: 'Плодове', en: 'Fruits', it: 'Frutta', fr: 'Fruits', de: 'Obst' },
-    'meat': { bg: 'Месо', en: 'Meat', it: 'Carne', fr: 'Viande', de: 'Fleisch' },
-    'seafood': { bg: 'Морски дарове', en: 'Seafood', it: 'Frutti di mare', fr: 'Fruits de mer', de: 'Meeresfrüchte' },
-    'dairy': { bg: 'Млечни', en: 'Dairy & Eggs', it: 'Latticini e uova', fr: 'Produits laitiers et œufs', de: 'Milchprodukte & Eier' },
-    'grains': { bg: 'Зърнени', en: 'Grains', it: 'Cereali', fr: 'Céréales', de: 'Getreide' },
-    'fats': { bg: 'Мазнини', en: 'Fats & Oils', it: 'Grassi e oli', fr: 'Matières grasses et huiles', de: 'Fette & Öle' },
-    'spices': { bg: 'Подправки', en: 'Spices & Herbs', it: 'Spezie ed erbe', fr: 'Épices et herbes', de: 'Gewürze & Kräuter' },
-    'nuts_and_seeds': { bg: 'Ядки и семена', en: 'Nuts & Seeds', it: 'Frutta a guscio e semi', fr: 'Fruits à coque et graines', de: 'Nüsse & Samen' },
-    'sweeteners': { bg: 'Подсладители', en: 'Sweeteners', it: 'Dolcificanti', fr: 'Édulcorants', de: 'Süßungsmittel' },
-    'drinks': { bg: 'Напитки', en: 'Drinks', it: 'Bevande', fr: 'Boissons', de: 'Getränke' },
-    'pasta_products': { bg: 'Макаронени изделия', en: 'Pasta Products', it: 'Paste alimentari', fr: 'Pâtes alimentaires', de: 'Teigwaren' },
-    'pulses_and_starches': { bg: 'Бобови и скорбялни', en: 'Pulses & Starches', it: 'Legumi e amidi', fr: 'Légumineuses et féculents', de: 'Hülsenfrüchte & Stärke' },
-    'other': { bg: 'Други', en: 'Other', it: 'Altro', fr: 'Autre', de: 'Andere' }
+    'vegetables': { bg: 'Зеленчуци', en: 'Vegetables', es: 'Verduras', it: 'Verdure', fr: 'Légumes', de: 'Gemüse' },
+    'fruits': { bg: 'Плодове', en: 'Fruits', es: 'Frutas', it: 'Frutta', fr: 'Fruits', de: 'Obst' },
+    'meat': { bg: 'Месо', en: 'Meat', es: 'Carne', it: 'Carne', fr: 'Viande', de: 'Fleisch' },
+    'seafood': { bg: 'Морски дарове', en: 'Seafood', es: 'Mariscos', it: 'Frutti di mare', fr: 'Fruits de mer', de: 'Meeresfrüchte' },
+    'dairy': { bg: 'Млечни', en: 'Dairy & Eggs', es: 'Lácteos y huevos', it: 'Latticini e uova', fr: 'Produits laitiers et œufs', de: 'Milchprodukte & Eier' },
+    'grains': { bg: 'Зърнени', en: 'Grains', es: 'Cereales', it: 'Cereali', fr: 'Céréales', de: 'Getreide' },
+    'fats': { bg: 'Мазнини', en: 'Fats & Oils', es: 'Grasas y aceites', it: 'Grassi e oli', fr: 'Matières grasses et huiles', de: 'Fette & Öle' },
+    'spices': { bg: 'Подправки', en: 'Spices & Herbs', es: 'Especias y hierbas', it: 'Spezie ed erbe', fr: 'Épices et herbes', de: 'Gewürze & Kräuter' },
+    'nuts_and_seeds': { bg: 'Ядки и семена', en: 'Nuts & Seeds', es: 'Frutos secos y semillas', it: 'Frutta a guscio e semi', fr: 'Fruits à coque et graines', de: 'Nüsse & Samen' },
+    'sweeteners': { bg: 'Подсладители', en: 'Sweeteners', es: 'Edulcorantes', it: 'Dolcificanti', fr: 'Édulcorants', de: 'Süßungsmittel' },
+    'drinks': { bg: 'Напитки', en: 'Drinks', es: 'Bebidas', it: 'Bevande', fr: 'Boissons', de: 'Getränke' },
+    'pasta_products': { bg: 'Макаронени изделия', en: 'Pasta Products', es: 'Pastas alimenticias', it: 'Paste alimentari', fr: 'Pâtes alimentaires', de: 'Teigwaren' },
+    'pulses_and_starches': { bg: 'Бобови и скорбялни', en: 'Pulses & Starches', es: 'Legumbres y almidones', it: 'Legumi e amidi', fr: 'Légumineuses et féculents', de: 'Hülsenfrüchte & Stärke' },
+    'other': { bg: 'Други', en: 'Other', es: 'Otros', it: 'Altro', fr: 'Autre', de: 'Andere' }
   };
   
   const norm = normalizeMainGroup(groupKey);
