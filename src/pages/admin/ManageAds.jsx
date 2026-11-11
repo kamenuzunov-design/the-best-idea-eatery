@@ -746,11 +746,15 @@ const ManageAds = () => {
         const enContent = data.content_en || data.content?.en || '';
         
         // Find content for current user language
-        let localContent = data[`content_${currentLang}`] || data.content?.[currentLang] || (currentLang === 'bg' ? (data.content_bg || '') : '');
+        let localContent = 
+          data[`content_${currentLang}`] || 
+          data.content?.[currentLang] || 
+          (currentLang === 'bg' ? (data.content_bg || '') : '') ||
+          (currentLang === 'en' ? enContent : '');
         
-        // If there is no text in current language, fallback to English (or Bulgarian if English is missing)
+        // If there is no text in current language, fallback to English or Bulgarian
         if (!localContent) {
-          localContent = enContent || (data.content_bg || '');
+          localContent = enContent || (data.content_bg || '') || (data.content?.bg || '');
         }
 
         setSettingsData({
@@ -774,11 +778,8 @@ const ManageAds = () => {
     try {
       const existing = settingsData.rawDoc || {};
       const existingContentMap = typeof existing.content === 'object' && existing.content ? existing.content : {};
-      const enText = (settingsData.content_en || '').trim();
-      const localText = (settingsData.content_local || '').trim();
-
-      const sourceText = isEn ? enText : (localText || enText);
-      const sourceLang = isEn ? 'en' : (localText ? currentLang : 'en');
+      const sourceText = (settingsData.content_local || '').trim();
+      const sourceLang = currentLang;
 
       if (!sourceText) {
         alert(t('manage_ads.alerts.content_required', 'Моля, въведете съдържание за правилата за реклама!'));
@@ -805,9 +806,6 @@ const ManageAds = () => {
         let val = '';
         if (lang === sourceLang) {
           val = sourceText;
-        } else if (!isEn && lang === 'en' && enText && enText !== localText && (!aiTranslations || !aiTranslations.en)) {
-          // If the user manually provided distinct English text and AI did not translate, respect manual English
-          val = enText;
         } else if (aiTranslations && aiTranslations[lang]) {
           val = aiTranslations[lang];
         } else if (existingContentMap[lang] || existing[`content_${lang}`]) {
@@ -836,7 +834,7 @@ const ManageAds = () => {
       // Keep local state in sync
       setSettingsData(prev => ({
         ...prev,
-        content_local: updatedContentMap[currentLang] || prev.content_local,
+        content_local: sourceText,
         content_en: updatedContentMap.en || prev.content_en,
         rawDoc: { ...existing, ...docUpdates }
       }));
@@ -1853,58 +1851,26 @@ const ManageAds = () => {
                 </div>
               </div>
 
-              {isEn ? (
-                /* Single English textarea for English users */
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                    {t('manage_ads.settings_modal.content_en')}
-                  </label>
-                  <textarea 
-                    required 
-                    rows={12}
-                    value={settingsData.content_en} 
-                    onChange={e => setSettingsData(prev => ({ ...prev, content_en: e.target.value }))} 
-                    className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                    placeholder={t('manage_ads.settings_modal.placeholder')}
-                  />
-                </div>
-              ) : (
-                /* Dual Local + English textareas for other languages */
-                <>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                      {t('manage_ads.settings_modal.content_local', { lang: localLangMeta.fullName })}
-                    </label>
-                    <textarea 
-                      rows={8}
-                      value={settingsData.content_local} 
-                      onChange={e => setSettingsData(prev => ({ ...prev, content_local: e.target.value }))} 
-                      className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                      placeholder={t('manage_ads.settings_modal.placeholder')}
-                    />
-                  </div>
-                  
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1 flex items-center justify-between">
-                      <span>{t('manage_ads.settings_modal.content_en')}</span>
-                      {hasApiKey && (
-                        <span className="text-primary font-normal text-[9px] lowercase tracking-normal flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">auto_awesome</span>
-                          {t('manage_ads.settings_modal.auto_translate_hint', 'автоматичен AI превод при запазване')}
-                        </span>
-                      )}
-                    </label>
-                    <textarea 
-                      required={!hasApiKey && !settingsData.content_local} 
-                      rows={8}
-                      value={settingsData.content_en} 
-                      onChange={e => setSettingsData(prev => ({ ...prev, content_en: e.target.value }))} 
-                      className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                      placeholder={hasApiKey ? t('manage_ads.settings_modal.placeholder_auto_en', 'Може да остане празно – ще се преведе автоматично от AI...') : t('manage_ads.settings_modal.placeholder')}
-                    />
-                  </div>
-                </>
-              )}
+              {/* Single textarea for current user language with automatic AI translation */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1 flex items-center justify-between">
+                  <span>{t('manage_ads.settings_modal.content_local', { lang: localLangMeta.fullName })}</span>
+                  {hasApiKey && (
+                    <span className="text-primary font-normal text-[9px] lowercase tracking-normal flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">auto_awesome</span>
+                      {t('manage_ads.settings_modal.auto_translate_hint', 'автоматичен AI превод при запазване')}
+                    </span>
+                  )}
+                </label>
+                <textarea 
+                  required 
+                  rows={12}
+                  value={settingsData.content_local} 
+                  onChange={e => setSettingsData(prev => ({ ...prev, content_local: e.target.value }))} 
+                  className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono leading-relaxed" 
+                  placeholder={t('manage_ads.settings_modal.placeholder')}
+                />
+              </div>
 
               <button 
                 disabled={loadingSettings} 
