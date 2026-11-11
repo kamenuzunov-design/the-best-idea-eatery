@@ -2,7 +2,31 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 6 Ноември 2026
+## Последна сесия: 11 Ноември 2026
+
+### Извършена работа:
+1. **Етап 1 от Пътната карта: Затворен цикъл „Пазаруване ➔ Килер ➔ Готвене (Zero-Waste Loop)“ и AI Скенер на касови бележки ([AppContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/AppContext.jsx), [SavedRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/SavedRecipes.jsx), [IngredientScanner.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/IngredientScanner.jsx), [Pantry.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/Pantry.jsx), [AIIngredientsSearch.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/AIIngredientsSearch.jsx), [CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx), [OrderHistory.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/OrderHistory.jsx))**:
+   - **Интелигентно управление на наличности**: `upsertPantryItem` сумира количества при съвместими мерни единици (`g` ↔ `kg`, `ml` ↔ `l`) и задава автоматичен срок на годност; `deductRecipeFromPantry` приспада използваните съставки при сготвяне на рецепта.
+   - **1-клик прехвърляне от Списъка за пазаруване към Килера**: Бутон „Маркирай всички“ и банер „📦 Прехвърли в Килера (X)“ в `SavedRecipes.jsx`.
+   - **AI Скенер на касови бележки (`/scanner?mode=receipt`)**: Двутабов селектор в `IngredientScanner.jsx` за разпознаване на хранителни артикули, количества и мерки от касов бон от супермаркет с възможност за корекция преди запис.
+   - **Zero-Waste Rescue**: Проактивен банер в `Pantry.jsx` при продукти с изтичащ до 3 дни срок, отварящ `/ai-search?filter=expiring`.
+2. **Експортиране на библиотека с преизползваеми архитектурни шаблони за Администрация и AI модули (`docs/blueprints/`)**:
+   - Създадени 13 самостоятелни документа ([00_INDEX_AND_INTEGRATION_GUIDE.md](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/blueprints/00_INDEX_AND_INTEGRATION_GUIDE.md) до [12_HYBRID_DETERMINISTIC_AI_BRIDGES.md](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/blueprints/12_HYBRID_DETERMINISTIC_AI_BRIDGES.md)) за директно внедряване в други проекти.
+3. **Испански език (`ES` — Español) като 6-ти основен кулинарен език (`EN, ES, IT, FR, DE, BG`)**:
+   - Създаден пълен речник [es.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/es.json) и обновени всички селектори, статични номенклатури, AI преводачи и пакетният мигратор за работа на 6 езика.
+4. **Едноезиков модал и автоматичен AI превод на условията за реклама ([ManageAds.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageAds.jsx), [geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js))**:
+   - В модала за „Правила за реклама“ се показва само едно текстово поле на активния език на потребителя, а при натискане на „Запази Промените“ текстът/HTML кодът се превежда автоматично на останалите езици чрез `translateAdvertisingPageTo5Languages`.
+5. **Козметична корекция на кръглия аватар на готвача ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx), [CookingProgress.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingProgress.jsx))**:
+   - Премахнат вътрешният отстъп (`p-0.5` / `p-1`) за плътно запълване на кръглата рамка.
+6. **Следващи приоритети за следващата сесия (по одобрената 5-етапна пътна карта в [03_active_plan.md](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/agent/03_active_plan.md))**:
+   - **Етап 2**: „Готвене с мръсни ръце“ — Гласови команди (`SpeechRecognition` на 6 езика) и плаващо Чекмедже със съставки в `CookingMode.jsx`.
+   - **Етап 3**: Умен Седмичен Планьор 2.0 (`WeeklyMenuPlanner.jsx`) с дневен калориен/макро баланс и бутон „Запълни седмицата автоматично“.
+   - **Етап 4**: Лични Кулинарни Колекции (Cookbooks), 1-клик споделяне на пазарския списък (Viber/WhatsApp) и Меню Карта за Гости.
+   - **Етап 5**: Инсталируемо Мобилно Приложение (PWA) и офлайн кеш.
+
+---
+
+## Предишна сесия: 6 Ноември 2026
 
 ### Извършена работа:
 1. **Интелигентно управление на линкове за онлайн събития и защита на достъпа ([GourmetEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetEvents.jsx), [ManageEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageEvents.jsx), [defaultEvents.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/defaultEvents.js), `src/locales/`)**:
