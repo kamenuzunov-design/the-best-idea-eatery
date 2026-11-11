@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { logActivity } from '../../lib/activityLogger';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, getLocalizedField } from '../../lib/localeUtils';
 import { extractYouTubeId, isYouTubeUrl, getYouTubeThumbnail } from '../../lib/videoUtils';
-import { translateTextTo5Languages, getGeminiApiKey } from '../../lib/geminiClient';
+import { translateTextTo5Languages, translateAdvertisingPageTo5Languages, getGeminiApiKey } from '../../lib/geminiClient';
 
 const ManageAds = () => {
   const { isAdmin, isOwner, user } = useAuth();
@@ -29,6 +29,7 @@ const ManageAds = () => {
   const currentLang = i18n.language || 'bg';
   const isEn = currentLang === 'en';
   const localLangMeta = LANGUAGE_LABELS[currentLang] || LANGUAGE_LABELS.bg;
+  const hasApiKey = Boolean(getGeminiApiKey());
   
   const [ads, setAds] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -774,58 +775,72 @@ const ManageAds = () => {
       const existing = settingsData.rawDoc || {};
       const existingContentMap = typeof existing.content === 'object' && existing.content ? existing.content : {};
       const enText = (settingsData.content_en || '').trim();
+      const localText = (settingsData.content_local || '').trim();
+
+      const sourceText = isEn ? enText : (localText || enText);
+      const sourceLang = isEn ? 'en' : (localText ? currentLang : 'en');
+
+      if (!sourceText) {
+        alert(t('manage_ads.alerts.content_required', 'Моля, въведете съдържание за правилата за реклама!'));
+        setLoadingSettings(false);
+        return;
+      }
+
+      // Check for Gemini API key and perform AI auto-translation into all 5 languages
+      const apiKey = getGeminiApiKey();
+      let aiTranslations = null;
+      if (apiKey) {
+        aiTranslations = await translateAdvertisingPageTo5Languages({ content: sourceText, sourceLang });
+      }
 
       const updatedContentMap = {
-        ...existingContentMap,
-        en: enText
+        ...existingContentMap
       };
-
       const docUpdates = {
         ...existing,
-        content_en: enText,
         updatedAt: serverTimestamp()
       };
 
-      if (isEn) {
-        // If English user: English content propagates as base if other languages missing, preserving existing
-        for (const lang of SUPPORTED_LANGUAGES) {
-          if (!updatedContentMap[lang]) {
-            updatedContentMap[lang] = enText;
-          }
-          if (!docUpdates[`content_${lang}`]) {
-            docUpdates[`content_${lang}`] = enText;
-          }
-        }
-        if (!docUpdates.content_bg) {
-          docUpdates.content_bg = enText;
-        }
-      } else {
-        // Local language user (bg, it, fr, de):
-        const finalLocal = (settingsData.content_local || '').trim() || enText;
-        docUpdates[`content_${currentLang}`] = finalLocal;
-        updatedContentMap[currentLang] = finalLocal;
-
-        if (currentLang === 'bg') {
-          docUpdates.content_bg = finalLocal;
+      for (const lang of SUPPORTED_LANGUAGES) {
+        let val = '';
+        if (lang === sourceLang) {
+          val = sourceText;
+        } else if (!isEn && lang === 'en' && enText && enText !== localText && (!aiTranslations || !aiTranslations.en)) {
+          // If the user manually provided distinct English text and AI did not translate, respect manual English
+          val = enText;
+        } else if (aiTranslations && aiTranslations[lang]) {
+          val = aiTranslations[lang];
+        } else if (existingContentMap[lang] || existing[`content_${lang}`]) {
+          val = existingContentMap[lang] || existing[`content_${lang}`];
+        } else {
+          val = sourceText;
         }
 
-        // Preserve existing translations for all other languages
-        for (const lang of SUPPORTED_LANGUAGES) {
-          if (lang !== currentLang && lang !== 'en') {
-            if (existing[`content_${lang}`]) {
-              docUpdates[`content_${lang}`] = existing[`content_${lang}`];
-            }
-            if (existingContentMap[lang]) {
-              updatedContentMap[lang] = existingContentMap[lang];
-            }
-          }
-        }
+        updatedContentMap[lang] = val;
+        docUpdates[`content_${lang}`] = val;
       }
 
+      // Maintain legacy/convenience top-level fields
+      docUpdates.content_bg = updatedContentMap.bg;
+      docUpdates.content_en = updatedContentMap.en;
       docUpdates.content = updatedContentMap;
 
       await setDoc(doc(db, 'settings', 'advertising_page'), docUpdates, { merge: true });
-      await logActivity(user?.uid || 'admin', user?.email || 'N/A', 'UPDATE_AD_SETTINGS', `Обновени правила за реклама (${currentLang.toUpperCase()})`);
+      await logActivity(
+        user?.uid || 'admin', 
+        user?.email || 'N/A', 
+        'UPDATE_AD_SETTINGS', 
+        `Обновени правила за реклама (${currentLang.toUpperCase()})${aiTranslations ? ' + AI превод на 5 езика' : ''}`
+      );
+
+      // Keep local state in sync
+      setSettingsData(prev => ({
+        ...prev,
+        content_local: updatedContentMap[currentLang] || prev.content_local,
+        content_en: updatedContentMap.en || prev.content_en,
+        rawDoc: { ...existing, ...docUpdates }
+      }));
+
       setIsSettingsModalOpen(false);
       alert(t('manage_ads.alerts.save_settings_success'));
     } catch(err) {
@@ -1870,23 +1885,41 @@ const ManageAds = () => {
                   </div>
                   
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                      {t('manage_ads.settings_modal.content_en')}
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1 flex items-center justify-between">
+                      <span>{t('manage_ads.settings_modal.content_en')}</span>
+                      {hasApiKey && (
+                        <span className="text-primary font-normal text-[9px] lowercase tracking-normal flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">auto_awesome</span>
+                          {t('manage_ads.settings_modal.auto_translate_hint', 'автоматичен AI превод при запазване')}
+                        </span>
+                      )}
                     </label>
                     <textarea 
-                      required 
+                      required={!hasApiKey && !settingsData.content_local} 
                       rows={8}
                       value={settingsData.content_en} 
                       onChange={e => setSettingsData(prev => ({ ...prev, content_en: e.target.value }))} 
                       className="bg-background-dark border border-primary/20 rounded-xl p-3 text-slate-100 text-sm outline-none focus:border-primary font-mono" 
-                      placeholder={t('manage_ads.settings_modal.placeholder')}
+                      placeholder={hasApiKey ? t('manage_ads.settings_modal.placeholder_auto_en', 'Може да остане празно – ще се преведе автоматично от AI...') : t('manage_ads.settings_modal.placeholder')}
                     />
                   </div>
                 </>
               )}
 
-              <button disabled={loadingSettings} type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer">
-                {t('manage_ads.settings_modal.save_btn')}
+              <button 
+                disabled={loadingSettings} 
+                type="submit" 
+                className="w-full py-4 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest cursor-pointer flex items-center justify-center gap-2"
+              >
+                {loadingSettings && (
+                  <span className="material-symbols-outlined animate-spin text-lg">refresh</span>
+                )}
+                <span>
+                  {loadingSettings
+                    ? (hasApiKey ? t('manage_ads.settings_modal.saving_ai', 'Запазване и AI превод...') : t('common.loading', 'Запазване...'))
+                    : t('manage_ads.settings_modal.save_btn')
+                  }
+                </span>
               </button>
             </form>
           </div>

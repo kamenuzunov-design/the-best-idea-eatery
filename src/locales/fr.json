@@ -1409,7 +1409,10 @@
       "content_bg": "Contenu (Bulgare)",
       "content_en": "Contenu (Anglais)",
       "placeholder": "Entrez du texte ou du HTML ici...",
-      "save_btn": "Enregistrer les Modifications"
+      "placeholder_auto_en": "Peut rester vide – sera traduit automatiquement par l'IA...",
+      "save_btn": "Enregistrer les Modifications",
+      "saving_ai": "Enregistrement et traduction IA...",
+      "auto_translate_hint": "traduction IA automatique à l'enregistrement"
     },
     "ing_modal": {
       "title": "Sélectionner un Ingrédient",

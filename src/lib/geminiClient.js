@@ -537,6 +537,75 @@ Return ONLY valid JSON with this exact structure:
   return baseMap;
 }
 
+/**
+ * Translates advertising rules / page content / HTML into all 5 languages: bg, en, it, fr, de.
+ * Preserves all HTML tags, formatting, URLs, emails, phone numbers, and structural markup intact.
+ */
+export async function translateAdvertisingPageTo5Languages({ content = '', sourceLang = 'bg' }) {
+  const cleanContent = (content || '').trim();
+  const baseMap = {
+    bg: cleanContent,
+    en: cleanContent,
+    it: cleanContent,
+    fr: cleanContent,
+    de: cleanContent
+  };
+  if (!cleanContent) return baseMap;
+
+  try {
+    await getRemoteAIConfig();
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) return baseMap;
+
+    const prompt = `You are a professional multilingual translator and HTML localization specialist.
+CRITICAL TASK:
+Translate the following advertisement / advertising rules page content for a culinary web application from "${sourceLang}" into all 5 languages:
+- bg: Bulgarian
+- en: English
+- it: Italian
+- fr: French
+- de: German
+
+CRITICAL LOCALIZATION & FORMATTING RULES:
+1. Preserve ALL HTML tags (e.g. <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <a>, <br>, <div>, <span>, <table>, etc.) and attributes (e.g. href, target, class) EXACTLY as they are.
+2. Translate ONLY the human-readable inner text content.
+3. DO NOT alter URLs, email addresses, phone numbers, brand names ("The Best Idea Eatery"), monetary amounts, or numeric values.
+4. If the text is plain text or Markdown rather than HTML, preserve all newlines, bullet points, and formatting cleanly.
+5. Provide professional, fluent, persuasive, and grammatically impeccable translations suited for culinary business promotions and advertising terms.
+6. The source language "${sourceLang}" must match the original input exactly.
+7. Return ONLY a valid JSON object with the exact keys: "bg", "en", "it", "fr", "de".
+
+Source content (${sourceLang}):
+${cleanContent}`;
+
+    const res = await callGemini({
+      apiKey,
+      prompt,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.1
+      },
+      timeoutMs: 35000
+    });
+
+    if (res?.data && typeof res.data === 'object') {
+      const result = { ...baseMap };
+      ['bg', 'en', 'it', 'fr', 'de'].forEach(lang => {
+        if (typeof res.data[lang] === 'string' && res.data[lang].trim()) {
+          result[lang] = res.data[lang].trim();
+        }
+      });
+      // Always retain user's exact original input for sourceLang
+      result[sourceLang] = cleanContent;
+      return result;
+    }
+  } catch (err) {
+    console.warn('translateAdvertisingPageTo5Languages failed or timed out:', err.message);
+  }
+
+  return baseMap;
+}
+
 // Pre-fetch remote AI configuration on module import in browser
 if (typeof window !== 'undefined') {
   setTimeout(() => {

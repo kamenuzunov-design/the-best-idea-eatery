@@ -1409,7 +1409,10 @@
       "content_bg": "Inhalt (Bulgarisch)",
       "content_en": "Inhalt (Englisch)",
       "placeholder": "Hier Text oder HTML eingeben...",
-      "save_btn": "Änderungen speichern"
+      "placeholder_auto_en": "Kann leer bleiben – wird automatisch von der KI übersetzt...",
+      "save_btn": "Änderungen speichern",
+      "saving_ai": "Speichern & AI-Übersetzung...",
+      "auto_translate_hint": "automatische AI-Übersetzung beim Speichern"
     },
     "ing_modal": {
       "title": "Zutat auswählen",

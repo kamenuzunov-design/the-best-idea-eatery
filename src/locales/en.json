@@ -1409,7 +1409,10 @@
       "content_bg": "Content (Bulgarian)",
       "content_en": "Content (English)",
       "placeholder": "Enter text or HTML here...",
-      "save_btn": "Save Changes"
+      "placeholder_auto_en": "Can be left blank – will be auto-translated by AI...",
+      "save_btn": "Save Changes",
+      "saving_ai": "Saving & AI translating...",
+      "auto_translate_hint": "automatic AI translation on save"
     },
     "ing_modal": {
       "title": "Select Ingredient",
