@@ -3,7 +3,24 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [2026-11-11] - Надграждане на AI Автоматичен Превод & Миграция (`/admin/backup`): превод на Кухни (`cuisines`), устойчив превод на Рецепти и Временен контролен буфер / JSON файл; Затворен цикъл „Пазаруване ➔ Килер ➔ Готвене (Zero-Waste Loop)“ и AI Скенер на касови бележки; Експортиране на `docs/blueprints/`; Испански език (ES - Español) като 6-ти основен език; Автоматичен AI превод на условията за реклама; Корекция на аватара на готвача
+## [2026-11-11] - Цялостно стабилизиране на AI многоезичния превод (6 езика): Интелигентен JSON Repair парсър & защита от кавички, 1-по-1 партиди без изкуствен таван, двуфазен езиков fallback; Персистиране и синхронизация в „Модерация“ и „Рецепти“; 6-езичен CSV импорт/експорт с `title_es` и `description_es`; Унифициране на текстове и бутони на 6 езика
+### Добавено / Променено (Added / Changed)
+- **Интелигентен JSON Repair & Защита от вътрешни кавички и сривове ([geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js), [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js))**:
+  - Реализиран и интегриран специализиран state-machine парсър `repairJsonString(raw)` в `geminiClient.js`, който автоматично открива и екранира вътрешни неекранирани кавички в стойностите (`"лодка"` ➔ `\"лодка\"`), вмъква пропуснати запетаи между редове, почиства некоректни контролни символи и премахва висящи запетаи.
+  - Добавено критично правило към промптовете за Gemini: изрична забрана за ползване на двойни кавички вътре в кулинарните текстове и насочване към единични `'...'` или „...“.
+  - Премахнат изкуственият таван `maxOutputTokens: 8192` в `aiTranslationMigrator.js` и преминаване към 1 рецепта на заявка (`BATCH_SIZE = 1`) за премахване на риска от препълване на буфера при богати 6-езикови рецепти.
+  - Реализиран двуфазен fallback за езикови групи (`bg/en/es` + `it/fr/de`) както в мигратора (`mergeSplitRecipeTranslations`), така и в `translateRecipeTo5Languages`, предотвратяващ загуба на данни при прекъсване на дълги заявки.
+- **Стабилизиране на превода в „Модерация“ (`/admin/moderation`) и „Рецепти“ (`/admin/recipes?edit=...`) ([Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+  - При отваряне на рецепта за редакция в език без превод (напр. испански), формата за редакция взима за източник съществуващите заглавие, описание, бележки и инструкции на български или английски език вместо празни полета.
+  - При клик върху „Преведи (6 езика)“ при редактиране на съществуваща рецепта (`editingId`), резултатите се записват мигновено във Firestore за всички 6 езика (`title_bg..de`, `description_bg..de`, `instruction_bg..de`, `notes_bg..de`, `needs_translation: false`, `translation_reason: null`), извиква се `syncRecipeCommunityPost` и се избягва повторно дублиращо превеждане при последващо натискане на „Запази“.
+  - При грешка при превода се визуализира реален Alert прозорец вместо фалшиво съобщение за успех.
+  - Въведен `lastOpenedEditIdRef`, предпазващ формата за редакция от нежелано нулиране при промяна на състоянието във Firestore.
+- **CSV Импорт и Експорт с `title_es` и `description_es` ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+  - Хедърът на експортирания и импортирания CSV файл вече включва `title_es` и `description_es`: `slug,title_bg,title_en,title_es,title_it,title_fr,title_de,description_bg,description_en,description_es,description_it,description_fr,description_de,...`.
+  - Експортният файл е преименуван на `recipes_6lang_${date}.csv`.
+- **Унифициране на бутони, логове и локализационни файлове от „5 езика“ на „6 езика“**:
+  - Всички бутони и системни текстове във всички 6 локализационни речника (`bg.json`, `en.json`, `es.json`, `it.json`, `fr.json`, `de.json`) и в административните страници (`ManageRecipes.jsx`, `Moderation.jsx`, `ManageAds.jsx`, `AIMultilingualMigrator.jsx`) са обновени на „6 езика“.
+
 ### Добавено / Променено (Added / Changed)
 - **Надграждане на инструмента „AI Автоматичен Превод & Миграция“ в `/admin/backup` ([aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js), [AIMultilingualMigrator.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/admin/AIMultilingualMigrator.jsx), `src/locales/` `bg.json`, `en.json`, `es.json`, `it.json`, `fr.json`, `de.json`)**:
   - **Превод на колекция „Кухни (Произход)“ (`cuisines`, `/admin/cuisines`)**:

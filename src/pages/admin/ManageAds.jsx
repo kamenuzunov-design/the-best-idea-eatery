@@ -828,7 +828,7 @@ const ManageAds = () => {
         user?.uid || 'admin', 
         user?.email || 'N/A', 
         'UPDATE_AD_SETTINGS', 
-        `Обновени правила за реклама (${currentLang.toUpperCase()})${aiTranslations ? ' + AI превод на 5 езика' : ''}`
+        `Обновени правила за реклама (${currentLang.toUpperCase()})${aiTranslations ? ' + AI превод на 6 езика' : ''}`
       );
 
       // Keep local state in sync

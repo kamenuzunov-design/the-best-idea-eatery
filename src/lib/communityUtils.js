@@ -35,7 +35,7 @@ export async function saveCommunityPosts(nextPosts, singleUpdatedPost = null) {
 }
 
 /**
- * Translates a post's title and caption into all 5 supported languages (bg, en, it, fr, de)
+ * Translates a post's title and caption into all 6 supported languages (bg, en, es, it, fr, de)
  * using the centralized Gemini AI client. Never throws — returns at least sourceLang entry.
  */
 export async function translatePostTo5Languages({ title = '', caption = '', sourceLang = 'bg' }) {
@@ -58,6 +58,7 @@ export async function translatePostTo5Languages({ title = '', caption = '', sour
     const prompt = `You are a professional culinary translator for a gourmet cooking social network.
 Translate the following dish title and culinary review/caption from "${sourceLang}" into all 6 languages: bg (Bulgarian), en (English), es (Spanish), it (Italian), fr (French), and de (German).
 Keep the tone warm, appetizing, and authentic.
+CRITICAL: NEVER use unescaped double quotes (") inside string values. Use single quotes ('...') or «...» instead.
 
 Input JSON:
 ${JSON.stringify({ title: cleanTitle, caption: cleanCaption })}
@@ -133,8 +134,7 @@ export function slugifyRecipeTitle(text = '') {
 
 /**
  * Translates a full recipe (title, description, ingredient notes, and preparation steps)
- * into all 5 supported languages (bg, en, it, fr, de) using translatePostTo5Languages
- * and the centralized Gemini AI client.
+ * into all 6 supported languages (bg, en, es, it, fr, de) using the centralized Gemini AI client.
  */
 export async function translateRecipeTo5Languages({
   title = '',
@@ -199,88 +199,42 @@ export async function translateRecipeTo5Languages({
     const apiKey = getGeminiApiKey();
     if (!apiKey) return baseResult;
 
-    const prompt = `You are a professional executive chef and multilingual culinary translator.
-CRITICAL TASK:
-Translate the following recipe content from "${sourceLang}" into all 6 supported languages:
-- "bg": Bulgarian (Български)
-- "en": English (Official Culinary English)
-- "es": Spanish (Español)
-- "it": Italian (Italiano)
-- "fr": French (Français)
-- "de": German (Deutsch)
+    const toSafeStr = (v) => {
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'string') return v.trim();
+      if (typeof v === 'object') {
+        return (v.instruction || v.text || v.step || v.note || v.desc || v.caption || v.content || v.value || '').toString().trim();
+      }
+      return String(v).trim();
+    };
 
-RULES:
-1. Every target language block must be completely translated into its corresponding language.
-2. The "en" block MUST be translated into pure, natural English (never leave it in Bulgarian, Spanish, Italian or German).
-3. "notes" and "steps" must be arrays of plain strings (not objects).
-4. Preserve exact array lengths and indices for "notes" and "steps" (if an item is "", keep it as "").
-
-Input JSON:
-${JSON.stringify({
-  title: cleanTitle,
-  description: cleanDesc,
-  notes: cleanNotes,
-  steps: cleanSteps
-})}
-
-Return ONLY valid JSON with this exact structure:
-{
-  "bg": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
-  "en": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
-  "es": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
-  "it": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
-  "fr": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] },
-  "de": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] }
-}`;
-
-    const res = await callGemini({
-      apiKey,
-      prompt,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.2
-      },
-      timeoutMs: 35000
-    });
-
-    if (res?.data && typeof res.data === 'object') {
-      const rootData = res.data?.data || res.data?.translations || res.data?.recipe || res.data;
-
-      const toSafeStr = (v) => {
-        if (v === null || v === undefined) return '';
-        if (typeof v === 'string') return v.trim();
-        if (typeof v === 'object') {
-          return (v.instruction || v.text || v.step || v.note || v.desc || v.caption || v.content || v.value || '').toString().trim();
+    const findBlock = (data, code) => {
+      if (!data || typeof data !== 'object') return null;
+      if (data[code] && typeof data[code] === 'object') return data[code];
+      if (data[code.toUpperCase()] && typeof data[code.toUpperCase()] === 'object') return data[code.toUpperCase()];
+      const aliases = {
+        bg: ['bulgarian', 'bulgaria'],
+        en: ['english', 'en-us', 'en-gb'],
+        es: ['spanish', 'espanol', 'español'],
+        it: ['italian', 'italiano'],
+        fr: ['french', 'francais'],
+        de: ['german', 'deutsch']
+      }[code] || [];
+      for (const k of Object.keys(data)) {
+        const kl = k.toLowerCase();
+        if (kl === code || aliases.includes(kl)) {
+          if (data[k] && typeof data[k] === 'object') return data[k];
         }
-        return String(v).trim();
-      };
+      }
+      return null;
+    };
 
-      const findBlock = (data, code) => {
-        if (!data || typeof data !== 'object') return null;
-        if (data[code] && typeof data[code] === 'object') return data[code];
-        if (data[code.toUpperCase()] && typeof data[code.toUpperCase()] === 'object') return data[code.toUpperCase()];
-        const aliases = {
-          bg: ['bulgarian', 'bulgaria'],
-          en: ['english', 'en-us', 'en-gb'],
-          es: ['spanish', 'espanol', 'español'],
-          it: ['italian', 'italiano'],
-          fr: ['french', 'francais'],
-          de: ['german', 'deutsch']
-        }[code] || [];
-        for (const k of Object.keys(data)) {
-          const kl = k.toLowerCase();
-          if (kl === code || aliases.includes(kl)) {
-            if (data[k] && typeof data[k] === 'object') return data[k];
-          }
-        }
-        return null;
-      };
-
-      let allPresent = true;
-      SUPPORTED_COMMUNITY_LANGS.forEach(lang => {
+    const applyParsedLangBlocks = (rootData, targetLangs) => {
+      let groupPresent = true;
+      targetLangs.forEach(lang => {
         const langBlock = findBlock(rootData, lang);
         if (!langBlock) {
-          if (lang !== sourceLang) allPresent = false;
+          if (lang !== sourceLang) groupPresent = false;
           return;
         }
 
@@ -322,20 +276,112 @@ Return ONLY valid JSON with this exact structure:
           }
         });
       });
+      return groupPresent;
+    };
 
-      // Always preserve the author's exact original text in sourceLang
-      baseResult.title[sourceLang] = cleanTitle;
-      baseResult.description[sourceLang] = cleanDesc;
-      cleanNotes.forEach((origNote, idx) => {
-        baseResult.notes[idx][sourceLang] = origNote;
-      });
-      cleanSteps.forEach((origStep, idx) => {
-        baseResult.steps[idx][sourceLang] = origStep;
+    const buildGroupPrompt = (targetLangs) => {
+      const schemaLines = targetLangs
+        .map(l => `  "${l}": { "title": "...", "description": "...", "notes": ["..."], "steps": ["..."] }`)
+        .join(',\n');
+      return `You are a professional executive chef and multilingual culinary translator.
+CRITICAL TASK:
+Translate the following recipe content from "${sourceLang}" into these languages:
+${targetLangs.map(l => `- "${l}": ${LANG_NAMES[l] || l}`).join('\n')}
+
+RULES:
+1. Every target language block must be completely translated into its corresponding language.
+2. The "en" block (if requested) MUST be translated into pure, natural English (never leave it in Bulgarian, Spanish, Italian or German).
+3. "notes" and "steps" must be arrays of plain strings (not objects).
+4. Preserve exact array lengths and indices for "notes" and "steps" (if an item is "", keep it as "").
+5. CRITICAL JSON RULE: NEVER use unescaped double quotes (") inside string values. Use single quotes ('...') or «...» instead.
+
+Input JSON:
+${JSON.stringify({
+  title: cleanTitle,
+  description: cleanDesc,
+  notes: cleanNotes,
+  steps: cleanSteps
+})}
+
+Return ONLY valid JSON with this exact structure:
+{
+${schemaLines}
+}`;
+    };
+
+    let allPresent = false;
+    try {
+      const res = await callGemini({
+        apiKey,
+        prompt: buildGroupPrompt(SUPPORTED_COMMUNITY_LANGS),
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.2
+        },
+        timeoutMs: 45000
       });
 
-      baseResult.translatedAll = allPresent;
-      return baseResult;
+      if (res?.data && typeof res.data === 'object') {
+        const rootData = res.data?.data || res.data?.translations || res.data?.recipe || res.data;
+        allPresent = applyParsedLangBlocks(rootData, SUPPORTED_COMMUNITY_LANGS);
+      }
+    } catch (singleCallErr) {
+      console.warn('6-language single call failed, retrying in 2 language groups:', singleCallErr.message);
     }
+
+    // Fallback: if the 6-language call failed or missed languages (e.g. long recipe like adjarian-khachapuri-cheese-boat),
+    // split into two compact 3-language calls so output never truncates
+    if (!allPresent) {
+      const groupA = ['bg', 'en', 'es'];
+      const groupB = ['it', 'fr', 'de'];
+      let okA = false;
+      let okB = false;
+
+      try {
+        const resA = await callGemini({
+          apiKey,
+          prompt: buildGroupPrompt(groupA),
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+          timeoutMs: 35000
+        });
+        if (resA?.data && typeof resA.data === 'object') {
+          const rootA = resA.data?.data || resA.data?.translations || resA.data?.recipe || resA.data;
+          okA = applyParsedLangBlocks(rootA, groupA);
+        }
+      } catch (errA) {
+        console.warn('Group A (bg/en/es) translation failed:', errA.message);
+      }
+
+      try {
+        const resB = await callGemini({
+          apiKey,
+          prompt: buildGroupPrompt(groupB),
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+          timeoutMs: 35000
+        });
+        if (resB?.data && typeof resB.data === 'object') {
+          const rootB = resB.data?.data || resB.data?.translations || resB.data?.recipe || resB.data;
+          okB = applyParsedLangBlocks(rootB, groupB);
+        }
+      } catch (errB) {
+        console.warn('Group B (it/fr/de) translation failed:', errB.message);
+      }
+
+      allPresent = okA && okB;
+    }
+
+    // Always preserve the author's exact original text in sourceLang
+    if (cleanTitle) baseResult.title[sourceLang] = cleanTitle;
+    if (cleanDesc) baseResult.description[sourceLang] = cleanDesc;
+    cleanNotes.forEach((origNote, idx) => {
+      baseResult.notes[idx][sourceLang] = origNote;
+    });
+    cleanSteps.forEach((origStep, idx) => {
+      baseResult.steps[idx][sourceLang] = origStep;
+    });
+
+    baseResult.translatedAll = allPresent;
+    return baseResult;
   } catch (err) {
     console.warn('Auto-translation of recipe skipped or failed:', err.message);
   }

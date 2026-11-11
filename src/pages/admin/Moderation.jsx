@@ -9,6 +9,7 @@ import { getLocalizedField, LANGUAGE_LABELS } from '../../lib/localeUtils';
 import { ROLES, hasHigherRole, canDeleteContentByRank } from '../../constants/roles';
 import {
   publishNewRecipeAnnouncement,
+  syncRecipeCommunityPost,
   translateRecipeTo5Languages,
   translatePostTo5Languages,
   moderateCommunityItem,
@@ -244,29 +245,40 @@ const Moderation = () => {
     const key = `${item.type}_${item.id}`;
     setTranslatingKey(key);
     try {
+      const cleanStr = (val) => (typeof val === 'string' && !val.includes('[за превод]') && !val.includes('[needs translation]') ? val.trim() : '');
+      const preferEn = item.translation_reason === 'en_edited' || item.translation_reason === 'new_en';
+
       if (item.type === 'recipe') {
-        const cleanStr = (val) => (typeof val === 'string' && !val.includes('[за превод]') && !val.includes('[needs translation]') ? val.trim() : '');
         const bgTitle = cleanStr(item.title?.bg || item.title_bg);
         const enTitle = cleanStr(item.title?.en || item.title_en);
-        const sourceLang = bgTitle ? 'bg' : (enTitle ? 'en' : currentLang);
-        const sourceTitle = bgTitle || enTitle || cleanStr(item.title?.[currentLang]) || item.id;
+        const sourceLang = preferEn
+          ? (enTitle ? 'en' : (bgTitle ? 'bg' : currentLang))
+          : (bgTitle ? 'bg' : (enTitle ? 'en' : currentLang));
+        const sourceTitle =
+          (sourceLang === 'en' ? (enTitle || bgTitle) : (bgTitle || enTitle)) ||
+          cleanStr(item.title?.[currentLang]) ||
+          cleanStr(item.title?.es || item.title_es || item.title?.it || item.title_it || item.title?.fr || item.title_fr || item.title?.de || item.title_de) ||
+          item.id;
 
         const bgDesc = cleanStr(item.description?.bg || item.description_bg);
         const enDesc = cleanStr(item.description?.en || item.description_en);
-        const sourceDesc = sourceLang === 'bg' ? (bgDesc || enDesc) : (enDesc || bgDesc);
+        const sourceDesc =
+          (sourceLang === 'en' ? (enDesc || bgDesc) : (bgDesc || enDesc)) ||
+          cleanStr(item.description?.[currentLang]) ||
+          '';
 
         const rawIngs = Array.isArray(item.ingredients) ? item.ingredients : [];
         const notesList = rawIngs.map(ing => {
-          const nBg = cleanStr(ing.notes?.bg || ing.notes_bg);
+          const nBg = cleanStr(ing.notes?.bg || ing.notes_bg || (typeof ing.notes === 'string' ? ing.notes : ''));
           const nEn = cleanStr(ing.notes?.en || ing.notes_en);
-          return sourceLang === 'bg' ? (nBg || nEn) : (nEn || nBg);
+          return (sourceLang === 'en' ? (nEn || nBg) : (nBg || nEn)) || cleanStr(ing.notes?.[currentLang]) || '';
         });
 
         const rawSteps = Array.isArray(item.steps) ? item.steps : [];
         const stepsList = rawSteps.map(st => {
-          const sBg = cleanStr(st.instruction?.bg || st.instruction_bg);
+          const sBg = cleanStr(st.instruction?.bg || st.instruction_bg || (typeof st.instruction === 'string' ? st.instruction : ''));
           const sEn = cleanStr(st.instruction?.en || st.instruction_en);
-          return sourceLang === 'bg' ? (sBg || sEn) : (sEn || sBg);
+          return (sourceLang === 'en' ? (sEn || sBg) : (sBg || sEn)) || cleanStr(st.instruction?.[currentLang]) || '';
         });
 
         const aiRes = await translateRecipeTo5Languages({
@@ -290,7 +302,11 @@ const Moderation = () => {
             ...ing,
             notes: noteMap,
             notes_bg: noteMap.bg || '',
-            notes_en: noteMap.en || ''
+            notes_en: noteMap.en || '',
+            notes_es: noteMap.es || '',
+            notes_it: noteMap.it || '',
+            notes_fr: noteMap.fr || '',
+            notes_de: noteMap.de || ''
           };
         });
 
@@ -300,17 +316,29 @@ const Moderation = () => {
             ...st,
             instruction: stepMap,
             instruction_bg: stepMap.bg || '',
-            instruction_en: stepMap.en || ''
+            instruction_en: stepMap.en || '',
+            instruction_es: stepMap.es || '',
+            instruction_it: stepMap.it || '',
+            instruction_fr: stepMap.fr || '',
+            instruction_de: stepMap.de || ''
           };
         });
 
         const updatedPayload = {
           title: aiRes.title,
-          title_bg: aiRes.title.bg,
-          title_en: aiRes.title.en,
+          title_bg: aiRes.title.bg || '',
+          title_en: aiRes.title.en || '',
+          title_es: aiRes.title.es || '',
+          title_it: aiRes.title.it || '',
+          title_fr: aiRes.title.fr || '',
+          title_de: aiRes.title.de || '',
           description: aiRes.description,
-          description_bg: aiRes.description.bg,
-          description_en: aiRes.description.en,
+          description_bg: aiRes.description.bg || '',
+          description_en: aiRes.description.en || '',
+          description_es: aiRes.description.es || '',
+          description_it: aiRes.description.it || '',
+          description_fr: aiRes.description.fr || '',
+          description_de: aiRes.description.de || '',
           ingredients: updatedIngredients,
           steps: updatedSteps,
           needs_translation: false,
@@ -319,6 +347,7 @@ const Moderation = () => {
         };
 
         await updateDoc(doc(db, 'recipes', item.id), updatedPayload);
+        await syncRecipeCommunityPost({ ...item, ...updatedPayload }, item.id);
         await logActivity(
           user.uid,
           user.email,
@@ -328,11 +357,15 @@ const Moderation = () => {
         return { ...item, ...updatedPayload };
       } else {
         // Ingredient translation into 6 languages
-        const cleanStr = (val) => (typeof val === 'string' && !val.includes('[за превод]') && !val.includes('[needs translation]') ? val.trim() : '');
         const bgName = cleanStr(item.name?.bg || item.name_bg);
         const enName = cleanStr(item.name?.en || item.name_en);
-        const sourceLang = bgName ? 'bg' : (enName ? 'en' : currentLang);
-        const sourceName = bgName || enName || cleanStr(item.name?.[currentLang]) || item.id;
+        const sourceLang = preferEn
+          ? (enName ? 'en' : (bgName ? 'bg' : currentLang))
+          : (bgName ? 'bg' : (enName ? 'en' : currentLang));
+        const sourceName =
+          (sourceLang === 'en' ? (enName || bgName) : (bgName || enName)) ||
+          cleanStr(item.name?.[currentLang]) ||
+          item.id;
 
         const postTrans = await translatePostTo5Languages({
           title: sourceName,
@@ -395,9 +428,14 @@ const Moderation = () => {
     if (queue.length === 0 || isBulkTranslating) return;
 
     setIsBulkTranslating(true);
+    let failedCount = 0;
     try {
       for (const it of queue) {
-        await handleAutoTranslateItem(it, true);
+        const res = await handleAutoTranslateItem(it, true);
+        if (!res) failedCount++;
+      }
+      if (failedCount > 0) {
+        alert(t('moderation.ai_translate_failed', 'Преводът с Chef AI не успя за някои записи (проверете интернет връзката или Gemini API ключа).'));
       }
     } finally {
       setIsBulkTranslating(false);
@@ -557,7 +595,7 @@ const Moderation = () => {
               <span>
                 {isBulkTranslating
                   ? t('moderation.ai_translating_all', 'Превеждане на всички с Chef AI...')
-                  : t('moderation.ai_translate_all_btn', 'Преведи всички с Chef AI (5 езика)')}
+                  : t('moderation.ai_translate_all_btn', 'Преведи всички с Chef AI (6 езика)')}
               </span>
             </button>
           </div>
@@ -1126,7 +1164,7 @@ const Moderation = () => {
                         <span>
                           {translatingKey === `${item.type}_${item.id}`
                             ? t('recipes.ai_translating_btn', 'Превеждане...')
-                            : t('moderation.buttons.ai_translate_5langs', 'Автоматичен превод с Chef AI (5 езика)')}
+                            : t('moderation.buttons.ai_translate_5langs', 'Автоматичен превод с Chef AI (6 езика)')}
                         </span>
                       </button>
                     )}

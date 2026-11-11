@@ -1,4 +1,4 @@
-import { getRemoteAIConfig } from './geminiClient';
+import { getRemoteAIConfig, repairJsonString } from './geminiClient';
 import { 
   collection, 
   getDocs, 
@@ -16,7 +16,8 @@ Requirements:
 1. Always output authentic, culturally appropriate culinary terminology in Spanish ('es'), Italian ('it'), French ('fr'), and German ('de').
 2. For Bulgarian ('bg') and English ('en'), preserve the original authentic wording if already provided, or provide accurate culinary terms if missing.
 3. Keep cooking times, numbers, and measurement units consistent.
-4. Output MUST BE valid, parseable JSON conforming strictly to the requested schema. No conversational filler or markdown markers.`;
+4. Output MUST BE valid, parseable JSON conforming strictly to the requested schema. No conversational filler or markdown markers.
+5. CRITICAL JSON RULE: NEVER use unescaped double quotes (") inside JSON string values. Use single quotes ('...') or «...» for quoted words inside text.`;
 
 /**
  * Global cache for the active Gemini model discovered for this project/key
@@ -155,39 +156,54 @@ export function parseRetryDelaySeconds(errData, errText) {
 }
 
 /**
- * Safely parses JSON returned by Gemini, stripping markdown fences or extracting JSON array/object if needed.
+ * Safely parses JSON returned by Gemini, stripping markdown fences, repairing unescaped internal quotes,
+ * or extracting JSON array/object if needed.
  */
 export function safeParseGeminiJSON(rawText) {
   if (!rawText || typeof rawText !== 'string') {
     throw new Error("Празен отговор от Gemini AI.");
   }
 
-  const trimmed = rawText.trim();
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    // Strip markdown code blocks ```json ... ```
-    const stripped = trimmed
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
+  const tryParse = (candidate) => {
+    if (!candidate) return undefined;
     try {
-      return JSON.parse(stripped);
+      return JSON.parse(candidate);
     } catch {
-      // Try extracting the outermost JSON array [...] or object {...}
-      const firstBracket = stripped.indexOf('[');
-      const lastBracket = stripped.lastIndexOf(']');
-      if (firstBracket !== -1 && lastBracket > firstBracket) {
-        return JSON.parse(stripped.slice(firstBracket, lastBracket + 1));
+      try {
+        return JSON.parse(repairJsonString(candidate));
+      } catch {
+        return undefined;
       }
-      const firstBrace = stripped.indexOf('{');
-      const lastBrace = stripped.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace > firstBrace) {
-        return JSON.parse(stripped.slice(firstBrace, lastBrace + 1));
-      }
-      throw new SyntaxError("Невалиден или прекъснат JSON формат в отговора от ИИ.");
     }
+  };
+
+  const trimmed = rawText.trim();
+  let res = tryParse(trimmed);
+  if (res !== undefined) return res;
+
+  // Strip markdown code blocks ```json ... ```
+  const stripped = trimmed
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+  res = tryParse(stripped);
+  if (res !== undefined) return res;
+
+  // Try extracting the outermost JSON array [...] or object {...}
+  const firstBracket = stripped.indexOf('[');
+  const lastBracket = stripped.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    res = tryParse(stripped.slice(firstBracket, lastBracket + 1));
+    if (res !== undefined) return res;
   }
+  const firstBrace = stripped.indexOf('{');
+  const lastBrace = stripped.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    res = tryParse(stripped.slice(firstBrace, lastBrace + 1));
+    if (res !== undefined) return res;
+  }
+
+  throw new SyntaxError("Невалиден или прекъснат JSON формат в отговора от ИИ.");
 }
 
 /**
@@ -250,8 +266,7 @@ export async function callGeminiTranslation({
               systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
               generationConfig: {
                 responseMimeType: "application/json",
-                temperature: 0.2,
-                maxOutputTokens: 8192
+                temperature: 0.2
               }
             })
           }
@@ -1114,54 +1129,66 @@ Expected JSON schema:
   // 4. RECIPES
   if (selectedCollections.includes('recipes') && scanResults.recipes?.items?.length > 0) {
     const items = scanResults.recipes.items;
-    const BATCH_SIZE = 2; // 2 recipes per prompt, with automatic 1-by-1 fallback if a batch fails
+    const BATCH_SIZE = 1; // 1 recipe per prompt to avoid JSON token truncation on multi-step recipes
     const totalBatches = Math.ceil(items.length / BATCH_SIZE);
 
-    onLog(`Обработка на Рецепти (${items.length} записа, ${totalBatches} партиди по ${BATCH_SIZE})...`, "info");
+    onLog(`Обработка на Рецепти (${items.length} записа, 1 по 1 с незабавен запис в БД и временния буфер)...`, "info");
 
-    const buildRecipePrompt = (recipeSlice) => {
-      const promptInput = recipeSlice.map(r => ({
-        id: r.id,
-        title_en: r.title?.en || r.title_en || r.title?.bg || r.title_bg || '',
-        title_bg: r.title?.bg || r.title_bg || r.title?.en || r.title_en || '',
-        description_en: r.description?.en || r.description_en || r.description?.bg || r.description_bg || '',
-        description_bg: r.description?.bg || r.description_bg || r.description?.en || r.description_en || '',
-        steps: (r.steps || []).map((s, idx) => ({
-          step: idx + 1,
-          phase_en: s.phase?.en || s.phase_en || s.phase?.bg || s.phase_bg || '',
-          phase_bg: s.phase?.bg || s.phase_bg || s.phase?.en || s.phase_en || '',
-          instruction_en: s.instruction?.en || s.instruction_en || s.instruction?.bg || s.instruction_bg || '',
-          instruction_bg: s.instruction?.bg || s.instruction_bg || s.instruction?.en || s.instruction_en || ''
-        })),
-        ingredients: (r.ingredients || []).map((i, idx) => ({
-          idx,
-          ingredient_id: i.ingredient_id || i.id || '',
-          notes_en: i.notes?.en || i.notes_en || i.notes?.bg || i.notes_bg || '',
-          notes_bg: i.notes?.bg || i.notes_bg || i.notes?.en || i.notes_en || ''
-        })).filter(i => Boolean(i.notes_en || i.notes_bg))
-      }));
+    const buildRecipePrompt = (recipeSlice, targetLangs = ['en', 'bg', 'es', 'it', 'fr', 'de']) => {
+      const langSchema = targetLangs.reduce((acc, l) => { acc[l] = "..."; return acc; }, {});
+      const promptInput = recipeSlice.map(r => {
+        const steps = (r.steps || []).map((s, idx) => {
+          const pEn = s.phase?.en || s.phase_en || s.phase?.bg || s.phase_bg || '';
+          const pBg = s.phase?.bg || s.phase_bg || s.phase?.en || s.phase_en || '';
+          const stepItem = {
+            step: idx + 1,
+            instruction_en: s.instruction?.en || s.instruction_en || s.instruction?.bg || s.instruction_bg || '',
+            instruction_bg: s.instruction?.bg || s.instruction_bg || s.instruction?.en || s.instruction_en || ''
+          };
+          if (pEn || pBg) {
+            stepItem.phase_en = pEn;
+            stepItem.phase_bg = pBg;
+          }
+          return stepItem;
+        });
 
-      return `Translate recipe details into authentic culinary Spanish ('es'), Italian ('it'), French ('fr'), German ('de'), Bulgarian ('bg'), and English ('en'):
+        return {
+          id: r.id,
+          title_en: r.title?.en || r.title_en || r.title?.bg || r.title_bg || '',
+          title_bg: r.title?.bg || r.title_bg || r.title?.en || r.title_en || '',
+          description_en: r.description?.en || r.description_en || r.description?.bg || r.description_bg || '',
+          description_bg: r.description?.bg || r.description_bg || r.description?.en || r.description_en || '',
+          steps,
+          ingredients: (r.ingredients || []).map((i, idx) => ({
+            idx,
+            ingredient_id: i.ingredient_id || i.id || '',
+            notes_en: i.notes?.en || i.notes_en || i.notes?.bg || i.notes_bg || '',
+            notes_bg: i.notes?.bg || i.notes_bg || i.notes?.en || i.notes_en || ''
+          })).filter(i => Boolean(i.notes_en || i.notes_bg))
+        };
+      });
+
+      return `Translate recipe details into authentic culinary ${targetLangs.map(l => `'${l}'`).join(', ')}.
+CRITICAL: NEVER use unescaped double quotes (") inside string values. Use single quotes ('...') or «...» instead.
 Input: ${JSON.stringify(promptInput)}
 
 Expected JSON schema:
 [
   {
     "id": "recipe_id",
-    "title": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." },
-    "description": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." },
+    "title": ${JSON.stringify(langSchema)},
+    "description": ${JSON.stringify(langSchema)},
     "steps": [
       {
         "step": 1,
-        "phase": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." },
-        "instruction": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." }
+        "instruction": ${JSON.stringify(langSchema)}
       }
     ],
     "ingredients": [
       {
         "idx": 0,
         "ingredient_id": "...",
-        "notes": { "en": "...", "bg": "...", "es": "...", "it": "...", "fr": "...", "de": "..." }
+        "notes": ${JSON.stringify(langSchema)}
       }
     ]
   }
@@ -1315,9 +1342,45 @@ Expected JSON schema:
       return batchOps;
     };
 
+    const mergeSplitRecipeTranslations = (partA, partB) => {
+      const a = partA?.[0] || {};
+      const b = partB?.[0] || {};
+      const mergedSteps = [];
+      const maxSteps = Math.max((a.steps || []).length, (b.steps || []).length);
+      for (let i = 0; i < maxSteps; i++) {
+        const sa = (a.steps || [])[i] || {};
+        const sb = (b.steps || [])[i] || {};
+        mergedSteps.push({
+          step: sa.step || sb.step || (i + 1),
+          phase: { ...(sa.phase || {}), ...(sb.phase || {}) },
+          instruction: { ...(sa.instruction || {}), ...(sb.instruction || {}) }
+        });
+      }
+      const mergedIngs = [];
+      const ingMap = new Map();
+      for (const item of [...(a.ingredients || []), ...(b.ingredients || [])]) {
+        const key = item.idx !== undefined ? `idx_${item.idx}` : `id_${item.ingredient_id}`;
+        const prev = ingMap.get(key) || { idx: item.idx, ingredient_id: item.ingredient_id, notes: {} };
+        prev.notes = { ...prev.notes, ...(item.notes || {}) };
+        ingMap.set(key, prev);
+      }
+      ingMap.forEach(v => mergedIngs.push(v));
+
+      return [{
+        id: a.id || b.id,
+        title: { ...(a.title || {}), ...(b.title || {}) },
+        description: { ...(a.description || {}), ...(sbDesc(b)) },
+        steps: mergedSteps,
+        ingredients: mergedIngs
+      }];
+    };
+    const sbDesc = (b) => b.description || {};
+
     for (let b = 0; b < totalBatches; b++) {
       await checkPauseAndCancel();
       const chunk = items.slice(b * BATCH_SIZE, (b + 1) * BATCH_SIZE);
+      const singleRecipe = chunk[0];
+      const singleTitle = singleRecipe?.title?.bg || singleRecipe?.title_bg || singleRecipe?.title?.en || singleRecipe?.title_en || singleRecipe?.id;
 
       try {
         const prompt = buildRecipePrompt(chunk);
@@ -1336,55 +1399,46 @@ Expected JSON schema:
           totalBatches
         });
 
-        onLog(`Успешно обработени и съхранени ${batchOps.length} рецепти (Партида ${b + 1}/${totalBatches}).`, "success");
+        onLog(`Успешно преведена и съхранена рецепта „${singleTitle}“ (${b + 1}/${totalBatches}).`, "success");
       } catch (err) {
         if (err.message && err.message.includes('спрян от потребителя')) {
           throw err;
         }
 
-        // If batch of 2 failed (e.g. truncated JSON on two long recipes), fall back to 1-by-1 translation
-        if (chunk.length > 1) {
-          onLog(`Партида ${b + 1} (${chunk.length} рецепти) даде грешка (${err.message}). Автоматичен опит поотделно (1 по 1)...`, "warn");
-          for (const singleRecipe of chunk) {
-            await checkPauseAndCancel();
-            const singleTitle = singleRecipe.title?.bg || singleRecipe.title_bg || singleRecipe.title?.en || singleRecipe.title_en || singleRecipe.id;
-            try {
-              await sleep(2000);
-              const singlePrompt = buildRecipePrompt([singleRecipe]);
-              const singleTranslatedList = await callGeminiTranslation({
-                apiKey,
-                prompt: singlePrompt,
-                model: activeModel,
-                onLog,
-                isCancelled
-              });
-              const singleOps = buildRecipeBatchOps([singleRecipe], singleTranslatedList);
-              await commitBatchWrites(singleOps);
-              totalProcessed += singleOps.length;
+        // Fallback: split the 6 languages into 2 compact groups (EN/BG/ES + IT/FR/DE) so long recipes never exceed output limits
+        onLog(`Рецепта „${singleTitle}“ е обемна (${err.message}). Автоматичен опит на две части (BG/EN/ES + IT/FR/DE)...`, "warn");
+        try {
+          await checkPauseAndCancel();
+          await sleep(1500);
+          const promptA = buildRecipePrompt([singleRecipe], ['en', 'bg', 'es']);
+          const listA = await callGeminiTranslation({ apiKey, prompt: promptA, model: activeModel, onLog, isCancelled });
 
-              onProgress({
-                collection: 'recipes',
-                processed: totalProcessed,
-                total: grandTotal,
-                percent: Math.min(100, Math.round((totalProcessed / grandTotal) * 100)),
-                batchIndex: b + 1,
-                totalBatches
-              });
+          await checkPauseAndCancel();
+          await sleep(1500);
+          const promptB = buildRecipePrompt([singleRecipe], ['it', 'fr', 'de']);
+          const listB = await callGeminiTranslation({ apiKey, prompt: promptB, model: activeModel, onLog, isCancelled });
 
-              onLog(`Успешно преведена и съхранена рецепта „${singleTitle}“ (индивидуален опит).`, "success");
-            } catch (singleErr) {
-              if (singleErr.message && singleErr.message.includes('спрян от потребителя')) {
-                throw singleErr;
-              }
-              totalFailed += 1;
-              onLog(`Пропусната рецепта „${singleTitle}“ (${singleRecipe.id}) след грешка: ${singleErr.message}. Продължаване със следващите...`, "error");
-            }
+          const mergedList = mergeSplitRecipeTranslations(listA, listB);
+          const singleOps = buildRecipeBatchOps([singleRecipe], mergedList);
+          await commitBatchWrites(singleOps);
+          totalProcessed += singleOps.length;
+
+          onProgress({
+            collection: 'recipes',
+            processed: totalProcessed,
+            total: grandTotal,
+            percent: Math.min(100, Math.round((totalProcessed / grandTotal) * 100)),
+            batchIndex: b + 1,
+            totalBatches
+          });
+
+          onLog(`Успешно преведена и съхранена рецепта „${singleTitle}“ чрез разделяне на езиците (${b + 1}/${totalBatches}).`, "success");
+        } catch (splitErr) {
+          if (splitErr.message && splitErr.message.includes('спрян от потребителя')) {
+            throw splitErr;
           }
-        } else {
-          const singleRecipe = chunk[0];
-          const singleTitle = singleRecipe?.title?.bg || singleRecipe?.title_bg || singleRecipe?.title?.en || singleRecipe?.title_en || singleRecipe?.id;
           totalFailed += 1;
-          onLog(`Пропусната рецепта „${singleTitle}“ (${singleRecipe?.id}) след грешка: ${err.message}. Продължаване със следващите...`, "error");
+          onLog(`Пропусната рецепта „${singleTitle}“ (${singleRecipe?.id}) след грешка: ${splitErr.message}. Продължаване със следващите...`, "error");
         }
       }
 

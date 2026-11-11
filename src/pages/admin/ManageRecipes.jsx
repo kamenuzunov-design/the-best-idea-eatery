@@ -66,6 +66,8 @@ const ManageRecipes = () => {
   const [isAiTranslating, setIsAiTranslating] = useState(false);
   const [isSavingRecipe, setIsSavingRecipe] = useState(false);
   const [aiTranslateSuccessMsg, setAiTranslateSuccessMsg] = useState('');
+  const [hasAiTranslatedInSession, setHasAiTranslatedInSession] = useState(false);
+  const lastOpenedEditIdRef = useRef(null);
 
   // Basic Info - Reactive 6-language map
   const [titlesByLang, setTitlesByLang] = useState({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
@@ -175,14 +177,32 @@ const ManageRecipes = () => {
     const isCurrentEn = currentLang === 'en';
     const sourceLang = (!isCurrentEn && titlesByLang[currentLang]?.trim())
       ? currentLang
-      : (titlesByLang.en?.trim() ? 'en' : currentLang);
-    const sourceTitle = (titlesByLang[sourceLang] || titlesByLang[currentLang] || titlesByLang.en || '').trim();
-    const sourceDesc = (descsByLang[sourceLang] || descsByLang[currentLang] || descsByLang.en || '').trim();
+      : (titlesByLang.bg?.trim() ? 'bg' : (titlesByLang.en?.trim() ? 'en' : currentLang));
+    const sourceTitle = (
+      titlesByLang[sourceLang] ||
+      titlesByLang[currentLang] ||
+      titlesByLang.bg ||
+      titlesByLang.en ||
+      ''
+    ).trim();
+    const sourceDesc = (
+      descsByLang[sourceLang] ||
+      descsByLang[currentLang] ||
+      descsByLang.bg ||
+      descsByLang.en ||
+      ''
+    ).trim();
     const notesList = recipeIngredients.map(i => (
-      sourceLang === 'en' ? (i.notes_en || i.notes_local || '') : (i.notes_local || i.notes_en || '')
+      (sourceLang === 'en'
+        ? (i.notes_en || i.notes_local || i.notes?.en || i.notes?.bg || '')
+        : (i.notes_local || i.notes?.[sourceLang] || i.notes?.bg || i.notes_en || i.notes?.en || '')
+      )
     ).trim());
     const stepsList = recipeSteps.map(s => (
-      sourceLang === 'en' ? (s.instruction_en || s.instruction_local || '') : (s.instruction_local || s.instruction_en || '')
+      (sourceLang === 'en'
+        ? (s.instruction_en || s.instruction_local || s.instruction?.en || s.instruction?.bg || '')
+        : (s.instruction_local || s.instruction?.[sourceLang] || s.instruction?.bg || s.instruction_en || s.instruction?.en || '')
+      )
     ).trim());
 
     if (!sourceTitle && !sourceDesc && !notesList.some(Boolean) && !stepsList.some(Boolean)) {
@@ -200,59 +220,200 @@ const ManageRecipes = () => {
         sourceLang
       });
 
+      if (!aiRes.translatedAll) {
+        alert(
+          t(
+            'moderation.ai_translate_failed',
+            'Преводът с Chef AI не успя (проверете интернет връзката или Gemini API ключа).'
+          )
+        );
+        return;
+      }
+
+      const nextTitleMap = {
+        ...titlesByLang,
+        ...aiRes.title,
+        ...(sourceTitle ? { [sourceLang]: sourceTitle } : {})
+      };
+      const nextDescMap = {
+        ...descsByLang,
+        ...aiRes.description,
+        ...(sourceDesc ? { [sourceLang]: sourceDesc } : {})
+      };
+
       if (sourceTitle) {
-        setTitlesByLang(prev => ({
-          ...prev,
-          ...aiRes.title,
-          [sourceLang]: sourceTitle
-        }));
+        setTitlesByLang(nextTitleMap);
         if (!editingId) {
           const nextSlug = slugifyRecipeTitle(aiRes.title?.en || sourceTitle);
           if (nextSlug) setSlug(nextSlug);
         }
       }
       if (sourceDesc) {
-        setDescsByLang(prev => ({
-          ...prev,
-          ...aiRes.description,
-          [sourceLang]: sourceDesc
-        }));
+        setDescsByLang(nextDescMap);
       }
-      if (notesList.some(Boolean)) {
-        setRecipeIngredients(prev => prev.map((ing, idx) => {
-          const noteMap = aiRes.notes[idx] || {};
-          const noteAuthor = (sourceLang === 'en' ? (ing.notes_en || ing.notes_local || '') : (ing.notes_local || ing.notes_en || '')).trim();
-          return {
-            ...ing,
-            notes: {
-              ...noteMap,
-              [sourceLang]: noteAuthor
-            },
-            notes_local: sourceLang === currentLang ? noteAuthor : (noteMap[currentLang] || ing.notes_local),
-            notes_en: sourceLang === 'en' ? noteAuthor : (noteMap.en || '')
-          };
-        }));
-      }
-      if (stepsList.some(Boolean)) {
-        setRecipeSteps(prev => prev.map((step, idx) => {
-          const stepMap = aiRes.steps[idx] || {};
-          const stepAuthor = (sourceLang === 'en' ? (step.instruction_en || step.instruction_local || '') : (step.instruction_local || step.instruction_en || '')).trim();
-          return {
-            ...step,
-            instruction: {
-              ...stepMap,
-              [sourceLang]: stepAuthor
-            },
-            instruction_local: sourceLang === currentLang ? stepAuthor : (stepMap[currentLang] || step.instruction_local),
-            instruction_en: sourceLang === 'en' ? stepAuthor : (stepMap.en || '')
-          };
-        }));
+
+      const nextIngredientsState = recipeIngredients.map((ing, idx) => {
+        const noteMap = {
+          ...(typeof ing.notes === 'object' && ing.notes ? ing.notes : {}),
+          ...(aiRes.notes[idx] || {})
+        };
+        const noteAuthor = notesList[idx] || '';
+        if (noteAuthor) noteMap[sourceLang] = noteAuthor;
+        return {
+          ...ing,
+          notes: noteMap,
+          notes_bg: noteMap.bg || '',
+          notes_en: noteMap.en || '',
+          notes_es: noteMap.es || '',
+          notes_it: noteMap.it || '',
+          notes_fr: noteMap.fr || '',
+          notes_de: noteMap.de || '',
+          notes_local: sourceLang === currentLang ? noteAuthor : (noteMap[currentLang] || ing.notes_local)
+        };
+      });
+      setRecipeIngredients(nextIngredientsState);
+
+      const nextStepsState = recipeSteps.map((step, idx) => {
+        const stepMap = {
+          ...(typeof step.instruction === 'object' && step.instruction ? step.instruction : {}),
+          ...(aiRes.steps[idx] || {})
+        };
+        const stepAuthor = stepsList[idx] || '';
+        if (stepAuthor) stepMap[sourceLang] = stepAuthor;
+        return {
+          ...step,
+          instruction: stepMap,
+          instruction_bg: stepMap.bg || '',
+          instruction_en: stepMap.en || '',
+          instruction_es: stepMap.es || '',
+          instruction_it: stepMap.it || '',
+          instruction_fr: stepMap.fr || '',
+          instruction_de: stepMap.de || '',
+          instruction_local: sourceLang === currentLang ? stepAuthor : (stepMap[currentLang] || step.instruction_local)
+        };
+      });
+      setRecipeSteps(nextStepsState);
+      setHasAiTranslatedInSession(true);
+
+      // If editing an existing recipe in Firestore, immediately persist the 6-language translation
+      if (editingId) {
+        const existingRec = recipes.find(r => r.id === editingId) || {};
+        const srv = parseInt(servings) || existingRec.servings || 1;
+        const persistedIngs = nextIngredientsState
+          .filter(i => i.ingredient_id && i.amount && i.unit_id)
+          .map(i => {
+            const noteObj = i.notes || { bg: '', en: '', es: '', it: '', fr: '', de: '' };
+            if (i.type === 'recipe') {
+              const subRec = recipes.find(r => r.id === (i.recipe_id || i.ingredient_id) || r.slug === (i.recipe_id || i.ingredient_id));
+              const subNameBg = i.ingredient_bg || subRec?.title_bg || subRec?.title?.bg || '';
+              const subNameEn = i.ingredient_en || subRec?.title_en || subRec?.title?.en || '';
+              return {
+                type: 'recipe',
+                ingredient_id: i.recipe_id || i.ingredient_id,
+                recipe_id: i.recipe_id || i.ingredient_id,
+                recipe_slug: subRec?.slug || i.recipe_slug || i.recipe_id || i.ingredient_id,
+                name: {
+                  bg: subNameBg,
+                  en: subNameEn,
+                  es: subRec?.title?.es || i.name?.es || '',
+                  it: subRec?.title?.it || i.name?.it || '',
+                  fr: subRec?.title?.fr || i.name?.fr || '',
+                  de: subRec?.title?.de || i.name?.de || ''
+                },
+                ingredient_bg: subNameBg,
+                ingredient_en: subNameEn,
+                amount: (parseFloat(i.amount) || 0) / srv,
+                unit_id: i.unit_id,
+                notes: noteObj,
+                notes_bg: noteObj.bg || '',
+                notes_en: noteObj.en || '',
+                notes_es: noteObj.es || '',
+                notes_it: noteObj.it || '',
+                notes_fr: noteObj.fr || '',
+                notes_de: noteObj.de || ''
+              };
+            }
+            const dbIng = ingredientsList.find(dbI => dbI.id === i.ingredient_id);
+            return {
+              type: 'ingredient',
+              ingredient_id: i.ingredient_id,
+              name: {
+                bg: dbIng?.name_bg || dbIng?.name?.bg || '',
+                en: dbIng?.name_en || dbIng?.name?.en || '',
+                es: dbIng?.name?.es || '',
+                it: dbIng?.name?.it || '',
+                fr: dbIng?.name?.fr || '',
+                de: dbIng?.name?.de || ''
+              },
+              ingredient_bg: dbIng?.name_bg || dbIng?.name?.bg || '',
+              ingredient_en: dbIng?.name_en || dbIng?.name?.en || '',
+              amount: (parseFloat(i.amount) || 0) / srv,
+              unit_id: i.unit_id,
+              notes: noteObj,
+              notes_bg: noteObj.bg || '',
+              notes_en: noteObj.en || '',
+              notes_es: noteObj.es || '',
+              notes_it: noteObj.it || '',
+              notes_fr: noteObj.fr || '',
+              notes_de: noteObj.de || ''
+            };
+          });
+
+        const persistedSteps = nextStepsState
+          .filter(s => s.instruction_bg || s.instruction_en || (s.instruction && Object.values(s.instruction).some(Boolean)))
+          .map(s => {
+            const instObj = s.instruction || { bg: '', en: '', es: '', it: '', fr: '', de: '' };
+            return {
+              instruction: instObj,
+              instruction_bg: instObj.bg || '',
+              instruction_en: instObj.en || '',
+              instruction_es: instObj.es || '',
+              instruction_it: instObj.it || '',
+              instruction_fr: instObj.fr || '',
+              instruction_de: instObj.de || '',
+              timer_minutes: parseInt(s.timer_minutes) || null
+            };
+          });
+
+        const directUpdatePayload = {
+          title: nextTitleMap,
+          title_bg: nextTitleMap.bg || '',
+          title_en: nextTitleMap.en || '',
+          title_es: nextTitleMap.es || '',
+          title_it: nextTitleMap.it || '',
+          title_fr: nextTitleMap.fr || '',
+          title_de: nextTitleMap.de || '',
+          description: nextDescMap,
+          description_bg: nextDescMap.bg || '',
+          description_en: nextDescMap.en || '',
+          description_es: nextDescMap.es || '',
+          description_it: nextDescMap.it || '',
+          description_fr: nextDescMap.fr || '',
+          description_de: nextDescMap.de || '',
+          ...(persistedIngs.length > 0 ? { ingredients: persistedIngs } : {}),
+          ...(persistedSteps.length > 0 ? { steps: persistedSteps } : {}),
+          needs_translation: false,
+          translation_reason: null,
+          updatedAt: new Date().toISOString()
+        };
+
+        await updateDoc(doc(db, 'recipes', editingId), directUpdatePayload);
+        await syncRecipeCommunityPost({ ...existingRec, ...directUpdatePayload, id: editingId, slug: editingId }, editingId);
+        await logActivity(user.uid, user.email, 'ai_translate_recipe', `Translated recipe into 6 languages: ${nextTitleMap.en || sourceTitle}`);
       }
 
       setAiTranslateSuccessMsg(
-        t('recipes.ai_translate_done', 'Преведено на 5 езика (BG, EN, IT, FR, DE) с Chef AI!')
+        t('recipes.ai_translate_done', 'Преведено на 6 езика (BG, EN, ES, IT, FR, DE) с Chef AI!')
       );
-      setTimeout(() => setAiTranslateSuccessMsg(''), 4000);
+      setTimeout(() => setAiTranslateSuccessMsg(''), 5000);
+    } catch (err) {
+      console.error('Error in handleTranslateRecipeWithAI:', err);
+      alert(
+        t(
+          'moderation.ai_translate_failed',
+          'Преводът с Chef AI не успя (проверете интернет връзката или Gemini API ключа).'
+        )
+      );
     } finally {
       setIsAiTranslating(false);
     }
@@ -495,7 +656,7 @@ const ManageRecipes = () => {
 
       const all5Langs = ['bg', 'en', 'es', 'it', 'fr', 'de'];
       const hasAllTitleLangs = all5Langs.every(l => (titlesByLang[l] || existingTitle[l] || '').trim());
-      const shouldRunAiTranslation = sourceLang !== 'en' || !hasAllTitleLangs || !editingId || originalRecipe?.needs_translation;
+      const shouldRunAiTranslation = !hasAiTranslatedInSession && (sourceLang !== 'en' || !hasAllTitleLangs || !editingId || originalRecipe?.needs_translation);
 
       let aiTranslated = null;
       if (shouldRunAiTranslation) {
@@ -510,11 +671,11 @@ const ManageRecipes = () => {
 
       const finalTitleObj = {
         bg: (sourceLang === 'bg' ? sourceTitle : (aiTranslated?.title?.bg || titlesByLang.bg || existingTitle.bg || originalRecipe?.title_bg || sourceTitle)).trim(),
-        en: (sourceLang === 'en' ? sourceTitle : (aiTranslated?.title?.en || (isCurrentEn ? titlesByLang.en : '') || existingTitle.en || originalRecipe?.title_en || sourceTitle)).trim(),
-        es: (sourceLang === 'es' ? sourceTitle : (aiTranslated?.title?.es || titlesByLang.es || existingTitle.es || sourceTitle)).trim(),
-        it: (sourceLang === 'it' ? sourceTitle : (aiTranslated?.title?.it || titlesByLang.it || existingTitle.it || sourceTitle)).trim(),
-        fr: (sourceLang === 'fr' ? sourceTitle : (aiTranslated?.title?.fr || titlesByLang.fr || existingTitle.fr || sourceTitle)).trim(),
-        de: (sourceLang === 'de' ? sourceTitle : (aiTranslated?.title?.de || titlesByLang.de || existingTitle.de || sourceTitle)).trim()
+        en: (sourceLang === 'en' ? sourceTitle : (aiTranslated?.title?.en || (isCurrentEn ? titlesByLang.en : '') || titlesByLang.en || existingTitle.en || originalRecipe?.title_en || sourceTitle)).trim(),
+        es: (sourceLang === 'es' ? sourceTitle : (aiTranslated?.title?.es || titlesByLang.es || existingTitle.es || originalRecipe?.title_es || sourceTitle)).trim(),
+        it: (sourceLang === 'it' ? sourceTitle : (aiTranslated?.title?.it || titlesByLang.it || existingTitle.it || originalRecipe?.title_it || sourceTitle)).trim(),
+        fr: (sourceLang === 'fr' ? sourceTitle : (aiTranslated?.title?.fr || titlesByLang.fr || existingTitle.fr || originalRecipe?.title_fr || sourceTitle)).trim(),
+        de: (sourceLang === 'de' ? sourceTitle : (aiTranslated?.title?.de || titlesByLang.de || existingTitle.de || originalRecipe?.title_de || sourceTitle)).trim()
       };
       if (sourceTitle) {
         finalTitleObj[sourceLang] = sourceTitle;
@@ -522,11 +683,11 @@ const ManageRecipes = () => {
 
       const finalDescObj = {
         bg: (sourceLang === 'bg' ? sourceDesc : (aiTranslated?.description?.bg || descsByLang.bg || existingDesc.bg || originalRecipe?.description_bg || sourceDesc)).trim(),
-        en: (sourceLang === 'en' ? sourceDesc : (aiTranslated?.description?.en || (isCurrentEn ? descsByLang.en : '') || existingDesc.en || originalRecipe?.description_en || sourceDesc)).trim(),
-        es: (sourceLang === 'es' ? sourceDesc : (aiTranslated?.description?.es || descsByLang.es || existingDesc.es || sourceDesc)).trim(),
-        it: (sourceLang === 'it' ? sourceDesc : (aiTranslated?.description?.it || descsByLang.it || existingDesc.it || sourceDesc)).trim(),
-        fr: (sourceLang === 'fr' ? sourceDesc : (aiTranslated?.description?.fr || descsByLang.fr || existingDesc.fr || sourceDesc)).trim(),
-        de: (sourceLang === 'de' ? sourceDesc : (aiTranslated?.description?.de || descsByLang.de || existingDesc.de || sourceDesc)).trim()
+        en: (sourceLang === 'en' ? sourceDesc : (aiTranslated?.description?.en || (isCurrentEn ? descsByLang.en : '') || descsByLang.en || existingDesc.en || originalRecipe?.description_en || sourceDesc)).trim(),
+        es: (sourceLang === 'es' ? sourceDesc : (aiTranslated?.description?.es || descsByLang.es || existingDesc.es || originalRecipe?.description_es || sourceDesc)).trim(),
+        it: (sourceLang === 'it' ? sourceDesc : (aiTranslated?.description?.it || descsByLang.it || existingDesc.it || originalRecipe?.description_it || sourceDesc)).trim(),
+        fr: (sourceLang === 'fr' ? sourceDesc : (aiTranslated?.description?.fr || descsByLang.fr || existingDesc.fr || originalRecipe?.description_fr || sourceDesc)).trim(),
+        de: (sourceLang === 'de' ? sourceDesc : (aiTranslated?.description?.de || descsByLang.de || existingDesc.de || originalRecipe?.description_de || sourceDesc)).trim()
       };
       if (sourceDesc) {
         finalDescObj[sourceLang] = sourceDesc;
@@ -551,10 +712,18 @@ const ManageRecipes = () => {
       const recipeData = {
         title_bg: finalTitleObj.bg,
         title_en: finalTitleObj.en,
+        title_es: finalTitleObj.es,
+        title_it: finalTitleObj.it,
+        title_fr: finalTitleObj.fr,
+        title_de: finalTitleObj.de,
         title: finalTitleObj,
         slug: finalSlug,
         description_bg: finalDescObj.bg,
         description_en: finalDescObj.en,
+        description_es: finalDescObj.es,
+        description_it: finalDescObj.it,
+        description_fr: finalDescObj.fr,
+        description_de: finalDescObj.de,
         description: finalDescObj,
         cuisine_id: cuisineId,
         prep_time: parseInt(prepTime) || 0,
@@ -633,7 +802,11 @@ const ManageRecipes = () => {
               unit_id: i.unit_id,
               notes: notesObj,
               notes_bg: notesObj.bg,
-              notes_en: notesObj.en
+              notes_en: notesObj.en,
+              notes_es: notesObj.es,
+              notes_it: notesObj.it,
+              notes_fr: notesObj.fr,
+              notes_de: notesObj.de
             };
           }
 
@@ -655,14 +828,18 @@ const ManageRecipes = () => {
             unit_id: i.unit_id,
             notes: notesObj,
             notes_bg: notesObj.bg,
-            notes_en: notesObj.en
+            notes_en: notesObj.en,
+            notes_es: notesObj.es,
+            notes_it: notesObj.it,
+            notes_fr: notesObj.fr,
+            notes_de: notesObj.de
           };
         }).filter(i => i.ingredient_id && i.amount && i.unit_id),
         steps: recipeSteps.map((s, idx) => {
           const origStep = originalRecipe?.steps?.[idx];
-          const existingInstruction = (typeof origStep?.instruction === 'object' && origStep?.instruction !== null)
-            ? origStep.instruction
-            : ((typeof s.instruction === 'object' && s.instruction !== null) ? s.instruction : {});
+          const existingInstruction = (typeof s.instruction === 'object' && s.instruction !== null)
+            ? s.instruction
+            : ((typeof origStep?.instruction === 'object' && origStep?.instruction !== null) ? origStep.instruction : {});
           const aiStepObj = aiTranslated?.steps?.[idx] || {};
           const stepAuthor = (sourceLang === 'en' ? (s.instruction_en || s.instruction_local || '') : (s.instruction_local || s.instruction_en || '')).trim();
 
@@ -699,6 +876,10 @@ const ManageRecipes = () => {
             instruction: instructionObj,
             instruction_bg: instructionObj.bg,
             instruction_en: instructionObj.en,
+            instruction_es: instructionObj.es,
+            instruction_it: instructionObj.it,
+            instruction_fr: instructionObj.fr,
+            instruction_de: instructionObj.de,
             timer_minutes: parseInt(s.timer_minutes) || null
           };
         }).filter(s => s.instruction_bg || s.instruction_en || s.instruction?.en || s.instruction?.bg || (s.instruction && Object.values(s.instruction).some(Boolean))),
@@ -766,22 +947,44 @@ const ManageRecipes = () => {
 
   const handleEditClick = (recipe) => {
     setEditingId(recipe.id);
-    setTitlesByLang({
-      bg: recipe.title?.bg || recipe.title_bg || '',
-      en: recipe.title?.en || recipe.title_en || '',
-      es: recipe.title?.es || recipe.title_es || '',
-      it: recipe.title?.it || recipe.title_it || '',
-      fr: recipe.title?.fr || recipe.title_fr || '',
-      de: recipe.title?.de || recipe.title_de || ''
-    });
-    setDescsByLang({
-      bg: recipe.description?.bg || recipe.description_bg || '',
-      en: recipe.description?.en || recipe.description_en || '',
-      es: recipe.description?.es || recipe.description_es || '',
-      it: recipe.description?.it || recipe.description_it || '',
-      fr: recipe.description?.fr || recipe.description_fr || '',
-      de: recipe.description?.de || recipe.description_de || ''
-    });
+    setHasAiTranslatedInSession(false);
+    const tBg = recipe.title?.bg || recipe.title_bg || '';
+    const tEn = recipe.title?.en || recipe.title_en || '';
+    const tEs = recipe.title?.es || recipe.title_es || '';
+    const tIt = recipe.title?.it || recipe.title_it || '';
+    const tFr = recipe.title?.fr || recipe.title_fr || '';
+    const tDe = recipe.title?.de || recipe.title_de || '';
+    const titleMap = {
+      bg: tBg,
+      en: tEn,
+      es: tEs,
+      it: tIt,
+      fr: tFr,
+      de: tDe
+    };
+    if (!titleMap[currentLang]) {
+      titleMap[currentLang] = tBg || tEn || tEs || tIt || tFr || tDe || '';
+    }
+    setTitlesByLang(titleMap);
+
+    const dBg = recipe.description?.bg || recipe.description_bg || '';
+    const dEn = recipe.description?.en || recipe.description_en || '';
+    const dEs = recipe.description?.es || recipe.description_es || '';
+    const dIt = recipe.description?.it || recipe.description_it || '';
+    const dFr = recipe.description?.fr || recipe.description_fr || '';
+    const dDe = recipe.description?.de || recipe.description_de || '';
+    const descMap = {
+      bg: dBg,
+      en: dEn,
+      es: dEs,
+      it: dIt,
+      fr: dFr,
+      de: dDe
+    };
+    if (!descMap[currentLang]) {
+      descMap[currentLang] = dBg || dEn || dEs || dIt || dFr || dDe || '';
+    }
+    setDescsByLang(descMap);
     setSlug(recipe.slug || recipe.id);
     const cMatch = getCuisineById(recipe.cuisine_id || recipe.cuisine_bg || recipe.cuisine_en);
     setCuisineId(cMatch ? cMatch.id : (recipe.cuisine_id || ''));
@@ -810,8 +1013,13 @@ const ManageRecipes = () => {
     setExtra2File(null);
 
     setRecipeIngredients(recipe.ingredients ? recipe.ingredients.map((i, idx) => {
-      const noteLocalVal = extractLocalizedNote(i.notes?.[currentLang] || (currentLang === 'bg' ? i.notes_bg : ''), i.notes, currentLang);
-      const noteEnVal = extractLocalizedNote(i.notes_en, i.notes, 'en');
+      const noteLocalVal =
+        extractLocalizedNote(i.notes?.[currentLang] || (currentLang === 'bg' ? i.notes_bg : ''), i.notes, currentLang) ||
+        extractLocalizedNote(i.notes_bg, i.notes, 'bg') ||
+        extractLocalizedNote(i.notes_en, i.notes, 'en');
+      const noteEnVal =
+        extractLocalizedNote(i.notes_en, i.notes, 'en') ||
+        extractLocalizedNote(i.notes_bg, i.notes, 'bg');
       return {
         ...i,
         id: `ing_edit_${idx}_${Date.now()}`,
@@ -824,17 +1032,19 @@ const ManageRecipes = () => {
     }) : []);
 
     setRecipeSteps(recipe.steps ? recipe.steps.map((s, idx) => {
-      const instLocalVal = (typeof s.instruction?.[currentLang] === 'string' && s.instruction[currentLang] !== '[object Object]')
-        ? s.instruction[currentLang]
-        : (currentLang === 'bg' && typeof s.instruction_bg === 'string' && s.instruction_bg !== '[object Object]' ? s.instruction_bg : '');
-      const instEnVal = (typeof s.instruction?.en === 'string' && s.instruction.en !== '[object Object]')
-        ? s.instruction.en
-        : (typeof s.instruction_en === 'string' && s.instruction_en !== '[object Object]' ? s.instruction_en : '');
+      const cleanStepStr = (val) => (typeof val === 'string' && val !== '[object Object]' ? val : '');
+      const instBgVal = cleanStepStr(s.instruction?.bg) || cleanStepStr(s.instruction_bg);
+      const instEnVal = cleanStepStr(s.instruction?.en) || cleanStepStr(s.instruction_en);
+      const instLocalVal =
+        cleanStepStr(s.instruction?.[currentLang]) ||
+        (currentLang === 'bg' ? instBgVal : '') ||
+        instBgVal ||
+        instEnVal;
       return {
         ...s,
         id: `step_edit_${idx}_${Date.now()}`,
         instruction_local: instLocalVal,
-        instruction_en: instEnVal,
+        instruction_en: instEnVal || instBgVal,
         timer_minutes: s.timer_minutes || ''
       };
     }) : []);
@@ -845,9 +1055,14 @@ const ManageRecipes = () => {
   };
 
   useEffect(() => {
-    if (editIdFromUrl && recipes.length > 0) {
+    if (!editIdFromUrl) {
+      lastOpenedEditIdRef.current = null;
+      return;
+    }
+    if (editIdFromUrl && recipes.length > 0 && lastOpenedEditIdRef.current !== editIdFromUrl) {
       const targetRecipe = recipes.find(r => r.id === editIdFromUrl || r.slug === editIdFromUrl);
       if (targetRecipe) {
+        lastOpenedEditIdRef.current = editIdFromUrl;
         const timer = setTimeout(() => {
           handleEditClick(targetRecipe);
         }, 0);
@@ -861,8 +1076,8 @@ const ManageRecipes = () => {
   const handleExportCSV = () => {
     const exportable = recipes.filter(r => !r.is_deleted);
     const headers = [
-      'slug','title_bg','title_en','title_it','title_fr','title_de',
-      'description_bg','description_en','description_it','description_fr','description_de',
+      'slug','title_bg','title_en','title_es','title_it','title_fr','title_de',
+      'description_bg','description_en','description_es','description_it','description_fr','description_de',
       'cuisine_id','category_id','category_ids','sub_category_id','prep_time','cook_time',
       'servings','difficulty','video_url','original_author','source_link',
       'ingredients','steps'
@@ -872,11 +1087,13 @@ const ManageRecipes = () => {
       r.slug || r.id,
       r.title_bg || r.title?.bg || '',
       r.title_en || r.title?.en || '',
+      r.title_es || r.title?.es || '',
       r.title_it || r.title?.it || '',
       r.title_fr || r.title?.fr || '',
       r.title_de || r.title?.de || '',
       r.description_bg || r.description?.bg || '',
       r.description_en || r.description?.en || '',
+      r.description_es || r.description?.es || '',
       r.description_it || r.description?.it || '',
       r.description_fr || r.description?.fr || '',
       r.description_de || r.description?.de || '',
@@ -896,13 +1113,13 @@ const ManageRecipes = () => {
     ]);
 
     const csvContent = formatCSV(headers, rows);
-    downloadCSV(`recipes_5lang_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
-    logActivity(user.uid, user.email, 'export_recipes_csv', `Exported ${exportable.length} recipes in 5 languages`);
+    downloadCSV(`recipes_6lang_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
+    logActivity(user.uid, user.email, 'export_recipes_csv', `Exported ${exportable.length} recipes in 6 languages`);
   };
 
   // --- Seed / Normalize Clean Recipes ---
   const handleSeedRecipes = async () => {
-    if (!window.confirm(t('recipes.confirm_seed_all', { defaultValue: 'Сигурни ли сте, че искате да обновите базата данни с нормализираните рецепти на 5 езика и да изчистите невалидните записи?' }))) {
+    if (!window.confirm(t('recipes.confirm_seed_all', { defaultValue: 'Сигурни ли сте, че искате да обновите базата данни с нормализираните рецепти на 6 езика и да изчистите невалидните записи?' }))) {
       return;
     }
     setSeedStatus('running');
@@ -912,7 +1129,7 @@ const ManageRecipes = () => {
       });
       if (res.success) {
         setSeedStatus('done');
-        await logActivity(user.uid, user.email, 'seed_recipes_5lang', `Seeded/normalized ${res.count} recipes across 5 languages`);
+        await logActivity(user.uid, user.email, 'seed_recipes_5lang', `Seeded/normalized ${res.count} recipes across 6 languages`);
       } else {
         setSeedStatus('error');
       }
@@ -951,16 +1168,18 @@ const ManageRecipes = () => {
         const slug = cols[idx('slug')]?.trim();
         const title_bg = cols[idx('title_bg')]?.trim();
         const title_en = cols[idx('title_en')]?.trim();
-        const title_it = cols[idx('title_it')]?.trim() || title_en;
-        const title_fr = cols[idx('title_fr')]?.trim() || title_en;
-        const title_de = cols[idx('title_de')]?.trim() || title_en;
+        const title_es = (idx('title_es') !== -1 ? cols[idx('title_es')]?.trim() : '') || title_en || title_bg;
+        const title_it = cols[idx('title_it')]?.trim() || title_en || title_bg;
+        const title_fr = cols[idx('title_fr')]?.trim() || title_en || title_bg;
+        const title_de = cols[idx('title_de')]?.trim() || title_en || title_bg;
         if (!slug || (!title_bg && !title_en)) continue;
 
         const description_bg = cols[idx('description_bg')] || '';
         const description_en = cols[idx('description_en')] || '';
-        const description_it = cols[idx('description_it')] || description_en;
-        const description_fr = cols[idx('description_fr')] || description_en;
-        const description_de = cols[idx('description_de')] || description_en;
+        const description_es = (idx('description_es') !== -1 ? cols[idx('description_es')] : '') || description_en || description_bg;
+        const description_it = cols[idx('description_it')] || description_en || description_bg;
+        const description_fr = cols[idx('description_fr')] || description_en || description_bg;
+        const description_de = cols[idx('description_de')] || description_en || description_bg;
 
         let ingredients = [];
         let steps = [];
@@ -996,12 +1215,12 @@ const ManageRecipes = () => {
 
         const row = {
           slug, 
-          title: { bg: title_bg || title_en, en: title_en || title_bg, it: title_it, fr: title_fr, de: title_de },
+          title: { bg: title_bg || title_en, en: title_en || title_bg, es: title_es, it: title_it, fr: title_fr, de: title_de },
           title_bg: title_bg || title_en, 
           title_en: title_en || title_bg,
-          title_it, title_fr, title_de,
-          description: { bg: description_bg, en: description_en, it: description_it, fr: description_fr, de: description_de },
-          description_bg, description_en, description_it, description_fr, description_de,
+          title_es, title_it, title_fr, title_de,
+          description: { bg: description_bg, en: description_en, es: description_es, it: description_it, fr: description_fr, de: description_de },
+          description_bg, description_en, description_es, description_it, description_fr, description_de,
           cuisine_id: getCuisineById(cols[idx('cuisine_id')])?.id || cols[idx('cuisine_id')] || '',
           category_id: normPrimaryCat,
           category_ids: parsedCatIds,
@@ -1154,6 +1373,8 @@ const ManageRecipes = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
+    setHasAiTranslatedInSession(false);
+    lastOpenedEditIdRef.current = null;
     setTitlesByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
     setDescsByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
     setSlug('');
@@ -1530,7 +1751,7 @@ const ManageRecipes = () => {
       </div>
 
       <div className="p-4 overflow-y-auto">
-        {/* Seed & Normalization Banner for 70 recipes with 5 languages */}
+        {/* Seed & Normalization Banner for 70 recipes with 6 languages */}
         {isPowerUser && showSeedBanner && (
           <div className="mb-6 p-4 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -1538,10 +1759,10 @@ const ManageRecipes = () => {
                 <span className="material-symbols-outlined text-amber-500 text-xl">auto_fix_high</span>
                 <div>
                   <h4 className="text-sm font-bold text-slate-100">
-                    {t('recipes.seed_banner_title', { count: CLEAN_RECIPES_COUNT, defaultValue: `Обновяване на базата с рецепти на 5 езика (${CLEAN_RECIPES_COUNT} рецепти)` })}
+                    {t('recipes.seed_banner_title', { count: CLEAN_RECIPES_COUNT, defaultValue: `Обновяване на базата с рецепти на 6 езика (${CLEAN_RECIPES_COUNT} рецепти)` })}
                   </h4>
                   <p className="text-xs text-slate-400">
-                    {t('recipes.seed_banner_desc', { defaultValue: 'Пълни 5-езикови преводи (BG, EN, IT, FR, DE), коригирани мерни единици, нормализирани категории и изчистване на невалидните записи.' })}
+                    {t('recipes.seed_banner_desc', { defaultValue: 'Пълни 6-езикови преводи (BG, EN, ES, IT, FR, DE), коригирани мерни единици, нормализирани категории и изчистване на невалидните записи.' })}
                   </p>
                 </div>
               </div>
@@ -1627,7 +1848,7 @@ const ManageRecipes = () => {
                 <span className="text-[11px] text-slate-300 font-medium leading-tight">
                   {t(
                     'recipes.ai_translate_hint',
-                    'Въведете рецептата само на Вашия език — Chef AI автоматично превежда заглавие, описание, бележки и стъпки на 5 езика.'
+                    'Въведете рецептата само на Вашия език — Chef AI автоматично превежда заглавие, описание, бележки и стъпки на 6 езика.'
                   )}
                 </span>
               </div>
@@ -1643,7 +1864,7 @@ const ManageRecipes = () => {
                 <span>
                   {isAiTranslating
                     ? t('recipes.ai_translating_btn', 'Превеждане...')
-                    : t('recipes.ai_translate_5langs', 'Преведи (5 езика)')}
+                    : t('recipes.ai_translate_5langs', 'Преведи (6 езика)')}
                 </span>
               </button>
             </div>
@@ -2151,7 +2372,7 @@ const ManageRecipes = () => {
               {isSavingRecipe ? 'sync' : (editingId ? 'save' : 'add')}
             </span>
             {isSavingRecipe
-              ? t('recipes.translating_and_saving', 'Превеждане на 5 езика и запазване...')
+              ? t('recipes.translating_and_saving', 'Превеждане на 6 езика и запазване...')
               : (editingId ? t('recipes.save_changes') : t('recipes.save_recipe'))}
           </button>
         </form>

@@ -21,7 +21,29 @@
    - `manifest.webmanifest`, Service Worker и бутон за инсталиране на началния екран за Android и iOS.
 
 ## Наскоро завършени задачи
-Успешно реализирано интелигентното управление на линкове за онлайн събития и защита на достъпа, оптимизацията на хедъра на страница „Събития“ в 3 самостоятелни реда, Модераторски и администраторски модул за контрол на съдържанието в „Гурме Общност“ с йерархия на ранговете, докладване и анти-хейт защита, динамично зареждане и синхронизиране на актуалното изображение на рецептите в „Гурме Общност“, коригиран и гарантиран AI преводът на английски при не-английски езици, опростяване на формата за въвеждане на рецепти, автоматично изчисляване на макронутриенти, козметични подобрения в Светла тема, Винено съчетание, раздел Рецепти, Профил, валидация, визуално преструктуриране и AI превод на кампании и реклами:
+Успешно реализиран 4-компонентен план за цялостно стабилизиране на AI многоезичния превод, интелигентен JSON Repair парсър, разширяване на CSV импорт/експорт за 6 езика, синхронизация с Firestore при превод на съществуващи рецепти и унифициране на всички бутони и текстове от 5 на 6 езика:
+
+1. **Интелигентен JSON Repair & Защита от вътрешни кавички и прекъсвания ([geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js), [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js))**:
+   - Реализиран специализиран state-machine парсър `repairJsonString(raw)` в `geminiClient.js`, който автоматично открива и екранира вътрешни неекранирани двойни кавички в стойностите на текстовите полета (напр. `"лодка"` ➔ `\"лодка\"`), вмъква липсващи запетаи между редове, почиства некоректни контролни символи и премахва висящи запетаи.
+   - Добавени строги правила в промптовете към Gemini AI (`CULINARY_TRANSLATION_SYSTEM_INSTRUCTION`, `translatePostTo5Languages`, `translateRecipeTo5Languages`): забрана за използване на двойни кавички вътре в низовете; задължително ползване на единични кавички (`'...'`) или кавички тип «...» / „...“.
+   - Премахнат ниският изкуствен таван `maxOutputTokens: 8192` в `aiTranslationMigrator.js` и преминаване към 1 рецепта на заявка (`BATCH_SIZE = 1`) за елиминиране на препълването на буфера.
+   - Реализиран двуфазен групов fallback при превод на рецепти: ако преводът на 6 езика наведнъж превиши лимита или се срине, системата автоматично ги разделя и превежда на 2 групи по 3 езика (`bg/en/es` и `it/fr/de`), след което ги обединява без загуба на информация.
+
+2. **Корекция и персистиране на превода в „Модерация“ (`/admin/moderation`) и „Рецепти“ (`/admin/recipes?edit=...`) ([Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx), [ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+   - При отваряне на рецепта за редакция в език без съществуващ превод (напр. испански `es`), формата за редакция надеждно взима за източник наличния `bg` или `en` текст за заглавие, описание, бележки и инструкции вместо да показва празни полета.
+   - При клик върху „Преведи (6 езика)“ при съществуваща рецепта (`editingId`), генерираните 6 езика се записват мигновено във Firestore (всички плоски полета `title_bg..de`, `description_bg..de`, `instruction_bg..de`, `notes_bg..de`, `needs_translation: false`), извиква се `syncRecipeCommunityPost` и се избягва повторен дублиращ превод при последващо натискане на „Запази“.
+   - При грешка по време на превода се визуализира реален информативен alert вместо фалшиво съобщение за успех.
+   - Въведен `lastOpenedEditIdRef`, елиминиращ нежелано рестартиране на формата при получаване на обновен Firestore snapshot.
+
+3. **Добавяне на `title_es` и `description_es` в CSV експорта и импорта на рецепти ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+   - Хедърът на експортирания и импортирания CSV файл е обновен на 6 езика: `slug,title_bg,title_en,title_es,title_it,title_fr,title_de,description_bg,description_en,description_es,description_it,description_fr,description_de,...`.
+   - Името на експортния файл е актуализирано на `recipes_6lang_${date}.csv`.
+   - CSV импортът разпознава и зарежда испанското заглавие и описание.
+
+4. **Актуализиране на всички бутони, логове и локализационни файлове от „5 езика“ на „6 езика“**:
+   - Актуализирани текстовете във всички 6 локализационни речника (`src/locales/bg.json`, `en.json`, `es.json`, `it.json`, `fr.json`, `de.json`) за `recipes`, `cuisines_admin`, `moderation`, `backup_recovery.ai_migration` и реклами.
+   - Обновени UI бутоните в `ManageRecipes.jsx`, `Moderation.jsx`, `ManageAds.jsx` и `AIMultilingualMigrator.jsx`.
+
 1. **Интелигентно управление на линкове за онлайн събития и защита на достъпа ([GourmetEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/GourmetEvents.jsx), [ManageEvents.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageEvents.jsx), [defaultEvents.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/defaultEvents.js))**:
    - Защита на линковете за срещи в Google Meet, Zoom, Teams (`meeting_access: 'registered_only'`): линкът е скрит за незаписани потребители и се активира автоматично в модала и на картата само след потвърдена резервация.
    - VIP зона за достъп в модала с бутони „Влез в срещата“ и „Копирай линка“, както и информационен статус, ако организаторът още не е настроил срещата.

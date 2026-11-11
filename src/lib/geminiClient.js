@@ -301,40 +301,229 @@ export function parseRetryDelaySeconds(errData, errText) {
 }
 
 /**
- * Resilient JSON extractor from text response (handles code fences, comments, whitespace)
+ * State-machine JSON repair utility that fixes common LLM JSON errors:
+ * 1. Unescaped double quotes inside string values (e.g. "Оформете тестото като "лодка" и печете.")
+ * 2. Unescaped newlines, carriage returns, and tabs inside string values
+ * 3. Missing commas between properties or elements on consecutive lines
+ * 4. Trailing commas before } or ]
+ */
+export function repairJsonString(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+
+  // Helper: checks if at position `pos` (after optional whitespace) there is a JSON key `"key":`
+  const hasKeyColonAhead = (str, pos) => {
+    let i = pos;
+    while (i < str.length && /\s/.test(str[i])) i++;
+    if (str[i] !== '"') return false;
+    i++;
+    while (i < str.length) {
+      if (str[i] === '\\') {
+        i += 2;
+        continue;
+      }
+      if (str[i] === '"') {
+        i++;
+        while (i < str.length && /\s/.test(str[i])) i++;
+        return str[i] === ':';
+      }
+      if (str[i] === '\n' || str[i] === '\r') return false;
+      i++;
+    }
+    return false;
+  };
+
+  let out = '';
+  let inString = false;
+  let isKeyString = false;
+  let escaped = false;
+  const containerStack = []; // '{' or '['
+  let lastStructuralToken = ''; // '{', '[', ':', ',', 'VALUE'
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+
+    if (!inString) {
+      if (/\s/.test(ch)) {
+        out += ch;
+        continue;
+      }
+
+      // If previous token was a completed VALUE and now a new key/value starts without a comma, insert ','
+      if (
+        lastStructuralToken === 'VALUE' &&
+        (ch === '"' || ch === '{' || ch === '[' || /[-0-9tfn]/.test(ch))
+      ) {
+        out += ',';
+        lastStructuralToken = ',';
+      }
+
+      if (ch === '{' || ch === '[') {
+        containerStack.push(ch);
+        lastStructuralToken = ch;
+        out += ch;
+        continue;
+      }
+
+      if (ch === '}' || ch === ']') {
+        containerStack.pop();
+        lastStructuralToken = 'VALUE';
+        out += ch;
+        continue;
+      }
+
+      if (ch === ':') {
+        lastStructuralToken = ':';
+        out += ch;
+        continue;
+      }
+
+      if (ch === ',') {
+        lastStructuralToken = ',';
+        out += ch;
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        const topContainer = containerStack[containerStack.length - 1];
+        isKeyString = topContainer === '{' && (lastStructuralToken === '{' || lastStructuralToken === ',');
+        out += ch;
+        continue;
+      }
+
+      // Primitive literal (number, true, false, null)
+      lastStructuralToken = 'VALUE';
+      out += ch;
+      continue;
+    }
+
+    // Inside a JSON string
+    if (escaped) {
+      escaped = false;
+      out += ch;
+      continue;
+    }
+
+    if (ch === '\\') {
+      escaped = true;
+      out += ch;
+      continue;
+    }
+
+    if (ch === '\n') {
+      out += '\\n';
+      continue;
+    }
+    if (ch === '\r') {
+      continue;
+    }
+    if (ch === '\t') {
+      out += '\\t';
+      continue;
+    }
+
+    if (ch === '"') {
+      // Determine whether this quote closes the JSON string or is an unescaped quote inside the text
+      let j = i + 1;
+      while (j < raw.length && (raw[j] === ' ' || raw[j] === '\t')) j++;
+
+      const nextSameLine = raw[j];
+      let jAny = i + 1;
+      while (jAny < raw.length && /\s/.test(raw[jAny])) jAny++;
+      const nextNonWs = raw[jAny];
+
+      let isClosingQuote = false;
+
+      if (isKeyString) {
+        isClosingQuote = nextNonWs === ':';
+      } else {
+        const topContainer = containerStack[containerStack.length - 1];
+        if (nextNonWs === '}' || nextNonWs === ']' || jAny >= raw.length) {
+          isClosingQuote = true;
+        } else if (nextNonWs === ',') {
+          // After a comma closing a string value:
+          let k = jAny + 1;
+          while (k < raw.length && /\s/.test(raw[k])) k++;
+          const afterComma = raw[k];
+          if (topContainer === '{') {
+            // In an object, after `,` must come `"nextKey":` or `}`
+            isClosingQuote = afterComma === '}' || hasKeyColonAhead(raw, k);
+          } else {
+            // In an array, after `,` must come `"`, `{`, `[`, `]`, or literal — and usually `,` is at end of string or followed by valid element
+            isClosingQuote =
+              afterComma === ']' ||
+              afterComma === '{' ||
+              afterComma === '[' ||
+              (afterComma === '"' && (nextSameLine === ',' || raw.slice(jAny + 1, k).includes('\n')));
+          }
+        } else if (nextSameLine === '\n' || nextSameLine === '\r') {
+          // Missing comma at the end of a line!
+          if (topContainer === '{' && hasKeyColonAhead(raw, jAny)) {
+            isClosingQuote = true;
+          } else if (topContainer === '[' && (nextNonWs === '"' || nextNonWs === '{' || nextNonWs === '[')) {
+            isClosingQuote = true;
+          }
+        }
+      }
+
+      if (isClosingQuote) {
+        inString = false;
+        if (!isKeyString) {
+          lastStructuralToken = 'VALUE';
+        }
+        out += '"';
+      } else {
+        // Unescaped internal quote inside text (e.g. "лодка") -> escape it!
+        out += '\\"';
+      }
+      continue;
+    }
+
+    out += ch;
+  }
+
+  // Remove trailing commas before } or ]
+  return out.replace(/,(\s*[}\]])/g, '$1');
+}
+
+/**
+ * Resilient JSON extractor from text response (handles code fences, comments, unescaped quotes, missing commas)
  */
 export function extractJsonFromText(text) {
   if (!text || typeof text !== 'string') return null;
   let cleaned = text.trim();
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const firstBracket = cleaned.indexOf('[');
-    const lastBracket = cleaned.lastIndexOf(']');
-    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-      try {
-        return JSON.parse(cleaned.substring(firstBracket, lastBracket + 1));
-      } catch {
-        // continue
-      }
-    }
-    const firstBrace = cleaned.indexOf('{');
-    const lastBrace = cleaned.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      try {
-        return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
-      } catch {
-        // continue
-      }
-    }
-    return null;
+
+  const candidates = [cleaned];
+  const firstBracket = cleaned.indexOf('[');
+  const lastBracket = cleaned.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    candidates.push(cleaned.substring(firstBracket, lastBracket + 1));
   }
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(cleaned.substring(firstBrace, lastBrace + 1));
+  }
+
+  for (const cand of candidates) {
+    try {
+      return JSON.parse(cand);
+    } catch {
+      try {
+        const repaired = repairJsonString(cand);
+        return JSON.parse(repaired);
+      } catch {
+        // continue
+      }
+    }
+  }
+  return null;
 }
 
 /**
  * Executes a call to Google Gemini with the configured modern model,
- * strict timeout via AbortController, and immediate failover to fallback.
+ * strict timeout via AbortController, automatic JSON validation/repair, and failover to fallback models.
  * 
  * @param {Object} options
  * @param {string} [options.apiKey] - Gemini API Key (defaults to getGeminiApiKey())
@@ -357,7 +546,16 @@ export async function callGemini({
   model = null,
   timeoutMs = 10000
 }) {
-  if (!apiKey) {
+  if (!cachedRemoteConfig) {
+    try {
+      await getRemoteAIConfig();
+    } catch {
+      // ignore
+    }
+  }
+
+  const effectiveKey = apiKey || getGeminiApiKey();
+  if (!effectiveKey) {
     throw new Error("Missing Gemini API Key. Please configure an API key in settings.");
   }
 
@@ -365,10 +563,15 @@ export async function callGemini({
     ? model 
     : (cachedRemoteConfig?.primary_model || PRIMARY_GEMINI_MODEL);
   const effectiveFallback = cachedRemoteConfig?.fallback_model || FALLBACK_GEMINI_MODEL;
+  const configuredAvailable = Array.isArray(cachedRemoteConfig?.available_models)
+    ? cachedRemoteConfig.available_models
+    : DEFAULT_AVAILABLE_MODELS;
 
   const modelsToTry = (model && model !== 'auto' && model !== effectivePrimary)
     ? [model]
-    : [effectivePrimary, effectiveFallback].filter((v, i, a) => a.indexOf(v) === i);
+    : [effectivePrimary, effectiveFallback, 'gemini-flash-latest', ...configuredAvailable]
+        .filter(Boolean)
+        .filter((v, i, a) => a.indexOf(v) === i);
 
   // Build parts array if contents wasn't provided directly (images first, then prompt)
   let requestContents = contents;
@@ -408,64 +611,82 @@ export async function callGemini({
   }
 
   let lastError = null;
+  const expectsJson = generationConfig.responseMimeType === 'application/json';
 
   for (const currentModel of modelsToTry) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const maxAttempts = expectsJson ? 2 : 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal
-        }
-      );
-
-      clearTimeout(timer);
-
-      if (!response.ok) {
-        let errText = `HTTP ${response.status} ${response.statusText}`;
-        try {
-          const errData = await response.json();
-          if (errData.error?.message) {
-            errText = errData.error.message;
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${effectiveKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
           }
-        } catch {
-          // ignore parsing error
+        );
+
+        clearTimeout(timer);
+
+        if (!response.ok) {
+          let errText = `HTTP ${response.status} ${response.statusText}`;
+          try {
+            const errData = await response.json();
+            if (errData.error?.message) {
+              errText = errData.error.message;
+            }
+          } catch {
+            // ignore parsing error
+          }
+          const httpErr = new Error(errText);
+          httpErr.status = response.status;
+          throw httpErr;
         }
-        throw new Error(errText);
-      }
 
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) {
-        throw new Error("No response text candidate returned by Gemini API.");
-      }
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          throw new Error("No response text candidate returned by Gemini API.");
+        }
 
-      let parsedData = null;
-      if (generationConfig.responseMimeType === 'application/json' || text.trim().startsWith('{') || text.trim().startsWith('[')) {
-        parsedData = extractJsonFromText(text);
-      }
+        let parsedData = null;
+        if (expectsJson || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+          parsedData = extractJsonFromText(text);
+          if (expectsJson && !parsedData) {
+            throw new SyntaxError("Invalid or incomplete JSON returned by Gemini API.");
+          }
+        }
 
-      return {
-        text,
-        data: parsedData,
-        modelUsed: currentModel,
-        rawResponse: data
-      };
+        return {
+          text,
+          data: parsedData,
+          modelUsed: currentModel,
+          rawResponse: data
+        };
 
-    } catch (err) {
-      clearTimeout(timer);
-      if (err.name === 'AbortError') {
-        lastError = new Error(`Request to model ${currentModel} timed out after ${Math.round(timeoutMs / 1000)}s`);
-      } else {
-        lastError = err;
+      } catch (err) {
+        clearTimeout(timer);
+        if (err.name === 'AbortError') {
+          lastError = new Error(`Request to model ${currentModel} timed out after ${Math.round(timeoutMs / 1000)}s`);
+        } else {
+          lastError = err;
+        }
+        console.warn(`Gemini call to ${currentModel} (attempt ${attempt}/${maxAttempts}) failed:`, lastError.message);
+
+        // If model does not exist (404) or is not available, immediately try next model
+        if (
+          err.status === 404 ||
+          lastError.message.includes('not found') ||
+          lastError.message.includes('not available') ||
+          lastError.message.includes('no longer available')
+        ) {
+          break;
+        }
       }
-      console.warn(`Gemini call to ${currentModel} failed:`, lastError.message);
-      // Immediately move to fallback model without blocking sleep
     }
   }
 
@@ -473,9 +694,9 @@ export async function callGemini({
 }
 
 /**
- * Translates a short text (title, name, phrase) into all 5 supported languages (bg, en, it, fr, de)
+ * Translates a short text (title, name, phrase) into all 6 supported languages (bg, en, es, it, fr, de)
  * using the configured Gemini AI client.
- * Returns an object { bg: '...', en: '...', it: '...', fr: '...', de: '...' }.
+ * Returns an object { bg: '...', en: '...', es: '...', it: '...', fr: '...', de: '...' }.
  * Never throws — if API key is missing or call fails, gracefully returns fallback mapping.
  */
 export async function translateTextTo5Languages({ text = '', sourceLang = 'bg' }) {
