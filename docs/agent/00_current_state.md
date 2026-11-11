@@ -15,6 +15,7 @@
 - `src/lib/`: Библиотеки и конфигурации (firebase.js, localeUtils.js, videoUtils.js, recipeNutrition.js, geminiClient.js и др.)
 - `src/locales/`: Структурирани JSON речници за многоезичност (`bg.json`, `en.json`, `es.json`, `it.json`, `fr.json`, `de.json`)
 - `docs/agent/`: Документация за AI агентите
+- `docs/blueprints/`: Библиотека от 13 универсални, преизползваеми архитектурни шаблона (Blueprints) за Административните и AI модули на приложението, предназначени за директно внедряване в други проекти (`00_INDEX_AND_INTEGRATION_GUIDE.md` до `12_HYBRID_DETERMINISTIC_AI_BRIDGES.md`)
 
 ## Конфигурация и код
 Приложението е настроено за работа с 6 езика (Български, Английски, Испански, Италиански, Френски и Немски) чрез i18next и структурирани JSON речници с универсални ключове в `src/locales/`, персистирани в `localStorage`. Подредбата на езиците във всички селектори е строго: **EN, ES, IT, FR, DE, BG**.
