@@ -21,6 +21,11 @@
    - Отстранен ESLint проблем в `public/sw.js` (използване на `self.clients`).
    - Изпълнен успешен билд (`npx vite build` за 1.18s) и линт.
 
+5. **Сигурност и разрешаване на GitHub Secret Scanning Alert**:
+   - Папката `docs/data-base/` (включително `best_idea_eatery_backup_2026-11-12.json`) е напълно премахната от Git и добавена в `.gitignore`.
+   - Промените са пушнати към GitHub (`ce35ea1`).
+   - Необходимо е възложителят да анулира (revoke) стария ключ в Google AI Studio и да маркира алерта в GitHub като "Revoked".
+
 ### Приоритети за следващата сесия:
 1. **Стартиране на Етап 1 от Десктоп Портала (`docs/plan-desktop-web.md`)**:
    - Разработка на `DesktopHeader.jsx` и `DesktopFooter.jsx`.

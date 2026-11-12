@@ -3,6 +3,13 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-11-12] - Сигурност: Премахване на папка data-base и игнориране на бекъпи в .gitignore
+### Премахнато / Защитено (Removed / Protected)
+- **Пълно премахване на папка `docs/data-base/` от хранилището**:
+  - Изтрит файлът с пълен архив на базата данни `best_idea_eatery_backup_2026-11-12.json`, съдържащ вътрешни системни конфигурации (`settings/ai_config`).
+  - Добавено правило в `.gitignore`: `docs/data-base/` и `*.backup.json`, за да се гарантира, че бъдещи локални експорти или архиви никога няма да попадат в публичното git хранилище.
+  - Изчистено Git дърво и пушнато към отдалеченото хранилище в GitHub (`ce35ea1`).
+
 ## [2026-11-12] - Стратегически План: Адаптивен Десктоп Портал (plan-desktop-web.md)
 ### Добавено (Added)
 - **План за Адаптивен Десктоп Портал ([plan-desktop-web.md](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/plan-desktop-web.md))**:
