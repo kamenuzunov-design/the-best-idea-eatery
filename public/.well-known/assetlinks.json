@@ -3,8 +3,19 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
+      "package_name": "app.bestideaeatery.twa",
+      "sha256_cert_fingerprints": [
+        "EC:73:BE:71:4C:50:1F:EA:C1:C6:1B:CF:EC:36:C6:C2:D7:F8:4B:B2:0A:CA:E5:47:9A:FE:C9:38:59:D8:1E:1B"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
       "package_name": "com.thebestideaeatery.app",
       "sha256_cert_fingerprints": [
+        "EC:73:BE:71:4C:50:1F:EA:C1:C6:1B:CF:EC:36:C6:C2:D7:F8:4B:B2:0A:CA:E5:47:9A:FE:C9:38:59:D8:1E:1B",
         "14:6D:E9:7D:0F:52:AB:68:85:E5:5B:3E:24:3F:DE:6F:CD:BE:4F:29:42:05:A3:9A:81:EA:0F:C6:1A:00:89:C4"
       ]
     }

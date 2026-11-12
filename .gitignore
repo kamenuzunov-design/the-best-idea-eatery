@@ -32,6 +32,17 @@ upload/
 docs/data-base/
 *.backup.json
 
+# Android Keys and Build Outputs
+*.keystore
+*.jks
+*.idsig
+twa-build/.gradle/
+twa-build/build/
+twa-build/app/build/
+twa-build/*.aab
+twa-build/*.apk
+twa-build/local.properties
+
 *.env
 *.env.*
 !.env.example
