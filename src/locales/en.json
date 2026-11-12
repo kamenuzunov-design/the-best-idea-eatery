@@ -1623,7 +1623,16 @@
     "enable_notifications_btn": "Enable",
     "timer_finished_title": "⏰ Timer Finished!",
     "timer_finished_body": "Step {{step}}: {{title}}",
-    "finish_congratulations": "Congratulations! You successfully completed cooking!"
+    "finish_congratulations": "Congratulations! You successfully completed cooking!",
+    "voice_control_btn": "Hands-Free Voice",
+    "voice_listening": "Listening... Say a command",
+    "voice_command_hint": "Commands: \"Next\", \"Back\", \"Start\", \"Pause\", \"Ingredients\", \"Repeat\"",
+    "voice_not_supported": "Voice recognition is not supported by this browser.",
+    "voice_recognized": "Recognized: \"{{command}}\"",
+    "ingredients_drawer_title": "Recipe Ingredients",
+    "ingredients_drawer_btn": "Ingredients",
+    "ingredients_empty": "No ingredients listed for this recipe.",
+    "servings_badge": "for {{servings}} servings"
   },
   "recipe_customization": {
     "title": "Customize Recipe",
@@ -2271,5 +2280,19 @@
       "report_submitted_toast": "Report submitted for moderator review.",
       "report_error": "An error occurred while submitting the report."
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "new_count": "new",
+    "mark_all_read": "Mark all as read",
+    "no_notifications": "No new notifications",
+    "no_notifications_desc": "You will receive updates here about expiring pantry items and approved recipes.",
+    "just_now": "Just now",
+    "enable_push_hint": "Enable browser/phone notifications",
+    "enable_btn": "Enable",
+    "pantry_expiring_title": "⏳ {{count}} pantry items expiring soon!",
+    "pantry_expiring_body": "Expiring soon: {{items}}. Tap to find recipes with them.",
+    "recipe_approved_title": "🎉 Your recipe has been approved!",
+    "recipe_approved_body": "The recipe \"{{title}}\" has been approved by a moderator and is now live."
   }
 }

@@ -1623,7 +1623,16 @@
     "enable_notifications_btn": "Включи",
     "timer_finished_title": "⏰ Таймерът приключи!",
     "timer_finished_body": "Стъпка {{step}}: {{title}}",
-    "finish_congratulations": "Поздравления! Вие успешно завършихте готвенето!"
+    "finish_congratulations": "Поздравления! Вие успешно завършихте готвенето!",
+    "voice_control_btn": "Готвене без ръце",
+    "voice_listening": "Слушам... Кажете команда",
+    "voice_command_hint": "Команди: „Следваща“, „Назад“, „Старт“, „Пауза“, „Съставки“, „Повтори“",
+    "voice_not_supported": "Гласовото разпознаване не се поддържа от този браузър.",
+    "voice_recognized": "Разпознато: „{{command}}“",
+    "ingredients_drawer_title": "Съставки за рецептата",
+    "ingredients_drawer_btn": "Съставки",
+    "ingredients_empty": "Няма описани съставки за тази рецепта.",
+    "servings_badge": "за {{servings}} порции"
   },
   "recipe_customization": {
     "title": "Персонализиране",
@@ -2271,5 +2280,19 @@
       "report_submitted_toast": "Сигналът е изпратен за преглед от модератор.",
       "report_error": "Възникна грешка при изпращане на сигнала."
     }
+  },
+  "notifications": {
+    "title": "Известия",
+    "new_count": "нови",
+    "mark_all_read": "Маркирай всички",
+    "no_notifications": "Нямате нови известия",
+    "no_notifications_desc": "Тук ще получавате известия за Килера и одобрени рецепти.",
+    "just_now": "Току-що",
+    "enable_push_hint": "Включете известия за браузъра/телефона",
+    "enable_btn": "Включи",
+    "pantry_expiring_title": "⏳ {{count}} продукта в Килера изтичат скоро!",
+    "pantry_expiring_body": "Остава малко време за: {{items}}. Натиснете, за да намерите рецепти с тях.",
+    "recipe_approved_title": "🎉 Вашата рецепта беше одобрена!",
+    "recipe_approved_body": "Рецептата „{{title}}“ беше одобрена от модератор и вече е публична."
   }
 }

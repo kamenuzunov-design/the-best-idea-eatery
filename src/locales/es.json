@@ -1623,7 +1623,16 @@
     "enable_notifications_btn": "Activar",
     "timer_finished_title": "⏰ ¡Temporizador finalizado!",
     "timer_finished_body": "Paso {{step}}: {{title}}",
-    "finish_congratulations": "¡Enhorabuena! ¡Has completado la receta con éxito!"
+    "finish_congratulations": "¡Enhorabuena! ¡Has completado la receta con éxito!",
+    "voice_control_btn": "Manos libres",
+    "voice_listening": "Escuchando... Di un comando",
+    "voice_command_hint": "Comandos: \"Siguiente\", \"Atrás\", \"Iniciar\", \"Pausa\", \"Ingredientes\", \"Repetir\"",
+    "voice_not_supported": "El reconocimiento de voz no es compatible con este navegador.",
+    "voice_recognized": "Reconocido: \"{{command}}\"",
+    "ingredients_drawer_title": "Ingredientes de la receta",
+    "ingredients_drawer_btn": "Ingredientes",
+    "ingredients_empty": "No hay ingredientes listados para esta receta.",
+    "servings_badge": "para {{servings}} porciones"
   },
   "recipe_customization": {
     "title": "Personalizar receta",
@@ -2271,5 +2280,19 @@
       "report_submitted_toast": "Denuncia enviada para revisión del moderador.",
       "report_error": "Se produjo un error al enviar la denuncia."
     }
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "new_count": "nuevas",
+    "mark_all_read": "Marcar todas como leídas",
+    "no_notifications": "No tienes notificaciones nuevas",
+    "no_notifications_desc": "Aquí recibirás actualizaciones sobre artículos de la despensa y recetas aprobadas.",
+    "just_now": "Ahora mismo",
+    "enable_push_hint": "Habilitar notificaciones en navegador/teléfono",
+    "enable_btn": "Activar",
+    "pantry_expiring_title": "⏳ ¡{{count}} productos de la despensa vencen pronto!",
+    "pantry_expiring_body": "Vencen pronto: {{items}}. Toca para buscar recetas con ellos.",
+    "recipe_approved_title": "🎉 ¡Tu receta ha sido aprobada!",
+    "recipe_approved_body": "La receta \"{{title}}\" ha sido aprobada por un moderador y ya es pública."
   }
 }

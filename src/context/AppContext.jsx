@@ -1,14 +1,17 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { mockRecipes } from '../data/mockRecipes';
+import { checkPantryExpirations } from '../lib/notificationService';
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [pantry, setPantry] = useState([]);
   const [shoppingList, setShoppingListState] = useState([]);
 
@@ -88,6 +91,13 @@ export const AppProvider = ({ children }) => {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Smart Pantry Expiration Detector (Checks expiring items <= 2 days once a day)
+  useEffect(() => {
+    if (pantry && pantry.length > 0) {
+      checkPantryExpirations(pantry, user?.uid, t);
+    }
+  }, [pantry, user, t]);
 
   const addPantryItem = async (item) => {
     if (!user || user.role === 'guest') return;

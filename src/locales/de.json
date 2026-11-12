@@ -1623,7 +1623,16 @@
     "enable_notifications_btn": "Aktivieren",
     "timer_finished_title": "⏰ Timer abgelaufen!",
     "timer_finished_body": "Schritt {{step}}: {{title}}",
-    "finish_congratulations": "Herzlichen Glückwunsch! Sie haben das Kochen erfolgreich beendet!"
+    "finish_congratulations": "Herzlichen Glückwunsch! Sie haben das Kochen erfolgreich beendet!",
+    "voice_control_btn": "Freihändig kochen",
+    "voice_listening": "Zuhören... Befehl sagen",
+    "voice_command_hint": "Befehle: „Weiter“, „Zurück“, „Start“, „Pause“, „Zutaten“, „Wiederholen“",
+    "voice_not_supported": "Spracherkennung wird von diesem Browser nicht unterstützt.",
+    "voice_recognized": "Erkannt: „{{command}}“",
+    "ingredients_drawer_title": "Rezeptzutaten",
+    "ingredients_drawer_btn": "Zutaten",
+    "ingredients_empty": "Keine Zutaten für dieses Rezept aufgeführt.",
+    "servings_badge": "für {{servings}} Portionen"
   },
   "recipe_customization": {
     "title": "Anpassen",
@@ -2271,5 +2280,19 @@
       "report_submitted_toast": "Meldung zur Überprüfung durch Moderatoren gesendet.",
       "report_error": "Fehler beim Senden der Meldung."
     }
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "new_count": "neu",
+    "mark_all_read": "Alle als gelesen markieren",
+    "no_notifications": "Keine neuen Benachrichtigungen",
+    "no_notifications_desc": "Hier erhalten Sie Benachrichtigungen über Vorratsartikel und freigegebene Rezepte.",
+    "just_now": "Gerade eben",
+    "enable_push_hint": "Browser-/Telefonbenachrichtigungen aktivieren",
+    "enable_btn": "Aktivieren",
+    "pantry_expiring_title": "⏳ {{count}} Vorratsartikel laufen bald ab!",
+    "pantry_expiring_body": "Läuft bald ab: {{items}}. Tippen, um Rezepte damit zu finden.",
+    "recipe_approved_title": "🎉 Dein Rezept wurde freigegeben!",
+    "recipe_approved_body": "Das Rezept „{{title}}“ wurde von einem Moderator freigegeben und ist nun öffentlich."
   }
 }

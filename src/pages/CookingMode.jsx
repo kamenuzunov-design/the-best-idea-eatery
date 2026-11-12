@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -96,6 +96,83 @@ const DEFAULT_SAMPLE_STEPS = [
   }
 ];
 
+// Multilingual voice command pattern registry
+const COMMAND_PATTERNS = {
+  next: [
+    'следваща', 'следващ', 'напред', 'по-нататък', 'давай', 'следваща стъпка',
+    'next', 'forward', 'next step', 'go forward', 'continue',
+    'siguiente', 'adelante', 'próximo', 'proximo', 'siguiente paso',
+    'avanti', 'successivo', 'prossimo', 'passo successivo',
+    'suivant', 'suivante', 'continuer', 'étape suivante', 'etape suivante',
+    'weiter', 'nächster', 'nächste', 'vorwärts', 'nächster schritt'
+  ],
+  prev: [
+    'предишна', 'предишен', 'назад', 'върни', 'предишна стъпка',
+    'back', 'previous', 'previous step', 'go back',
+    'anterior', 'atrás', 'atras', 'volver', 'paso anterior',
+    'indietro', 'precedente', 'passo precedente',
+    'précédent', 'précédente', 'precedent', 'retour', 'en arrière', 'étape précédente',
+    'zurück', 'zurueck', 'vorheriger', 'vorherige', 'vorheriger schritt'
+  ],
+  timer_start: [
+    'старт', 'пусни таймер', 'таймер старт', 'пусни', 'започни', 'таймер',
+    'start', 'start timer', 'run timer', 'timer start', 'play timer',
+    'iniciar', 'empezar', 'iniciar temporizador', 'temporizador',
+    'avvia', 'inizia', 'fai partire',
+    'démarrer', 'demarrer', 'lance le minuteur', 'minuteur',
+    'starten', 'los', 'timer starten'
+  ],
+  timer_pause: [
+    'пауза', 'спри таймер', 'спри', 'паузирай', 'стой',
+    'pause', 'stop timer', 'pause timer', 'stop', 'hold',
+    'parar', 'detener',
+    'ferma',
+    'arrêter', 'arreter',
+    'anhalten', 'stopp'
+  ],
+  timer_reset: [
+    'нулирай', 'ресет', 'отначало',
+    'reset', 'reset timer', 'restart timer',
+    'reiniciar', 'resetear',
+    'reimposta', 'azzera',
+    'réinitialiser', 'reinitialiser', 'remettre à zéro',
+    'zurücksetzen', 'zuruecksetzen'
+  ],
+  repeat: [
+    'повтори', 'прочети', 'кажи', 'изчети',
+    'repeat', 'read', 'read step', 'say again',
+    'repetir', 'leer', 'léelo',
+    'ripeti', 'leggi',
+    'répéter', 'repeter', 'lire',
+    'wiederholen', 'vorlesen'
+  ],
+  drawer_open: [
+    'съставки', 'продукти', 'чекмедже', 'покажи съставки',
+    'ingredients', 'ingredient', 'show ingredients',
+    'ingredientes', 'mostrar ingredientes',
+    'ingredienti', 'mostra ingredienti',
+    'ingrédients', 'afficher les ingrédients',
+    'zutaten', 'zutaten anzeigen'
+  ],
+  drawer_close: [
+    'затвори съставки', 'затвори', 'скрий',
+    'close ingredients', 'close', 'hide',
+    'cerrar', 'ocultar',
+    'chiudi', 'nascondi',
+    'fermer', 'masquer',
+    'schließen', 'schliessen', 'verstecken'
+  ]
+};
+
+const SPEECH_LANG_MAP = {
+  bg: 'bg-BG',
+  en: 'en-US',
+  es: 'es-ES',
+  it: 'it-IT',
+  fr: 'fr-FR',
+  de: 'de-DE'
+};
+
 const CookingMode = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -127,6 +204,22 @@ const CookingMode = () => {
 
   // Audio Context synth for chime alert
   const audioCtxRef = useRef(null);
+
+  // Hands-Free Voice Control States
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [lastRecognizedCommand, setLastRecognizedCommand] = useState(null);
+  const recognitionRef = useRef(null);
+  const isVoiceActiveRef = useRef(false);
+
+  // Slide-Over Ingredients Drawer States
+  const [isIngredientsDrawerOpen, setIsIngredientsDrawerOpen] = useState(false);
+  const [checkedIngredients, setCheckedIngredients] = useState({});
+
+  // Dynamic Refs to keep fresh state in asynchronous event listeners
+  const currentStepIndexRef = useRef(0);
+  const totalStepsRef = useRef(0);
+  const isTimerRunningRef = useRef(false);
+  const currentStepRef = useRef(null);
 
   // Pre-load SpeechSynthesis voices for reliable audio playback
   useEffect(() => {
@@ -164,7 +257,18 @@ const CookingMode = () => {
             title_bg: 'Класическа Шопска Салата',
             title_en: 'Classic Shopska Salad',
             media_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=1000',
-            steps: DEFAULT_SAMPLE_STEPS
+            steps: DEFAULT_SAMPLE_STEPS,
+            ingredients: [
+              { name: 'Домати', name_bg: 'Домати', name_en: 'Tomatoes', amount: 4, unit: 'бр.', notes: 'добре узрели' },
+              { name: 'Краставици', name_bg: 'Краставици', name_en: 'Cucumbers', amount: 2, unit: 'бр.', notes: 'обелени' },
+              { name: 'Чушки', name_bg: 'Чушки', name_en: 'Peppers', amount: 2, unit: 'бр.', notes: 'зелени или червени' },
+              { name: 'Червен лук', name_bg: 'Червен лук', name_en: 'Red Onion', amount: 1, unit: 'глава', notes: 'нарязан на полумесеци' },
+              { name: 'Бяло саламурено сирене', name_bg: 'Бяло саламурено сирене', name_en: 'White Brine Cheese', amount: 200, unit: 'g', notes: 'българско, настъргано' },
+              { name: 'Зехтин', name_bg: 'Зехтин', name_en: 'Olive Oil', amount: 3, unit: 'с.л.', notes: 'екстра върджин' },
+              { name: 'Маслини', name_bg: 'Маслини', name_en: 'Olives', amount: 50, unit: 'g', notes: 'черни' },
+              { name: 'Пресен магданоз', name_bg: 'Пресен магданоз', name_en: 'Fresh Parsley', amount: 0.5, unit: 'връзка', notes: 'ситно нарязан' }
+            ],
+            servings: 4
           });
           setTimerRemaining((DEFAULT_SAMPLE_STEPS[0].timer_minutes || 0) * 60);
           setLoading(false);
@@ -199,7 +303,8 @@ const CookingMode = () => {
               },
               title_bg: 'Режим Готвене',
               title_en: 'Cooking Mode',
-              steps: DEFAULT_SAMPLE_STEPS
+              steps: DEFAULT_SAMPLE_STEPS,
+              ingredients: []
             });
             setTimerRemaining((DEFAULT_SAMPLE_STEPS[0].timer_minutes || 0) * 60);
           }
@@ -218,7 +323,8 @@ const CookingMode = () => {
             },
             title_bg: 'Режим Готвене',
             title_en: 'Cooking Mode',
-            steps: DEFAULT_SAMPLE_STEPS
+            steps: DEFAULT_SAMPLE_STEPS,
+            ingredients: []
           });
           setTimerRemaining((DEFAULT_SAMPLE_STEPS[0].timer_minutes || 0) * 60);
         }
@@ -280,8 +386,16 @@ const CookingMode = () => {
   const currentStep = steps[currentStepIndex] || steps[0];
   const totalSteps = steps.length;
 
+  // Keep state refs updated to prevent stale closures in async voice events
+  useEffect(() => {
+    currentStepIndexRef.current = currentStepIndex;
+    totalStepsRef.current = totalSteps;
+    isTimerRunningRef.current = isTimerRunning;
+    currentStepRef.current = currentStep;
+  }, [currentStepIndex, totalSteps, isTimerRunning, currentStep]);
+
   // Change active step and reset step timer
-  const handleGoToStep = (newIndex) => {
+  const handleGoToStep = useCallback((newIndex) => {
     if (newIndex < 0 || newIndex >= steps.length) return;
     if (isSpeaking && typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -293,7 +407,7 @@ const CookingMode = () => {
     const nextStep = steps[newIndex] || steps[0];
     const initialMins = nextStep?.timer_minutes || 0;
     setTimerRemaining(initialMins * 60);
-  };
+  }, [steps, isSpeaking]);
 
   // Play Audible Chime Notification (Web Audio API Synthesizer)
   const playChimeSound = () => {
@@ -453,26 +567,26 @@ const CookingMode = () => {
   }, [isTimerRunning]);
 
   // Timer Controls
-  const toggleTimer = () => {
+  const toggleTimer = useCallback(() => {
     if (timerRemaining === 0) {
-      const initialMins = currentStep?.timer_minutes || 0;
+      const initialMins = currentStepRef.current?.timer_minutes || 0;
       setTimerRemaining(initialMins * 60);
       timerEndTimeRef.current = Date.now() + initialMins * 60 * 1000;
       setIsTimerRunning(true);
     } else {
-      if (!isTimerRunning) {
+      if (!isTimerRunningRef.current) {
         timerEndTimeRef.current = Date.now() + timerRemaining * 1000;
       }
-      setIsTimerRunning(!isTimerRunning);
+      setIsTimerRunning(!isTimerRunningRef.current);
     }
-  };
+  }, [timerRemaining]);
 
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     setIsTimerRunning(false);
     timerEndTimeRef.current = null;
-    const initialMins = currentStep?.timer_minutes || 0;
+    const initialMins = currentStepRef.current?.timer_minutes || 0;
     setTimerRemaining(initialMins * 60);
-  };
+  }, []);
 
   // Format MM:SS
   const formatTime = (seconds) => {
@@ -482,7 +596,7 @@ const CookingMode = () => {
   };
 
   // Robust Text to Speech Implementation
-  const handleSpeakInstruction = () => {
+  const handleSpeakInstruction = useCallback(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       alert(t('cooking_mode.speech_not_supported'));
       return;
@@ -501,7 +615,8 @@ const CookingMode = () => {
       synth.resume();
     }
 
-    const textToSpeak = currentStep.instruction || currentStep.instruction_bg || currentStep.instruction_en;
+    const targetStep = currentStepRef.current || currentStep;
+    const textToSpeak = targetStep.instruction || targetStep.instruction_bg || targetStep.instruction_en;
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
 
     // Select available voice or best matching fallback
@@ -543,11 +658,184 @@ const CookingMode = () => {
 
     setIsSpeaking(true);
     synth.speak(utterance);
+  }, [availableVoices, currentLang, currentStep, isSpeaking, t]);
+
+  // Voice Command Dispatcher
+  const handleVoiceAction = useCallback((actionType, rawTranscript) => {
+    setLastRecognizedCommand(rawTranscript);
+    setTimeout(() => {
+      setLastRecognizedCommand(null);
+    }, 3000);
+
+    switch (actionType) {
+      case 'next': {
+        const nextIdx = currentStepIndexRef.current + 1;
+        if (nextIdx < totalStepsRef.current) {
+          handleGoToStep(nextIdx);
+        }
+        break;
+      }
+      case 'prev': {
+        const prevIdx = currentStepIndexRef.current - 1;
+        if (prevIdx >= 0) {
+          handleGoToStep(prevIdx);
+        }
+        break;
+      }
+      case 'timer_start': {
+        if (!isTimerRunningRef.current) {
+          toggleTimer();
+        }
+        break;
+      }
+      case 'timer_pause': {
+        if (isTimerRunningRef.current) {
+          toggleTimer();
+        }
+        break;
+      }
+      case 'timer_reset': {
+        resetTimer();
+        break;
+      }
+      case 'repeat': {
+        handleSpeakInstruction();
+        break;
+      }
+      case 'drawer_open': {
+        setIsIngredientsDrawerOpen(true);
+        break;
+      }
+      case 'drawer_close': {
+        setIsIngredientsDrawerOpen(false);
+        break;
+      }
+      default:
+        break;
+    }
+  }, [handleGoToStep, handleSpeakInstruction, resetTimer, toggleTimer]);
+
+  // Web SpeechRecognition Setup and Lifecycle
+  useEffect(() => {
+    if (!isVoiceActive) {
+      isVoiceActiveRef.current = false;
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {
+          console.warn("Recognition abort error:", e);
+        }
+        recognitionRef.current = null;
+      }
+      return;
+    }
+
+    const SpeechRecognition = typeof window !== 'undefined' 
+      ? (window.SpeechRecognition || window.webkitSpeechRecognition) 
+      : null;
+
+    if (!SpeechRecognition) return;
+
+    isVoiceActiveRef.current = true;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.lang = SPEECH_LANG_MAP[currentLang] || 'bg-BG';
+
+    recognition.onresult = (event) => {
+      const lastResult = event.results[event.results.length - 1];
+      if (!lastResult || !lastResult[0]) return;
+      const transcript = lastResult[0].transcript.toLowerCase().trim();
+
+      // Find matching action
+      for (const [action, triggers] of Object.entries(COMMAND_PATTERNS)) {
+        if (triggers.some(kw => transcript.includes(kw))) {
+          handleVoiceAction(action, lastResult[0].transcript);
+          break;
+        }
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.warn("Speech recognition error:", event.error);
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        alert(t('cooking_mode.voice_not_supported'));
+        setIsVoiceActive(false);
+        isVoiceActiveRef.current = false;
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if voice mode is still enabled (handles Chrome silence timeouts)
+      if (isVoiceActiveRef.current) {
+        try {
+          recognition.start();
+        } catch {
+          // Restart after short delay if busy
+          setTimeout(() => {
+            if (isVoiceActiveRef.current) {
+              try {
+                recognition.start();
+              } catch (err) {
+                console.warn("Restart failed:", err);
+              }
+            }
+          }, 300);
+        }
+      }
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.warn("Error starting speech recognition:", err);
+      setTimeout(() => setIsVoiceActive(false), 0);
+    }
+
+    return () => {
+      isVoiceActiveRef.current = false;
+      try {
+        recognition.abort();
+      } catch (err) {
+        console.warn("Recognition cleanup error:", err);
+      }
+      recognitionRef.current = null;
+    };
+  }, [isVoiceActive, currentLang, handleVoiceAction, t]);
+
+  // Toggle Voice Control
+  const toggleVoiceControl = () => {
+    if (!isVoiceActive) {
+      const SpeechRecognition = typeof window !== 'undefined' 
+        ? (window.SpeechRecognition || window.webkitSpeechRecognition) 
+        : null;
+      if (!SpeechRecognition) {
+        alert(t('cooking_mode.voice_not_supported'));
+        return;
+      }
+      setIsVoiceActive(true);
+    } else {
+      setIsVoiceActive(false);
+    }
+  };
+
+  // Toggle Ingredient Checkbox
+  const toggleIngredientChecked = (idx) => {
+    setCheckedIngredients(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
   };
 
   const handleFinishCooking = async () => {
     if (isSpeaking && typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
+    }
+    if (recognitionRef.current) {
+      isVoiceActiveRef.current = false;
+      recognitionRef.current.abort();
     }
 
     const entryId = `cook_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -630,34 +918,95 @@ const CookingMode = () => {
   }
 
   const recipeTitle = getLocalizedField(recipe, 'title', currentLang) || recipe?.title_bg || recipe?.title_en || '';
+  const recipeIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
+  const checkedCount = Object.values(checkedIngredients).filter(Boolean).length;
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark overflow-x-hidden font-display pb-10">
-      {/* Top Navigation & Progress */}
-      <header className="sticky top-0 z-10 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-lg">
-        <div className="flex items-center p-4 justify-between w-full max-w-3xl mx-auto">
-          <div className="flex items-center gap-3">
+      {/* Top Navigation & Controls */}
+      <header className="sticky top-0 z-20 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-lg">
+        <div className="flex items-center p-3 justify-between w-full max-w-3xl mx-auto gap-2">
+          {/* Back & Recipe Title */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <button 
               onClick={() => navigate(-1)} 
-              className="text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+              className="text-slate-100 flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
             >
-              <span className="material-symbols-outlined text-2xl font-bold">close</span>
+              <span className="material-symbols-outlined text-xl font-bold">close</span>
             </button>
-            <div>
-              <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-primary/90">The Best Idea Eatery</h2>
-              <h1 className="text-sm font-black leading-tight text-slate-100 line-clamp-1">{recipeTitle}</h1>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[9px] font-extrabold uppercase tracking-widest text-primary/90">The Best Idea Eatery</h2>
+              <h1 className="text-xs md:text-sm font-black leading-tight text-slate-100 truncate">{recipeTitle}</h1>
             </div>
           </div>
-          <button 
-            onClick={handleFinishCooking} 
-            className="bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
-          >
-            {t('cooking_mode.finish_btn')}
-          </button>
+
+          {/* Quick Action Tools: Voice + Ingredients + Finish */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Hands-Free Voice Control Toggle */}
+            <button
+              onClick={toggleVoiceControl}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md ${
+                isVoiceActive
+                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/60 shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse'
+                  : 'bg-surface-dark text-slate-300 border border-primary/30 hover:border-primary hover:text-white'
+              }`}
+              title={isVoiceActive ? t('cooking_mode.voice_listening') : t('cooking_mode.voice_control_btn')}
+            >
+              <span className={`material-symbols-outlined text-base ${isVoiceActive ? 'text-rose-400' : 'text-primary'}`}>
+                {isVoiceActive ? 'mic' : 'mic_none'}
+              </span>
+              <span className="hidden sm:inline">
+                {isVoiceActive ? t('cooking_mode.voice_listening').slice(0, 7) + '...' : t('cooking_mode.voice_control_btn')}
+              </span>
+            </button>
+
+            {/* Ingredients Drawer Button */}
+            <button
+              onClick={() => setIsIngredientsDrawerOpen(true)}
+              className="bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+              title={t('cooking_mode.ingredients_drawer_title')}
+            >
+              <span className="material-symbols-outlined text-base">format_list_bulleted</span>
+              <span className="hidden sm:inline">{t('cooking_mode.ingredients_drawer_btn')}</span>
+              {recipeIngredients.length > 0 && (
+                <span className="bg-primary text-background-dark text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                  {recipeIngredients.length}
+                </span>
+              )}
+            </button>
+
+            {/* Finish Button */}
+            <button 
+              onClick={handleFinishCooking} 
+              className="bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+            >
+              {t('cooking_mode.finish_btn')}
+            </button>
+          </div>
         </div>
 
+        {/* Active Voice Listening Banner */}
+        {isVoiceActive && (
+          <div className="bg-gradient-to-r from-rose-950/80 via-surface-dark to-rose-950/80 border-y border-rose-500/30 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 shadow-inner">
+            <div className="flex items-center gap-2 text-rose-300">
+              <span className="size-2 rounded-full bg-rose-500 animate-ping inline-block" />
+              <span className="font-bold">{t('cooking_mode.voice_listening')}</span>
+            </div>
+
+            {lastRecognizedCommand ? (
+              <span className="bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 px-2 py-0.5 rounded-md text-[11px] font-black tracking-wide animate-pulse">
+                {t('cooking_mode.voice_recognized', { command: lastRecognizedCommand })}
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 hidden sm:inline">
+                {t('cooking_mode.voice_command_hint')}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Progress Bar & Phase Title */}
-        <div className="px-4 pb-3 w-full max-w-3xl mx-auto">
+        <div className="px-4 pb-3 pt-2 w-full max-w-3xl mx-auto">
           <div className="flex justify-between items-center mb-1.5">
             <p className="text-[10px] font-bold text-primary/80 uppercase tracking-widest">
               {t('cooking_mode.phase')}: <span className="text-slate-200">{currentStep.phase}</span>
@@ -670,7 +1019,7 @@ const CookingMode = () => {
             <div 
               className="h-full bg-gradient-to-r from-primary to-[#b8860b] rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(212,175,53,0.6)]" 
               style={{ width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }}
-            ></div>
+            />
           </div>
         </div>
 
@@ -719,6 +1068,7 @@ const CookingMode = () => {
         </div>
       )}
 
+      {/* Main Step Visual and Instructions */}
       <main className="flex-1 w-full max-w-3xl mx-auto flex flex-col justify-between p-4 gap-4">
         <div className="space-y-4">
           {/* Main Step Visual Container */}
@@ -729,7 +1079,7 @@ const CookingMode = () => {
                 alt={currentStep.phase}
                 className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background-dark/90 via-transparent to-background-dark/40"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-background-dark/90 via-transparent to-background-dark/40" />
               
               {/* Floating Luxury Timer Overlay */}
               <div className="absolute bottom-4 right-4 bg-background-dark/90 backdrop-blur-xl border border-primary/40 p-3.5 px-4 rounded-2xl flex items-center gap-3.5 shadow-2xl">
@@ -739,7 +1089,7 @@ const CookingMode = () => {
                     {formatTime(timerRemaining)}
                   </span>
                 </div>
-                <div className="w-[1px] h-8 bg-primary/30"></div>
+                <div className="w-[1px] h-8 bg-primary/30" />
                 
                 <div className="flex items-center gap-1">
                   <button 
@@ -829,6 +1179,130 @@ const CookingMode = () => {
           )}
         </div>
       </main>
+
+      {/* Slide-Over Ingredients Drawer Modal */}
+      {isIngredientsDrawerOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop blur */}
+          <div 
+            onClick={() => setIsIngredientsDrawerOpen(false)}
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm transition-opacity cursor-pointer animate-fade-in"
+          />
+
+          {/* Slide panel */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-surface-dark border-l border-primary/30 shadow-2xl flex flex-col">
+              {/* Drawer Header */}
+              <div className="p-5 border-b border-primary/20 flex items-center justify-between bg-surface-dark/95">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-2xl">kitchen</span>
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black text-slate-100 tracking-tight">
+                      {t('cooking_mode.ingredients_drawer_title')}
+                    </h2>
+                    <p className="text-[11px] font-bold text-primary uppercase tracking-wider">
+                      {t('cooking_mode.servings_badge', { servings: recipe?.servings || 2 })}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsIngredientsDrawerOpen(false)}
+                  className="size-9 rounded-full hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-2xl">close</span>
+                </button>
+              </div>
+
+              {/* Drawer Body - Ingredients List */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-3">
+                {recipeIngredients.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">
+                    <span className="material-symbols-outlined text-4xl text-slate-500 mb-2">soup_kitchen</span>
+                    <p className="text-sm font-semibold">{t('cooking_mode.ingredients_empty')}</p>
+                  </div>
+                ) : (
+                  recipeIngredients.map((ing, idx) => {
+                    const isChecked = !!checkedIngredients[idx];
+                    const ingName = getLocalizedField(ing, 'name', currentLang) 
+                      || ing.name_bg 
+                      || ing.name_en 
+                      || ing.name 
+                      || ing.title 
+                      || '';
+                    const ingNotes = getLocalizedField(ing, 'notes', currentLang) 
+                      || ing.notes_bg 
+                      || ing.notes 
+                      || '';
+                    const amount = ing.amount ?? ing.quantity ?? '';
+                    const unit = ing.unit ?? '';
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => toggleIngredientChecked(idx)}
+                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                          isChecked
+                            ? 'bg-surface-dark/40 border-primary/10 opacity-50'
+                            : 'bg-surface-dark border-primary/25 hover:border-primary/50 shadow-sm'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <button
+                            type="button"
+                            className={`size-6 rounded-lg border flex items-center justify-center transition-colors shrink-0 ${
+                              isChecked
+                                ? 'bg-emerald-500 border-emerald-400 text-background-dark'
+                                : 'border-primary/40 bg-primary/5 text-transparent'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-sm font-bold">check</span>
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-sm font-bold text-slate-100 truncate ${isChecked ? 'line-through text-slate-400' : ''}`}>
+                              {ingName}
+                            </p>
+                            {ingNotes && (
+                              <p className="text-[11px] text-slate-400 italic truncate">
+                                {ingNotes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Amount & Unit Badge */}
+                        {(amount !== '' || unit !== '') && (
+                          <span className={`px-2.5 py-1 rounded-xl text-xs font-black shrink-0 ${
+                            isChecked
+                              ? 'bg-white/5 text-slate-400'
+                              : 'bg-primary/15 text-primary border border-primary/30'
+                          }`}>
+                            {amount} {unit}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="p-4 border-t border-primary/20 bg-surface-dark flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-slate-400">
+                  {checkedCount} / {recipeIngredients.length} добавени
+                </span>
+                <button
+                  onClick={() => setCheckedIngredients({})}
+                  className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                >
+                  Изчисти отметките
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

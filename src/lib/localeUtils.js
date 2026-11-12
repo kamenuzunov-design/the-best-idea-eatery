@@ -53,30 +53,49 @@ export const getLocalizedText = (value, lang = 'bg', fallbackLang = 'en') => {
 export const getLocalizedField = (obj, fieldName, lang = 'bg', fallbackLang = 'en') => {
   if (!obj) return '';
 
-  // 1. Check if obj[fieldName] is a multilingual map
-  if (obj[fieldName] && typeof obj[fieldName] === 'object') {
-    const fromMap = getLocalizedText(obj[fieldName], lang, fallbackLang);
-    if (fromMap) return fromMap;
-  }
-
-  // 2. Check flat localized properties: obj.title_bg, obj.title_en, etc.
-  const checkFlat = (val) => {
-    if (typeof val === 'string' && val !== '[object Object]') return val;
-    if (val && typeof val === 'object') return getLocalizedText(val, lang, fallbackLang);
+  const clean = (val) => {
+    if (typeof val === 'string' && val.trim() !== '' && val !== '[object Object]') return val.trim();
     return '';
   };
 
-  const fLang = checkFlat(obj[`${fieldName}_${lang}`]);
+  // 1. Direct match for desired lang: check nested map first, then flat field
+  if (typeof obj[fieldName] === 'object' && obj[fieldName] !== null) {
+    const fromMap = clean(obj[fieldName][lang]);
+    if (fromMap) return fromMap;
+  }
+  const fLang = clean(obj[`${fieldName}_${lang}`]);
   if (fLang) return fLang;
-  const fFallback = checkFlat(obj[`${fieldName}_${fallbackLang}`]);
-  if (fFallback) return fFallback;
-  const fBg = checkFlat(obj[`${fieldName}_bg`]);
-  if (fBg) return fBg;
-  const fEn = checkFlat(obj[`${fieldName}_en`]);
-  if (fEn) return fEn;
 
-  // 3. Fallback to direct string property if exists
-  if (typeof obj[fieldName] === 'string' && obj[fieldName] !== '[object Object]') return obj[fieldName];
+  // 2. Direct match for fallbackLang (default 'en')
+  if (fallbackLang && fallbackLang !== lang) {
+    if (typeof obj[fieldName] === 'object' && obj[fieldName] !== null) {
+      const fromMapFallback = clean(obj[fieldName][fallbackLang]);
+      if (fromMapFallback) return fromMapFallback;
+    }
+    const fFallback = clean(obj[`${fieldName}_${fallbackLang}`]);
+    if (fFallback) return fFallback;
+  }
+
+  // 3. Fallback to BG
+  if (lang !== 'bg' && fallbackLang !== 'bg') {
+    if (typeof obj[fieldName] === 'object' && obj[fieldName] !== null) {
+      const fromMapBg = clean(obj[fieldName]['bg']);
+      if (fromMapBg) return fromMapBg;
+    }
+    const fBg = clean(obj[`${fieldName}_bg`]);
+    if (fBg) return fBg;
+  }
+
+  // 4. Any available string in the map
+  if (typeof obj[fieldName] === 'object' && obj[fieldName] !== null) {
+    const any = Object.values(obj[fieldName]).find(v => clean(v));
+    if (any) return clean(any);
+  }
+
+  // 5. Fallback to direct string property if exists
+  if (typeof obj[fieldName] === 'string' && obj[fieldName] !== '[object Object]') {
+    return clean(obj[fieldName]);
+  }
 
   return '';
 };

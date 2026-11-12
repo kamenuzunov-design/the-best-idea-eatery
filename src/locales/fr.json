@@ -1623,7 +1623,16 @@
     "enable_notifications_btn": "Activer",
     "timer_finished_title": "⏰ Minuteur terminé !",
     "timer_finished_body": "Étape {{step}} : {{title}}",
-    "finish_congratulations": "Félicitations ! Vous avez terminé la cuisson avec succès !"
+    "finish_congratulations": "Félicitations ! Vous avez terminé la cuisson avec succès !",
+    "voice_control_btn": "Mains libres",
+    "voice_listening": "À l'écoute... Dites une commande",
+    "voice_command_hint": "Commandes: « Suivant », « Retour », « Démarrer », « Pause », « Ingrédients », « Répéter »",
+    "voice_not_supported": "La reconnaissance vocale n'est pas prise en charge par ce navigateur.",
+    "voice_recognized": "Reconnu : « {{command}} »",
+    "ingredients_drawer_title": "Ingrédients de la recette",
+    "ingredients_drawer_btn": "Ingrédients",
+    "ingredients_empty": "Aucun ingrédient répertorié pour cette recette.",
+    "servings_badge": "pour {{servings}} portions"
   },
   "recipe_customization": {
     "title": "Personnaliser",
@@ -2271,5 +2280,19 @@
       "report_submitted_toast": "Signalement envoyé aux modérateurs.",
       "report_error": "Erreur lors de l’envoi du signalement."
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "new_count": "nouvelles",
+    "mark_all_read": "Tout marquer comme lu",
+    "no_notifications": "Aucune nouvelle notification",
+    "no_notifications_desc": "Vous recevrez ici des mises à jour sur le garde-manger et les recettes approuvées.",
+    "just_now": "À l'instant",
+    "enable_push_hint": "Activer les notifications du navigateur/téléphone",
+    "enable_btn": "Activer",
+    "pantry_expiring_title": "⏳ {{count}} produits du garde-manger expirent bientôt !",
+    "pantry_expiring_body": "Expire bientôt : {{items}}. Appuyez pour trouver des recettes.",
+    "recipe_approved_title": "🎉 Votre recette a été approuvée !",
+    "recipe_approved_body": "La recette « {{title}} » a été approuvée par un modérateur et est maintenant publique."
   }
 }

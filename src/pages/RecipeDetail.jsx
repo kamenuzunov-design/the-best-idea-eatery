@@ -1305,15 +1305,26 @@ const RecipeDetail = () => {
         <ul className="space-y-4">
           {recipe.ingredients?.map((ing, idx) => {
             const isSubRecipe = ing.type === 'recipe';
-            const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id) : null;
+            const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id || i.slug === ing.ingredient_id) : null;
             
             const ingName = isSubRecipe
               ? (getLocalizedField(ing, 'name', currentLang) || (isBg ? ing.ingredient_bg : ing.ingredient_en) || ing.ingredient_id)
-              : (getLocalizedField(ing, 'ingredient', currentLang) || getLocalizedField(ing, 'name', currentLang) || getLocalizedField(dbIng, 'name', currentLang) || (isBg 
-                  ? (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id) 
-                  : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id)));
+              : (
+                  (typeof ing?.name === 'object' && ing.name?.[currentLang] && ing.name[currentLang].trim()) ||
+                  (ing?.[`ingredient_${currentLang}`] && ing[`ingredient_${currentLang}`].trim()) ||
+                  (ing?.[`name_${currentLang}`] && ing[`name_${currentLang}`].trim()) ||
+                  (dbIng?.[`name_${currentLang}`] && dbIng[`name_${currentLang}`].trim()) ||
+                  (typeof dbIng?.name === 'object' && dbIng.name?.[currentLang] && dbIng.name[currentLang].trim()) ||
+                  getLocalizedField(ing, 'ingredient', currentLang) || 
+                  getLocalizedField(ing, 'name', currentLang) || 
+                  getLocalizedField(dbIng, 'name', currentLang) || 
+                  (isBg 
+                    ? (ing.ingredient_bg || ing.name_bg || dbIng?.name_bg || ing.ingredient_id) 
+                    : (ing.ingredient_en || ing.name_en || dbIng?.name_en || ing.ingredient_id))
+                );
 
-            const noteText = extractLocalizedNote(ing[`notes_${currentLang}`] || (isBg ? ing.notes_bg : ing.notes_en), ing.notes, currentLang);
+            const noteText = extractLocalizedNote(ing[`notes_${currentLang}`], ing.notes, currentLang) ||
+              (currentLang === 'bg' ? extractLocalizedNote(ing.notes_bg, ing.notes, 'bg') : extractLocalizedNote(ing.notes_en, ing.notes, 'en'));
 
             const isIngMissing = isPantryActive && missing.some(m => 
               matchesPantryItem(ing, m)

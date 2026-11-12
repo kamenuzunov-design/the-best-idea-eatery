@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.thebestideaeatery.app",
+      "sha256_cert_fingerprints": [
+        "14:6D:E9:7D:0F:52:AB:68:85:E5:5B:3E:24:3F:DE:6F:CD:BE:4F:29:42:05:A3:9A:81:EA:0F:C6:1A:00:89:C4"
+      ]
+    }
+  }
+]

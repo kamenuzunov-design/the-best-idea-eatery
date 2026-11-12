@@ -3,6 +3,118 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-11-12] - Спринт Г: Google Play Подготовка и PWA Инфраструктура (Trusted Web Activity - TWA, Service Worker, Манифест и Икони)
+### Добавено / Променено (Added / Changed)
+- **Пълна PWA спецификация за Google Play ([manifest.webmanifest](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/public/manifest.webmanifest))**:
+  - Дефинирани метаданни за инсталиране на Android: `name: "The Best Idea Eatery"`, `short_name: "Idea Eatery"`, `display: "standalone"`, `orientation: "portrait-primary"`, `theme_color: "#D4AF37"`, `background_color: "#121212"`.
+  - Преки пътища (App Shortcuts): директно отваряне на Килер, AI Шеф Асистент, Скенер и Пазарен списък от иконата на началния екран.
+- **Пакет адаптивни PWA икони в `public/icons/`**:
+  - `icon-192.png`: 192x192 за нормални устройства.
+  - `icon-512.png`: 512x512 за висока резолюция.
+  - `icon-maskable-512.png`: 512x512 с 10% безопасна зона за адаптивни Android форми (кръг, заоблен правоъгълник).
+- **Service Worker с интелигентно кеширане и офлайн поддръжка ([sw.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/public/sw.js), [main.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/main.jsx))**:
+  - Предварително кеширане на критичния app shell при инсталация.
+  - Стратегия Cache-first за статични активи (CSS, JS, шрифтове, знамена, икони).
+  - Стратегия Network-first с кеш fallback при офлайн навигация.
+  - Обработка на Web Push събития (`push`, `notificationclick`) с насочване при клик.
+- **Верификация за Trusted Web Activity (TWA) ([assetlinks.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/public/.well-known/assetlinks.json))**:
+  - Конфигуриран Digital Asset Links файл за пакет `com.thebestideaeatery.app`, премахващ адресната лента на браузъра в Android.
+- **Инструкции за билд с Bubblewrap CLI ([google_play_twa_guide.md](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/agent/google_play_twa_guide.md))**:
+  - Подробно ръководство стъпка по стъпка за генериране на `.aab` файл и преминаване през проверките в Google Play Console (Privacy Policy, Terms, Content Rating, Data Safety).
+
+
+## [2026-11-12] - Спринт В: Система за Push & Ин-ап Нотификации (Известия за Килера, Одобрени рецепти и Център за известия)
+### Добавено / Променено (Added / Changed)
+- **Унифициран модул за известия ([notificationService.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/notificationService.js))**:
+  - Управление на разрешенията за браузърни нотификации (`Notification.requestPermission()`).
+  - Изпращане на нативни Web Notifications със звукова сигнализация, вибрация и директно пренасочване при клик.
+  - Създаване и управление на ин-ап нотификации във Firestore (`users/{userId}/notifications`) и локален кеш (`localStorage`).
+  - Маркиране на единични или всички известия като прочетени и изтриване.
+- **Ин-ап Център за известия ([NotificationCenter.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/NotificationCenter.jsx), [Header.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/Header.jsx))**:
+  - Елегантен бутон-камбанка в десния край на хедъра със значка за брой непрочетени известия.
+  - Падащо меню с плавна анимация и замъгляване на фона (backdrop-blur).
+  - Специфични икони и цветове според типа на известието (пясъчен часовник за Килера, парти конфети за одобрени рецепти).
+  - 1-клик навигация към съответния екран (`/ai-search?filter=expiring` или `/recipe/:id`), бутон „Маркирай всички“ и опция за активиране на push известия.
+- **Интелигентен детектив за изтичащ срок в Килера ([AppContext.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/context/AppContext.jsx))**:
+  - Фонова проверка веднъж дневно (`checkPantryExpirations`): сканира продуктите в Килера за оставащ срок $\le 2$ дни.
+  - При откриване на продукти с наближаващ срок генерира браузърно и ин-ап известие с 1-клик бутон за намиране на рецепта с тях (`/ai-search?filter=expiring`).
+- **Автоматично уведомяване на автора при одобрение на рецепта ([Moderation.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/Moderation.jsx))**:
+  - При одобрение на рецепта в статус `pending` модераторът автоматично изпраща нотификация към профила на създателя (`authorId`): *„🎉 Вашата рецепта беше одобрена!“*.
+- **Локализация на 6 езика ([bg.json, en.json, es.json, it.json, fr.json, de.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - Пълни преводи за всички елементи на Центъра за известия и текстовете на известията на 6 езика.
+
+
+## [2026-11-12] - Спринт Б: „Готвене с мръсни ръце“ — Гласов контрол (Web Speech API) на 6 езика и Плаващо чекмедже за съставки в CookingMode.jsx
+### Добавено / Променено (Added / Changed)
+- **Интеграция на Web Speech API за Hands-Free гласов контрол ([CookingMode.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/CookingMode.jsx))**:
+  - Реализиран специализиран мениджър за гласово разпознаване чрез `window.SpeechRecognition || window.webkitSpeechRecognition`.
+  - Пълна мултиезична поддръжка за 6-те езика на приложението (`bg-BG`, `en-US`, `es-ES`, `it-IT`, `fr-FR`, `de-DE`) с автоматично съгласуване според текущо избрания език в `i18n`.
+  - Регистър от гласови команди (`COMMAND_PATTERNS`):
+    - **Следваща стъпка**: *„следваща“, „напред“, „next“, „siguiente“, „avanti“, „suivant“, „weiter“*.
+    - **Предишна стъпка**: *„предишна“, „назад“, „back“, „anterior“, „indietro“, „précédent“, „zurück“*.
+    - **Старт на таймера**: *„старт“, „пусни таймер“, „start“, „iniciar“, „avvia“, „démarrer“, „starten“*.
+    - **Пауза на таймера**: *„пауза“, „спри таймер“, „pause“, „parar“, „ferma“, „arrêter“, „stopp“*.
+    - **Нулиране на таймера**: *„нулирай“, „ресет“, „reset“, „reiniciar“, „reimposta“, „réinitialiser“, „zurücksetzen“*.
+    - **Гласово прочитане на стъпката**: *„повтори“, „прочети“, „repeat“, „repetir“, „ripeti“, „répéter“, „wiederholen“*.
+    - **Отвори/Затвори съставки**: *„съставки“, „продукти“, „ingredients“, „ingredientes“, „ingredienti“, „ingrédients“, „zutaten“* / *„затвори“, „close“*.
+  - Автоматично подновяване на слушането при Chrome timeouts за непрекъснат режим по време на готвене.
+  - Визуална обратна връзка: пулсиращ микрофонен бутон, банер „Слушам...“ и индикатор за последно разпозната команда (напр. *✓ Разпознато: „следваща стъпка“*).
+- **Плаващо странично чекмедже за съставки с точни грамажи (Slide-Over Drawer)**:
+  - Бутон „Съставки (N)“ в хедъра на `CookingMode.jsx`, отварящ плъзгащ се страничен панел със списъка на съставките за конкретната рецепта.
+  - Показва точни количества и мерни единици в златни баджове, 6-езични имена и кулинарни бележки без прекъсване на текущата стъпка или активния таймер.
+  - Интерактивни чекбоксове за отмятане на вложените съставки със зачеркване и брояч *„X / Y добавени“*, плюс бутон за изчистване.
+- **Локализация на 6 езика ([bg.json, en.json, es.json, it.json, fr.json, de.json](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/locales/))**:
+  - Добавени преводи за всички нови гласови етикети, подсказки за команди, статус съобщения и текстове на чекмеджето за съставки във всичките 6 локализационни речника.
+
+
+## [2026-11-12] - Спринт А: Архитектурна оптимизация и Code Splitting (Редуциране на началния бандъл от 5.4 MB до 58 KB)
+### Добавено / Променено (Added / Changed)
+- **Цялостно динамично разделяне на кода (Route-level Code Splitting) в [`src/App.jsx`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/App.jsx))**:
+  - Всички 14 административни екрана (`AdminDashboard`, `ManageRecipes`, `BackupRecovery`, `Moderation`, `ManageIngredients`, `ManageUsers` и др.) и вторичните тежки потребителски страници (`CookingMode`, `WinePairing`, `IngredientScanner`, `WeeklyMenuPlanner`, `CookingProgress` и др.) са преобразувани към динамично зареждане с `React.lazy()`.
+  - Маршрутите са обвити в `<Suspense>` контейнер за плавен асинхронен преход без блокиране на главната нишка.
+  - Административният пакет за управление на рецепти (`ManageRecipes.jsx`, 2.94 MB), съдържащ масивните таблици, експорт/импорт модулите и редакторите, се зарежда единствено при посещение на `/admin/recipes`.
+- **Нов кулинарен зареждащ екран ([`src/components/RouteLoadingSpinner.jsx`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/components/RouteLoadingSpinner.jsx))**:
+  - Елегантен, лек и оптимизиран компонент за Suspense преход с пулсираща златна кулинарна икона и анимационен ринг в стилистиката на бранда (`#D4AF37`), напълно съвместим със светъл и тъмен режим.
+- **Вендорно и езиково разделяне на пакетите във [`vite.config.js`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/vite.config.js)**:
+  - Конфигуриран `manualChunks` филтър в `rollupOptions.output`:
+    - `vendor-react`: React, React-DOM, React Router DOM (224 kB / gzip 71 kB).
+    - `vendor-firebase`: Firebase Core, Firestore, Auth, Storage (377 kB / gzip 114 kB).
+    - `vendor-i18n`: i18next, react-i18next (55 kB / gzip 18 kB).
+    - `app-locales`: 6-те езикови речника (`bg.json`, `en.json`, `es.json`, `it.json`, `fr.json`, `de.json`) и номенклатурни файлове (618 kB / gzip 190 kB).
+    - `vendor-icons`: Lucide React икони.
+  - Увеличен `chunkSizeWarningLimit: 3200` за чист билд без фалшиви предупреждения.
+- **Измерим ефект върху първоначалния бандъл**:
+  - Началният JavaScript индексен файл (`dist/assets/index-*.js`) е редуциран от **5 400 kB (5.4 MB)** до **58.65 kB** (gzip: **16.66 kB**) — **над 98.9% намаляване на размера**, осигуряващо мигновено стартиране на мобилни устройства.
+  - Времето за билд спадна до 1.16 секунди.
+
+
+## [2026-11-12] - Пълна нормализация на базата данни и 100% 6-езично стабилизиране на рецепти, съставки и категории (BG, EN, ES, IT, FR, DE)
+### Добавено / Променено (Added / Changed)
+- **Пълна 6-езична нормализация на базата данни (`docs/data-base/`)**:
+  - **100% покритие на кулинарните бележки (`notes`)**: Всички 687 уникални бележки към 2 750 вложени съставки в 333-те рецепти са професионално преведени и валидирани на испански (`es`), италиански (`it`), френски (`fr`) и немски (`de`) език с 0 липсващи превода.
+  - **Корекция на фактологични дефекти в стъпките на рецептите**:
+    - `tender-pork-pan-fried10` (Стъпка 1): коригирани BG и EN текстове за мариноване със сода бикарбонат за крехкост.
+    - `roasted-chicken29` (Стъпка 4): коригиран EN текст за печене на пилето и поливане със сосове вместо дублирана марината.
+    - `roasted-pork25` (Стъпка 1): коригиран EN текст за шпиковане на месото с чесън и намазване с ароматна паста вместо бульон.
+    - `twisted-bulgarian-banitsa` (Стъпка 2): коригиран EN текст за разточване и навиване на корите на руло.
+  - **Почистване и обогатяване на номенклатурата на съставките (`ingredients`)**:
+    - Премахнат паразитен заглавен ред (`slug: "slug"`).
+    - Добавени 6 липсващи мастър съставки с пълни нутриционни данни, класификация и 6-езични имена: лимонова трева (`lemongrass`), галангал (`galangal`), пресен девесил (`lovage`), варено говеждо (`boiled-beef`), варено свинско (`boiled-pork`) и телешки мозък (`boiled-brain`).
+    - Канонизирани слъгове в рецептите: `cucumbers` ➔ `cucumber`, `carrots` ➔ `carrot`, `pickles` ➔ `pickled-cucumbers`, `flour` ➔ `wheat-flour`, `ground-beef` ➔ `minced-beef`, `kashkaval` ➔ `gouda`, `mushrooms` ➔ `mushrooms-champignon`, `mint` ➔ `fresh-mint`.
+  - **Кухни (`cuisines`)**: Добавена липсваща кухня „Международна кухня“ (`international`).
+  - **Автоматично изчисляване на макронутриенти**: Всички 333 рецепти (100%) вече успешно изчисляват хранителни стойности с калории > 0 kcal.
+  - **Обновяване на файловете в `docs/data-base/`**: Записан обновеният главен архив `best_idea_eatery_backup_2026-11-12.json` и експортирани всички 5 CSV файла с UTF-8 BOM (`recipes_6lang_2026-11-12.csv`, `ingredients_2026-11-12.csv`, `cuisines_2026-11-12.csv`, `ingredient_groups_2026-11-12.csv`, `measurements_2026-11-12.csv`).
+- **Код и UI корекции за стабилност при преглед и редакция**:
+  - **Категории и подкатегории ([recipe_categories.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/data/recipe_categories.js))**: Добавени пълни преводи на 6 езика за всички 10 основни категории и всички 43 подкатегории (включително 13 липсващи), елиминирайки появата на английски етикети в табовете при испански, италиански, френски и немски интерфейс.
+  - **Устойчиво извличане на локализирани полета ([localeUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/localeUtils.js))**: `getLocalizedField` проверява избрания език както във вложения обект, така и в плоските свойства преди fallback към английски/български.
+  - **Преглед на детайли за рецепта ([RecipeDetail.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/RecipeDetail.jsx))**: Търсенето на мастър съставка поддържа едновременно търсене по `id` и `slug`, а визуализацията на имената и бележките следва избрания текущ език.
+  - **Администрация и редакция на рецепти ([ManageRecipes.jsx](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/pages/admin/ManageRecipes.jsx))**:
+    - `handleEditClick`: Проверява плоските полета `instruction_${currentLang}` и `notes_${currentLang}` за коректно зареждане на данните в съответния езиков таб.
+    - `handleSave`: Отстранен критичен дефект при запазване, при който се търсеха вложени полета `dbIng.name.es/it/fr/de` вместо плоските `dbIng.name_es/it/fr/de`, което водеше до изтриване на не-BG/EN имената на съставките при редакция.
+    - **Двойна защита на съставките**: Гарантиран fallback към английските имена за всички 6 езика както при обикновени съставки, така и при подрецепти (`type: 'recipe'`).
+    - **Добавена колона `image_url` в CSV експорта**: Включена в хедъра и редовете на `recipes_6lang_${date}.csv` за предотвратяване на загуба на снимки при пренос на данни.
+    - **Автоматично изчисляване на хранителни стойности при CSV импорт**: В `executeImport` всяка рецепта се преизчислява през `calculateNutritionFromIngredients` преди запис във Firestore (`calories_per_serving`, `protein`, `fat`, `carbs`).
+
 ## [2026-11-11] - Цялостно стабилизиране на AI многоезичния превод (6 езика): Интелигентен JSON Repair парсър & защита от кавички, 1-по-1 партиди без изкуствен таван, двуфазен езиков fallback; Персистиране и синхронизация в „Модерация“ и „Рецепти“; 6-езичен CSV импорт/експорт с `title_es` и `description_es`; Унифициране на текстове и бутони на 6 езика
 ### Добавено / Променено (Added / Changed)
 - **Интелигентен JSON Repair & Защита от вътрешни кавички и сривове ([geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js), [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js))**:

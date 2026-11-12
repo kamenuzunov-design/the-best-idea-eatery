@@ -15,6 +15,7 @@ import {
   moderateCommunityItem,
   saveCommunityPosts
 } from '../../lib/communityUtils';
+import { notifyRecipeApproved } from '../../lib/notificationService';
 
 const Moderation = () => {
   const { t, i18n } = useTranslation();
@@ -463,6 +464,19 @@ const Moderation = () => {
 
       if (type === 'recipe' && newStatus === 'approved' && latestItemData) {
         await publishNewRecipeAnnouncement(latestItemData, itemId);
+
+        const authorId = latestItemData.publisher_id 
+          || latestItemData.author_id 
+          || latestItemData.created_by 
+          || latestItemData.userId 
+          || latestItemData.authorId;
+        if (authorId) {
+          try {
+            await notifyRecipeApproved(authorId, latestItemData, t);
+          } catch (notifErr) {
+            console.warn('Could not send recipe approval notification:', notifErr);
+          }
+        }
       }
       
       await logActivity(

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES } from '../lib/localeUtils';
+import NotificationCenter from './NotificationCenter';
 
 const CYRILLIC_TO_LATIN_INITIAL = {
   А: 'A', Б: 'B', В: 'V', Г: 'G', Д: 'D', Е: 'E', Ж: 'Z', З: 'Z',
@@ -92,64 +93,68 @@ const Header = () => {
           </p>
         </div>
 
-        {/* Multi-language Selector */}
-        <div className="relative flex items-center justify-end" ref={langMenuRef}>
-          <button 
-            type="button"
-            onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-            className="flex items-center gap-1.5 px-3 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary border border-primary/30 hover:scale-105 active:scale-95 transition-all shadow-inner cursor-pointer"
-            title={t('nav.switch_language')}
-            aria-label={t('nav.switch_language')}
-            aria-expanded={isLangMenuOpen}
-          >
-            <span className="text-xs font-black uppercase tracking-wider">{currentLangMeta.name}</span>
-            {currentLangMeta.flagUrl && (
-              <img 
-                src={currentLangMeta.flagUrl} 
-                alt="" 
-                className="h-[10px] w-[14px] object-cover rounded-[1.5px] border border-white/20 shadow-xs inline-block shrink-0" 
-              />
-            )}
-            <span className="material-symbols-outlined text-sm transition-transform duration-200" style={{ transform: isLangMenuOpen ? 'rotate(180deg)' : 'none' }}>
-              expand_more
-            </span>
-          </button>
+        {/* Actions: Notifications + Multi-language Selector */}
+        <div className="flex items-center gap-2">
+          <NotificationCenter />
 
-          {/* Language Dropdown Menu */}
-          {isLangMenuOpen && (
-            <div className="absolute right-0 top-12 z-[60] w-32 bg-surface-dark border border-primary/30 rounded-2xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.8)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 space-y-1">
-              {SUPPORTED_LANGUAGES.map((langKey) => {
-                const meta = LANGUAGE_LABELS[langKey] || { name: langKey.toUpperCase() };
-                const isSelected = currentLang === langKey;
-                return (
-                  <button
-                    key={langKey}
-                    type="button"
-                    onClick={() => selectLanguage(langKey)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold transition-all ${
-                      isSelected 
-                        ? 'bg-primary/20 text-primary border border-primary/40' 
-                        : 'text-slate-200 hover:bg-primary/10 hover:text-primary'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="font-extrabold tracking-wider">{meta.name}</span>
-                      {meta.flagUrl && (
-                        <img 
-                          src={meta.flagUrl} 
-                          alt="" 
-                          className="h-[10px] w-[14px] object-cover rounded-[1.5px] border border-white/20 shadow-xs inline-block shrink-0" 
-                        />
+          <div className="relative flex items-center justify-end" ref={langMenuRef}>
+            <button 
+              type="button"
+              onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+              className="flex items-center gap-1.5 px-3 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary border border-primary/30 hover:scale-105 active:scale-95 transition-all shadow-inner cursor-pointer"
+              title={t('nav.switch_language')}
+              aria-label={t('nav.switch_language')}
+              aria-expanded={isLangMenuOpen}
+            >
+              <span className="text-xs font-black uppercase tracking-wider">{currentLangMeta.name}</span>
+              {currentLangMeta.flagUrl && (
+                <img 
+                  src={currentLangMeta.flagUrl} 
+                  alt="" 
+                  className="h-[10px] w-[14px] object-cover rounded-[1.5px] border border-white/20 shadow-xs inline-block shrink-0" 
+                  />
+              )}
+              <span className="material-symbols-outlined text-sm transition-transform duration-200" style={{ transform: isLangMenuOpen ? 'rotate(180deg)' : 'none' }}>
+                expand_more
+              </span>
+            </button>
+
+            {/* Language Dropdown Menu */}
+            {isLangMenuOpen && (
+              <div className="absolute right-0 top-12 z-[60] w-32 bg-surface-dark border border-primary/30 rounded-2xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.8)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                {SUPPORTED_LANGUAGES.map((langKey) => {
+                  const meta = LANGUAGE_LABELS[langKey] || { name: langKey.toUpperCase() };
+                  const isSelected = currentLang === langKey;
+                  return (
+                    <button
+                      key={langKey}
+                      type="button"
+                      onClick={() => selectLanguage(langKey)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold transition-all ${
+                        isSelected 
+                          ? 'bg-primary/20 text-primary border border-primary/40' 
+                          : 'text-slate-200 hover:bg-primary/10 hover:text-primary'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="font-extrabold tracking-wider">{meta.name}</span>
+                        {meta.flagUrl && (
+                          <img 
+                            src={meta.flagUrl} 
+                            alt="" 
+                            className="h-[10px] w-[14px] object-cover rounded-[1.5px] border border-white/20 shadow-xs inline-block shrink-0" 
+                          />
+                        )}
+                      </span>
+                      {isSelected && (
+                        <span className="material-symbols-outlined text-sm font-bold text-primary">check</span>
                       )}
-                    </span>
-                    {isSelected && (
-                      <span className="material-symbols-outlined text-sm font-bold text-primary">check</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

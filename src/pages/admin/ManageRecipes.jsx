@@ -782,7 +782,11 @@ const ManageRecipes = () => {
           if (i.type === 'recipe') {
             const subRec = recipes.find(r => r.id === (i.recipe_id || i.ingredient_id) || r.slug === (i.recipe_id || i.ingredient_id));
             const subNameBg = i.ingredient_bg || subRec?.title_bg || subRec?.title?.bg || '';
-            const subNameEn = i.ingredient_en || subRec?.title_en || subRec?.title?.en || '';
+            const subNameEn = i.ingredient_en || subRec?.title_en || subRec?.title?.en || subNameBg;
+            const subNameEs = subRec?.title_es || subRec?.title?.es || i.name?.es || i.ingredient_es || subNameEn;
+            const subNameIt = subRec?.title_it || subRec?.title?.it || i.name?.it || i.ingredient_it || subNameEn;
+            const subNameFr = subRec?.title_fr || subRec?.title?.fr || i.name?.fr || i.ingredient_fr || subNameEn;
+            const subNameDe = subRec?.title_de || subRec?.title?.de || i.name?.de || i.ingredient_de || subNameEn;
             return {
               type: 'recipe',
               ingredient_id: i.recipe_id || i.ingredient_id,
@@ -791,13 +795,17 @@ const ManageRecipes = () => {
               name: {
                 bg: subNameBg,
                 en: subNameEn,
-                es: subRec?.title?.es || i.name?.es || '',
-                it: subRec?.title?.it || i.name?.it || '',
-                fr: subRec?.title?.fr || i.name?.fr || '',
-                de: subRec?.title?.de || i.name?.de || ''
+                es: subNameEs,
+                it: subNameIt,
+                fr: subNameFr,
+                de: subNameDe
               },
               ingredient_bg: subNameBg,
               ingredient_en: subNameEn,
+              ingredient_es: subNameEs,
+              ingredient_it: subNameIt,
+              ingredient_fr: subNameFr,
+              ingredient_de: subNameDe,
               amount: (parseFloat(i.amount) || 0) / (parseInt(servings) || 1),
               unit_id: i.unit_id,
               notes: notesObj,
@@ -810,20 +818,31 @@ const ManageRecipes = () => {
             };
           }
 
-          const dbIng = ingredientsList.find(dbI => dbI.id === i.ingredient_id);
+          const dbIng = ingredientsList.find(dbI => dbI.id === i.ingredient_id || dbI.slug === i.ingredient_id);
+          const ingNameBg = dbIng?.name_bg || dbIng?.name?.bg || i.name?.bg || i.ingredient_bg || '';
+          const ingNameEn = dbIng?.name_en || dbIng?.name?.en || i.name?.en || i.ingredient_en || ingNameBg;
+          const ingNameEs = dbIng?.name_es || dbIng?.name?.es || i.name?.es || i.ingredient_es || ingNameEn;
+          const ingNameIt = dbIng?.name_it || dbIng?.name?.it || i.name?.it || i.ingredient_it || ingNameEn;
+          const ingNameFr = dbIng?.name_fr || dbIng?.name?.fr || i.name?.fr || i.ingredient_fr || ingNameEn;
+          const ingNameDe = dbIng?.name_de || dbIng?.name?.de || i.name?.de || i.ingredient_de || ingNameEn;
+
           return {
             type: 'ingredient',
             ingredient_id: i.ingredient_id,
             name: {
-              bg: dbIng?.name_bg || dbIng?.name?.bg || '',
-              en: dbIng?.name_en || dbIng?.name?.en || '',
-              es: dbIng?.name?.es || '',
-              it: dbIng?.name?.it || '',
-              fr: dbIng?.name?.fr || '',
-              de: dbIng?.name?.de || ''
+              bg: ingNameBg,
+              en: ingNameEn,
+              es: ingNameEs,
+              it: ingNameIt,
+              fr: ingNameFr,
+              de: ingNameDe
             },
-            ingredient_bg: dbIng?.name_bg || dbIng?.name?.bg || '',
-            ingredient_en: dbIng?.name_en || dbIng?.name?.en || '',
+            ingredient_bg: ingNameBg,
+            ingredient_en: ingNameEn,
+            ingredient_es: ingNameEs,
+            ingredient_it: ingNameIt,
+            ingredient_fr: ingNameFr,
+            ingredient_de: ingNameDe,
             amount: (parseFloat(i.amount) || 0) / (parseInt(servings) || 1),
             unit_id: i.unit_id,
             notes: notesObj,
@@ -837,30 +856,34 @@ const ManageRecipes = () => {
         }).filter(i => i.ingredient_id && i.amount && i.unit_id),
         steps: recipeSteps.map((s, idx) => {
           const origStep = originalRecipe?.steps?.[idx];
-          const existingInstruction = (typeof s.instruction === 'object' && s.instruction !== null)
-            ? s.instruction
-            : ((typeof origStep?.instruction === 'object' && origStep?.instruction !== null) ? origStep.instruction : {});
+          const getExistingStepInstr = (lang) => {
+            return (typeof s.instruction === 'object' && s.instruction?.[lang]) ||
+                   s[`instruction_${lang}`] ||
+                   (typeof origStep?.instruction === 'object' && origStep?.instruction?.[lang]) ||
+                   origStep?.[`instruction_${lang}`] ||
+                   '';
+          };
           const aiStepObj = aiTranslated?.steps?.[idx] || {};
           const stepAuthor = (sourceLang === 'en' ? (s.instruction_en || s.instruction_local || '') : (s.instruction_local || s.instruction_en || '')).trim();
 
           const stepInstEn = (sourceLang === 'en'
             ? stepAuthor
-            : (aiStepObj.en || (existingInstruction.en && existingInstruction.en !== '[object Object]' ? existingInstruction.en : '') || stepAuthor)).trim();
+            : (aiStepObj.en || getExistingStepInstr('en') || stepAuthor)).trim();
           const stepInstBg = (sourceLang === 'bg'
             ? stepAuthor
-            : (aiStepObj.bg || (existingInstruction.bg && existingInstruction.bg !== '[object Object]' ? existingInstruction.bg : '') || stepInstEn)).trim();
+            : (aiStepObj.bg || getExistingStepInstr('bg') || stepInstEn)).trim();
           const stepInstEs = (sourceLang === 'es'
             ? stepAuthor
-            : (aiStepObj.es || (existingInstruction.es && existingInstruction.es !== '[object Object]' ? existingInstruction.es : '') || stepInstEn)).trim();
+            : (aiStepObj.es || getExistingStepInstr('es') || stepInstEn)).trim();
           const stepInstIt = (sourceLang === 'it'
             ? stepAuthor
-            : (aiStepObj.it || (existingInstruction.it && existingInstruction.it !== '[object Object]' ? existingInstruction.it : '') || stepInstEn)).trim();
+            : (aiStepObj.it || getExistingStepInstr('it') || stepInstEn)).trim();
           const stepInstFr = (sourceLang === 'fr'
             ? stepAuthor
-            : (aiStepObj.fr || (existingInstruction.fr && existingInstruction.fr !== '[object Object]' ? existingInstruction.fr : '') || stepInstEn)).trim();
+            : (aiStepObj.fr || getExistingStepInstr('fr') || stepInstEn)).trim();
           const stepInstDe = (sourceLang === 'de'
             ? stepAuthor
-            : (aiStepObj.de || (existingInstruction.de && existingInstruction.de !== '[object Object]' ? existingInstruction.de : '') || stepInstEn)).trim();
+            : (aiStepObj.de || getExistingStepInstr('de') || stepInstEn)).trim();
 
           const instructionObj = {
             en: stepInstEn,
@@ -1014,9 +1037,8 @@ const ManageRecipes = () => {
 
     setRecipeIngredients(recipe.ingredients ? recipe.ingredients.map((i, idx) => {
       const noteLocalVal =
-        extractLocalizedNote(i.notes?.[currentLang] || (currentLang === 'bg' ? i.notes_bg : ''), i.notes, currentLang) ||
-        extractLocalizedNote(i.notes_bg, i.notes, 'bg') ||
-        extractLocalizedNote(i.notes_en, i.notes, 'en');
+        extractLocalizedNote(i.notes?.[currentLang] || (typeof i[`notes_${currentLang}`] === 'string' ? i[`notes_${currentLang}`] : ''), i.notes, currentLang) ||
+        (currentLang === 'bg' ? extractLocalizedNote(i.notes_bg, i.notes, 'bg') : extractLocalizedNote(i.notes_en, i.notes, 'en'));
       const noteEnVal =
         extractLocalizedNote(i.notes_en, i.notes, 'en') ||
         extractLocalizedNote(i.notes_bg, i.notes, 'bg');
@@ -1032,14 +1054,16 @@ const ManageRecipes = () => {
     }) : []);
 
     setRecipeSteps(recipe.steps ? recipe.steps.map((s, idx) => {
-      const cleanStepStr = (val) => (typeof val === 'string' && val !== '[object Object]' ? val : '');
+      const cleanStepStr = (val) => (typeof val === 'string' && val.trim() !== '' && val !== '[object Object]' ? val.trim() : '');
       const instBgVal = cleanStepStr(s.instruction?.bg) || cleanStepStr(s.instruction_bg);
       const instEnVal = cleanStepStr(s.instruction?.en) || cleanStepStr(s.instruction_en);
       const instLocalVal =
         cleanStepStr(s.instruction?.[currentLang]) ||
+        cleanStepStr(s[`instruction_${currentLang}`]) ||
         (currentLang === 'bg' ? instBgVal : '') ||
-        instBgVal ||
-        instEnVal;
+        (currentLang === 'en' ? instEnVal : '') ||
+        instEnVal ||
+        instBgVal;
       return {
         ...s,
         id: `step_edit_${idx}_${Date.now()}`,
@@ -1080,6 +1104,7 @@ const ManageRecipes = () => {
       'description_bg','description_en','description_es','description_it','description_fr','description_de',
       'cuisine_id','category_id','category_ids','sub_category_id','prep_time','cook_time',
       'servings','difficulty','video_url','original_author','source_link',
+      'image_url',
       'ingredients','steps'
     ];
 
@@ -1108,6 +1133,7 @@ const ManageRecipes = () => {
       r.video_url || '',
       r.original_author || '',
       r.source_link || '',
+      r.image_url || r.images?.main || '',
       JSON.stringify(r.ingredients || []),
       JSON.stringify(r.steps || [])
     ]);
@@ -1271,7 +1297,26 @@ const ManageRecipes = () => {
       for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
         const batch = writeBatch(db);
         rows.slice(offset, offset + BATCH_SIZE).forEach(row => {
-          batch.set(doc(db, 'recipes', row.slug), { ...row, tags: getRecipeTags(row, ingredientsList), updatedAt: now, createdAt: now }, { merge: true });
+          const nut = calculateNutritionFromIngredients({
+            ingredients: row.ingredients || [],
+            servings: parseInt(row.servings) || 1,
+            ingredientsList,
+            measurements: measurementsList,
+            subRecipes: recipes
+          });
+          const nutritionFields = {
+            calories_per_serving: nut.calories || 0,
+            protein: nut.protein || 0,
+            fat: nut.fat || 0,
+            carbs: nut.carbs || 0
+          };
+          const rowWithNutrition = { ...row, ...nutritionFields };
+          batch.set(doc(db, 'recipes', row.slug), {
+            ...rowWithNutrition,
+            tags: getRecipeTags(rowWithNutrition, ingredientsList),
+            updatedAt: now,
+            createdAt: now
+          }, { merge: true });
         });
         await batch.commit();
       }
@@ -2160,7 +2205,7 @@ const ManageRecipes = () => {
               {recipeIngredients.map((ing, idx) => {
                 const isSubRecipe = ing.type === 'recipe';
                 const subRec = isSubRecipe ? recipes.find(r => r.id === (ing.recipe_id || ing.ingredient_id) || r.slug === (ing.recipe_id || ing.ingredient_id)) : null;
-                const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id) : null;
+                const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id || i.slug === ing.ingredient_id) : null;
                 const hasSpecificUnits = dbIng?.units_mapping?.length > 0;
                 const mappedUnitIds = hasSpecificUnits ? dbIng.units_mapping.map(um => um.unit_id) : null;
 
@@ -2208,7 +2253,7 @@ const ManageRecipes = () => {
                           title={t('recipes.select_ingredient_tooltip')}
                         >
                           <span className="truncate">
-                            {dbIng ? (getLocalizedField(dbIng, 'name', currentLang) || dbIng.name_bg || dbIng.name_en) : t('recipes.ingredient_placeholder')}
+                            {dbIng ? (getLocalizedField(dbIng, 'name', currentLang) || dbIng.name_bg || dbIng.name_en) : (ing.name?.[currentLang] || ing.ingredient_bg || ing.ingredient_en || t('recipes.ingredient_placeholder'))}
                           </span>
                           <span className="material-symbols-outlined text-primary text-sm shrink-0 ml-1">search</span>
                         </button>

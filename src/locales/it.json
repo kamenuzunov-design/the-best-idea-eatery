@@ -1623,7 +1623,16 @@
     "enable_notifications_btn": "Attiva",
     "timer_finished_title": "⏰ Timer Terminato!",
     "timer_finished_body": "Passo {{step}}: {{title}}",
-    "finish_congratulations": "Congratulazioni! Hai completato la preparazione con successo!"
+    "finish_congratulations": "Congratulazioni! Hai completato la preparazione con successo!",
+    "voice_control_btn": "Mani libere",
+    "voice_listening": "In ascolto... Pronuncia un comando",
+    "voice_command_hint": "Comandi: \"Avanti\", \"Indietro\", \"Avvia\", \"Pausa\", \"Ingredienti\", \"Ripeti\"",
+    "voice_not_supported": "Il riconoscimento vocale non è supportato da questo browser.",
+    "voice_recognized": "Riconosciuto: \"{{command}}\"",
+    "ingredients_drawer_title": "Ingredienti della ricetta",
+    "ingredients_drawer_btn": "Ingredienti",
+    "ingredients_empty": "Nessun ingrediente elencato per questa ricetta.",
+    "servings_badge": "per {{servings}} porzioni"
   },
   "recipe_customization": {
     "title": "Personalizza",
@@ -2271,5 +2280,19 @@
       "report_submitted_toast": "Segnalazione inviata ai moderatori.",
       "report_error": "Errore durante l’invio della segnalazione."
     }
+  },
+  "notifications": {
+    "title": "Notifiche",
+    "new_count": "nuove",
+    "mark_all_read": "Segna tutte come lette",
+    "no_notifications": "Nessuna nuova notifica",
+    "no_notifications_desc": "Qui riceverai aggiornamenti su dispensa e ricette approvate.",
+    "just_now": "Proprio ora",
+    "enable_push_hint": "Abilita notifiche su browser/telefono",
+    "enable_btn": "Abilita",
+    "pantry_expiring_title": "⏳ {{count}} prodotti in dispensa stanno per scadere!",
+    "pantry_expiring_body": "In scadenza: {{items}}. Tocca per trovare ricette con questi ingredienti.",
+    "recipe_approved_title": "🎉 La tua ricetta è stata approvata!",
+    "recipe_approved_body": "La ricetta \"{{title}}\" è stata approvata da un moderatore ed è ora pubblica."
   }
 }
