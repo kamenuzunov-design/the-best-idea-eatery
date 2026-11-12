@@ -28,6 +28,10 @@ public/upload
 public/images/recipe-placeholder.png
 download/
 upload/
+# Database backups & local dumps
+docs/data-base/
+*.backup.json
+
 *.env
 *.env.*
 !.env.example
