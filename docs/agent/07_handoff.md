@@ -2,7 +2,42 @@
 
 Този документ обобщава текущото състояние на проекта и дефинира приоритетите за следващата сесия.
 
-## Последна сесия: 11 Ноември 2026
+## Последна сесия: 12 Ноември 2026
+
+### Извършена работа:
+1. **Пълна 6-езична нормализация и оздравяване на базата данни (`docs/data-base/`)**:
+   - 100% 6-езикови кулинарни бележки (687 уникални бележки към 2 750 вложени съставки преведени на ES, IT, FR, DE с 0 пропуснати).
+   - Поправени 4 фактологични грешки в стъпки на рецепти (`tender-pork-pan-fried10`, `roasted-chicken29`, `roasted-pork25`, `twisted-bulgarian-banitsa`).
+   - Почистена номенклатура на съставките (премахнат паразитен ред `slug: "slug"`, добавени 6 липсващи мастър съставки, канонизирани слъгове).
+   - Добавена липсваща кухня „Международна кухня“ (`international`).
+   - 100% успешен калкулатор на макронутриенти и калории за всички 333 рецепти.
+   - Експортирани пълен главен JSON архив `best_idea_eatery_backup_2026-11-12.json` и 5 CSV файла с UTF-8 BOM. Базата бе успешно възстановена и в живия Firebase от възложителя.
+2. **Спринт А: Архитектурна оптимизация и динамично разделяне на кода (Code Splitting)**:
+   - Преобразувани всички 14 административни и тежки потребителски страници към `React.lazy()` и `<Suspense>` в `src/App.jsx`.
+   - Създаден кулинарен преходен зареждащ компонент `src/components/RouteLoadingSpinner.jsx`.
+   - Настроени интелигентни вендорни чанкове във `vite.config.js` (`vendor-react`, `vendor-firebase`, `vendor-i18n`, `app-locales`).
+   - Редуциран началният JavaScript бандъл от **5.4 MB до 70 KB** (gzip: 19 KB) — **над 98.7% намаляване на трансфера при първоначално отваряне**.
+3. **Спринт Б: „Готвене с мръсни ръце“ (Hands-Free Voice Control) и Чекмедже за съставки в `CookingMode.jsx`**:
+   - Web Speech API гласово разпознаване на 6-те езика (*Следваща, Назад, Старт таймер, Пауза, Нулирай, Съставки, Повтори*) с автоматично подновяване при мобилни Chrome таймаути и обратна връзка.
+   - Плаващо странично чекмедже (Slide-over drawer) със съставките за рецептата, точни грамажи, бележки и интерактивни чекбоксове за отмятане, работещо без прекъсване на стъпката или таймера.
+4. **Спринт В: Система за Push & Ин-ап Нотификации**:
+   - Създаден унифициран мениджър `src/lib/notificationService.js` (Web Notifications API, Firestore `users/{uid}/notifications`, локален кеш).
+   - Интелигентен детектив в `AppContext.jsx` за изтичащ срок в Килера ($\le 2$ дни) с 1-клик „Спаси с рецепта“.
+   - Автоматично известие до автора при одобрение на предложена рецепта от модератор (`Moderation.jsx`).
+   - Ин-ап Център за известия с камбанка и брояч на непрочетени в `Header.jsx`.
+5. **Спринт Г: Google Play Подготовка и PWA / TWA Инфраструктура**:
+   - PWA спецификация `public/manifest.webmanifest` с Android преки пътища (Shortcuts).
+   - Пакет адаптивни икони `public/icons/` (192, 512, maskable 512).
+   - Service Worker `public/sw.js` с интелигентно кеширане и офлайн достъп.
+   - Digital Asset Links `public/.well-known/assetlinks.json` за Trusted Web Activity (TWA).
+   - Пълно ръководство за пакетиране на `.aab` с Bubblewrap CLI: `docs/agent/google_play_twa_guide.md`.
+6. **Деплой и контрол на версиите**:
+   - Успешен `git commit` и `git push` към клон `feat/dashboard-and-auth` (комит `3903a0c`).
+   - Успешен деплой към Firebase Hosting: [https://project-08fabab9-ca3c-4140-9d7.web.app](https://project-08fabab9-ca3c-4140-9d7.web.app).
+
+---
+
+## Предишна сесия: 11 Ноември 2026
 
 ### Извършена работа:
 1. **Цялостно стабилизиране на AI многоезичния превод (6 езика) и Интелигентен JSON Repair парсър ([geminiClient.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/geminiClient.js), [aiTranslationMigrator.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/aiTranslationMigrator.js), [communityUtils.js](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/src/lib/communityUtils.js))**:
