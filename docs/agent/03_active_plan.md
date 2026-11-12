@@ -27,8 +27,13 @@
    - Service Worker (`public/sw.js` и регистрация в `main.jsx`) с кеширане на критичния app shell, офлайн навигация и Web Push слушатели.
    - Digital Asset Links (`public/.well-known/assetlinks.json`) за премахване на адресната лента на браузъра в Android.
    - Пълно ръководство за генериране на `.aab` с Bubblewrap CLI (`docs/agent/google_play_twa_guide.md`).
+   - **Достъпен наръчник на човешки език за качване в Google Play**: [`docs/plan-google-play.md`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/plan-google-play.md) (такси, документи, въпросници, линкове, тестване).
 
 ## Следващи стратегически приоритети
+- **[ПРИОРИТЕТ 1] Адаптивен Десктоп Портал (Responsive Desktop Gourmet Portal)**:
+  - Пълен план в [`docs/plan-desktop-web.md`](file:///c:/Users/KAMEH%20Y3YHOB/Documents/GitHub/the-best-idea-eatery/docs/plan-desktop-web.md).
+  - Трансформация на изгледа за екрани $\ge 1024px$ в пълномащабен кулинарен уебсайт (горен широк хедър с търсачка, 4-колонен грид за рецепти с лява филтърна лента, 2-колонен изглед на рецептите с бутон за печат, банер за сваляне на мобилното приложение за Android от Google Play).
+  - 100% запазване на сегашния чист и бърз Mobile-First формат за телефони и инсталирани TWA устройства.
 - **Генерация на официален Android App Bundle (`.aab`)**: Изпълнение на Bubblewrap инициализацията от ръководството при готовност за качване в Google Play Console.
 - **Умен Седмичен Планьор 2.0 (`WeeklyMenuPlanner.jsx`)**: Дневен калориен и макро-баланс (kcal, протеини, мазнини, въглехидрати) за всеки ден от седмицата + автоматично запълване според Килера.
 - **Лични Кулинарни Колекции (Cookbooks) & Меню Карта за Гости**: Папки в „Запазени рецепти“, форматирано споделяне на пазарския списък във Viber/WhatsApp.
