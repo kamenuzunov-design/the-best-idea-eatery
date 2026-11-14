@@ -8,13 +8,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  
-  console.log("ProtectedRoute check:", { 
-    path: window.location.pathname, 
-    userRole: user?.role, 
-    loading,
-    allowedRoles 
-  });
 
   if (loading) {
     return (

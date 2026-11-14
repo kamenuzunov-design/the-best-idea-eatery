@@ -140,7 +140,7 @@ const NotificationCenter = () => {
 
       {/* Notifications Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 top-12 z-[70] w-80 sm:w-96 rounded-2xl bg-surface-dark border border-primary/30 shadow-[0_12px_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute -right-20 top-12 z-[70] w-[calc(100vw-2rem)] max-w-[350px] sm:max-w-[380px] rounded-2xl bg-surface-dark border border-primary/30 shadow-[0_12px_40px_rgba(0,0,0,0.85)] backdrop-blur-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
           <div className="p-3.5 border-b border-primary/20 flex items-center justify-between bg-surface-dark/95">
             <div className="flex items-center gap-2">

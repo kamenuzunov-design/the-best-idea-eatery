@@ -276,19 +276,32 @@ const BackupRecovery = () => {
     
     try {
       let data;
+      const targetPath = backup.storagePath || (backup.name ? `backups/${backup.name}` : null);
+      
       try {
-        const bytes = await getBytes(ref(storage, backup.storagePath));
+        if (!targetPath) throw new Error("Missing storage path");
+        const bytes = await getBytes(ref(storage, targetPath));
         const text = new TextDecoder().decode(bytes);
         data = JSON.parse(text);
       } catch (storageErr) {
         console.warn("Storage getBytes error, falling back to fetch url:", storageErr);
+        if (!backup.url) throw storageErr;
         const response = await fetch(backup.url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         data = await response.json();
       }
       await performRestore(data, backup.name);
     } catch (error) {
       console.error("Cloud restore error:", error);
-      setStatus(t('backup_recovery.status.cloud_restore_error'));
+      const isCorsError = error.message?.includes('Failed to fetch') || 
+                          error.name === 'TypeError' || 
+                          error.code === 'storage/retry-limit-exceeded';
+      if (isCorsError) {
+        setStatus(t('backup_recovery.status.cloud_restore_cors_error') || 
+          'Браузърът блокира директното четене от облака (CORS защита). Изтеглете архива с бутона ⬇️ и го възстановете през "Възстановяване от файл".');
+      } else {
+        setStatus(`${t('backup_recovery.status.cloud_restore_error')}: ${error.message || ''}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -391,7 +404,19 @@ const BackupRecovery = () => {
                       {(backup.size / 1024).toFixed(1)} KB • {backup.name}
                     </p>
                   </div>
-                  <div className="flex gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                    {backup.url && (
+                      <a 
+                        href={backup.url}
+                        download={backup.name}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 text-sky-400 hover:bg-sky-500/10 rounded-lg transition-colors cursor-pointer"
+                        title={t('backup_recovery.cloud.download_tooltip') || 'Свали архива на компютъра'}
+                      >
+                        <span className="material-symbols-outlined text-xl">download</span>
+                      </a>
+                    )}
                     <button 
                       onClick={() => handleRestoreFromCloud(backup)}
                       disabled={loading || cloudLoading}

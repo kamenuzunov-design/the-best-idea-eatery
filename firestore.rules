@@ -35,6 +35,12 @@ service cloud.firestore {
       match /pantry/{pantryId} {
         allow read, write: if isOwnerOfDoc(userId) || isAdminOrOwner();
       }
+
+      // Subcollection notifications
+      match /notifications/{notifId} {
+        allow read, update, delete: if isOwnerOfDoc(userId) || isAdminOrOwner();
+        allow create: if isAuth();
+      }
     }
 
     // 2. Recipes collection

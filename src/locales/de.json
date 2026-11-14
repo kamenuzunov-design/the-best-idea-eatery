@@ -877,6 +877,11 @@
     "ai_translate_done": "Mit Chef AI in 6 Sprachen (BG, EN, ES, IT, FR, DE) übersetzt!",
     "auto_translated_placeholder": "Automatisch von Chef AI...",
     "translating_and_saving": "Übersetzen in 6 Sprachen & Speichern...",
+    "translate_and_save_changes": "Übersetzen und Änderungen speichern",
+    "translate_and_save_recipe": "Übersetzen und Rezept speichern",
+    "saving_btn": "Wird gespeichert...",
+    "ai_key_required_short": "Übersetzung erfordert Gemini API-Schlüssel",
+    "ai_key_required_hint": "Geben Sie einen Gemini API-Schlüssel in den Einstellungen ein, um die automatische Übersetzung zu aktivieren",
     "seed_success": "Die Datenbank wurde erfolgreich aktualisiert und normalisiert!",
     "seed_error": "Beim Aktualisieren der Datenbank ist ein Fehler aufgetreten."
   },
@@ -1204,6 +1209,7 @@
       "cloud_backup_error": "Cloud-Sicherung fehlgeschlagen.",
       "downloading_backup": "Sicherung wird heruntergeladen...",
       "cloud_restore_error": "Wiederherstellung aus der Cloud fehlgeschlagen.",
+      "cloud_restore_cors_error": "Der Browser hat das direkte Lesen aus der Cloud blockiert (CORS-Richtlinie). Bitte laden Sie das Backup über die Schaltfläche ⬇️ herunter und stellen Sie es über „Wiederherstellung aus lokaler Datei“ wieder her.",
       "backup_deleted": "Sicherung gelöscht.",
       "delete_backup_error": "Löschen fehlgeschlagen."
     },
@@ -1214,6 +1220,7 @@
       "empty": "Keine Cloud-Sicherungen gefunden",
       "pending": "Ausstehend...",
       "restore_tooltip": "Aus dieser Sicherung wiederherstellen",
+      "download_tooltip": "Backup auf den Computer herunterladen",
       "delete_tooltip": "Sicherung löschen",
       "auto_limit_note": "* Bis zu 5 aktuelle Sicherungen werden automatisch aufbewahrt"
     },

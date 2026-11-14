@@ -696,16 +696,33 @@ const Home = () => {
             const cuisineName = getLocalizedCuisine(recipe.cuisine_id || recipe.cuisine_bg, i18n.language) || t('home.global_selection');
             const calculatedTags = getRecipeTags(recipe, ingredientsList);
             const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
+            const isLongTitle = typeof title === 'string' && title.trim().length > 20;
 
             return (
-              <div key={recipe.id} className="bg-surface-dark/90 backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:border-primary/50 transition-colors flex flex-col group cursor-pointer" onClick={() => navigate(`/recipe/${recipe.id}`)}>
+              <div key={recipe.id} className="bg-surface-dark/90 backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:border-primary/50 transition-colors flex flex-col group cursor-pointer relative hover:z-10" onClick={() => navigate(`/recipe/${recipe.id}`)}>
                 <div className="flex h-auto min-h-[10rem]">
                   <div className="w-[35%] overflow-hidden relative">
                     <img className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" alt={title} src={imageUrl}/>
                   </div>
                   <div className="w-[65%] p-4 flex flex-col justify-between relative">
                     <div>
-                      <h4 className="text-slate-100 font-bold text-lg leading-tight line-clamp-1">{title}</h4>
+                      <div className="relative group/title inline-block w-full">
+                        <h4 
+                          className="text-slate-100 font-bold text-lg leading-tight line-clamp-1 group-hover/title:text-primary transition-colors"
+                          aria-label={title}
+                        >
+                          {title}
+                        </h4>
+                        {isLongTitle && (
+                          <div className="pointer-events-none absolute left-0 top-full mt-1.5 z-30 opacity-0 invisible group-hover/title:opacity-100 group-hover/title:visible transition-all duration-200 w-full">
+                            <div className="relative bg-[#161b26]/95 backdrop-blur-md text-slate-100 text-xs font-semibold p-2.5 rounded-xl border border-primary/40 shadow-2xl shadow-black/80 flex items-start gap-1.5">
+                              <div className="absolute -top-1 left-4 size-2 rotate-45 bg-[#161b26] border-t border-l border-primary/40"></div>
+                              <span className="material-symbols-outlined text-primary text-sm shrink-0 mt-0.5">restaurant_menu</span>
+                              <span className="leading-snug break-words text-slate-100 drop-shadow-sm">{title}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[9px] font-bold uppercase tracking-tighter shadow-md">
                           {cuisineName}

@@ -877,6 +877,11 @@
     "ai_translate_done": "Translated into 6 languages (BG, EN, ES, IT, FR, DE) with Chef AI!",
     "auto_translated_placeholder": "Auto-translated by Chef AI...",
     "translating_and_saving": "Translating into 6 languages & saving...",
+    "translate_and_save_changes": "Translate & Save Changes",
+    "translate_and_save_recipe": "Translate & Save Recipe",
+    "saving_btn": "Saving...",
+    "ai_key_required_short": "Translation requires Gemini API key",
+    "ai_key_required_hint": "Enter a Gemini API key in Settings to enable automatic translation",
     "seed_success": "Database was successfully updated and normalized!",
     "seed_error": "An error occurred while updating the database."
   },
@@ -1204,6 +1209,7 @@
       "cloud_backup_error": "Cloud backup failed.",
       "downloading_backup": "Downloading backup...",
       "cloud_restore_error": "Cloud restore failed.",
+      "cloud_restore_cors_error": "The browser blocked direct cloud reading (CORS policy). Please download the backup using the ⬇️ button and restore it via 'Restore from Local File'.",
       "backup_deleted": "Backup deleted.",
       "delete_backup_error": "Delete failed."
     },
@@ -1214,6 +1220,7 @@
       "empty": "No cloud backups found",
       "pending": "Pending...",
       "restore_tooltip": "Restore from this backup",
+      "download_tooltip": "Download backup to computer",
       "delete_tooltip": "Delete backup",
       "auto_limit_note": "* Up to 5 latest backups are kept automatically"
     },

@@ -27,6 +27,8 @@ export const PERMANENT_SHORTCUTS = [
 export const DEFAULT_AVAILABLE_MODELS = [
   'gemini-flash-latest',
   'gemini-pro-latest',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
   'gemini-3.8-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.7-flash',
@@ -36,6 +38,8 @@ export const DEFAULT_AVAILABLE_MODELS = [
 export const KNOWN_GEMINI_MODELS = [
   { id: 'gemini-flash-latest', label: 'Gemini Flash Latest (Най-нов Flash модел)', isPermanent: true },
   { id: 'gemini-pro-latest', label: 'Gemini Pro Latest (Най-нов Pro модел)', isPermanent: true },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Стабилен / Бърз)' },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (Светкавичен)' },
   { id: PRIMARY_GEMINI_MODEL, label: 'Gemini 3.8 Flash (Препоръчителен / Актуален)' },
   { id: FALLBACK_GEMINI_MODEL, label: 'Gemini 3.5 Flash-Lite (Бърз / Резервен)' },
   { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },

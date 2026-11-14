@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +32,13 @@ const Login = () => {
     const consent = localStorage.getItem(GDPR_CONSENT_KEY);
     if (consent === 'agreed') setGdprAccepted(true);
   }, []);
+
+  // Operating system detection for social login providers
+  const isAndroid = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    return /android/i.test(navigator.userAgent || '');
+  }, []);
+  const showApple = !isAndroid;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -356,15 +363,27 @@ const Login = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center h-12 border border-primary/20 rounded-xl bg-surface-dark hover:bg-primary/10 hover:border-primary/40 transition-all shadow-sm disabled:opacity-50 cursor-pointer" type="button">
+              <div className={`grid ${showApple ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                <button 
+                  onClick={() => handleSocialLogin('google')} 
+                  disabled={loading} 
+                  className="flex items-center justify-center h-12 border border-primary/20 rounded-xl bg-surface-dark hover:bg-primary/10 hover:border-primary/40 transition-all shadow-sm disabled:opacity-50 cursor-pointer w-full" 
+                  type="button"
+                >
                   <img alt="Google" className="w-5 h-5 mr-2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaosnMYulSPMVgQeppOGOl12S3NxjqorMyhg-qIHaeD5XRJ3Vw8w0ppThIZYMft7rbEpQ7hvTCHarNe42fNBpxn8zdSXKLlnaGLKI4Wq5kYYGYoazq2KeTMNKZd3fzDJ4whJHSqf8-2KWHqmND1O-nw1EIoYQkAmNO0UEV-qXvImLs_VrqmOrN69GjtuI5UbY_-RIiwppm9I5rCrQg18v8Ug6JfItxZT1AGNhxWmRvj1roaYmTdRUZBpewaUyEPQvnOFwQe3427pU"/>
                   <span className="text-sm font-bold text-slate-200">Google</span>
                 </button>
-                <button onClick={() => handleSocialLogin('apple')} disabled={loading} className="flex items-center justify-center h-12 border border-primary/20 rounded-xl bg-surface-dark hover:bg-primary/10 hover:border-primary/40 transition-all shadow-sm disabled:opacity-50 cursor-pointer" type="button">
-                  <span className="material-symbols-outlined text-xl mr-2 text-slate-200">apple</span>
-                  <span className="text-sm font-bold text-slate-200">Apple</span>
-                </button>
+                {showApple && (
+                  <button 
+                    onClick={() => handleSocialLogin('apple')} 
+                    disabled={loading} 
+                    className="flex items-center justify-center h-12 border border-primary/20 rounded-xl bg-surface-dark hover:bg-primary/10 hover:border-primary/40 transition-all shadow-sm disabled:opacity-50 cursor-pointer w-full" 
+                    type="button"
+                  >
+                    <span className="material-symbols-outlined text-xl mr-2 text-slate-200">apple</span>
+                    <span className="text-sm font-bold text-slate-200">Apple</span>
+                  </button>
+                )}
               </div>
             </>
           )}

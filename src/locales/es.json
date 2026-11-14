@@ -877,6 +877,11 @@
     "ai_translate_done": "¡Traducido a 6 idiomas (BG, EN, ES, IT, FR, DE) con Chef IA!",
     "auto_translated_placeholder": "Traducido automáticamente por Chef IA...",
     "translating_and_saving": "Traduciendo a 6 idiomas y guardando...",
+    "translate_and_save_changes": "Traducir y guardar cambios",
+    "translate_and_save_recipe": "Traducir y guardar receta",
+    "saving_btn": "Guardando...",
+    "ai_key_required_short": "La traducción requiere clave API de Gemini",
+    "ai_key_required_hint": "Introduzca una clave API de Gemini en Configuración para activar la traducción automática",
     "seed_success": "¡La base de datos se ha actualizado y normalizado con éxito!",
     "seed_error": "Se ha producido un error al actualizar la base de datos."
   },
@@ -1204,6 +1209,7 @@
       "cloud_backup_error": "Error al crear la copia de seguridad en la nube.",
       "downloading_backup": "Descargando copia de seguridad...",
       "cloud_restore_error": "Error en la restauración desde la nube.",
+      "cloud_restore_cors_error": "El navegador bloqueó la lectura directa desde la nube (política CORS). Por favor, descargue la copia con el botón ⬇️ y restáurela mediante 'Restaurar desde archivo local'.",
       "backup_deleted": "Copia de seguridad eliminada.",
       "delete_backup_error": "Error al eliminar."
     },
@@ -1214,6 +1220,7 @@
       "empty": "No se encontraron copias de seguridad en la nube",
       "pending": "Pendiente...",
       "restore_tooltip": "Restaurar desde esta copia de seguridad",
+      "download_tooltip": "Descargar copia al ordenador",
       "delete_tooltip": "Eliminar copia de seguridad",
       "auto_limit_note": "* Se conservan automáticamente hasta las 5 copias más recientes"
     },

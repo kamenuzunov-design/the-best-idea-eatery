@@ -749,8 +749,8 @@
     "add_recipe": "Добави Рецепта",
     "new_recipe": "Нова рецепта",
     "edit_recipe": "Редакция на рецепта",
-    "save_changes": "Запази промените",
-    "save_recipe": "Запиши рецепта",
+    "save_changes": "Запази рецептата",
+    "save_recipe": "Запази рецептата",
     "tab_basic": "Основна",
     "tab_media": "Медия",
     "tab_ingredients": "Съставки",
@@ -877,6 +877,11 @@
     "ai_translate_done": "Преведено на 6 езика (BG, EN, ES, IT, FR, DE) с Chef AI!",
     "auto_translated_placeholder": "Автоматично от Chef AI...",
     "translating_and_saving": "Превеждане на 6 езика и запазване...",
+    "translate_and_save_changes": "Преведи и запази рецептата",
+    "translate_and_save_recipe": "Преведи и запази рецептата",
+    "saving_btn": "Запазване...",
+    "ai_key_required_short": "Преводът изисква Gemini API ключ",
+    "ai_key_required_hint": "Въведете Gemini API ключ в Настройки за активиране на автоматичен превод",
     "seed_success": "Базата данни беше успешно обновена и нормализирана!",
     "seed_error": "Възникна грешка при обновяване на базата данни."
   },
@@ -1204,6 +1209,7 @@
       "cloud_backup_error": "Грешка при облачния архив.",
       "downloading_backup": "Изтегляне на архив...",
       "cloud_restore_error": "Грешка при възстановяване от облака.",
+      "cloud_restore_cors_error": "Браузърът блокира директното четене от облака (CORS защита). Моля, изтеглете архива чрез бутона ⬇️ и го възстановете през „Възстановяване от файл“.",
       "backup_deleted": "Архивът е изтрит.",
       "delete_backup_error": "Грешка при изтриване."
     },
@@ -1214,6 +1220,7 @@
       "empty": "Няма намерени облачни архиви",
       "pending": "В процес...",
       "restore_tooltip": "Възстанови от този архив",
+      "download_tooltip": "Свали архива на компютъра",
       "delete_tooltip": "Изтрий архива",
       "auto_limit_note": "* Пазят се до 5 последни архива автоматично"
     },

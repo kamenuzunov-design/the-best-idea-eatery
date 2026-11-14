@@ -1,0 +1,786 @@
+<!DOCTYPE html><html class="dark" lang="bg"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>The Best Idea Eatery - Culinary Intelligence &amp; Pantry</title>
+<!-- Font Setup: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              charcoal: '#16130C',
+              surface: '#221D12',
+              border: '#3A311E',
+              amber: '#E5B83B',
+              amberHover: '#f5c94d',
+              emerald: '#00A878',
+              emeraldBg: '#09291E',
+              cream: '#D8D0C0',
+              muted: '#9C917A',
+              cardDark: '#1A160E'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Scrollbars & Fine Details -->
+<style data-purpose="theme-styles">
+    body {
+      background-color: #16130C;
+      color: #D8D0C0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+    
+    /* Subtle custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #16130C;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3A311E;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #E5B83B;
+    }
+
+    .badge-glow {
+      box-shadow: 0 0 15px rgba(229, 184, 59, 0.15);
+    }
+    
+    .card-hover-fx {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card-hover-fx:hover {
+      transform: translateY(-3px);
+      border-color: #E5B83B;
+      box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5), 0 0 20px -8px rgba(229, 184, 59, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-brand-charcoal antialiased selection:bg-brand-amber selection:text-brand-charcoal">
+<!-- BEGIN: StickyTopHeaderBar -->
+<header class="sticky top-0 z-50 w-full border-b border-brand-border bg-brand-charcoal/95 backdrop-blur-md">
+<!-- Tier 1: Main Bar (72px height) -->
+<div class="h-[72px] border-b border-brand-border/60 px-6 lg:px-12 flex items-center justify-between gap-6 max-w-[1440px] mx-auto">
+<!-- Brand Logo & Identity -->
+<a class="flex items-center gap-3.5 group flex-shrink-0" data-purpose="brand-logo" href="#">
+<div class="w-[42px] h-[42px] rounded-xl overflow-hidden border border-brand-border group-hover:border-brand-amber transition-colors flex items-center justify-center bg-brand-surface shadow-md">
+<img alt="The Best Idea Eatery Icon" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNoT9vemtK_gbs0QNR8pRjCm5eycohJpylVzXglZzfgiW2d3VjL1MB5ZRuR5qeXmZUFAh4PBRzSvndo99Dap59lAphGkmHUeBLN2ATiRihRibDQBasuehIAG32raF8-4JvRQhAnrMaywnOsoF90fZ51vJvLgb3-9OO5Q_NVj5rWtzHkYWQpJX2PCykjAAw-U96ZcgZ3QU1ryxcvD5-8DDCaUfUw6511ruIeapudH9ney5HLvJNwYcfiw">
+</div>
+<div class="flex flex-col">
+<span class="text-xl font-extrabold italic tracking-tight text-white group-hover:text-brand-amber transition-colors leading-none flex items-center gap-1.5">
+            The Best Idea Eatery
+          </span>
+<span class="text-[9px] uppercase tracking-[0.2em] font-bold text-brand-amber mt-1 leading-none">
+            Culinary Intelligence &amp; Pantry
+          </span>
+</div>
+</a>
+<!-- Center: Global Search Bar -->
+<div class="flex-1 max-w-xl mx-4 hidden md:block" data-purpose="global-search">
+<div class="relative flex items-center">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-brand-muted">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<input class="w-full h-10 pl-10 pr-12 text-sm bg-[#1E1B14] text-brand-cream border border-brand-border rounded-xl placeholder-brand-muted/70 focus:outline-none focus:ring-1 focus:ring-brand-amber focus:border-brand-amber transition-all" placeholder="Търсене на рецепти, съставки, кухни..." type="search">
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<kbd class="px-1.5 py-0.5 text-[10px] font-semibold text-brand-muted bg-brand-surface border border-brand-border rounded">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Right Header Actions & User Profile -->
+<div class="flex items-center gap-3.5 flex-shrink-0" data-purpose="header-user-actions">
+<!-- Notifications Button -->
+<button class="relative p-2.5 rounded-xl bg-brand-surface border border-brand-border text-brand-cream hover:text-white hover:border-brand-amber/50 transition-colors" title="Известия">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<!-- Active Notification Pill -->
+<span class="absolute top-2 right-2 w-2 h-2 bg-brand-amber rounded-full shadow-[0_0_6px_#E5B83B]"></span>
+</button>
+<!-- Theme Toggle Pill -->
+<button class="p-2.5 rounded-xl bg-brand-surface border border-brand-border text-brand-muted hover:text-brand-amber hover:border-brand-amber/50 transition-colors" title="Превключване на тема">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Language Selector Pill -->
+<button class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-surface border border-brand-border text-xs font-semibold text-brand-cream hover:border-brand-amber/50 transition-colors">
+<span class="text-sm">🇧🇬</span>
+<span class="font-bold tracking-wide">BG</span>
+<svg class="w-3.5 h-3.5 text-brand-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="m19.5 8.25-7.5 7.5-7.5-7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="h-6 w-[1px] bg-brand-border/70 mx-1"></div>
+<!-- User Profile Pill (Matching Kamen Uzunov / OWNER identity from Mobile-Menu.png) -->
+<div class="flex items-center gap-3 pl-1 pr-3 py-1 rounded-full bg-brand-surface border border-brand-border hover:border-brand-amber/60 transition-colors cursor-pointer group" data-purpose="user-profile-badge">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-brand-amber/80 flex-shrink-0 bg-brand-charcoal">
+<img alt="Kamen Uzunov" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCU9Oi4P2Rp7CX_N1EQWaVcfgxrctM1R0jipO8A3ANKzlaug4vfTjv40QSuLEZVtHW0rtq9k_aNZMt5KnU-JbqP6GcqZWZm_ALoRKfHMdHa4aaPtHwkjrctzWVo_G3LB6kXJ1EbDNLHQXw526O8z0gBVUIjXoXjq1TI00R2NAlyLyyh3vxMmPD3XF4DwzCvRq_0PwjwPxrIfP9vlrIZqkIa2_BakaxpYUWkxfwugJ_X">
+</div>
+<div class="flex flex-col text-left">
+<span class="text-xs font-bold text-white group-hover:text-brand-amber transition-colors leading-tight">
+              Kamen Uzunov
+            </span>
+<span class="text-[9px] font-black uppercase text-brand-amber tracking-wider leading-none mt-0.5">
+              OWNER
+            </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tier 2: Horizontal Navigation Bar (54px height) -->
+<nav class="h-[54px] px-6 lg:px-12 flex items-center justify-between max-w-[1440px] mx-auto overflow-x-auto no-scrollbar" data-purpose="tier-2-navigation">
+<div class="flex items-center gap-2 py-1">
+<!-- 1. Рецепти (Active Pill) -->
+<a class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-amber text-brand-charcoal text-xs font-bold shadow-sm transition-transform active:scale-95" href="#recipes">
+<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path>
+</svg>
+<span>Рецепти</span>
+</a>
+<!-- 2. Килер -->
+<a class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-brand-cream hover:text-white hover:bg-brand-surface text-xs font-medium border border-transparent hover:border-brand-border transition-all" href="#pantry">
+<svg class="w-4 h-4 text-brand-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 7h12M9 6.5v1M9 14.5v2" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Килер</span>
+</a>
+<!-- 3. Скенер за продукти -->
+<a class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-brand-cream hover:text-white hover:bg-brand-surface text-xs font-medium border border-transparent hover:border-brand-border transition-all" href="#scanner">
+<svg class="w-4 h-4 text-brand-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M13.5 14.25h3v3h-3zM18 18.75h2.25v2.25H18z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Скенер за продукти</span>
+</a>
+<!-- 4. Запазени -->
+<a class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-brand-cream hover:text-white hover:bg-brand-surface text-xs font-medium border border-transparent hover:border-brand-border transition-all" href="#saved">
+<svg class="w-4 h-4 text-brand-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Запазени</span>
+</a>
+<!-- 5. Събития -->
+<a class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-brand-cream hover:text-white hover:bg-brand-surface text-xs font-medium border border-transparent hover:border-brand-border transition-all" href="#events">
+<svg class="w-4 h-4 text-brand-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Събития</span>
+</a>
+<!-- 6. Общност -->
+<a class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-brand-cream hover:text-white hover:bg-brand-surface text-xs font-medium border border-transparent hover:border-brand-border transition-all" href="#community">
+<svg class="w-4 h-4 text-brand-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Общност</span>
+</a>
+<!-- 7. Моят Профил -->
+<a class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-brand-cream hover:text-white hover:bg-brand-surface text-xs font-medium border border-transparent hover:border-brand-border transition-all" href="#profile">
+<svg class="w-4 h-4 text-brand-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Моят Профил</span>
+</a>
+</div>
+<!-- Quick Action: Kitchen Assistant / Pantry Status -->
+<div class="hidden lg:flex items-center gap-2 text-xs font-semibold text-brand-amber">
+<span class="w-2 h-2 rounded-full bg-brand-emerald animate-pulse"></span>
+<span>Килер: 35 Налични Съставки</span>
+</div>
+</nav>
+</header>
+<!-- END: StickyTopHeaderBar -->
+<!-- BEGIN: MainContent -->
+<main class="max-w-[1360px] mx-auto px-6 lg:px-12 py-7 space-y-6" data-purpose="main-culinary-feed">
+<!-- BEGIN: FeaturedOfDayRibbon -->
+<section class="relative rounded-2xl bg-brand-surface border border-brand-border overflow-hidden card-hover-fx shadow-xl min-h-[200px] md:min-h-[210px] flex flex-col md:flex-row" data-purpose="compact-featured-hero">
+  <!-- Left 50% Image Container -->
+  <div class="relative w-full md:w-1/2 min-h-[190px] md:min-h-full overflow-hidden flex-shrink-0">
+    <img alt="Студена вечеря от варено месо" class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlSEblZ-1IrMGJPDPrMpB4vQf27T5iZ-3xKVqLzQluU46MGc2S68izlI87ifL7APG0NVdxMLQibEMNagHLqqsoydlkSpvp3MywPQFwjQyDzL_q6tRcBuHR4cLKxjhfXL4Zqr-iRVYnyHMRGCcnCrBF1j19rSAF2doRuIf5wASdRfENUqA9GeNi-tueTjNLxeZqWxee1XMG6DUevM3kjy2NAembOe-fViZ571NZDp_5" style="object-fit: cover; object-position: center; width: 100%; height: 100%;">
+    <span class="absolute top-3.5 left-3.5 px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider bg-brand-amber text-brand-charcoal shadow-md">
+      Акцент на деня
+    </span>
+  </div>
+  <!-- Right 50% Information Content -->
+  <div class="w-full md:w-1/2 p-5 lg:p-6 flex flex-col justify-between space-y-4">
+    <div class="space-y-2.5">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-brand-amber/15 text-brand-amber border border-brand-amber/40">
+          Българска
+        </span>
+        <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-brand-emerald/15 text-brand-emerald border border-brand-emerald/30">
+          Кето
+        </span>
+        <span class="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-brand-emerald/15 text-brand-emerald border border-brand-emerald/30">
+          Суперхрана
+        </span>
+        <span class="text-xs text-brand-muted">•</span>
+        <span class="text-xs text-brand-cream font-medium">⏱ 45 мин</span>
+      </div>
+      <h2 class="text-xl lg:text-2xl font-black text-white tracking-tight leading-snug">
+        Студена вечеря от варено месо с яйца и горчица
+      </h2>
+      <div class="flex flex-wrap items-center gap-3 pt-0.5">
+        <!-- Star Rating -->
+        <div class="flex items-center gap-1.5 text-xs font-bold text-brand-amber">
+          <span>★</span>
+          <span class="text-white font-extrabold">4.9</span>
+          <span class="text-brand-muted font-normal text-[11px]">(128 оценки)</span>
+        </div>
+        <div class="h-3 w-[1px] bg-brand-border"></div>
+        <!-- Price per portion pill -->
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-brand-emeraldBg/90 border border-brand-emerald/40 text-brand-emerald text-xs font-bold">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v10.5m0-10.5h1.5A2.25 2.25 0 0 1 6 8.25v7.5A2.25 2.25 0 0 1 3.75 18H2.25" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <span>~1.88 € / порция</span>
+        </div>
+      </div>
+    </div>
+    <!-- Actions Strip -->
+    <div class="flex items-center gap-3 pt-2">
+      <button class="p-2.5 rounded-xl border border-brand-border text-brand-cream hover:text-brand-amber hover:border-brand-amber/50 bg-brand-charcoal transition-colors" title="Запази в любими">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </button>
+      <button class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95">
+        <svg class="w-4 h-4 fill-brand-charcoal" viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z"></path>
+        </svg>
+        <span>Сготви сега</span>
+      </button>
+    </div>
+  </div>
+</section>
+<!-- END: FeaturedOfDayRibbon -->
+<!-- BEGIN: SmartPantryPromptStrip -->
+<section class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-gradient-to-r from-brand-surface to-[#2A2315] border border-brand-border/90 shadow-sm" data-purpose="pantry-smart-suggestion">
+<div class="flex items-center gap-3.5">
+<div class="w-10 h-10 rounded-lg bg-brand-amber/15 border border-brand-amber/30 text-brand-amber flex items-center justify-center flex-shrink-0">
+<!-- Refrigerator SVG -->
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 7h12M9 6.5v1M9 14.5v2" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div>
+<h3 class="text-sm font-bold text-white flex items-center gap-2">
+            Какво да сготвя сега? 
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-amber text-brand-charcoal">35</span>
+</h3>
+<p class="text-xs text-brand-muted mt-0.5">
+            Вижте кои рецепти можете да приготвите веднага с наличните продукти в килера
+          </p>
+</div>
+</div>
+<a class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-surface hover:bg-brand-amber hover:text-brand-charcoal border border-brand-border hover:border-brand-amber text-brand-cream text-xs font-bold transition-all flex-shrink-0" href="#pantry-ready">
+<span>35 рецепти ви чакат</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</a>
+</section>
+<!-- END: SmartPantryPromptStrip -->
+<!-- BEGIN: FilterAndCategoryBar -->
+<section class="space-y-3 pt-2" data-purpose="filtering-controls">
+<!-- Sorting & View Controls -->
+<div class="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-brand-border/50">
+<!-- Sorting Pills -->
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+<button class="px-4 py-1.5 rounded-full text-xs font-bold bg-brand-amber text-brand-charcoal shadow-sm transition-all">
+            Най-нови
+          </button>
+<button class="px-4 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-[#2A2315] text-brand-cream border border-brand-border transition-all">
+            Най-оценявани
+          </button>
+<button class="px-4 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-[#2A2315] text-brand-cream border border-brand-border transition-all">
+            Най-гледани
+          </button>
+<button class="px-4 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-[#2A2315] text-brand-cream border border-brand-border transition-all">
+            Всички
+          </button>
+</div>
+<!-- View mode & total count badge -->
+<div class="flex items-center gap-3">
+<span class="text-xs text-brand-muted font-medium">Показани: <strong class="text-white">6 от 142</strong></span>
+<div class="flex items-center bg-brand-surface border border-brand-border rounded-lg p-0.5">
+<button class="p-1 rounded bg-[#2D2517] text-brand-amber" title="Решетка">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<button class="p-1 rounded text-brand-muted hover:text-white" title="Списък">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+<!-- Category Filter Pills (Derived from screenshot-1-catalog.png) -->
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" data-purpose="category-pills">
+<button class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-brand-amber text-brand-charcoal flex items-center gap-1.5 flex-shrink-0">
+<span>🍲</span>
+<span>Всички</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🥗</span>
+<span>Салати</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🥣</span>
+<span>Супи</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🥟</span>
+<span>Предястия</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🍽</span>
+<span>Основни</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🧁</span>
+<span>Десерти</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🥐</span>
+<span>Тестени</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🥤</span>
+<span>Напитки</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🌶</span>
+<span>Сос/Марината</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-brand-surface hover:border-brand-amber/50 text-brand-cream border border-brand-border flex items-center gap-1.5 flex-shrink-0 transition-colors">
+<span>🍳</span>
+<span>Закуска</span>
+</button>
+</div>
+</section>
+<!-- END: FilterAndCategoryBar -->
+<!-- BEGIN: RecipeGridSection -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2" data-purpose="recipe-cards-grid">
+<!-- Card 1: Ароматизираща отвара (Broth from screenshot) -->
+<article class="rounded-2xl bg-brand-surface border border-brand-border overflow-hidden card-hover-fx flex flex-col justify-between" data-purpose="recipe-card">
+<div>
+<!-- Thumbnail & Badges -->
+<div class="relative h-48 w-full overflow-hidden bg-brand-charcoal">
+<img alt="Ароматизираща отвара" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD73vzWA_XF5p1HXXnM7m6UEjTVPPx43OdQbCr5DJJJrINOBHD4wHQymoifSMuIYF-jsGBspfKvzxz1EFDa0rRbPjOvxuG684oti-zGfYQySHTTlBI1nexWKLWEkzUuTfBpe2zlPiQSaJ-gVtb1K5HCZCU7k9brEfhIQEbkOllDZfhljyHfDOEUtyx5F6JVR1ZIE_xeWpKuCOi9XGkXFNluMcSZ4Bf7HJxYpgbFLwDC">
+<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-brand-emerald text-white">
+                100% налично
+              </span>
+</div>
+<button class="absolute top-3 right-3 p-2 rounded-full bg-brand-charcoal/80 text-brand-cream hover:text-brand-amber transition-colors backdrop-blur-sm">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Card Content Body -->
+<div class="p-5 space-y-3">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-amber/20 text-brand-amber border border-brand-amber/40">
+                Европейска кухня
+              </span>
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-emerald/20 text-brand-emerald border border-brand-emerald/40">
+                Веган
+              </span>
+</div>
+<h3 class="text-base font-bold text-white leading-snug line-clamp-2 hover:text-brand-amber transition-colors cursor-pointer">
+              Ароматизираща отвара с кореноплодни и билки
+            </h3>
+<!-- Key Specs: Time & Difficulty -->
+<div class="flex items-center gap-4 text-xs text-brand-muted">
+<div class="flex items-center gap-1">
+<span>⏱</span>
+<span class="font-medium text-brand-cream">50 мин</span>
+</div>
+<div class="flex items-center gap-1">
+<span>🔥</span>
+<span class="font-medium text-brand-cream">Лесно</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-brand-amber">★</span>
+<span class="font-bold text-white">4.8</span>
+<span class="text-[11px]">(32)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer strip: Pricing and Cook Button -->
+<div class="px-5 py-3.5 bg-brand-cardDark border-t border-brand-border/70 flex items-center justify-between">
+<div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-brand-emeraldBg border border-brand-emerald/30 text-brand-emerald text-xs font-bold">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v10.5m0-10.5h1.5A2.25 2.25 0 0 1 6 8.25v7.5A2.25 2.25 0 0 1 3.75 18H2.25" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>~0.37 € / порция</span>
+</div>
+<button class="w-9 h-9 rounded-full bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal flex items-center justify-center transition-all shadow-md active:scale-90" title="Започни готвене">
+<svg class="w-4 h-4 fill-brand-charcoal ml-0.5" viewBox="0 0 24 24">
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</button>
+</div>
+</article>
+<!-- Card 2: Крехко пиле със спанак -->
+<article class="rounded-2xl bg-brand-surface border border-brand-border overflow-hidden card-hover-fx flex flex-col justify-between" data-purpose="recipe-card">
+<div>
+<div class="relative h-48 w-full overflow-hidden bg-brand-charcoal">
+<img alt="Крехко пиле с пресен спанак" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAiye_pl4emV2OSrWNsv6OXX27a2P398a8TYRU5tvSxed3xcrESHtV1XO_rrJnAXMoYtMBlc8HeKgC_M0qrMnY1GgSDHm0WVSNraVVW7FRP4WDrnq80NGgc26TIlfGl317cXKov2U4pkUiqo-xcMU8eDmCg6l-tyk-qQQ7qlVeXkXKd89JtJtfNEH09vTGaxUEiy5dtGHZ8tWzRaJaKPEu_P-iY8mcDXKaexM_Jchf">
+<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-brand-emerald text-white">
+                100% налично
+              </span>
+</div>
+<button class="absolute top-3 right-3 p-2 rounded-full bg-brand-charcoal/80 text-brand-cream hover:text-brand-amber transition-colors backdrop-blur-sm">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<div class="p-5 space-y-3">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-emerald/20 text-brand-emerald border border-brand-emerald/40">
+                Суперхрана
+              </span>
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-amber/20 text-brand-amber border border-brand-amber/40">
+                Високо протеиново
+              </span>
+</div>
+<h3 class="text-base font-bold text-white leading-snug line-clamp-2 hover:text-brand-amber transition-colors cursor-pointer">
+              Крехко пиле с пресен спанак и чеснови билки
+            </h3>
+<div class="flex items-center gap-4 text-xs text-brand-muted">
+<div class="flex items-center gap-1">
+<span>⏱</span>
+<span class="font-medium text-brand-cream">40 мин</span>
+</div>
+<div class="flex items-center gap-1">
+<span>🔥</span>
+<span class="font-medium text-brand-cream">Средно</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-brand-amber">★</span>
+<span class="font-bold text-white">4.9</span>
+<span class="text-[11px]">(84)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-5 py-3.5 bg-brand-cardDark border-t border-brand-border/70 flex items-center justify-between">
+<div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-brand-emeraldBg border border-brand-emerald/30 text-brand-emerald text-xs font-bold">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v10.5m0-10.5h1.5A2.25 2.25 0 0 1 6 8.25v7.5A2.25 2.25 0 0 1 3.75 18H2.25" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>~2.40 € / порция</span>
+</div>
+<button class="w-9 h-9 rounded-full bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal flex items-center justify-center transition-all shadow-md active:scale-90" title="Започни готвене">
+<svg class="w-4 h-4 fill-brand-charcoal ml-0.5" viewBox="0 0 24 24">
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</button>
+</div>
+</article>
+<!-- Card 3: Прясна картофена салата -->
+<article class="rounded-2xl bg-brand-surface border border-brand-border overflow-hidden card-hover-fx flex flex-col justify-between" data-purpose="recipe-card">
+<div>
+<div class="relative h-48 w-full overflow-hidden bg-brand-charcoal">
+<img alt="Прясна картофена салата" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfzLGnxwk_03AiUF-9sx9-NO7VvAc6VkjHXHosZD9fR33EDXuyPSScoKF9T8eNZqgWwLEdqQ2zaqDu4U2-K1912qbCAGUsQukJd_MLvazIzSMlYbmL-Xp4iu194RRhCPko-LdPnb8vilSNe1iL7hY4S7rpA6i94-TsmXiBLrmQ2vyjoJuexjn-FtWePY7fVW3OvGha4N4hNMQNgpqTSUBeKj3_RZYhinkojz9cz3BL">
+<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-brand-emerald text-white">
+                100% налично
+              </span>
+</div>
+<button class="absolute top-3 right-3 p-2 rounded-full bg-brand-charcoal/80 text-brand-cream hover:text-brand-amber transition-colors backdrop-blur-sm">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<div class="p-5 space-y-3">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-emerald/20 text-brand-emerald border border-brand-emerald/40">
+                Вегетарианско
+              </span>
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-amber/20 text-brand-amber border border-brand-amber/40">
+                Свежо
+              </span>
+</div>
+<h3 class="text-base font-bold text-white leading-snug line-clamp-2 hover:text-brand-amber transition-colors cursor-pointer">
+              Прясна картофена салата със зехтин и диви билки
+            </h3>
+<div class="flex items-center gap-4 text-xs text-brand-muted">
+<div class="flex items-center gap-1">
+<span>⏱</span>
+<span class="font-medium text-brand-cream">30 мин</span>
+</div>
+<div class="flex items-center gap-1">
+<span>🔥</span>
+<span class="font-medium text-brand-cream">Лесно</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-brand-amber">★</span>
+<span class="font-bold text-white">4.7</span>
+<span class="text-[11px]">(47)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-5 py-3.5 bg-brand-cardDark border-t border-brand-border/70 flex items-center justify-between">
+<div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-brand-emeraldBg border border-brand-emerald/30 text-brand-emerald text-xs font-bold">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v10.5m0-10.5h1.5A2.25 2.25 0 0 1 6 8.25v7.5A2.25 2.25 0 0 1 3.75 18H2.25" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>~1.15 € / порция</span>
+</div>
+<button class="w-9 h-9 rounded-full bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal flex items-center justify-center transition-all shadow-md active:scale-90" title="Започни готвене">
+<svg class="w-4 h-4 fill-brand-charcoal ml-0.5" viewBox="0 0 24 24">
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</button>
+</div>
+</article>
+<!-- Card 4: Бавно задушено телешко -->
+<article class="rounded-2xl bg-brand-surface border border-brand-border overflow-hidden card-hover-fx flex flex-col justify-between" data-purpose="recipe-card">
+<div>
+<div class="relative h-48 w-full overflow-hidden bg-brand-charcoal">
+<img alt="Бавно задушено телешко с моркови" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLM3QpqVF7E7W6WagoqsqBtNrX8zNoTT4N2z1vNnTWDtNRBLsL7r6GYKrJ0cqyqo43tAw2D57wRgdjHIFeq3b7egXMt2RE71A0jHR8Jx7MEW3X6Nb4waJ-Kf3FBDb67MeEM10v_78tp4OaU5T6XlBNZMuv97zrm6MU1I5S9caUuq1SJSomglVlmsqDwhCE411gOV7Acs6q_AUUzFadYfssOrRiWkmLoqvm-gPWG68G">
+<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-[#C27803] text-white">
+                90% налично
+              </span>
+</div>
+<button class="absolute top-3 right-3 p-2 rounded-full bg-brand-charcoal/80 text-brand-cream hover:text-brand-amber transition-colors backdrop-blur-sm">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<div class="p-5 space-y-3">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-amber/20 text-brand-amber border border-brand-amber/40">
+                Традиционна
+              </span>
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-emerald/20 text-brand-emerald border border-brand-emerald/40">
+                Засищащо
+              </span>
+</div>
+<h3 class="text-base font-bold text-white leading-snug line-clamp-2 hover:text-brand-amber transition-colors cursor-pointer">
+              Бавно задушено телешко с пресни моркови и дафинов лист
+            </h3>
+<div class="flex items-center gap-4 text-xs text-brand-muted">
+<div class="flex items-center gap-1">
+<span>⏱</span>
+<span class="font-medium text-brand-cream">90 мин</span>
+</div>
+<div class="flex items-center gap-1">
+<span>🔥</span>
+<span class="font-medium text-brand-cream">Майсторско</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-brand-amber">★</span>
+<span class="font-bold text-white">5.0</span>
+<span class="text-[11px]">(96)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-5 py-3.5 bg-brand-cardDark border-t border-brand-border/70 flex items-center justify-between">
+<div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-brand-emeraldBg border border-brand-emerald/30 text-brand-emerald text-xs font-bold">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v10.5m0-10.5h1.5A2.25 2.25 0 0 1 6 8.25v7.5A2.25 2.25 0 0 1 3.75 18H2.25" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>~3.20 € / порция</span>
+</div>
+<button class="w-9 h-9 rounded-full bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal flex items-center justify-center transition-all shadow-md active:scale-90" title="Започни готвене">
+<svg class="w-4 h-4 fill-brand-charcoal ml-0.5" viewBox="0 0 24 24">
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</button>
+</div>
+</article>
+<!-- Card 5: Яйца с пикантен горчичен дресинг -->
+<article class="rounded-2xl bg-brand-surface border border-brand-border overflow-hidden card-hover-fx flex flex-col justify-between" data-purpose="recipe-card">
+<div>
+<div class="relative h-48 w-full overflow-hidden bg-brand-charcoal">
+<img alt="Яйца с горчичен дресинг" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtAjt1VD7z5O4XH0wi_GPFospIBM3brrYkbokAFqrFCkxuz_Uig6QY2xCUOB5PXOQJb7-nOLKkx3QhNPXeYvWS02j5orrIww_sORMR1A_5Nirc5elC4p8l3GmIzHf5NU8VrkJFJ-xL4-7yoesd4s1q_ehfMw47s3el6vXr4g7DPHGsaqLTdZUOHek_IRoCD2J9dvasLL36PNP6952Fsz1zGPLPp_fNhikJY09yp-6u">
+<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-brand-emerald text-white">
+                100% налично
+              </span>
+</div>
+<button class="absolute top-3 right-3 p-2 rounded-full bg-brand-charcoal/80 text-brand-cream hover:text-brand-amber transition-colors backdrop-blur-sm">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<div class="p-5 space-y-3">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-emerald/20 text-brand-emerald border border-brand-emerald/40">
+                Кето
+              </span>
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-amber/20 text-brand-amber border border-brand-amber/40">
+                Експресно
+              </span>
+</div>
+<h3 class="text-base font-bold text-white leading-snug line-clamp-2 hover:text-brand-amber transition-colors cursor-pointer">
+              Яйца с пикантен горчичен дресинг и кисели краставички
+            </h3>
+<div class="flex items-center gap-4 text-xs text-brand-muted">
+<div class="flex items-center gap-1">
+<span>⏱</span>
+<span class="font-medium text-brand-cream">12 мин</span>
+</div>
+<div class="flex items-center gap-1">
+<span>🔥</span>
+<span class="font-medium text-brand-cream">Бързо</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-brand-amber">★</span>
+<span class="font-bold text-white">4.6</span>
+<span class="text-[11px]">(51)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-5 py-3.5 bg-brand-cardDark border-t border-brand-border/70 flex items-center justify-between">
+<div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-brand-emeraldBg border border-brand-emerald/30 text-brand-emerald text-xs font-bold">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v10.5m0-10.5h1.5A2.25 2.25 0 0 1 6 8.25v7.5A2.25 2.25 0 0 1 3.75 18H2.25" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>~0.85 € / порция</span>
+</div>
+<button class="w-9 h-9 rounded-full bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal flex items-center justify-center transition-all shadow-md active:scale-90" title="Започни готвене">
+<svg class="w-4 h-4 fill-brand-charcoal ml-0.5" viewBox="0 0 24 24">
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</button>
+</div>
+</article>
+<!-- Card 6: Ръжен селски хляб -->
+<article class="rounded-2xl bg-brand-surface border border-brand-border overflow-hidden card-hover-fx flex flex-col justify-between" data-purpose="recipe-card">
+<div>
+<div class="relative h-48 w-full overflow-hidden bg-brand-charcoal">
+<img alt="Ръжен селски хляб" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpWFiUMsXcn-NW37wzOcAWYb97AOlSNooUIoVJs8hUgTjcCS2A18FHksLV0KL5Wa271vFretKa-Q1d3Gzq8uv74qT2xlTIe7Bb426xKaSH1Lt25X7Zhd2qKWWztOoGKi-jz2l9Wrl1n3H9y7iWw_5YhNPYrqspLsOw_V16tNZXpH0Dhq4AZ6TubpjmiGhbr2wf6Tl5ozlt7KKr0Qx03L-FWee58ZPANJyzEUUlQ-Pr">
+<div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-brand-emerald text-white">
+                100% налично
+              </span>
+</div>
+<button class="absolute top-3 right-3 p-2 rounded-full bg-brand-charcoal/80 text-brand-cream hover:text-brand-amber transition-colors backdrop-blur-sm">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<div class="p-5 space-y-3">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-amber/20 text-brand-amber border border-brand-amber/40">
+                Хлебопекарна
+              </span>
+<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-brand-emerald/20 text-brand-emerald border border-brand-emerald/40">
+                Пълнозърнесто
+              </span>
+</div>
+<h3 class="text-base font-bold text-white leading-snug line-clamp-2 hover:text-brand-amber transition-colors cursor-pointer">
+              Ръжен селски хляб с дива закваска и хрупкава коричка
+            </h3>
+<div class="flex items-center gap-4 text-xs text-brand-muted">
+<div class="flex items-center gap-1">
+<span>⏱</span>
+<span class="font-medium text-brand-cream">180 мин</span>
+</div>
+<div class="flex items-center gap-1">
+<span>🔥</span>
+<span class="font-medium text-brand-cream">Майсторско</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-brand-amber">★</span>
+<span class="font-bold text-white">4.9</span>
+<span class="text-[11px]">(112)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-5 py-3.5 bg-brand-cardDark border-t border-brand-border/70 flex items-center justify-between">
+<div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-brand-emeraldBg border border-brand-emerald/30 text-brand-emerald text-xs font-bold">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v10.5m0-10.5h1.5A2.25 2.25 0 0 1 6 8.25v7.5A2.25 2.25 0 0 1 3.75 18H2.25" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>~0.65 € / порция</span>
+</div>
+<button class="w-9 h-9 rounded-full bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal flex items-center justify-center transition-all shadow-md active:scale-90" title="Започни готвене">
+<svg class="w-4 h-4 fill-brand-charcoal ml-0.5" viewBox="0 0 24 24">
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</button>
+</div>
+</article>
+</section>
+<!-- END: RecipeGridSection -->
+<!-- BEGIN: PaginationBar -->
+<div class="flex items-center justify-center gap-2 pt-6 pb-12" data-purpose="pagination">
+<button class="p-2 rounded-lg bg-brand-surface border border-brand-border text-brand-muted hover:text-white transition-colors" disabled="">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M15.75 19.5 8.25 12l7.5-7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<button class="w-8 h-8 rounded-lg bg-brand-amber text-brand-charcoal text-xs font-black">1</button>
+<button class="w-8 h-8 rounded-lg bg-brand-surface border border-brand-border text-brand-cream text-xs font-semibold hover:border-brand-amber/50">2</button>
+<button class="w-8 h-8 rounded-lg bg-brand-surface border border-brand-border text-brand-cream text-xs font-semibold hover:border-brand-amber/50">3</button>
+<span class="text-xs text-brand-muted px-1">...</span>
+<button class="w-8 h-8 rounded-lg bg-brand-surface border border-brand-border text-brand-cream text-xs font-semibold hover:border-brand-amber/50">14</button>
+<button class="p-2 rounded-lg bg-brand-surface border border-brand-border text-brand-muted hover:text-white transition-colors">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="m8.25 4.5 7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- END: PaginationBar -->
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: MinimalFooter -->
+<footer class="border-t border-brand-border/70 bg-brand-surface/50 py-6 text-center text-xs text-brand-muted">
+<div class="max-w-[1360px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+<div class="flex items-center gap-2">
+<span class="font-bold text-white">The Best Idea Eatery</span>
+<span>© 2025 Всички права запазени.</span>
+</div>
+<div class="flex items-center gap-4 text-brand-muted">
+<a class="hover:text-brand-amber transition-colors" href="#">Политика за поверителност</a>
+<span>•</span>
+<a class="hover:text-brand-amber transition-colors" href="#">Условия за ползване</a>
+<span>•</span>
+<a class="hover:text-brand-amber transition-colors" href="#">Помощ &amp; Контакти</a>
+</div>
+</div>
+</footer>
+<!-- END: MinimalFooter -->
+
+
+</body></html>

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { ROLES } from '../../constants/roles';
+import { ROLES, getRoleWeight } from '../../constants/roles';
 import { logActivity } from '../../lib/activityLogger';
 
 const ManageUsers = () => {
@@ -171,13 +171,13 @@ const ManageUsers = () => {
     [ROLES.USER]: t('manage_users.short_roles.user')
   };
 
-  // Filter by rank/visibility (e.g. Moderator sees only same and lower rank)
+  // Filter by rank/visibility: lower rank users cannot see higher rank users (e.g. Admin cannot see Owner)
   const visibleUsers = usersList.filter(u => {
-    if (user?.role === ROLES.MODERATOR) {
-      const uRole = u.status?.level || u.role || ROLES.USER;
-      if (uRole === ROLES.OWNER || uRole === ROLES.ADMIN) return false;
-    }
-    return true;
+    const actorWeight = getRoleWeight(user?.role);
+    const targetRole = u.status?.level || u.role || ROLES.USER;
+    const targetWeight = getRoleWeight(targetRole);
+
+    return targetWeight <= actorWeight;
   });
 
   // Derived filtered data
@@ -294,7 +294,7 @@ const ManageUsers = () => {
             <div>
               <h1 className="text-xl font-bold text-slate-100">{t('manage_users.title')}</h1>
               <p className="text-xs font-medium text-primary/70">
-                {visibleUsers.length} {user?.role === ROLES.MODERATOR ? t('manage_users.accessible_total') : t('manage_users.registered_total')}
+                {visibleUsers.length} {user?.role === ROLES.OWNER ? t('manage_users.registered_total') : t('manage_users.accessible_total')}
               </p>
             </div>
           </div>

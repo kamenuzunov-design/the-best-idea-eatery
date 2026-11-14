@@ -24,6 +24,7 @@ import {
   slugifyRecipeTitle
 } from '../../lib/communityUtils';
 import { calculateNutritionFromIngredients } from '../../lib/recipeNutrition';
+import { getGeminiApiKey } from '../../lib/geminiClient';
 
 const ManageRecipes = () => {
   const { t, i18n } = useTranslation();
@@ -63,11 +64,10 @@ const ManageRecipes = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [activeTab, setActiveTab] = useState('basic'); // basic, media, ingredients, steps
-  const [isAiTranslating, setIsAiTranslating] = useState(false);
   const [isSavingRecipe, setIsSavingRecipe] = useState(false);
-  const [aiTranslateSuccessMsg, setAiTranslateSuccessMsg] = useState('');
-  const [hasAiTranslatedInSession, setHasAiTranslatedInSession] = useState(false);
+  const [isTranslatingAndSaving, setIsTranslatingAndSaving] = useState(false);
   const lastOpenedEditIdRef = useRef(null);
+  const hasApiKey = Boolean(getGeminiApiKey()?.trim());
 
   // Basic Info - Reactive 6-language map
   const [titlesByLang, setTitlesByLang] = useState({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
@@ -171,252 +171,6 @@ const ManageRecipes = () => {
   const handleLocalDescChange = (e) => {
     const val = e.target.value;
     setDescsByLang(prev => ({ ...prev, [currentLang]: val }));
-  };
-
-  const handleTranslateRecipeWithAI = async () => {
-    const isCurrentEn = currentLang === 'en';
-    const sourceLang = (!isCurrentEn && titlesByLang[currentLang]?.trim())
-      ? currentLang
-      : (titlesByLang.bg?.trim() ? 'bg' : (titlesByLang.en?.trim() ? 'en' : currentLang));
-    const sourceTitle = (
-      titlesByLang[sourceLang] ||
-      titlesByLang[currentLang] ||
-      titlesByLang.bg ||
-      titlesByLang.en ||
-      ''
-    ).trim();
-    const sourceDesc = (
-      descsByLang[sourceLang] ||
-      descsByLang[currentLang] ||
-      descsByLang.bg ||
-      descsByLang.en ||
-      ''
-    ).trim();
-    const notesList = recipeIngredients.map(i => (
-      (sourceLang === 'en'
-        ? (i.notes_en || i.notes_local || i.notes?.en || i.notes?.bg || '')
-        : (i.notes_local || i.notes?.[sourceLang] || i.notes?.bg || i.notes_en || i.notes?.en || '')
-      )
-    ).trim());
-    const stepsList = recipeSteps.map(s => (
-      (sourceLang === 'en'
-        ? (s.instruction_en || s.instruction_local || s.instruction?.en || s.instruction?.bg || '')
-        : (s.instruction_local || s.instruction?.[sourceLang] || s.instruction?.bg || s.instruction_en || s.instruction?.en || '')
-      )
-    ).trim());
-
-    if (!sourceTitle && !sourceDesc && !notesList.some(Boolean) && !stepsList.some(Boolean)) {
-      return;
-    }
-
-    setIsAiTranslating(true);
-    setAiTranslateSuccessMsg('');
-    try {
-      const aiRes = await translateRecipeTo5Languages({
-        title: sourceTitle,
-        description: sourceDesc,
-        notesList,
-        stepsList,
-        sourceLang
-      });
-
-      if (!aiRes.translatedAll) {
-        alert(
-          t(
-            'moderation.ai_translate_failed',
-            'Преводът с Chef AI не успя (проверете интернет връзката или Gemini API ключа).'
-          )
-        );
-        return;
-      }
-
-      const nextTitleMap = {
-        ...titlesByLang,
-        ...aiRes.title,
-        ...(sourceTitle ? { [sourceLang]: sourceTitle } : {})
-      };
-      const nextDescMap = {
-        ...descsByLang,
-        ...aiRes.description,
-        ...(sourceDesc ? { [sourceLang]: sourceDesc } : {})
-      };
-
-      if (sourceTitle) {
-        setTitlesByLang(nextTitleMap);
-        if (!editingId) {
-          const nextSlug = slugifyRecipeTitle(aiRes.title?.en || sourceTitle);
-          if (nextSlug) setSlug(nextSlug);
-        }
-      }
-      if (sourceDesc) {
-        setDescsByLang(nextDescMap);
-      }
-
-      const nextIngredientsState = recipeIngredients.map((ing, idx) => {
-        const noteMap = {
-          ...(typeof ing.notes === 'object' && ing.notes ? ing.notes : {}),
-          ...(aiRes.notes[idx] || {})
-        };
-        const noteAuthor = notesList[idx] || '';
-        if (noteAuthor) noteMap[sourceLang] = noteAuthor;
-        return {
-          ...ing,
-          notes: noteMap,
-          notes_bg: noteMap.bg || '',
-          notes_en: noteMap.en || '',
-          notes_es: noteMap.es || '',
-          notes_it: noteMap.it || '',
-          notes_fr: noteMap.fr || '',
-          notes_de: noteMap.de || '',
-          notes_local: sourceLang === currentLang ? noteAuthor : (noteMap[currentLang] || ing.notes_local)
-        };
-      });
-      setRecipeIngredients(nextIngredientsState);
-
-      const nextStepsState = recipeSteps.map((step, idx) => {
-        const stepMap = {
-          ...(typeof step.instruction === 'object' && step.instruction ? step.instruction : {}),
-          ...(aiRes.steps[idx] || {})
-        };
-        const stepAuthor = stepsList[idx] || '';
-        if (stepAuthor) stepMap[sourceLang] = stepAuthor;
-        return {
-          ...step,
-          instruction: stepMap,
-          instruction_bg: stepMap.bg || '',
-          instruction_en: stepMap.en || '',
-          instruction_es: stepMap.es || '',
-          instruction_it: stepMap.it || '',
-          instruction_fr: stepMap.fr || '',
-          instruction_de: stepMap.de || '',
-          instruction_local: sourceLang === currentLang ? stepAuthor : (stepMap[currentLang] || step.instruction_local)
-        };
-      });
-      setRecipeSteps(nextStepsState);
-      setHasAiTranslatedInSession(true);
-
-      // If editing an existing recipe in Firestore, immediately persist the 6-language translation
-      if (editingId) {
-        const existingRec = recipes.find(r => r.id === editingId) || {};
-        const srv = parseInt(servings) || existingRec.servings || 1;
-        const persistedIngs = nextIngredientsState
-          .filter(i => i.ingredient_id && i.amount && i.unit_id)
-          .map(i => {
-            const noteObj = i.notes || { bg: '', en: '', es: '', it: '', fr: '', de: '' };
-            if (i.type === 'recipe') {
-              const subRec = recipes.find(r => r.id === (i.recipe_id || i.ingredient_id) || r.slug === (i.recipe_id || i.ingredient_id));
-              const subNameBg = i.ingredient_bg || subRec?.title_bg || subRec?.title?.bg || '';
-              const subNameEn = i.ingredient_en || subRec?.title_en || subRec?.title?.en || '';
-              return {
-                type: 'recipe',
-                ingredient_id: i.recipe_id || i.ingredient_id,
-                recipe_id: i.recipe_id || i.ingredient_id,
-                recipe_slug: subRec?.slug || i.recipe_slug || i.recipe_id || i.ingredient_id,
-                name: {
-                  bg: subNameBg,
-                  en: subNameEn,
-                  es: subRec?.title?.es || i.name?.es || '',
-                  it: subRec?.title?.it || i.name?.it || '',
-                  fr: subRec?.title?.fr || i.name?.fr || '',
-                  de: subRec?.title?.de || i.name?.de || ''
-                },
-                ingredient_bg: subNameBg,
-                ingredient_en: subNameEn,
-                amount: (parseFloat(i.amount) || 0) / srv,
-                unit_id: i.unit_id,
-                notes: noteObj,
-                notes_bg: noteObj.bg || '',
-                notes_en: noteObj.en || '',
-                notes_es: noteObj.es || '',
-                notes_it: noteObj.it || '',
-                notes_fr: noteObj.fr || '',
-                notes_de: noteObj.de || ''
-              };
-            }
-            const dbIng = ingredientsList.find(dbI => dbI.id === i.ingredient_id);
-            return {
-              type: 'ingredient',
-              ingredient_id: i.ingredient_id,
-              name: {
-                bg: dbIng?.name_bg || dbIng?.name?.bg || '',
-                en: dbIng?.name_en || dbIng?.name?.en || '',
-                es: dbIng?.name?.es || '',
-                it: dbIng?.name?.it || '',
-                fr: dbIng?.name?.fr || '',
-                de: dbIng?.name?.de || ''
-              },
-              ingredient_bg: dbIng?.name_bg || dbIng?.name?.bg || '',
-              ingredient_en: dbIng?.name_en || dbIng?.name?.en || '',
-              amount: (parseFloat(i.amount) || 0) / srv,
-              unit_id: i.unit_id,
-              notes: noteObj,
-              notes_bg: noteObj.bg || '',
-              notes_en: noteObj.en || '',
-              notes_es: noteObj.es || '',
-              notes_it: noteObj.it || '',
-              notes_fr: noteObj.fr || '',
-              notes_de: noteObj.de || ''
-            };
-          });
-
-        const persistedSteps = nextStepsState
-          .filter(s => s.instruction_bg || s.instruction_en || (s.instruction && Object.values(s.instruction).some(Boolean)))
-          .map(s => {
-            const instObj = s.instruction || { bg: '', en: '', es: '', it: '', fr: '', de: '' };
-            return {
-              instruction: instObj,
-              instruction_bg: instObj.bg || '',
-              instruction_en: instObj.en || '',
-              instruction_es: instObj.es || '',
-              instruction_it: instObj.it || '',
-              instruction_fr: instObj.fr || '',
-              instruction_de: instObj.de || '',
-              timer_minutes: parseInt(s.timer_minutes) || null
-            };
-          });
-
-        const directUpdatePayload = {
-          title: nextTitleMap,
-          title_bg: nextTitleMap.bg || '',
-          title_en: nextTitleMap.en || '',
-          title_es: nextTitleMap.es || '',
-          title_it: nextTitleMap.it || '',
-          title_fr: nextTitleMap.fr || '',
-          title_de: nextTitleMap.de || '',
-          description: nextDescMap,
-          description_bg: nextDescMap.bg || '',
-          description_en: nextDescMap.en || '',
-          description_es: nextDescMap.es || '',
-          description_it: nextDescMap.it || '',
-          description_fr: nextDescMap.fr || '',
-          description_de: nextDescMap.de || '',
-          ...(persistedIngs.length > 0 ? { ingredients: persistedIngs } : {}),
-          ...(persistedSteps.length > 0 ? { steps: persistedSteps } : {}),
-          needs_translation: false,
-          translation_reason: null,
-          updatedAt: new Date().toISOString()
-        };
-
-        await updateDoc(doc(db, 'recipes', editingId), directUpdatePayload);
-        await syncRecipeCommunityPost({ ...existingRec, ...directUpdatePayload, id: editingId, slug: editingId }, editingId);
-        await logActivity(user.uid, user.email, 'ai_translate_recipe', `Translated recipe into 6 languages: ${nextTitleMap.en || sourceTitle}`);
-      }
-
-      setAiTranslateSuccessMsg(
-        t('recipes.ai_translate_done', 'Преведено на 6 езика (BG, EN, ES, IT, FR, DE) с Chef AI!')
-      );
-      setTimeout(() => setAiTranslateSuccessMsg(''), 5000);
-    } catch (err) {
-      console.error('Error in handleTranslateRecipeWithAI:', err);
-      alert(
-        t(
-          'moderation.ai_translate_failed',
-          'Преводът с Chef AI не успя (проверете интернет връзката или Gemini API ключа).'
-        )
-      );
-    } finally {
-      setIsAiTranslating(false);
-    }
   };
 
   // --- Dynamic Ingredients ---
@@ -601,12 +355,15 @@ const ManageRecipes = () => {
     });
   };
 
-  const handleSaveRecipe = async (e) => {
-    e.preventDefault();
+  const handleSaveRecipe = async (e, shouldTranslate = false) => {
+    if (e && e.preventDefault) e.preventDefault();
     const rawPrimaryTitle = (titlesByLang[currentLang] || titlesByLang.en || '').trim();
     if (!rawPrimaryTitle) return;
 
     setIsSavingRecipe(true);
+    if (shouldTranslate) {
+      setIsTranslatingAndSaving(true);
+    }
     try {
       const timestamp = new Date().getTime();
       // 1. AI Safety Check for new images (Skip for Admins to save resources)
@@ -636,7 +393,8 @@ const ManageRecipes = () => {
         return;
       }
 
-      // 2. Automatic 5-Language AI Translation (Title, Description, Ingredient Notes, Steps)
+      // 2. 6-Language AI Translation (Title, Description, Ingredient Notes, Steps)
+      // Only runs if user explicitly clicked "Translate & Save" (shouldTranslate === true)
       const originalRecipe = editingId ? recipes.find(r => r.id === editingId) : null;
       const existingTitle = (typeof originalRecipe?.title === 'object' && originalRecipe?.title !== null) ? originalRecipe.title : {};
       const existingDesc = (typeof originalRecipe?.description === 'object' && originalRecipe?.description !== null) ? originalRecipe.description : {};
@@ -654,9 +412,7 @@ const ManageRecipes = () => {
         sourceLang === 'en' ? (s.instruction_en || s.instruction_local || '') : (s.instruction_local || s.instruction_en || '')
       ).trim());
 
-      const all5Langs = ['bg', 'en', 'es', 'it', 'fr', 'de'];
-      const hasAllTitleLangs = all5Langs.every(l => (titlesByLang[l] || existingTitle[l] || '').trim());
-      const shouldRunAiTranslation = !hasAiTranslatedInSession && (sourceLang !== 'en' || !hasAllTitleLangs || !editingId || originalRecipe?.needs_translation);
+      const shouldRunAiTranslation = Boolean(shouldTranslate && (sourceTitle || sourceDesc || notesList.some(Boolean) || stepsList.some(Boolean)));
 
       let aiTranslated = null;
       if (shouldRunAiTranslation) {
@@ -706,7 +462,7 @@ const ManageRecipes = () => {
       if (extra1File) e1Url = await uploadImage(extra1File, `recipes/${finalSlug}/extra1_${timestamp}`);
       if (extra2File) e2Url = await uploadImage(extra2File, `recipes/${finalSlug}/extra2_${timestamp}`);
 
-      const needsTranslation = aiTranslated ? !aiTranslated.translatedAll : false;
+      const needsTranslation = shouldRunAiTranslation ? !aiTranslated?.translatedAll : (originalRecipe?.needs_translation ?? false);
       const translationReason = needsTranslation ? 'pending' : null;
 
       const recipeData = {
@@ -965,12 +721,12 @@ const ManageRecipes = () => {
       alert(t('recipes.error_saving', { message: errorMsg }));
     } finally {
       setIsSavingRecipe(false);
+      setIsTranslatingAndSaving(false);
     }
   };
 
   const handleEditClick = (recipe) => {
     setEditingId(recipe.id);
-    setHasAiTranslatedInSession(false);
     const tBg = recipe.title?.bg || recipe.title_bg || '';
     const tEn = recipe.title?.en || recipe.title_en || '';
     const tEs = recipe.title?.es || recipe.title_es || '';
@@ -1418,7 +1174,6 @@ const ManageRecipes = () => {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setHasAiTranslatedInSession(false);
     lastOpenedEditIdRef.current = null;
     setTitlesByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
     setDescsByLang({ bg: '', en: '', es: '', it: '', fr: '', de: '' });
@@ -1883,42 +1638,6 @@ const ManageRecipes = () => {
             <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-200 uppercase font-bold bg-background-dark px-3 py-1 rounded">
               {t('common.buttons.cancel')}
             </button>
-          </div>
-
-          {/* 5-Language Chef AI Auto-Translation Bar */}
-          <div className="mb-4 p-2.5 rounded-xl bg-gradient-to-r from-primary/15 via-[#b8860b]/10 to-transparent border border-primary/30 flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="material-symbols-outlined text-primary text-base shrink-0">translate</span>
-                <span className="text-[11px] text-slate-300 font-medium leading-tight">
-                  {t(
-                    'recipes.ai_translate_hint',
-                    'Въведете рецептата само на Вашия език — Chef AI автоматично превежда заглавие, описание, бележки и стъпки на 6 езика.'
-                  )}
-                </span>
-              </div>
-              <button
-                type="button"
-                disabled={isAiTranslating || isSavingRecipe}
-                onClick={handleTranslateRecipeWithAI}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-[11px] uppercase tracking-wider shadow-sm hover:brightness-110 transition-all cursor-pointer disabled:opacity-50"
-              >
-                <span className={`material-symbols-outlined text-sm ${isAiTranslating ? 'animate-spin' : ''}`}>
-                  {isAiTranslating ? 'sync' : 'auto_awesome'}
-                </span>
-                <span>
-                  {isAiTranslating
-                    ? t('recipes.ai_translating_btn', 'Превеждане...')
-                    : t('recipes.ai_translate_5langs', 'Преведи (6 езика)')}
-                </span>
-              </button>
-            </div>
-            {aiTranslateSuccessMsg && (
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                <span className="material-symbols-outlined text-sm">check_circle</span>
-                <span>{aiTranslateSuccessMsg}</span>
-              </div>
-            )}
           </div>
 
           <div className="flex gap-2 border-b border-primary/20 mb-4 overflow-x-auto hide-scrollbar">
@@ -2408,18 +2127,47 @@ const ManageRecipes = () => {
             </div>
           )}
           
-          <button
-            type="submit"
-            disabled={isSavingRecipe || isAiTranslating}
-            className={`w-full font-bold py-3 rounded-lg transition-colors border mt-4 flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50 ${editingId ? 'bg-[#b8860b]/20 hover:bg-[#b8860b]/30 text-[#b8860b] border-[#b8860b]/30' : 'bg-primary/20 hover:bg-primary/30 text-primary border-primary/30'}`}
-          >
-            <span className={`material-symbols-outlined text-[20px] ${isSavingRecipe ? 'animate-spin' : ''}`}>
-              {isSavingRecipe ? 'sync' : (editingId ? 'save' : 'add')}
-            </span>
-            {isSavingRecipe
-              ? t('recipes.translating_and_saving', 'Превеждане на 6 езика и запазване...')
-              : (editingId ? t('recipes.save_changes') : t('recipes.save_recipe'))}
-          </button>
+          <div className="flex flex-col gap-3 mt-5 pt-3 border-t border-primary/10">
+            {/* Button 1 (Top): Translate to 6 languages & Save (Gemini AI) - Visible when hasApiKey */}
+            {hasApiKey && (
+              <button
+                type="button"
+                disabled={isSavingRecipe}
+                onClick={(e) => handleSaveRecipe(e, true)}
+                className="w-full font-extrabold py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark shadow-[0_0_20px_rgba(212,175,53,0.25)] hover:shadow-[0_0_25px_rgba(212,175,53,0.4)] hover:brightness-110 active:scale-[0.99] transition-all flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <span className={`material-symbols-outlined text-[20px] ${isTranslatingAndSaving ? 'animate-spin' : ''}`}>
+                  {isTranslatingAndSaving ? 'sync' : 'auto_awesome'}
+                </span>
+                <span>
+                  {isTranslatingAndSaving
+                    ? t('recipes.translating_and_saving', 'Превеждане на 6 езика и запазване...')
+                    : t('recipes.translate_and_save_recipe', 'Преведи и запази рецептата')}
+                </span>
+              </button>
+            )}
+
+            {/* Button 2 (Bottom): Save without AI translation (Instant) */}
+            <button
+              type="button"
+              disabled={isSavingRecipe}
+              onClick={(e) => handleSaveRecipe(e, false)}
+              className={`w-full font-bold py-3 px-4 rounded-xl transition-all border flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50 ${
+                editingId
+                  ? 'bg-surface-dark border-[#b8860b]/40 hover:bg-[#b8860b]/10 text-slate-100 hover:border-[#b8860b]'
+                  : 'bg-surface-dark border-primary/40 hover:bg-primary/10 text-slate-100 hover:border-primary'
+              }`}
+            >
+              <span className={`material-symbols-outlined text-[20px] ${isSavingRecipe && !isTranslatingAndSaving ? 'animate-spin' : ''}`}>
+                {isSavingRecipe && !isTranslatingAndSaving ? 'sync' : (editingId ? 'save' : 'add')}
+              </span>
+              <span>
+                {isSavingRecipe && !isTranslatingAndSaving
+                  ? t('recipes.saving_btn', 'Запазване...')
+                  : t('recipes.save_recipe', 'Запази рецептата')}
+              </span>
+            </button>
+          </div>
         </form>
         )}
 

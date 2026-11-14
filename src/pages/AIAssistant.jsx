@@ -654,7 +654,7 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
         generationConfig: {
           temperature: 0.7
         },
-        timeoutMs: 12000
+        timeoutMs: 25000
       });
 
       const text = response?.text;

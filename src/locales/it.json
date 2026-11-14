@@ -877,6 +877,11 @@
     "ai_translate_done": "Tradotto in 6 lingue (BG, EN, ES, IT, FR, DE) con Chef AI!",
     "auto_translated_placeholder": "Tradotto automaticamente da Chef AI...",
     "translating_and_saving": "Traduzione in 6 lingue e salvataggio...",
+    "translate_and_save_changes": "Traduci e salva modifiche",
+    "translate_and_save_recipe": "Traduci e salva ricetta",
+    "saving_btn": "Salvataggio...",
+    "ai_key_required_short": "La traduzione richiede la chiave API Gemini",
+    "ai_key_required_hint": "Inserisci una chiave API Gemini nelle Impostazioni per abilitare la traduzione automatica",
     "seed_success": "Il database è stato aggiornato e normalizzato con successo!",
     "seed_error": "Si è verificato un errore durante l'aggiornamento del database."
   },
@@ -1204,6 +1209,7 @@
       "cloud_backup_error": "Backup su cloud fallito.",
       "downloading_backup": "Download del backup...",
       "cloud_restore_error": "Ripristino dal cloud fallito.",
+      "cloud_restore_cors_error": "Il browser ha bloccato la lettura diretta dal cloud (criterio CORS). Scarica il backup utilizzando il pulsante ⬇️ e ripristinalo tramite 'Ripristino da file locale'.",
       "backup_deleted": "Backup eliminato.",
       "delete_backup_error": "Eliminazione fallita."
     },
@@ -1214,6 +1220,7 @@
       "empty": "Nessun backup su cloud trovato",
       "pending": "In elaborazione...",
       "restore_tooltip": "Ripristina da questo backup",
+      "download_tooltip": "Scarica il backup sul computer",
       "delete_tooltip": "Elimina backup",
       "auto_limit_note": "* Vengono conservati automaticamente fino a 5 backup recenti"
     },
