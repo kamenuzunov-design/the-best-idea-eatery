@@ -270,7 +270,7 @@ const GourmetEvents = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32 overflow-x-hidden">
+    <div className="relative flex w-full flex-col bg-background-dark font-display pb-6 lg:pb-8 overflow-x-hidden">
       {/* Toast Notification */}
       {toastMsg && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[150] bg-emerald-500 text-background-dark px-5 py-2.5 rounded-2xl font-extrabold text-xs uppercase tracking-wider shadow-2xl flex items-center gap-2 animate-in fade-in duration-200">
@@ -279,7 +279,7 @@ const GourmetEvents = () => {
         </div>
       )}
 
-      <main className="flex-1 px-4 pt-5 space-y-5">
+      <main className="flex-1 w-full lg:max-w-[1000px] mx-auto px-4 pt-5 space-y-5">
         {/* Page Heading + Admin Shortcut */}
         <section className="flex flex-col gap-2.5">
           <div>
@@ -347,99 +347,200 @@ const GourmetEvents = () => {
               const seatsLeft = Math.max(0, capacity - bookedSeats);
 
               return (
-                <div
-                  onClick={() => handleOpenEventModal(featuredEvent)}
-                  className="relative group overflow-hidden rounded-3xl bg-surface-dark border border-primary/30 shadow-[0_10px_30px_rgba(212,175,53,0.15)] cursor-pointer"
-                >
-                  <div className="aspect-[16/10] w-full relative overflow-hidden">
-                    <img
-                      src={featuredEvent.image}
-                      alt={title}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/images/recipe-placeholder.png';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/65 to-transparent"></div>
-                  </div>
-
-                  <div className="p-5 -mt-16 relative z-10 space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="bg-primary text-background-dark text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-md">
+                <>
+                  {/* Desktop Featured Event Hero Ribbon (>= lg) — 1:1 with Home Hero */}
+                  <div
+                    onClick={() => handleOpenEventModal(featuredEvent)}
+                    className="hidden lg:flex relative rounded-2xl bg-brand-surface border border-brand-border overflow-hidden shadow-xl min-h-[240px] transition-all hover:border-brand-amber/50 cursor-pointer group"
+                  >
+                    {/* Left 50% Image Container */}
+                    <div className="relative w-1/2 min-h-[240px] max-h-[340px] overflow-hidden shrink-0 bg-brand-charcoal">
+                      <img
+                        src={featuredEvent.image}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/images/recipe-placeholder.png';
+                        }}
+                      />
+                      <span className="absolute top-3.5 left-3.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-brand-amber text-brand-charcoal shadow-md">
                         ★ {t('gourmet_events.featured_badge')}
                       </span>
-                      <span className="bg-surface-dark/90 backdrop-blur-md text-primary border border-primary/30 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                        {t(`gourmet_events.categories.${featuredEvent.category || 'masterclass'}`)}
-                      </span>
-                      {existingBooking && (
-                        <span className="bg-emerald-500 text-background-dark text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
-                          {t('gourmet_events.booked_badge', { seats: existingBooking.seats })}
-                        </span>
-                      )}
                     </div>
 
-                    <h3 className="text-xl sm:text-2xl font-extrabold text-white leading-tight drop-shadow-md">
-                      {title}
-                    </h3>
-
-                    <div className="flex flex-col gap-1 text-xs text-slate-300 font-semibold">
-                      <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
-                        {formatEventDate(featuredEvent.date)} • {featuredEvent.time}
-                      </span>
-                      {loc && (
-                        <span className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-sm text-primary">location_on</span>
-                          {loc}
-                        </span>
-                      )}
-                      <span className="text-[11px] text-amber-400 font-bold">
-                        {seatsLeft > 0
-                          ? t('gourmet_events.seats_left', { left: seatsLeft, total: capacity })
-                          : t('gourmet_events.sold_out')}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-primary/15 gap-2 flex-wrap">
-                      <span className="text-primary font-extrabold text-xl">
-                        {Number(featuredEvent.price_eur) > 0
-                          ? t('gourmet_events.price_eur', { price: featuredEvent.price_eur })
-                          : t('gourmet_events.free_price')}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {featuredEvent.category === 'online' &&
-                          existingBooking &&
-                          (featuredEvent.meeting_url || featuredEvent.external_url) && (
-                            <a
-                              href={featuredEvent.meeting_url || featuredEvent.external_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="px-3.5 py-2.5 rounded-xl bg-emerald-500 text-background-dark font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md hover:brightness-110 active:scale-95 transition-all"
-                            >
-                              <span className="material-symbols-outlined text-sm">videocam</span>
-                              <span>{t('gourmet_events.join_online_event_btn', 'Влез в срещата')}</span>
-                            </a>
+                    {/* Right 50% Information Content */}
+                    <div className="w-1/2 p-6 flex flex-col justify-between space-y-4">
+                      <div className="space-y-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-brand-amber/15 text-brand-amber border border-brand-amber/40">
+                            {t(`gourmet_events.categories.${featuredEvent.category || 'masterclass'}`)}
+                          </span>
+                          {existingBooking && (
+                            <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              {t('gourmet_events.booked_badge', { seats: existingBooking.seats })}
+                            </span>
                           )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEventModal(featuredEvent);
-                          }}
-                          className={`px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-lg cursor-pointer ${
-                            existingBooking
-                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                              : 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark hover:scale-105'
-                          }`}
-                        >
-                          {existingBooking ? t('gourmet_events.manage_booking_btn') : t('gourmet_events.book_btn')}
-                        </button>
+                        </div>
+
+                        <h3 className="text-2xl font-black text-white tracking-tight leading-snug group-hover:text-brand-amber transition-colors">
+                          {title}
+                        </h3>
+
+                        <div className="flex flex-col gap-1.5 text-xs text-brand-cream font-medium pt-0.5">
+                          <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[15px] text-brand-amber">calendar_today</span>
+                            {formatEventDate(featuredEvent.date)} • {featuredEvent.time}
+                          </span>
+                          {loc && (
+                            <span className="flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[15px] text-brand-amber">location_on</span>
+                              {loc}
+                            </span>
+                          )}
+                          <span className="text-[11px] text-brand-amber font-bold">
+                            {seatsLeft > 0
+                              ? t('gourmet_events.seats_left', { left: seatsLeft, total: capacity })
+                              : t('gourmet_events.sold_out')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-brand-border/60 gap-3 flex-wrap">
+                        <span className="text-brand-amber font-black text-xl">
+                          {Number(featuredEvent.price_eur) > 0
+                            ? t('gourmet_events.price_eur', { price: featuredEvent.price_eur })
+                            : t('gourmet_events.free_price')}
+                        </span>
+                        <div className="flex items-center gap-2.5">
+                          {featuredEvent.category === 'online' &&
+                            existingBooking &&
+                            (featuredEvent.meeting_url || featuredEvent.external_url) && (
+                              <a
+                                href={featuredEvent.meeting_url || featuredEvent.external_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-brand-charcoal font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95 transition-all"
+                              >
+                                <span className="material-symbols-outlined text-base">videocam</span>
+                                <span>{t('gourmet_events.join_online_event_btn', 'Влез в срещата')}</span>
+                              </a>
+                            )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEventModal(featuredEvent);
+                            }}
+                            className={`inline-flex items-center justify-center gap-2 w-44 py-2.5 px-4 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer ${
+                              existingBooking
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                : 'bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal'
+                            }`}
+                          >
+                            {existingBooking ? t('gourmet_events.manage_booking_btn') : t('gourmet_events.book_btn')}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+
+                  {/* Mobile Featured Event Card (< lg) */}
+                  <div
+                    onClick={() => handleOpenEventModal(featuredEvent)}
+                    className="lg:hidden relative group overflow-hidden rounded-3xl bg-surface-dark border border-primary/30 shadow-[0_10px_30px_rgba(212,175,53,0.15)] cursor-pointer"
+                  >
+                    <div className="aspect-[16/10] w-full relative overflow-hidden">
+                      <img
+                        src={featuredEvent.image}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/images/recipe-placeholder.png';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/65 to-transparent"></div>
+                    </div>
+
+                    <div className="p-5 -mt-16 relative z-10 space-y-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="bg-primary text-background-dark text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-md">
+                          ★ {t('gourmet_events.featured_badge')}
+                        </span>
+                        <span className="bg-surface-dark/90 backdrop-blur-md text-primary border border-primary/30 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                          {t(`gourmet_events.categories.${featuredEvent.category || 'masterclass'}`)}
+                        </span>
+                        {existingBooking && (
+                          <span className="bg-emerald-500 text-background-dark text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
+                            {t('gourmet_events.booked_badge', { seats: existingBooking.seats })}
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-xl sm:text-2xl font-extrabold text-white leading-tight drop-shadow-md">
+                        {title}
+                      </h3>
+
+                      <div className="flex flex-col gap-1 text-xs text-slate-300 font-semibold">
+                        <span className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
+                          {formatEventDate(featuredEvent.date)} • {featuredEvent.time}
+                        </span>
+                        {loc && (
+                          <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm text-primary">location_on</span>
+                            {loc}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-amber-400 font-bold">
+                          {seatsLeft > 0
+                            ? t('gourmet_events.seats_left', { left: seatsLeft, total: capacity })
+                            : t('gourmet_events.sold_out')}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-primary/15 gap-2 flex-wrap">
+                        <span className="text-primary font-extrabold text-xl">
+                          {Number(featuredEvent.price_eur) > 0
+                            ? t('gourmet_events.price_eur', { price: featuredEvent.price_eur })
+                            : t('gourmet_events.free_price')}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {featuredEvent.category === 'online' &&
+                            existingBooking &&
+                            (featuredEvent.meeting_url || featuredEvent.external_url) && (
+                              <a
+                                href={featuredEvent.meeting_url || featuredEvent.external_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-3.5 py-2.5 rounded-xl bg-emerald-500 text-background-dark font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md hover:brightness-110 active:scale-95 transition-all"
+                              >
+                                <span className="material-symbols-outlined text-sm">videocam</span>
+                                <span>{t('gourmet_events.join_online_event_btn', 'Влез в срещата')}</span>
+                              </a>
+                            )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEventModal(featuredEvent);
+                            }}
+                            className={`px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-lg cursor-pointer ${
+                              existingBooking
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                : 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark hover:scale-105'
+                            }`}
+                          >
+                            {existingBooking ? t('gourmet_events.manage_booking_btn') : t('gourmet_events.book_btn')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
               );
             })()}
           </section>

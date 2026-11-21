@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,7 @@ import { db } from '../lib/firebase';
 import { getRecipeTags, translateTag } from '../lib/recipeMetaUtils';
 import { getLocalizedField, getLocalizedRecipeTitle, extractLocalizedNote } from '../lib/localeUtils';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { callGemini, getGeminiApiKey } from '../lib/geminiClient';
+import { callGemini, getGeminiApiKey, getRemoteAIConfig, getBestGeminiModel, KNOWN_GEMINI_MODELS } from '../lib/geminiClient';
 
 const getUniqueId = (prefix) => {
   return `${prefix}-${Math.random().toString(36).substring(2, 11)}`;
@@ -46,6 +46,48 @@ const AIAssistant = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelpGuide, setShowHelpGuide] = useState(false);
   const [customApiKey, setCustomApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+  const [activeModelId, setActiveModelId] = useState(() => getBestGeminiModel());
+
+  useEffect(() => {
+    let isMounted = true;
+    getRemoteAIConfig().then((cfg) => {
+      if (isMounted && cfg?.primary_model) {
+        setActiveModelId(cfg.primary_model);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
+  const formatModelLabel = (modelId) => {
+    const known = KNOWN_GEMINI_MODELS.find(m => m.id === modelId);
+    if (known?.label) {
+      return known.label.replace(/\s*\([^)]*\)/g, '').trim();
+    }
+    return (modelId || 'gemini-3.8-flash')
+      .split('-')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  };
+
+  const getContextualPromptQuestion = () => {
+    const autoPrompt = (location.state?.autoPrompt || '').toLowerCase();
+    if (location.state?.recipeId || /липсва|замест|missing|substitut|manc|fehl|manqu/i.test(autoPrompt)) {
+      return t('ai.prompt_question_missing');
+    }
+    if (/сезон|seasonal|stagion|saison|temporada/i.test(autoPrompt)) {
+      return t('ai.prompt_question_seasonal');
+    }
+    if (/кухня|cuisine|cucina|cocina|küche|традицион/i.test(autoPrompt)) {
+      return t('ai.prompt_question_cuisine');
+    }
+    if (/събити|event|вечеря|празник|повод|occasion|официал/i.test(autoPrompt)) {
+      return t('ai.prompt_question_events');
+    }
+    if (autoPrompt.trim()) {
+      return t('ai.prompt_question_contextual');
+    }
+    return t('ai.prompt_question');
+  };
   
   // Extra ingredients for Chef AI queries
   const [extraIngredients, setExtraIngredients] = useState([]);
@@ -55,6 +97,12 @@ const AIAssistant = () => {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const latestChefMsgRef = useRef(null);
+  const suggestionsScrollRef = useRef(null);
+
+  // Suggestions tab pagination & random shuffle state (12 per page)
+  const SUGGESTIONS_PER_PAGE = 12;
+  const [suggestionsPage, setSuggestionsPage] = useState(1);
+  const [shuffleSeed, setShuffleSeed] = useState(() => Math.floor(Math.random() * 1000000));
 
   const handleAddExtraIngredient = (item) => {
     if (!item) return;
@@ -743,8 +791,60 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
 
   const filteredMatches = getFilteredRecipes();
 
+  // Deterministic pseudo-random sort keyed by shuffleSeed (updates on each click of "Бързи идеи")
+  const shuffledSuggestions = useMemo(() => {
+    const hashId = (str, seed) => {
+      let h = seed ^ 0x9e3779b9;
+      for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 0x85ebca6b);
+        h ^= h >>> 13;
+      }
+      return h >>> 0;
+    };
+    return [...filteredMatches].sort(
+      (a, b) => hashId(String(a.id || ''), shuffleSeed) - hashId(String(b.id || ''), shuffleSeed)
+    );
+  }, [filteredMatches, shuffleSeed]);
+
+  const totalSuggestionPages = Math.max(1, Math.ceil(shuffledSuggestions.length / SUGGESTIONS_PER_PAGE));
+  const safeSuggestionsPage = Math.min(suggestionsPage, totalSuggestionPages);
+
+  const paginatedSuggestions = useMemo(() => {
+    const startIndex = (safeSuggestionsPage - 1) * SUGGESTIONS_PER_PAGE;
+    return shuffledSuggestions.slice(startIndex, startIndex + SUGGESTIONS_PER_PAGE);
+  }, [shuffledSuggestions, safeSuggestionsPage]);
+
+  const handleSuggestionsPageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalSuggestionPages || newPage === safeSuggestionsPage) return;
+    setSuggestionsPage(newPage);
+    if (suggestionsScrollRef.current) {
+      suggestionsScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const getSuggestionPageNumbers = () => {
+    if (totalSuggestionPages <= 7) {
+      return Array.from({ length: totalSuggestionPages }, (_, i) => i + 1);
+    }
+    if (safeSuggestionsPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalSuggestionPages];
+    }
+    if (safeSuggestionsPage >= totalSuggestionPages - 3) {
+      return [
+        1,
+        '...',
+        totalSuggestionPages - 4,
+        totalSuggestionPages - 3,
+        totalSuggestionPages - 2,
+        totalSuggestionPages - 1,
+        totalSuggestionPages
+      ];
+    }
+    return [1, '...', safeSuggestionsPage - 1, safeSuggestionsPage, safeSuggestionsPage + 1, '...', totalSuggestionPages];
+  };
+
   return (
-    <main className="flex-1 flex flex-col bg-background-dark pb-24 h-[calc(100vh-60px)]">
+    <main className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto bg-background-dark pt-5 pb-6 h-[calc(100vh-60px)]">
       {/* Dynamic SEO Title & Headings */}
       <h1 className="sr-only">The Best Idea Eatery - AI Cooking Assistant</h1>
 
@@ -799,7 +899,14 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
         </button>
         <button
           id="tab-suggestions-ai"
-          onClick={() => setViewMode('suggestions')}
+          onClick={() => {
+            setViewMode('suggestions');
+            setShuffleSeed(Math.floor(Math.random() * 1000000));
+            setSuggestionsPage(1);
+            if (suggestionsScrollRef.current) {
+              suggestionsScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
           className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${
             viewMode === 'suggestions'
               ? 'bg-primary text-background-dark shadow-md shadow-primary/15'
@@ -905,27 +1012,62 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
             </div>
 
             {/* Input Bar & Suggestions chips */}
-            <div className="p-4 bg-surface-dark border-t border-primary/20 space-y-3">
-              {/* Text Input Row */}
-              <div className="flex gap-2 relative">
-                <input
+            <div className="p-4">
+              {/* Playful Context-Aware Prompt Heading */}
+              <div className="flex items-center justify-center gap-1.5 text-center pb-2.5">
+                <span className="material-symbols-outlined text-sm text-primary">auto_awesome</span>
+                <span className="text-xs sm:text-sm font-bold text-slate-200 tracking-tight">
+                  {getContextualPromptQuestion()}
+                </span>
+              </div>
+
+              {/* Gemini-style Prompt Composer Box */}
+              <div className="bg-background-dark/95 border border-primary/25 focus-within:border-primary/60 focus-within:shadow-[0_0_18px_rgba(212,175,53,0.16)] rounded-3xl px-4 pt-3 pb-2.5 transition-all shadow-inner">
+                {/* Writing Zone */}
+                <textarea
                   id="chat-message-input"
-                  type="text"
+                  rows={2}
                   placeholder={t('ai.input_placeholder')}
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="flex-1 bg-background-dark border border-primary/20 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary/50 focus:outline-none transition-all shadow-inner"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  className="w-full resize-none bg-transparent border-none p-0 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-0 leading-relaxed max-h-32 overflow-y-auto"
                 />
-                <button
-                  id="btn-send-message"
-                  onClick={() => handleSendMessage()}
-                  className="px-4 bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold rounded-xl flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined font-black">send</span>
-                </button>
+
+                {/* Bottom Toolbar: Read-only Model Indicator (Left) + Submit Icon (Right) */}
+                <div className="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-primary/10">
+                  <div
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-dark/90 border border-primary/15 text-[11px] font-bold text-slate-400 select-none"
+                    title={activeModelId}
+                  >
+                    <span className="material-symbols-outlined text-[13px] text-primary">auto_awesome</span>
+                    <span>{formatModelLabel(activeModelId)}</span>
+                  </div>
+
+                  <button
+                    id="btn-send-message"
+                    type="button"
+                    onClick={() => handleSendMessage()}
+                    disabled={!inputMessage.trim() || isTyping}
+                    aria-label={t('ai.send_prompt_label', 'Изпрати')}
+                    className={`size-9 rounded-full flex items-center justify-center transition-all shadow-md ${
+                      inputMessage.trim() && !isTyping
+                        ? 'bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark active:scale-95 cursor-pointer'
+                        : 'bg-surface-dark text-slate-500 border border-primary/15 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-lg font-black">arrow_upward</span>
+                  </button>
+                </div>
               </div>
 
+              {/* Extra Custom Ingredients & Quick Chips (Separated from Gemini Prompt Box) */}
+              <div className="mt-4 pt-3.5 border-t border-primary/10 space-y-3">
               {/* Extra Custom Ingredients Bar */}
               <div className="bg-background-dark/80 p-2.5 rounded-xl border border-primary/20 space-y-2">
                 <div className="flex items-center justify-between">
@@ -1013,11 +1155,12 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
                   ))}
                 </div>
               </div>
+              </div>
             </div>
           </div>
         ) : (
           /* SUGGESTIONS MODE */
-          <div className="h-full overflow-y-auto p-4 space-y-6">
+          <div ref={suggestionsScrollRef} className="h-full overflow-y-auto p-4 space-y-6">
             {/* Header info about profile */}
             <div className="p-4 bg-surface-dark/50 border border-primary/10 rounded-2xl shadow-inner space-y-2">
               <h3 className="text-xs font-black text-primary uppercase tracking-wider">{t('ai.dietary_profile_title')}</h3>
@@ -1047,16 +1190,21 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
             <div className="space-y-4">
               <h3 className="text-slate-100 text-lg font-bold tracking-tight flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">restaurant_menu</span>
-                {t('ai.suggested_recipes_title')}
+                <span>{t('ai.suggested_recipes_title')}</span>
+                {totalSuggestionPages > 1 && (
+                  <span className="text-xs font-normal text-slate-400">
+                    (Стр. {safeSuggestionsPage}/{totalSuggestionPages})
+                  </span>
+                )}
               </h3>
               
               <div className="grid grid-cols-1 gap-4">
-                {filteredMatches.length === 0 ? (
+                {shuffledSuggestions.length === 0 ? (
                   <div className="text-center py-10 text-slate-500 uppercase text-[10px] tracking-widest font-bold border border-primary/10 rounded-2xl bg-surface-dark/30">
                     {t('ai.no_matching_recipes')}
                   </div>
                 ) : (
-                  filteredMatches.map(recipe => {
+                  paginatedSuggestions.map(recipe => {
                     const title = getLocalizedRecipeTitle(recipe, currentLang) || getLocalizedField(recipe, 'title', currentLang) || (typeof recipe.title === 'string' ? recipe.title : '') || 'Recipe';
                     const calculatedTags = getRecipeTags(recipe, ingredientsDB);
                     const tags = calculatedTags.length > 0 ? calculatedTags : (recipe.tags || []);
@@ -1107,6 +1255,60 @@ Measurement system: ${userUnitSystem === 'imperial' ? 'Imperial (oz, fl oz, lb, 
                   })
                 )}
               </div>
+
+              {/* Pagination Controls (12 per page) */}
+              {totalSuggestionPages > 1 && (
+                <div className="flex items-center justify-center gap-1.5 sm:gap-2 pt-4 pb-2 select-none" data-purpose="suggestions-pagination">
+                  <button
+                    type="button"
+                    onClick={() => handleSuggestionsPageChange(safeSuggestionsPage - 1)}
+                    disabled={safeSuggestionsPage === 1}
+                    className="size-8 rounded-lg bg-brand-surface border border-brand-border text-brand-muted hover:text-white hover:border-brand-amber/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={t('common.pagination.prev', 'Предишна страница')}
+                    aria-label="Previous Page"
+                  >
+                    <span className="material-symbols-outlined text-lg leading-none">chevron_left</span>
+                  </button>
+
+                  {getSuggestionPageNumbers().map((p, idx) => {
+                    if (p === '...') {
+                      return (
+                        <span key={`ellipsis-${idx}`} className="text-xs text-brand-muted px-1 select-none">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    const isCurrent = p === safeSuggestionsPage;
+                    return (
+                      <button
+                        key={`page-${p}`}
+                        type="button"
+                        onClick={() => handleSuggestionsPageChange(p)}
+                        className={`size-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                          isCurrent
+                            ? 'bg-brand-amber text-brand-charcoal font-black shadow-md'
+                            : 'bg-brand-surface border border-brand-border text-brand-cream hover:border-brand-amber/50 hover:text-white'
+                        }`}
+                        aria-current={isCurrent ? 'page' : undefined}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => handleSuggestionsPageChange(safeSuggestionsPage + 1)}
+                    disabled={safeSuggestionsPage === totalSuggestionPages}
+                    className="size-8 rounded-lg bg-brand-surface border border-brand-border text-brand-muted hover:text-white hover:border-brand-amber/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={t('common.pagination.next', 'Следваща страница')}
+                    aria-label="Next Page"
+                  >
+                    <span className="material-symbols-outlined text-lg leading-none">chevron_right</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

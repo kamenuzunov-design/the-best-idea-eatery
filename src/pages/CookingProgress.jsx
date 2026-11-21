@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,9 @@ const CookingProgress = () => {
   const [chefCommunityPosts, setChefCommunityPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAchievement, setSelectedAchievement] = useState(null);
+  const RECIPES_PER_PAGE = 12;
+  const [currentPage, setCurrentPage] = useState(1);
+  const recipesSectionRef = useRef(null);
 
   // Fetch Chef Data and Recipes from Firestore
   useEffect(() => {
@@ -62,7 +65,10 @@ const CookingProgress = () => {
           return bTime - aTime;
         });
 
-        if (isMounted) setChefRecipes(list);
+        if (isMounted) {
+          setChefRecipes(list);
+          setCurrentPage(1);
+        }
 
         // 3. Fetch Chef's Shared Community Posts
         try {
@@ -145,11 +151,39 @@ const CookingProgress = () => {
     return evaluatedAchievements.filter(a => a.isUnlocked).length;
   }, [evaluatedAchievements]);
 
+  const totalPages = Math.max(1, Math.ceil(chefRecipes.length / RECIPES_PER_PAGE));
+
+  const paginatedRecipes = useMemo(() => {
+    const startIndex = (currentPage - 1) * RECIPES_PER_PAGE;
+    return chefRecipes.slice(startIndex, startIndex + RECIPES_PER_PAGE);
+  }, [chefRecipes, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    if (recipesSectionRef.current) {
+      recipesSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
+
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-24 overflow-x-hidden">
+    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-8 overflow-x-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 p-4 shadow-sm">
-        <div className="max-w-md mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-10 w-full lg:max-w-[1000px] mx-auto bg-surface-dark/90 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl lg:mt-4 mb-4 p-4 shadow-sm">
+        <div className="max-w-md lg:max-w-none mx-auto flex items-center justify-between">
           <button 
             onClick={() => navigate(queryUid ? -1 : '/profile')} 
             className="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors group cursor-pointer"
@@ -178,7 +212,7 @@ const CookingProgress = () => {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-xl mx-auto">
+      <main className="flex-1 w-full max-w-xl lg:max-w-[1000px] mx-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
@@ -357,11 +391,16 @@ const CookingProgress = () => {
             </section>
 
             {/* Author's Masterpieces / Published Recipes */}
-            <section className="px-6 py-4">
+            <section ref={recipesSectionRef} className="px-6 py-4 scroll-mt-20">
               <div className="flex items-center justify-between mb-4 px-2">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-primary/70 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-sm">auto_awesome</span>
                   {t('cooking_progress.recipes_title')}
+                  {totalPages > 1 && (
+                    <span className="text-[10px] font-bold text-slate-400 normal-case tracking-normal">
+                      ({currentPage}/{totalPages})
+                    </span>
+                  )}
                 </h3>
                 {recipesCount > 0 && (
                   <button 
@@ -374,8 +413,9 @@ const CookingProgress = () => {
               </div>
 
               {chefRecipes.length > 0 ? (
-                <div className="space-y-3.5">
-                  {chefRecipes.slice(0, 5).map(r => {
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    {paginatedRecipes.map(r => {
                     const rTitle = getLocalizedField(r, 'title', currentLang) || r.title || '';
                     const rDesc = getLocalizedField(r, 'description', currentLang) || r.description || '';
                     
@@ -393,40 +433,138 @@ const CookingProgress = () => {
                       <div 
                         key={r.id} 
                         onClick={() => navigate(`/recipe/${r.id}`)}
-                        className="bg-surface-dark/90 border border-primary/20 rounded-2xl overflow-hidden flex gap-4 shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
+                        className="bg-surface-dark/90 border border-primary/20 rounded-2xl overflow-hidden shadow-lg hover:border-primary/50 transition-all cursor-pointer group flex flex-col justify-between"
                       >
-                        <div className="w-24 sm:w-28 h-24 sm:h-28 shrink-0 overflow-hidden bg-background-dark border-r border-primary/20">
-                          <img 
-                            src={imgUrl} 
-                            alt={rTitle} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => { e.target.onerror = null; e.target.src = '/images/recipe-placeholder.png'; }}
-                          />
+                        {/* MOBILE VIEW (< lg): Horizontal layout */}
+                        <div className="flex lg:hidden gap-4">
+                          <div className="w-24 sm:w-28 h-24 sm:h-28 shrink-0 overflow-hidden bg-background-dark border-r border-primary/20">
+                            <img 
+                              src={imgUrl} 
+                              alt={rTitle} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => { e.target.onerror = null; e.target.src = '/images/recipe-placeholder.png'; }}
+                            />
+                          </div>
+                          <div className="flex flex-col justify-center py-2 pr-4 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
+                                <span>★ {ratingScore}</span>
+                                {votesCount > 0 && <span className="text-slate-400 font-normal">({votesCount})</span>}
+                              </span>
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-xs text-primary">schedule</span>
+                                {totalMins} {t('cooking_progress.min_abbr')}
+                              </span>
+                            </div>
+                            <h4 className="font-extrabold text-sm sm:text-base leading-snug text-slate-100 group-hover:text-primary transition-colors truncate">
+                              {rTitle}
+                            </h4>
+                            {rDesc && (
+                              <p className="text-xs text-slate-400 mt-1 line-clamp-1 italic font-normal">
+                                {rDesc}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex flex-col justify-center py-2 pr-4 min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
-                              <span>★ {ratingScore}</span>
-                              {votesCount > 0 && <span className="text-slate-400 font-normal">({votesCount})</span>}
+
+                        {/* DESKTOP VIEW (>= lg): Vertical Hero-style card */}
+                        <div className="hidden lg:flex flex-col h-full justify-between">
+                          <div>
+                            <div className="relative h-40 w-full overflow-hidden bg-background-dark shrink-0">
+                              <img
+                                src={imgUrl}
+                                alt={rTitle}
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                onError={(e) => { e.target.onerror = null; e.target.src = '/images/recipe-placeholder.png'; }}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-background-dark/80 via-transparent to-transparent"></div>
+                              <div className="absolute top-2.5 left-2.5">
+                                <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider bg-background-dark/80 backdrop-blur-md px-2 py-0.5 rounded-md border border-amber-500/30 flex items-center gap-1 shadow-sm">
+                                  <span>★ {ratingScore}</span>
+                                  {votesCount > 0 && <span className="text-slate-300 font-normal">({votesCount})</span>}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="p-3.5 space-y-1.5">
+                              <h4 className="font-bold text-sm leading-snug text-slate-100 group-hover:text-primary transition-colors line-clamp-2" title={rTitle}>
+                                {rTitle}
+                              </h4>
+                              {rDesc && (
+                                <p className="text-[11px] text-slate-400 line-clamp-2 italic font-normal leading-relaxed">
+                                  {rDesc}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="px-3.5 pb-3 pt-2 border-t border-primary/10 flex items-center justify-between text-[11px] text-slate-300 font-bold">
+                            <span className="flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px] text-primary">schedule</span>
+                              <span>{totalMins} {t('cooking_progress.min_abbr')}</span>
                             </span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-0.5">
-                              <span className="material-symbols-outlined text-xs text-primary">schedule</span>
-                              {totalMins} {t('cooking_progress.min_abbr')}
+                            <span className="material-symbols-outlined text-base text-primary/70 group-hover:text-primary group-hover:translate-x-0.5 transition-all">
+                              arrow_forward
                             </span>
                           </div>
-                          <h4 className="font-extrabold text-sm sm:text-base leading-snug text-slate-100 group-hover:text-primary transition-colors truncate">
-                            {rTitle}
-                          </h4>
-                          {rDesc && (
-                            <p className="text-xs text-slate-400 mt-1 line-clamp-1 italic font-normal">
-                              {rDesc}
-                            </p>
-                          )}
                         </div>
                       </div>
                     );
                   })}
-                </div>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-1.5 sm:gap-2 pt-5 pb-1 select-none" data-purpose="pagination">
+                      <button
+                        type="button"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="size-8 rounded-lg bg-surface-dark border border-primary/20 text-slate-300 hover:text-primary hover:border-primary/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={t('common.pagination.prev', 'Предишна страница')}
+                        aria-label="Previous Page"
+                      >
+                        <span className="material-symbols-outlined text-lg leading-none">chevron_left</span>
+                      </button>
+
+                      {getPageNumbers().map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span key={`ellipsis-${idx}`} className="text-xs text-slate-400 px-1 select-none">
+                              ...
+                            </span>
+                          );
+                        }
+
+                        const isCurrent = p === currentPage;
+                        return (
+                          <button
+                            key={`page-${p}`}
+                            type="button"
+                            onClick={() => handlePageChange(p)}
+                            className={`size-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                              isCurrent
+                                ? 'bg-primary text-background-dark font-black shadow-md'
+                                : 'bg-surface-dark border border-primary/20 text-slate-200 hover:border-primary/50 hover:text-primary'
+                            }`}
+                            aria-current={isCurrent ? 'page' : undefined}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="size-8 rounded-lg bg-surface-dark border border-primary/20 text-slate-300 hover:text-primary hover:border-primary/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={t('common.pagination.next', 'Следваща страница')}
+                        aria-label="Next Page"
+                      >
+                        <span className="material-symbols-outlined text-lg leading-none">chevron_right</span>
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-8 bg-surface-dark/50 border border-dashed border-primary/20 rounded-2xl">
                   <span className="material-symbols-outlined text-3xl text-slate-500 mb-1">restaurant</span>

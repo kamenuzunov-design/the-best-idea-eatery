@@ -2,6 +2,8 @@
   "app": {
     "title": "L'Idea Migliore",
     "subtitle": "A Tavola",
+    "full_name": "L'Idea Migliore A Tavola",
+    "header_subtitle": "Intelligenza Culinaria e Dispensa",
     "tagline": "Ecosistema culinario intelligente"
   },
   "common": {
@@ -52,6 +54,21 @@
     "not_logged_in": "Non registrato",
     "events": "Eventi",
     "community": "Community"
+  },
+  "desktop_nav": {
+    "weekly_planner": "Menu settimanale",
+    "seasonal_menu": "Menu stagionale",
+    "cuisines": "Cucine del mondo",
+    "get_android_app": "Scarica per Android",
+    "pantry_status": "Dispensa: {{count}} Ingredienti disponibili",
+    "view_pantry": "Vedi inventario dispensa",
+    "search_placeholder": "Cerca ricette, ingredienti, cucine..."
+  },
+  "desktop_footer": {
+    "rights": "Tutti i diritti riservati.",
+    "privacy": "Informativa sulla privacy",
+    "terms": "Termini di servizio",
+    "advertise": "Pubblicità e Contatti"
   },
   "auth": {
     "headings": {
@@ -162,7 +179,13 @@
     "discover_plan": "Scopri e Pianifica",
     "weekly_menu": "Menu Settimanale",
     "seasonal_menu": "Menu di Stagione",
-    "explore_cuisines": "Cucine del Mondo"
+    "explore_cuisines": "Cucine del Mondo",
+    "views_label": "visualizzazioni",
+    "views_title": "Numero di visualizzazioni",
+    "ratings_count": "valutazioni",
+    "view_btn": "Visualizza",
+    "cook_now_btn": "Cucina ora",
+    "find_by_pantry": "Trova ricette"
   },
   "categories": {
     "salad": "Insalate",
@@ -177,7 +200,7 @@
     "special": "Occasioni Speciali"
   },
   "pantry": {
-    "title": "La tua Dispensa",
+    "title": "La Mia Dispensa",
     "subtitle": "Scorte e Scadenze",
     "search": "Cerca ingredienti...",
     "all": "Tutti",
@@ -260,7 +283,7 @@
     "generate": "Genera Ricette",
     "suggested": "Suggerite per te",
     "uses_ingredients": "Utilizza i tuoi ingredienti!",
-    "chef_greeting": "Ciao! Sono **Chef AI** – il tuo assistente culinario gourmet personale. 🧑‍🍳\n\nVedo che hai **{{count}} prodotti** nella tua dispensa. Posso suggerirti ricette dalla nostra selezione, personalizzate in base a diete, esclusioni e allergie.\n\nCosa vorresti cucinare oggi?",
+    "chef_greeting": "Ciao! Sono il tuo **Chef AI** – assistente culinario personale. 🧑‍🍳\n\nVedo che hai **{{count}} prodotti** nella tua dispensa. Posso suggerirti ricette dalla nostra selezione, personalizzate in base a diete, esclusioni e allergie.\n\nCosa vorresti cucinare oggi?",
     "fallback_expiring_with_items": "Nella tua dispensa i seguenti prodotti sono in scadenza: **{{names}}**. Ti consiglio di cucinare una di queste ricette per ridurre lo spreco alimentare:",
     "fallback_expiring_none": "Non hai prodotti in scadenza nei prossimi 3 giorni. Ecco i migliori suggerimenti basati sulla tua dispensa:",
     "fallback_keto": "Certamente! Ecco le nostre migliori ricette **Keto**, adatte al tuo profilo:",
@@ -288,6 +311,13 @@
     "chip_keto": "Ricette Keto",
     "chip_substitutes": "Sostituzioni di ingredienti",
     "input_placeholder": "Chiedi una ricetta a Chef AI...",
+    "prompt_question": "Cosa cuciniamo di buono insieme oggi?",
+    "prompt_question_missing": "Come trasformiamo i tuoi ingredienti disponibili in un ottimo piatto oggi?",
+    "prompt_question_seasonal": "Quale piatto fresco di stagione prepariamo insieme oggi?",
+    "prompt_question_cuisine": "Verso quale viaggio culinario partiamo insieme oggi?",
+    "prompt_question_events": "Quale menu speciale prepariamo oggi per la tua occasione?",
+    "prompt_question_contextual": "Come sviluppiamo insieme questa deliziosa idea oggi?",
+    "send_prompt_label": "Invia",
     "dietary_profile_title": "Il tuo Profilo Dietetico:",
     "excluded_items_count": "{{count}} ingredienti esclusi",
     "no_dietary_restrictions": "Nessuna restrizione impostata",
@@ -741,6 +771,13 @@
     "view_list": "Vista a elenco",
     "recalculate_tags": "Ricalcola tag",
     "tags_btn": "Tag",
+    "missing_products_btn": "Prodotti mancanti",
+    "check_missing_products_tooltip": "Controlla le ricette con prodotti mancanti o non collegati nel database",
+    "missing_audit_all_ok": "Tutte le ricette verificate! Tutti gli ingredienti sono correttamente collegati ai prodotti nel database.",
+    "missing_audit_modal_title": "Verifica prodotti mancanti",
+    "missing_audit_summary": "Trovate {{recipeCount}} ricette con un totale di {{missingCount}} ingredienti mancanti o non collegati.",
+    "send_to_moderation_btn": "📋 Genera lista in Moderazione",
+    "send_to_moderation_success": "Lista generata con successo in Moderazione! Vuoi andare a Moderazione ora?",
     "filter_all": "Tutti",
     "filter_pending": "In attesa",
     "filter_active": "Attive",
@@ -789,6 +826,14 @@
     "sub_recipe": "Sub-ricetta",
     "no_ingredients": "Nessun ingrediente aggiunto",
     "recipe_badge": "RICETTA",
+    "unlinked_ingredient_tooltip": "⚠️ Questo ingrediente non è collegato ad alcun elemento in Prodotti (il costo e le calorie non saranno calcolati).",
+    "unlinked_ingredient_warning": "Manca in Prodotti — costo e calorie non possono essere calcolati!",
+    "unlinked_badge": "Manca in Prodotti",
+    "create_in_products_btn": "+ Aggiungi a Prodotti",
+    "create_in_products_tooltip": "Crea questo ingrediente come prodotto ufficiale nella nomenclatura",
+    "prompt_product_price": "Inserisci il prezzo stimato in EUR per 100 grammi per \"{{name}}\":",
+    "product_created_success": "Il prodotto \"{{name}}\" è stato aggiunto con successo a Prodotti con prezzo {{price}} € / 100g!",
+    "product_created_error": "Errore durante la creazione del prodotto: ",
     "change_sub_recipe_tooltip": "Clicca per cambiare la sub-ricetta",
     "select_ingredient_tooltip": "Clicca per cercare e selezionare l'ingrediente",
     "ingredient_placeholder": "-- Ingrediente --",
@@ -1004,8 +1049,17 @@
       "all": "Tutti",
       "translation": "Da tradurre",
       "approval": "In attesa di approvazione",
+      "missing_products": "Prodotti mancanti",
       "community": "Comunità Gourmet"
     },
+    "missing_products_banner_title": "Ricette con prodotti mancanti",
+    "missing_products_banner_desc_one": "1 ricetta è in attesa di collegare gli ingredienti ai prodotti nel database",
+    "missing_products_banner_desc_other": "{{count}} ricette sono in attesa di collegare gli ingredienti ai prodotti nel database",
+    "missing_products_badge": "Prodotti mancanti ({{count}})",
+    "missing_ingredients_label": "Ingredienti non collegati:",
+    "mark_reviewed_btn": "Segna come verificata",
+    "mark_reviewed_tooltip": "Rimuovi la ricetta dalla coda di revisione dei prodotti mancanti",
+    "empty_missing_products": "Nessuna ricetta con prodotti mancanti. Tutti gli ingredienti sono collegati!",
     "empty_translation": "Nessun elemento in attesa di traduzione.",
     "empty_approval": "Nessun contenuto in attesa di approvazione.",
     "empty_all": "La coda è completamente libera.",

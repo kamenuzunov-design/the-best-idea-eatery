@@ -285,9 +285,9 @@ const ManageEvents = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-28 min-h-screen font-display">
+    <div className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto lg:pt-5 bg-background-dark pb-28 min-h-screen font-display">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-sm">
+      <header className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/95 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => navigate('/admin')}

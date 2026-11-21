@@ -2,6 +2,8 @@
   "app": {
     "title": "Die Beste Idee",
     "subtitle": "Für Genießer",
+    "full_name": "Die Beste Idee Für Genießer",
+    "header_subtitle": "Kulinarische Intelligenz & Vorratskammer",
     "tagline": "Intelligentes kulinarisches Ökosystem"
   },
   "common": {
@@ -38,7 +40,7 @@
     "recipes": "Rezepte",
     "pantry": "Vorratskammer",
     "scanner": "Lebensmittel-Scanner",
-    "ai": "Chefkoch KI",
+    "ai": "Chef AI",
     "saved": "Gespeichert",
     "profile": "Profil",
     "my_profile": "Mein Profil",
@@ -52,6 +54,21 @@
     "not_logged_in": "Nicht angemeldet",
     "events": "Events",
     "community": "Community"
+  },
+  "desktop_nav": {
+    "weekly_planner": "Wochenmenü",
+    "seasonal_menu": "Saisonales Menü",
+    "cuisines": "Weltküchen",
+    "get_android_app": "App für Android holen",
+    "pantry_status": "Vorratskammer: {{count}} Zutaten verfügbar",
+    "view_pantry": "Vorratskammer ansehen",
+    "search_placeholder": "Rezepte, Zutaten, Küchen suchen..."
+  },
+  "desktop_footer": {
+    "rights": "Alle Rechte vorbehalten.",
+    "privacy": "Datenschutzerklärung",
+    "terms": "Nutzungsbedingungen",
+    "advertise": "Werbung & Kontakt"
   },
   "auth": {
     "headings": {
@@ -162,7 +179,13 @@
     "discover_plan": "Entdecken & Planen",
     "weekly_menu": "Wochenmenü",
     "seasonal_menu": "Saisonales Menü",
-    "explore_cuisines": "Weltküchen"
+    "explore_cuisines": "Weltküchen",
+    "views_label": "Aufrufe",
+    "views_title": "Anzahl der Aufrufe",
+    "ratings_count": "Bewertungen",
+    "view_btn": "Ansehen",
+    "cook_now_btn": "Jetzt kochen",
+    "find_by_pantry": "Rezepte finden"
   },
   "categories": {
     "salad": "Salate",
@@ -177,7 +200,7 @@
     "special": "Besondere Anlässe"
   },
   "pantry": {
-    "title": "Ihre Vorratskammer",
+    "title": "Meine Vorratskammer",
     "subtitle": "Bestand und Haltbarkeit",
     "search": "Zutaten suchen...",
     "all": "Alle",
@@ -260,7 +283,7 @@
     "generate": "Rezepte generieren",
     "suggested": "Für Sie vorgeschlagen",
     "uses_ingredients": "Verwendet Ihre Zutaten!",
-    "chef_greeting": "Hallo! Ich bin **Chef AI** – Ihr persönlicher Gourmet-Kochassistent. 🧑‍🍳\n\nIch sehe, Sie haben **{{count}} Produkte** in Ihrer Vorratskammer. Ich kann Ihnen passende Rezepte empfehlen, abgestimmt auf Ihre Ernährung und Allergien.\n\nWas möchten Sie heute kochen?",
+    "chef_greeting": "Hallo! Ich bin dein **Chef AI** – persönlicher Kochassistent. 🧑‍🍳\n\nIch sehe, du hast **{{count}} Produkte** in deiner Vorratskammer. Ich kann dir passende Rezepte empfehlen, abgestimmt auf deine Ernährung und Allergien.\n\nWas möchtest du heute kochen?",
     "fallback_expiring_with_items": "In Ihrer Vorratskammer laufen folgende Zutaten bald ab: **{{names}}**. Ich empfehle folgende Rezepte, um Lebensmittelverschwendung zu vermeiden:",
     "fallback_expiring_none": "Sie haben keine Produkte, die in den nächsten 3 Tagen ablaufen. Hier sind die besten Vorschläge aus Ihrem Vorrat:",
     "fallback_keto": "Natürlich! Hier sind unsere besten **Keto**-Rezepte, passend zu Ihrem Profil:",
@@ -288,6 +311,13 @@
     "chip_keto": "Keto-Rezepte",
     "chip_substitutes": "Zutaten-Alternativen",
     "input_placeholder": "Fragen Sie Chef AI nach einem Rezept...",
+    "prompt_question": "Was Leckeres kochen wir heute zusammen?",
+    "prompt_question_missing": "Wie zaubern wir heute aus deinen vorhandenen Zutaten etwas Köstliches?",
+    "prompt_question_seasonal": "Welches frische Saisongericht bereiten wir heute zusammen zu?",
+    "prompt_question_cuisine": "Auf welche kulinarische Reise gehen wir heute zusammen?",
+    "prompt_question_events": "Welches besondere Menü stellen wir heute für deinen Anlass zusammen?",
+    "prompt_question_contextual": "Wie entwickeln wir diese köstliche Idee heute gemeinsam weiter?",
+    "send_prompt_label": "Senden",
     "dietary_profile_title": "Ihr Ernährungsprofil:",
     "excluded_items_count": "{{count}} ausgeschlossene Zutaten",
     "no_dietary_restrictions": "Keine Einschränkungen festgelegt",
@@ -741,6 +771,13 @@
     "view_list": "Listenansicht",
     "recalculate_tags": "Tags neu berechnen",
     "tags_btn": "Tags",
+    "missing_products_btn": "Fehlende Produkte",
+    "check_missing_products_tooltip": "Rezepte auf fehlende oder nicht verknüpfte Produkte in der Datenbank prüfen",
+    "missing_audit_all_ok": "Alle Rezepte überprüft! Alle Zutaten sind korrekt mit den Produkten in der Datenbank verknüpft.",
+    "missing_audit_modal_title": "Prüfung auf fehlende Produkte",
+    "missing_audit_summary": "{{recipeCount}} Rezepte mit insgesamt {{missingCount}} fehlenden oder nicht verknüpften Zutaten gefunden.",
+    "send_to_moderation_btn": "📋 Liste in Moderation erstellen",
+    "send_to_moderation_success": "Liste erfolgreich in Moderation erstellt! Möchten Sie jetzt zu Moderation wechseln?",
     "filter_all": "Alle",
     "filter_pending": "Ausstehend",
     "filter_active": "Aktiv",
@@ -789,6 +826,14 @@
     "sub_recipe": "Unter-Rezept",
     "no_ingredients": "Keine Zutaten hinzugefügt",
     "recipe_badge": "REZEPT",
+    "unlinked_ingredient_tooltip": "⚠️ Diese Zutat ist mit keinem Produkt in Produkte verknüpft (Kosten und Kalorien werden nicht berechnet).",
+    "unlinked_ingredient_warning": "Fehlt in Produkte — Kosten und Kalorien können nicht berechnet werden!",
+    "unlinked_badge": "Fehlt in Produkte",
+    "create_in_products_btn": "+ Zu Produkte hinzufügen",
+    "create_in_products_tooltip": "Diese Zutat als offizielles Produkt in der Nomenklatur anlegen",
+    "prompt_product_price": "Geschätzten EUR-Preis pro 100 Gramm für \"{{name}}\" eingeben:",
+    "product_created_success": "Das Produkt \"{{name}}\" wurde erfolgreich zu Produkte mit Preis {{price}} € / 100g hinzugefügt!",
+    "product_created_error": "Fehler beim Erstellen des Produkts: ",
     "change_sub_recipe_tooltip": "Klicken, um das Unter-Rezept zu ändern",
     "select_ingredient_tooltip": "Klicken, um Zutat zu suchen und auszuwählen",
     "ingredient_placeholder": "-- Zutat --",
@@ -1004,8 +1049,17 @@
       "all": "Alle",
       "translation": "Zu übersetzen",
       "approval": "Warten auf Genehmigung",
+      "missing_products": "Fehlende Produkte",
       "community": "Gourmet-Community"
     },
+    "missing_products_banner_title": "Rezepte mit fehlenden Produkten",
+    "missing_products_banner_desc_one": "1 Rezept wartet auf die Verknüpfung von Zutaten mit Produkten in der Datenbank",
+    "missing_products_banner_desc_other": "{{count}} Rezepte warten auf die Verknüpfung von Zutaten mit Produkten in der Datenbank",
+    "missing_products_badge": "Fehlende Produkte ({{count}})",
+    "missing_ingredients_label": "Nicht verknüpfte Zutaten:",
+    "mark_reviewed_btn": "Als geprüft markieren",
+    "mark_reviewed_tooltip": "Rezept aus der Prüfwarteschlange für fehlende Produkte entfernen",
+    "empty_missing_products": "Keine Rezepte mit fehlenden Produkten. Alle Zutaten sind ordnungsgemäß verknüpft!",
     "empty_translation": "Keine Einträge zur Übersetzung ausstehend.",
     "empty_approval": "Keine Inhalte zur Genehmigung ausstehend.",
     "empty_all": "Die Warteschlange ist vollständig abgearbeitet.",

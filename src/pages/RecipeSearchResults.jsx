@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, onSnapshot } from 'firebase/firestore';
@@ -25,12 +25,16 @@ const RecipeSearchResults = () => {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [usersMap, setUsersMap] = useState({});
+  const RECIPES_PER_PAGE = 12;
+  const [currentPage, setCurrentPage] = useState(1);
+  const resultsRef = useRef(null);
 
   // Sync search input when URL query changes
   useEffect(() => {
     const qFromUrl = searchParams.get('q') || searchParams.get('search') || '';
     const timer = setTimeout(() => {
       setSearchTerm(qFromUrl);
+      setCurrentPage(1);
     }, 0);
     return () => clearTimeout(timer);
   }, [searchParams]);
@@ -150,19 +154,59 @@ const RecipeSearchResults = () => {
     ? new Set(getDescendantCuisineIds(cuisineFromUrl))
     : null;
 
-  // Filter recipes according to cuisineFromUrl and activeKeywords (EVERY keyword must match across all 5 languages)
-  const filteredRecipes = recipes.filter(r => {
-    if (allowedCuisineIds) {
-      const rCid = resolveRecipeCuisineId(r);
-      if (!rCid || !allowedCuisineIds.has(rCid)) return false;
+  // Filter and rank recipes according to cuisineFromUrl and activeKeywords (supporting multi-ingredient matching)
+  const filteredRecipes = recipes
+    .filter(r => {
+      if (allowedCuisineIds) {
+        const rCid = resolveRecipeCuisineId(r);
+        if (!rCid || !allowedCuisineIds.has(rCid)) return false;
+      }
+      return true;
+    })
+    .map(r => {
+      if (activeKeywords.length === 0) return { ...r, _matchCount: 0 };
+      const matchCount = activeKeywords.filter(kw => matchesRecipeSearch(r, [kw], ingredientsList, 'some')).length;
+      return { ...r, _matchCount: matchCount };
+    })
+    .filter(r => activeKeywords.length === 0 || r._matchCount > 0)
+    .sort((a, b) => {
+      if (b._matchCount !== a._matchCount) return b._matchCount - a._matchCount;
+      const rA = Number(a.rating ?? a.rating_avg ?? 0);
+      const rB = Number(b.rating ?? b.rating_avg ?? 0);
+      return rB - rA;
+    });
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecipes.length / RECIPES_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const startIndex = (safePage - 1) * RECIPES_PER_PAGE;
+  const paginatedRecipes = filteredRecipes.slice(startIndex, startIndex + RECIPES_PER_PAGE);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === safePage) return;
+    setCurrentPage(newPage);
+    if (resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    return matchesRecipeSearch(r, activeKeywords, ingredientsList, 'every');
-  });
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (safePage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (safePage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', safePage - 1, safePage, safePage + 1, '...', totalPages];
+  };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-28">
+    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-7">
       {/* Top Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-primary/20 bg-surface-dark/90 backdrop-blur-md sticky top-0 z-10 shadow-md">
+      <header className="flex items-center justify-between px-4 py-4 border-b lg:border border-primary/20 bg-surface-dark/90 backdrop-blur-md sticky top-0 z-10 shadow-md w-full lg:max-w-[1000px] mx-auto lg:mt-4 lg:rounded-2xl">
         <button 
           onClick={() => navigate(-1)} 
           className="text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
@@ -175,7 +219,7 @@ const RecipeSearchResults = () => {
         <div className="size-10"></div>
       </header>
 
-      <main className="flex-1 flex flex-col p-4 gap-4 max-w-2xl mx-auto w-full">
+      <main className="flex-1 flex flex-col p-4 gap-4 max-w-2xl lg:max-w-[1000px] mx-auto w-full">
         {/* Search Bar Input Form */}
         <form onSubmit={handleSearchSubmit} className="relative group">
           <input 
@@ -236,37 +280,56 @@ const RecipeSearchResults = () => {
         )}
 
         {/* Search Results Count Bar */}
-        <div className="flex justify-between items-center px-1 border-b border-primary/10 pb-2">
+        <div ref={resultsRef} className="flex justify-between items-center px-1 border-b border-primary/10 pb-2 scroll-mt-20">
           <span className="text-xs font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5">
             <span className="material-symbols-outlined text-base">restaurant_menu</span>
             <span>{t('recipe_search.found_recipes')}</span>
+            {totalPages > 1 && (
+              <span className="text-[10px] font-bold text-slate-400 normal-case tracking-normal">
+                ({safePage}/{totalPages})
+              </span>
+            )}
           </span>
           <span className="text-xs font-bold text-slate-400">
             {loading ? '...' : (filteredRecipes.length === 1 ? t('recipe_search.recipes_count_one', { count: filteredRecipes.length }) : t('recipe_search.recipes_count_other', { count: filteredRecipes.length }))}
           </span>
         </div>
 
-        {/* Recipe Cards List (Strictly 1 Column on All Screens) */}
+        {/* Recipe Cards Grid (1 Column Mobile, 4 Columns Desktop, 12 per page) */}
         {loading ? (
-          <div className="grid grid-cols-1 gap-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-44 w-full bg-surface-dark rounded-2xl animate-pulse"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-64 w-full bg-surface-dark rounded-2xl animate-pulse"></div>
             ))}
           </div>
         ) : filteredRecipes.length > 0 ? (
-          <div className="flex flex-col gap-4">
-            {filteredRecipes.map(recipe => (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              {paginatedRecipes.map(recipe => (
               <div 
                 key={recipe.id}
                 onClick={() => navigate(`/recipe/${recipe.id}`)}
                 className="group bg-surface-dark border border-primary/20 rounded-2xl overflow-hidden shadow-lg hover:border-primary/50 transition-all cursor-pointer flex flex-col"
               >
-                <div className="relative h-44 w-full overflow-hidden bg-neutral-900">
+                <div className="relative h-44 w-full overflow-hidden bg-surface-dark/90">
                   <img 
                     src={getRecipeImageUrl(recipe)} 
                     alt={getLocalizedField(recipe, 'title', currentLang) || recipe.title_bg || recipe.title_en || ''}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+                  {/* Top Left Multi-Keyword Match Badge */}
+                  {activeKeywords.length > 1 && (
+                    <div
+                      className={`absolute top-2 left-2 px-2 py-0.5 rounded-full backdrop-blur-md border text-[10px] font-extrabold shadow-md flex items-center gap-1 ${
+                        recipe._matchCount === activeKeywords.length
+                          ? 'bg-emerald-600/85 border-emerald-400/50 text-white'
+                          : 'bg-background-dark/80 border-primary/40 text-primary'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-xs">check_circle</span>
+                      <span>{recipe._matchCount}/{activeKeywords.length}</span>
+                    </div>
+                  )}
                   {/* Top Right Prep Time Badge */}
                   <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-background-dark/80 backdrop-blur-md border border-primary/30 text-primary text-[10px] font-extrabold shadow-md flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs">schedule</span>
@@ -302,7 +365,62 @@ const RecipeSearchResults = () => {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 pt-4 pb-0 select-none" data-purpose="pagination">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(safePage - 1)}
+                  disabled={safePage === 1}
+                  className="size-8 rounded-lg bg-surface-dark border border-primary/20 text-slate-300 hover:text-primary hover:border-primary/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title={t('common.pagination.prev', 'Предишна страница')}
+                  aria-label="Previous Page"
+                >
+                  <span className="material-symbols-outlined text-lg leading-none">chevron_left</span>
+                </button>
+
+                {getPageNumbers().map((p, idx) => {
+                  if (p === '...') {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="text-xs text-slate-400 px-1 select-none">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  const isCurrent = p === safePage;
+                  return (
+                    <button
+                      key={`page-${p}`}
+                      type="button"
+                      onClick={() => handlePageChange(p)}
+                      className={`size-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                        isCurrent
+                          ? 'bg-primary text-background-dark font-black shadow-md'
+                          : 'bg-surface-dark border border-primary/20 text-slate-200 hover:border-primary/50 hover:text-primary'
+                      }`}
+                      aria-current={isCurrent ? 'page' : undefined}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(safePage + 1)}
+                  disabled={safePage === totalPages}
+                  className="size-8 rounded-lg bg-surface-dark border border-primary/20 text-slate-300 hover:text-primary hover:border-primary/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title={t('common.pagination.next', 'Следваща страница')}
+                  aria-label="Next Page"
+                >
+                  <span className="material-symbols-outlined text-lg leading-none">chevron_right</span>
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="p-8 text-center bg-surface-dark border border-primary/20 rounded-3xl flex flex-col items-center gap-3">
             <span className="material-symbols-outlined text-amber-400 text-4xl">search_off</span>

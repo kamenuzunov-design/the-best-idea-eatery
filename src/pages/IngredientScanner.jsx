@@ -411,19 +411,32 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
   };
 
   const handleSearchRecipes = () => {
-    let searchTarget = '';
-    if (mainItem && mainItem.checked) {
-      searchTarget = mainItem.name;
-    } else {
-      const selected = detectedItems.filter(i => i.checked);
-      if (selected.length === 0) {
-        alert(t('ingredient_scanner.select_at_least_one_ingredient'));
-        return;
+    const selectedNames = [];
+    const seen = new Set();
+
+    const addUnique = (name) => {
+      const clean = (name || '').trim();
+      if (!clean) return;
+      const key = clean.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        selectedNames.push(clean);
       }
-      searchTarget = selected[0].name;
+    };
+
+    if (mainItem && mainItem.checked) {
+      addUnique(mainItem.name);
+    }
+    detectedItems.forEach((item) => {
+      if (item.checked) addUnique(item.name);
+    });
+
+    if (selectedNames.length === 0) {
+      alert(t('ingredient_scanner.select_at_least_one_ingredient'));
+      return;
     }
 
-    navigate(`/search?q=${encodeURIComponent(searchTarget)}`);
+    navigate(`/search?q=${encodeURIComponent(selectedNames.join(', '))}`);
   };
 
   const filteredMaster = masterIngredients.filter(ing => {
@@ -436,7 +449,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
   });
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-20">
+    <div className="relative flex w-full lg:max-w-[800px] mx-auto flex-col bg-background-dark font-display pb-6 lg:pb-8">
       {/* Hidden File Input for Real Camera Capture */}
       <input 
         type="file" 
@@ -464,15 +477,17 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
         </button>
       </div>
 
-      {/* Mode Switcher: Photo vs Receipt */}
-      <div className="px-4 pt-3 pb-1 bg-surface-dark border-b border-primary/10 grid grid-cols-2 gap-2">
+      {/* Mode Switcher Tabs: Photo vs Receipt */}
+      <div role="tablist" className="px-4 pt-2 bg-surface-dark border-b border-primary/20 grid grid-cols-2 gap-1">
         <button
           type="button"
+          role="tab"
+          aria-selected={scanMode === 'photo'}
           onClick={() => handleSwitchMode('photo')}
-          className={`py-2.5 px-3 rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+          className={`py-3 px-3 rounded-t-xl text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 ${
             scanMode === 'photo'
-              ? 'bg-primary text-background-dark border-primary shadow-md'
-              : 'bg-background-dark/60 text-slate-300 border-primary/20 hover:border-primary/40'
+              ? 'border-primary text-primary bg-primary/10'
+              : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-primary/5'
           }`}
         >
           <span className="material-symbols-outlined text-base">photo_camera</span>
@@ -480,11 +495,13 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={scanMode === 'receipt'}
           onClick={() => handleSwitchMode('receipt')}
-          className={`py-2.5 px-3 rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+          className={`py-3 px-3 rounded-t-xl text-xs font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer border-b-2 ${
             scanMode === 'receipt'
-              ? 'bg-primary text-background-dark border-primary shadow-md'
-              : 'bg-background-dark/60 text-slate-300 border-primary/20 hover:border-primary/40'
+              ? 'border-primary text-primary bg-primary/10'
+              : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-primary/5'
           }`}
         >
           <span className="material-symbols-outlined text-base">receipt_long</span>
@@ -514,7 +531,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
 
       {/* 2. Photo Viewfinder Area */}
       {capturedImage ? (
-        <div className="relative w-full h-64 bg-neutral-950 flex flex-col items-center justify-center overflow-hidden border-b border-primary/20 shrink-0">
+        <div className="relative w-full h-64 bg-surface-dark/95 flex flex-col items-center justify-center overflow-hidden border-b border-primary/20 shrink-0">
           {/* Captured Image */}
           <div 
             className={`absolute inset-0 z-0 bg-cover bg-center transition-all duration-700 ${scanning ? 'scale-105 filter brightness-75' : 'scale-100'}`}
@@ -554,7 +571,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
       ) : (
         <div 
           onClick={handleStartScan}
-          className="relative w-full h-64 bg-neutral-950/80 hover:bg-neutral-900 border-b border-primary/20 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-colors group"
+          className="relative w-full h-64 bg-surface-dark/80 hover:bg-surface-dark border-b border-primary/20 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-colors group"
         >
           <div className="size-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary group-hover:scale-110 group-hover:border-primary transition-all shadow-lg mb-3">
             <span className="material-symbols-outlined text-3xl">
@@ -829,7 +846,7 @@ Do NOT include cookware, plates, cutlery, or generic words like "dish" or "food"
       </div>
 
       {/* 4. Bottom Action Buttons */}
-      <div className="bg-surface-dark p-4 pb-6 flex flex-col gap-3 border-t border-primary/20 shadow-2xl">
+      <div className="bg-surface-dark p-4 pb-3 flex flex-col gap-3 border-t border-primary/20 shadow-2xl">
         <div className="grid grid-cols-2 gap-3">
           <button 
             onClick={handleAddToPantry}

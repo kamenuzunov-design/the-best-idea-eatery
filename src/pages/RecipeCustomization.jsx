@@ -9,6 +9,7 @@ import { REPUTATION_POINTS } from '../lib/reputationUtils';
 import { ROLES } from '../constants/roles';
 import { normalizeMainGroup, getMainGroupLabel } from '../lib/recipeMetaUtils';
 import { extractLocalizedNote, getLocalizedField, LANGUAGE_LABELS } from '../lib/localeUtils';
+import { getRemoteAIConfig, getGeminiApiKey, callGemini } from '../lib/geminiClient';
 
 const RecipeCustomization = () => {
   const { id } = useParams();
@@ -241,11 +242,107 @@ const RecipeCustomization = () => {
         });
       }
 
+      // Auto-translate title, ingredient notes, and steps into all 6 languages if Gemini API key is configured
+      try {
+        await getRemoteAIConfig();
+        const apiKey = getGeminiApiKey();
+        const sourceTitle = isEnOnly ? finalTitleEn : finalTitleLocal;
+        const noteEntries = normalizedIngredientsToSave
+          .map((ing, idx) => ({ idx, text: (isEnOnly ? ing.notes?.en : ing.notes?.[currentLang]) || '' }))
+          .filter(e => e.text.trim().length > 0);
+        const stepEntries = normalizedStepsToSave
+          .map((st, idx) => ({ idx, text: (isEnOnly ? st.instruction?.en : st.instruction?.[currentLang]) || '' }))
+          .filter(e => e.text.trim().length > 0);
+
+        if (apiKey && (sourceTitle || noteEntries.length > 0 || stepEntries.length > 0)) {
+          const payload = {
+            title: sourceTitle,
+            notes: noteEntries.map(e => e.text),
+            steps: stepEntries.map(e => e.text)
+          };
+          const translatePrompt = `You are a professional culinary translator.
+Translate the fields in the JSON below from "${currentLang}" into all 6 languages: bg (Bulgarian), en (English), es (Spanish), it (Italian), fr (French), and de (German).
+Keep array lengths and order identical. Preserve culinary accuracy and concise phrasing.
+
+Input JSON:
+${JSON.stringify(payload)}
+
+Return ONLY valid JSON with this exact structure:
+{
+  "title": { "bg": "...", "en": "...", "es": "...", "it": "...", "fr": "...", "de": "..." },
+  "notes": [ { "bg": "...", "en": "...", "es": "...", "it": "...", "fr": "...", "de": "..." } ],
+  "steps": [ { "bg": "...", "en": "...", "es": "...", "it": "...", "fr": "...", "de": "..." } ]
+}`;
+
+          const aiRes = await callGemini({
+            apiKey,
+            prompt: translatePrompt,
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.1
+            },
+            timeoutMs: 12000
+          });
+
+          const langs = ['bg', 'en', 'es', 'it', 'fr', 'de'];
+          if (aiRes?.data && typeof aiRes.data === 'object') {
+            if (aiRes.data.title && typeof aiRes.data.title === 'object') {
+              langs.forEach(l => {
+                if (typeof aiRes.data.title[l] === 'string' && aiRes.data.title[l].trim()) {
+                  titleMap[l] = aiRes.data.title[l].trim();
+                }
+              });
+              if (sourceTitle) titleMap[currentLang] = sourceTitle;
+            }
+
+            if (Array.isArray(aiRes.data.notes)) {
+              noteEntries.forEach((entry, arrIdx) => {
+                const translated = aiRes.data.notes[arrIdx];
+                if (translated && typeof translated === 'object') {
+                  const targetIng = normalizedIngredientsToSave[entry.idx];
+                  const notesObj = { ...(targetIng.notes || {}) };
+                  langs.forEach(l => {
+                    if (typeof translated[l] === 'string' && translated[l].trim()) {
+                      notesObj[l] = translated[l].trim();
+                    }
+                  });
+                  notesObj[currentLang] = entry.text;
+                  targetIng.notes = notesObj;
+                  targetIng.notes_bg = notesObj.bg || entry.text;
+                  targetIng.notes_en = notesObj.en || entry.text;
+                }
+              });
+            }
+
+            if (Array.isArray(aiRes.data.steps)) {
+              stepEntries.forEach((entry, arrIdx) => {
+                const translated = aiRes.data.steps[arrIdx];
+                if (translated && typeof translated === 'object') {
+                  const targetStep = normalizedStepsToSave[entry.idx];
+                  const instObj = { ...(targetStep.instruction || {}) };
+                  langs.forEach(l => {
+                    if (typeof translated[l] === 'string' && translated[l].trim()) {
+                      instObj[l] = translated[l].trim();
+                    }
+                  });
+                  instObj[currentLang] = entry.text;
+                  targetStep.instruction = instObj;
+                  targetStep.instruction_bg = instObj.bg || entry.text;
+                  targetStep.instruction_en = instObj.en || entry.text;
+                }
+              });
+            }
+          }
+        }
+      } catch (translateErr) {
+        console.warn('RecipeCustomization auto-translation skipped:', translateErr?.message);
+      }
+
       const newRecipeData = {
         ...originalRecipe,
         title: titleMap,
         title_bg: titleMap.bg || (currentLang === 'bg' ? finalTitleLocal : finalTitleEn),
-        title_en: finalTitleEn,
+        title_en: titleMap.en || finalTitleEn,
         slug: newSlug,
         parent_recipe_id: id,
         is_public_variation: isPublic,
@@ -336,9 +433,9 @@ const RecipeCustomization = () => {
   }
 
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col bg-background-dark overflow-x-hidden pb-32">
+    <div className="relative flex h-auto min-h-screen w-full lg:max-w-[1000px] mx-auto flex-col bg-background-dark overflow-x-hidden lg:pt-5 pb-8">
       {/* Top App Bar */}
-      <div className="flex items-center p-4 pb-2 justify-between sticky top-0 z-10 bg-surface-dark/90 backdrop-blur-md border-b border-primary/10">
+      <div className="flex items-center p-4 pb-2 justify-between sticky top-0 z-10 bg-surface-dark/90 backdrop-blur-md border-b lg:border border-primary/10 lg:rounded-2xl">
         <div onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center cursor-pointer hover:bg-primary/10 rounded-full transition-colors">
           <span className="material-symbols-outlined">arrow_back</span>
         </div>
@@ -352,7 +449,7 @@ const RecipeCustomization = () => {
       </div>
 
       <div className="mx-4 mt-4">
-        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="bg-[#b8860b]/10 border border-[#b8860b]/40 rounded-2xl p-4 shadow-lg mb-6 transition-colors">
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="bg-[#b8860b]/10 border border-[#b8860b]/40 rounded-2xl p-4 shadow-lg mb-2 transition-colors">
           
           {/* Form Header */}
           <div className="flex justify-between items-center border-b border-primary/10 pb-2 mb-4">
@@ -375,7 +472,7 @@ const RecipeCustomization = () => {
           {activeTab === 'basic' && (
             <div className="space-y-4">
               <div className="flex flex-col gap-4">
-                {!isEnOnly && (
+                {!isEnOnly ? (
                   <div>
                     <label className="text-xs text-slate-400">{t('recipe_customization.title_local', { lang: localLangName })}</label>
                     <input 
@@ -385,16 +482,17 @@ const RecipeCustomization = () => {
                       className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" 
                     />
                   </div>
+                ) : (
+                  <div>
+                    <label className="text-xs text-slate-400">{t('recipe_customization.title_en')}</label>
+                    <input 
+                      value={titleEn} 
+                      onChange={e => setTitleEn(e.target.value)} 
+                      required 
+                      className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" 
+                    />
+                  </div>
                 )}
-                <div>
-                  <label className="text-xs text-slate-400">{t('recipe_customization.title_en')}</label>
-                  <input 
-                    value={titleEn} 
-                    onChange={e => setTitleEn(e.target.value)} 
-                    required 
-                    className="w-full bg-background-dark border border-primary/20 rounded p-2 text-slate-100 text-sm focus:border-[#b8860b] outline-none" 
-                  />
-                </div>
 
                 <label className="flex items-center justify-between p-4 bg-surface-dark border border-primary/20 rounded-2xl cursor-pointer hover:border-primary/40 transition-all w-full">
                   <div className="flex flex-col">
@@ -555,8 +653,8 @@ const RecipeCustomization = () => {
                           </button>
                         </div>
 
-                        <div className={`grid ${isEnOnly ? 'grid-cols-1' : 'grid-cols-2'} gap-2 flex-grow`}>
-                          {!isEnOnly && (
+                        <div className="grid grid-cols-1 gap-2 flex-grow">
+                          {!isEnOnly ? (
                             <input
                               type="text"
                               value={typeof ing.notes_local === 'string' && ing.notes_local !== '[object Object]' ? ing.notes_local : (typeof ing.notes_bg === 'string' && currentLang === 'bg' ? ing.notes_bg : '')}
@@ -569,14 +667,15 @@ const RecipeCustomization = () => {
                               placeholder={t('recipe_customization.notes_local_placeholder', { lang: localLangName })}
                               className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px] outline-none"
                             />
+                          ) : (
+                            <input
+                              type="text"
+                              value={typeof ing.notes_en === 'string' && ing.notes_en !== '[object Object]' ? ing.notes_en : ''}
+                              onChange={(e) => updateIngredientRow(ing.id, 'notes_en', e.target.value)}
+                              placeholder={t('recipe_customization.notes_en_placeholder')}
+                              className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px] outline-none"
+                            />
                           )}
-                          <input
-                            type="text"
-                            value={typeof ing.notes_en === 'string' && ing.notes_en !== '[object Object]' ? ing.notes_en : ''}
-                            onChange={(e) => updateIngredientRow(ing.id, 'notes_en', e.target.value)}
-                            placeholder={t('recipe_customization.notes_en_placeholder')}
-                            className="bg-surface-dark/50 border border-primary/10 rounded p-1.5 text-slate-300 text-[10px] outline-none"
-                          />
                         </div>
                       </div>
                     </div>
@@ -635,7 +734,7 @@ const RecipeCustomization = () => {
                       </button>
                     </div>
                     <div className="grid grid-cols-1 gap-2">
-                      {!isEnOnly && (
+                      {!isEnOnly ? (
                         <textarea 
                           value={step.instruction_local || (currentLang === 'bg' ? step.instruction_bg : '') || ''} 
                           onChange={(e) => {
@@ -646,16 +745,17 @@ const RecipeCustomization = () => {
                           }} 
                           placeholder={t('recipe_customization.instruction_local_placeholder', { lang: localLangName })} 
                           rows="2" 
-                          className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
+                          className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors lg:min-h-[112px]"
+                        ></textarea>
+                      ) : (
+                        <textarea 
+                          value={step.instruction_en || ''} 
+                          onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
+                          placeholder={t('recipe_customization.instruction_en_placeholder')} 
+                          rows="2" 
+                          className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors lg:min-h-[112px]"
                         ></textarea>
                       )}
-                      <textarea 
-                        value={step.instruction_en || ''} 
-                        onChange={(e) => updateStepRow(step.id, 'instruction_en', e.target.value)} 
-                        placeholder={t('recipe_customization.instruction_en_placeholder')} 
-                        rows="2" 
-                        className="w-full bg-surface-dark border border-primary/20 rounded p-2 text-slate-100 text-xs resize-none outline-none focus:border-[#b8860b] transition-colors"
-                      ></textarea>
                     </div>
                   </div>
                 ))}

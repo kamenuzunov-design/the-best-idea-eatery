@@ -1,6 +1,8 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
+import DesktopHeader from './components/DesktopHeader';
+import DesktopFooter from './components/DesktopFooter';
 import Navigation from './components/Navigation';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouteLoadingSpinner from './components/RouteLoadingSpinner';
@@ -64,11 +66,17 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl border-x border-primary/10 pb-24">
+      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden max-w-md lg:max-w-[1440px] mx-auto shadow-2xl border-x border-primary/10 lg:border-brand-border/40 pb-24 lg:pb-0">
         <GDPRConsent />
-        <Header />
+        <div className="lg:hidden">
+          <Header />
+        </div>
+        <div className="hidden lg:block">
+          <DesktopHeader />
+        </div>
         
-        <Suspense fallback={<RouteLoadingSpinner />}>
+        <main className="flex-1 w-full flex flex-col">
+          <Suspense fallback={<RouteLoadingSpinner />}>
           <Routes>
             {/* Public / Login */}
             <Route path="/login" element={user.role === ROLES.GUEST ? <Login /> : <Navigate to="/" replace />} />
@@ -233,9 +241,15 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </main>
 
         <AdBanner />
-        <Navigation />
+        <div className="lg:hidden">
+          <Navigation />
+        </div>
+        <div className="hidden lg:block">
+          <DesktopFooter />
+        </div>
       </div>
     </Router>
   );

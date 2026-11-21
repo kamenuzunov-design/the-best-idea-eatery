@@ -53,8 +53,13 @@ const Home = () => {
   const [ingredientsList, setIngredientsList] = useState([]);
   const [measurementsList, setMeasurementsList] = useState([]);
 
+  // Pagination (12 recipes per page -> exactly 3 rows of 4 on desktop)
+  const [currentPage, setCurrentPage] = useState(1);
+  const RECIPES_PER_PAGE = 12;
+
   const authorFilterRef = useRef(null);
   const searchInputRef = useRef(null);
+  const recipeCatalogRef = useRef(null);
 
   useEffect(() => {
     const qFromUrl = searchParams.get('search') || searchParams.get('q');
@@ -335,16 +340,8 @@ const Home = () => {
           });
         }
 
-        // If searching or filtering by category, show all matching results.
-        // If active tab is 'all', show up to 150 recipes.
-        // Otherwise, limit to top 10.
-        if (searchQuery || selectedCategory || authorFilter) {
-          setRealRecipes(filtered);
-        } else if (activeTab === 'all') {
-          setRealRecipes(filtered.slice(0, 150));
-        } else {
-          setRealRecipes(filtered.slice(0, 10));
-        }
+        // Store all filtered recipes for client-side pagination (12 per page)
+        setRealRecipes(filtered);
         setFetchError(null);
         setLoading(false);
       },
@@ -459,126 +456,326 @@ const Home = () => {
     if (!ingName) return;
     setSearchQuery(ingName);
     setSearchParams({ search: ingName });
-    if (searchInputRef.current) {
-      searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (window.innerWidth < 1024 && searchInputRef.current) {
+      searchInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (recipeCatalogRef.current) {
+      recipeCatalogRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [setSearchParams]);
 
+  // Reset pagination to page 1 on filter or search changes
+  const [prevFilterKey, setPrevFilterKey] = useState('');
+  const currentFilterKey = `${searchQuery}|${selectedCategory}|${activeTab}|${authorFilter}`;
+  if (prevFilterKey !== currentFilterKey) {
+    setPrevFilterKey(currentFilterKey);
+    setCurrentPage(1);
+  }
+
+  const totalRecipes = realRecipes.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecipes / RECIPES_PER_PAGE));
+
+  const paginatedRecipes = useMemo(() => {
+    const startIndex = (currentPage - 1) * RECIPES_PER_PAGE;
+    return realRecipes.slice(startIndex, startIndex + RECIPES_PER_PAGE);
+  }, [realRecipes, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    if (recipeCatalogRef.current) {
+      recipeCatalogRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 350, behavior: 'smooth' });
+    }
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
+
+  const rootCategories = getRootCategories();
+
+  const renderCategoryPill = (cat) => {
+    const isActive = selectedCategory === cat.id;
+    return (
+      <button
+        key={cat.id}
+        onClick={() => setSelectedCategory(isActive ? null : cat.id)}
+        className={`w-full lg:w-[244px] min-h-9 lg:min-h-10 h-full px-1.5 lg:px-4 py-1.5 rounded-xl text-[10.5px] sm:text-[11px] lg:text-xs font-bold leading-tight transition-all lg:whitespace-nowrap flex items-center justify-center text-center gap-1 lg:gap-2 shrink-0 border cursor-pointer ${
+          isActive
+            ? 'bg-brand-amber text-brand-charcoal border-brand-amber shadow-sm'
+            : 'bg-surface-dark lg:bg-brand-surface text-brand-cream border-brand-border hover:border-brand-amber/50'
+        }`}
+      >
+        <span className="shrink-0">{cat.icon}</span>
+        <span>{getPluralCategoryName(cat.id, t)}</span>
+      </button>
+    );
+  };
+
+  const renderAllCategoriesPill = () => (
+    <button
+      onClick={() => setSelectedCategory(null)}
+      className={`w-full lg:w-[244px] min-h-9 lg:min-h-10 h-full px-1.5 lg:px-4 py-1.5 rounded-xl text-[10.5px] sm:text-[11px] lg:text-xs font-bold leading-tight transition-all lg:whitespace-nowrap flex items-center justify-center text-center gap-1 lg:gap-2 shrink-0 border cursor-pointer ${
+        selectedCategory === null
+          ? 'bg-brand-amber text-brand-charcoal border-brand-amber shadow-sm'
+          : 'bg-surface-dark lg:bg-brand-surface text-brand-cream border-brand-border hover:border-brand-amber/50'
+      }`}
+    >
+      <span className="shrink-0">🍽️</span>
+      <span>{t('home.all_categories')}</span>
+    </button>
+  );
+
   return (
-    <div className="flex-1 pb-4">
-      {/* Featured Section (Dynamic Accent) */}
-      <section className="p-4">
+    <div className="flex-1 pb-8 w-full lg:max-w-[1000px] mx-auto px-4 lg:px-12 py-4 space-y-6">
+      {/* Featured Section (Hero Ribbon) */}
+      <section className="w-full">
         {featuredRecipe ? (
-          <div 
-            className="relative group @container cursor-pointer" 
-            onClick={() => navigate(`/recipe/${featuredRecipe.id}`)}
-          >
-            <div className="relative h-72 w-full overflow-hidden rounded-2xl bg-surface-dark shadow-[0_10px_40px_rgba(212,175,53,0.15)] transition-all duration-500 hover:shadow-[0_15px_50px_rgba(212,175,53,0.25)] border border-primary/20">
-              <img 
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                alt={getLocalizedRecipeTitle(featuredRecipe, i18n.language)} 
-                src={featuredRecipe.images?.main || "/images/recipe-placeholder.png"}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-transparent opacity-90"></div>
-              <div className="absolute bottom-0 left-0 p-6 w-full">
-                <span className="inline-block px-3 py-1 mb-3 rounded-full bg-primary text-background-dark text-[10px] font-extrabold uppercase tracking-widest shadow-lg shadow-primary/30">
+          <>
+            {/* Desktop Hero Ribbon (>= lg) */}
+            <div 
+              className="hidden lg:flex relative rounded-2xl bg-brand-surface border border-brand-border overflow-hidden shadow-xl min-h-[220px] transition-all hover:border-brand-amber/50 cursor-pointer group"
+              onClick={() => navigate(`/recipe/${featuredRecipe.id}`)}
+            >
+              {/* Left 50% Image Container */}
+              <div className="relative w-1/2 min-h-[220px] overflow-hidden shrink-0">
+                <img 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                  alt={getLocalizedRecipeTitle(featuredRecipe, i18n.language)} 
+                  src={featuredRecipe.images?.main || "/images/recipe-placeholder.png"}
+                />
+                <span className="absolute top-3.5 left-3.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-brand-amber text-brand-charcoal shadow-md">
                   {t('home.featured_badge')}
                 </span>
-                <h2 className="text-white text-3xl font-extrabold leading-tight drop-shadow-lg">
-                  {getLocalizedRecipeTitle(featuredRecipe, i18n.language)}
-                </h2>
-                <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <span className="px-2 py-1 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[10px] font-bold uppercase tracking-tighter shadow-md">
-                    {featuredCuisineName}
-                  </span>
-                  {featuredTags.map(tag => (
-                    <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md">
-                      {translateTag(tag, i18n.language)}
+              </div>
+
+              {/* Right 50% Information Content */}
+              <div className="w-1/2 p-6 flex flex-col justify-between space-y-4">
+                <div className="space-y-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-brand-amber/15 text-brand-amber border border-brand-amber/40">
+                      {featuredCuisineName}
                     </span>
-                  ))}
+                    {featuredTags.map(tag => (
+                      <span key={tag} className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        {translateTag(tag, i18n.language)}
+                      </span>
+                    ))}
+                    <span className="text-xs text-brand-muted">•</span>
+                    <span className="text-xs text-brand-cream font-medium">⏱ {(featuredRecipe.prep_time || 0) + (featuredRecipe.cook_time || 0)} мин</span>
+                  </div>
+
+                  <h2 className="text-2xl font-black text-white tracking-tight leading-snug group-hover:text-brand-amber transition-colors">
+                    {getLocalizedRecipeTitle(featuredRecipe, i18n.language)}
+                  </h2>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-0.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-brand-amber">
+                      <span>★</span>
+                      <span className="text-slate-100 font-extrabold">{(featuredRecipe.rating || 0).toFixed(1)}</span>
+                      <span className="text-brand-muted font-normal text-[11px]">({getVotesCount(featuredRecipe)} {t('home.ratings_count', 'оценки')})</span>
+                    </div>
+                    <div className="h-3 w-[1px] bg-brand-border"></div>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-brand-cream" title={t('home.views_title', 'Брой гледания')}>
+                      <span className="material-symbols-outlined text-[15px] text-brand-amber">visibility</span>
+                      <span className="text-slate-100 font-extrabold">{featuredRecipe.views_count || 0}</span>
+                      <span className="text-brand-muted font-normal text-[11px]">{t('home.views_label', 'гледания')}</span>
+                    </div>
+                    {calculateEstimatedPrice(featuredRecipe, ingredientsList) && (
+                      <>
+                        <div className="h-3 w-[1px] bg-brand-border"></div>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-emeraldBg/90 border border-brand-emerald/40 text-brand-emerald text-xs font-bold">
+                          <span className="material-symbols-outlined text-[14px]">payments</span>
+                          <span>~{calculateEstimatedPrice(featuredRecipe, ingredientsList)} € / порция</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                 <div className="flex flex-wrap items-center gap-3 mt-2">
-                  <div className="flex items-center gap-1 text-primary">
-                    <span className="material-symbols-outlined text-sm fill-[1]">star</span>
-                    <span className="text-sm font-black">{(featuredRecipe.rating || 0).toFixed(1)}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-slate-300">
-                    <span className="material-symbols-outlined text-sm">visibility</span>
-                    <span className="text-xs font-bold">{featuredRecipe.views_count || 0}</span>
-                  </div>
-                  {calculateEstimatedPrice(featuredRecipe, ingredientsList) && (
-                    <div className="flex items-center gap-1 text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded text-[10px] font-bold" title={t('home.estimated_price_title')}>
-                      <span className="material-symbols-outlined text-[13px]">payments</span>
-                      <span>{t('home.per_serving', { price: calculateEstimatedPrice(featuredRecipe, ingredientsList) })}</span>
-                    </div>
-                  )}
-                  {featuredRecipe.video_url && (
-                    <div className="flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded text-[10px] font-bold" title={t('home.has_video_title')}>
-                      <span className="material-symbols-outlined text-[13px]">play_circle</span>
-                      <span>{t('home.video_badge')}</span>
-                    </div>
-                  )}
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/recipe/${featuredRecipe.id}`);
+                    }}
+                    className="inline-flex items-center justify-center gap-2 w-44 py-2.5 px-4 rounded-xl bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-base">visibility</span>
+                    <span>{t('home.view_btn', 'Прегледай')}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/recipe/${featuredRecipe.id}/cooking`);
+                    }}
+                    className="inline-flex items-center justify-center gap-2 w-44 py-2.5 px-4 rounded-xl bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-base">play_arrow</span>
+                    <span>{t('home.cook_now_btn', 'Сготви сега')}</span>
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
+
+            {/* Mobile Hero Card (< lg) */}
+            <div 
+              className="lg:hidden relative group @container cursor-pointer" 
+              onClick={() => navigate(`/recipe/${featuredRecipe.id}`)}
+            >
+              <div className="relative h-72 w-full overflow-hidden rounded-2xl bg-surface-dark shadow-[0_10px_40px_rgba(212,175,53,0.15)] transition-all duration-500 hover:shadow-[0_15px_50px_rgba(212,175,53,0.25)] border border-primary/20">
+                <img 
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  alt={getLocalizedRecipeTitle(featuredRecipe, i18n.language)} 
+                  src={featuredRecipe.images?.main || "/images/recipe-placeholder.png"}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-transparent opacity-90"></div>
+                <div className="absolute bottom-0 left-0 p-6 w-full">
+                  <span className="inline-block px-3 py-1 mb-3 rounded-full bg-primary text-background-dark text-[10px] font-extrabold uppercase tracking-widest shadow-lg shadow-primary/30">
+                    {t('home.featured_badge')}
+                  </span>
+                  <h2 className="text-white text-3xl font-extrabold leading-tight drop-shadow-lg">
+                    {getLocalizedRecipeTitle(featuredRecipe, i18n.language)}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <span className="px-2 py-1 rounded bg-gradient-to-r from-primary to-[#b8860b] text-background-dark text-[10px] font-bold uppercase tracking-tighter shadow-md">
+                      {featuredCuisineName}
+                    </span>
+                    {featuredTags.map(tag => (
+                      <span key={tag} className="px-2 py-1 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter shadow-md">
+                        {translateTag(tag, i18n.language)}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 mt-2">
+                    <div className="flex items-center gap-1 text-primary">
+                      <span className="material-symbols-outlined text-sm fill-[1]">star</span>
+                      <span className="text-sm font-black">{(featuredRecipe.rating || 0).toFixed(1)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-300">
+                      <span className="material-symbols-outlined text-sm">visibility</span>
+                      <span className="text-xs font-bold">{featuredRecipe.views_count || 0}</span>
+                    </div>
+                    {calculateEstimatedPrice(featuredRecipe, ingredientsList) && (
+                      <div className="flex items-center gap-1 text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded text-[10px] font-bold" title={t('home.estimated_price_title')}>
+                        <span className="material-symbols-outlined text-[13px]">payments</span>
+                        <span>{t('home.per_serving', { price: calculateEstimatedPrice(featuredRecipe, ingredientsList) })}</span>
+                      </div>
+                    )}
+                    {featuredRecipe.video_url && (
+                      <div className="flex items-center gap-1 text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded text-[10px] font-bold" title={t('home.has_video_title')}>
+                        <span className="material-symbols-outlined text-[13px]">play_circle</span>
+                        <span>{t('home.video_badge')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
-          <div className="h-72 w-full bg-surface-dark rounded-2xl animate-pulse"></div>
+          <div className="h-64 w-full bg-surface-dark rounded-2xl animate-pulse"></div>
         )}
       </section>
 
-      {/* Search Header */}
-      <section ref={searchInputRef} className="px-4 py-2 scroll-mt-4">
-        <div className="relative group">
-          <input 
-            type="text"
-            placeholder={t('home.search_placeholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-surface-dark border-2 border-primary/20 rounded-2xl py-4 pl-12 pr-4 text-slate-100 placeholder:text-slate-500 focus:border-primary/50 focus:outline-none transition-all shadow-lg"
-          />
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">search</span>
-          {searchQuery && (
-            <button onClick={() => { setSearchQuery(''); setSearchParams({}); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-              <span className="material-symbols-outlined text-xl">close</span>
-            </button>
-          )}
+      {/* What to Cook Now Banner */}
+      <section className="w-full">
+        <div className="p-4 rounded-xl bg-gradient-to-r from-brand-surface to-brand-surfaceMuted border border-brand-border/90 transition-all shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="w-full lg:flex-1 flex items-start sm:items-center gap-3.5 min-w-0">
+            <div className="size-11 rounded-xl bg-brand-amber/15 border border-brand-amber/30 text-brand-amber flex items-center justify-center shrink-0 shadow-md">
+              <span className="material-symbols-outlined text-2xl font-black">kitchen</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <span>{t('what_to_cook.home_banner_btn', 'Какво да сготвя сега?')}</span>
+                {pantry && pantry.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-amber text-brand-charcoal shrink-0">
+                    {pantry.length}
+                  </span>
+                )}
+              </h4>
+              <p className="text-xs text-brand-muted mt-0.5 leading-snug">
+                {t('what_to_cook.home_banner_desc', 'Вижте кои рецепти можете да приготвите веднага с продуктите от килера си!')}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5 shrink-0 w-full lg:w-auto">
+            <Link
+              to="/ai-search"
+              className="inline-flex items-center justify-center gap-1.5 px-3 lg:px-5 py-2.5 rounded-xl bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal font-black text-[11px] lg:text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+            >
+              <span className="truncate">{t('home.find_by_pantry', 'Намери рецепти')}</span>
+              <span className="material-symbols-outlined text-base font-black shrink-0">arrow_forward</span>
+            </Link>
+            <Link
+              to="/ai-assistant"
+              className="inline-flex items-center justify-center gap-1.5 px-3 lg:px-5 py-2.5 rounded-xl bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal font-black text-[11px] lg:text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+              title={t('pantry.chef_ai_btn')}
+            >
+              <span className="material-symbols-outlined text-base font-black shrink-0">auto_awesome</span>
+              <span className="truncate">{t('pantry.chef_ai_btn')}</span>
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* What to Cook Now Banner (Visible ONLY when pantry has items) */}
-      {pantry && pantry.length > 0 && (
-        <section className="px-4 mt-3">
-          <div 
-            onClick={() => navigate('/ai-search')}
-            className="p-3.5 rounded-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-surface-dark border border-primary/30 hover:border-primary/60 cursor-pointer transition-all shadow-md active:scale-[0.99] group flex items-center justify-between gap-3"
+      {/* Top 12 Most Used Ingredients */}
+      {allPublicRecipes.length > 0 && (
+        <section className="w-full">
+          <button 
+            onClick={() => setShowTop10(!showTop10)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-dark lg:bg-brand-surface border border-primary/20 lg:border-brand-border text-primary lg:text-brand-amber font-bold hover:bg-primary/10 lg:hover:border-brand-amber/60 transition-colors shadow-md cursor-pointer"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-[#b8860b] text-background-dark flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-2xl font-black">kitchen</span>
-              </div>
-              <div className="min-w-0">
-                <h4 className="text-xs font-black text-slate-100 uppercase tracking-wider group-hover:text-primary transition-colors truncate flex items-center gap-1.5">
-                  <span>{t('what_to_cook.home_banner_btn')}</span>
-                  <span className="px-1.5 py-0.2 rounded-md bg-primary/25 text-primary text-[9px] font-black">
-                    {pantry.length}
-                  </span>
-                </h4>
-                <p className="text-[10px] text-slate-300 font-medium line-clamp-1">
-                  {t('what_to_cook.home_banner_desc')}
-                </p>
-              </div>
+            <span className="material-symbols-outlined">{showTop10 ? 'expand_less' : 'workspace_premium'}</span>
+            {t('home.top_ingredients_btn')}
+          </button>
+
+          {showTop10 && (
+            <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 pb-2">
+              {top10Ingredients.map((ing, idx) => {
+                const ingName = getLocalizedField(ing, 'name', i18n.language) || ing[`name_${i18n.language}`] || (isBg ? ing.name_bg : ing.name_en) || ing.name_en || ing.name_bg || ing.id;
+                return (
+                  <button
+                    key={ing.id}
+                    onClick={() => handleIngredientClick(ingName)}
+                    className="w-full bg-surface-dark/80 lg:bg-brand-surface rounded-2xl p-2.5 border border-primary/10 lg:border-brand-border flex flex-col items-center justify-center text-center shadow-lg relative hover:border-primary/50 lg:hover:border-brand-amber hover:bg-primary/10 hover:scale-[1.03] transition-all cursor-pointer group"
+                    title={t('home.search_with_ingredient', { name: ingName })}
+                  >
+                    <div className="absolute -top-0.5 -left-0.5 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-[#b8860b] text-background-dark font-black text-[10px] flex items-center justify-center shadow-md border border-background-dark">
+                      {idx + 1}
+                    </div>
+                    <span className="material-symbols-outlined text-3xl text-primary/50 group-hover:text-primary mb-2 transition-colors">
+                      {ing.icon || 'restaurant'}
+                    </span>
+                    <span className="text-slate-100 group-hover:text-primary text-[11px] font-bold line-clamp-2 leading-tight h-8 flex items-center underline decoration-primary/30 group-hover:decoration-primary underline-offset-2 transition-colors">
+                      {ingName}
+                    </span>
+                    <span className="text-primary text-[10px] mt-1 font-bold bg-primary/10 group-hover:bg-primary/20 px-2 py-0.5 rounded-full transition-colors">
+                      {t('home.recipes_count', { count: ing.count })}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <span className="material-symbols-outlined text-primary text-lg group-hover:translate-x-1 transition-transform shrink-0">
-              arrow_forward
-            </span>
-          </div>
+          )}
         </section>
       )}
 
-      {/* Dynamic Tabs */}
-      <section className="px-4 mt-2">
-        <div className="grid grid-cols-2 gap-2">
+      {/* Dynamic Tabs (Sorting Pills) */}
+      <section className="w-full">
+        <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-center justify-center mx-auto gap-2.5 lg:gap-3 py-1">
           {[
             { id: 'newest', label: t('home.tabs.newest') },
             { id: 'top', label: t('home.tabs.top') },
@@ -588,10 +785,10 @@ const Home = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-center ${
+              className={`w-full lg:w-[200px] h-9 lg:h-10 px-3 lg:px-4 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center justify-center text-center border cursor-pointer ${
                 activeTab === tab.id 
-                  ? 'bg-primary text-background-dark shadow-lg shadow-primary/20 scale-[1.02]' 
-                  : 'bg-surface-dark text-slate-400 border border-primary/10 hover:border-primary/30'
+                  ? 'bg-brand-amber text-brand-charcoal border-brand-amber shadow-sm' 
+                  : 'bg-surface-dark lg:bg-brand-surface text-brand-cream border-brand-border hover:border-brand-amber/50'
               }`}
             >
               {tab.label}
@@ -600,75 +797,78 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="px-4 mt-8">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-slate-100 text-2xl font-bold tracking-tight">
-            {t(`home.headings.${activeTab}`)}
-            {selectedCategory && ` • ${getPluralCategoryName(selectedCategory, t)}`}
-          </h3>
+      {/* Catalog & Filter Section */}
+      <section ref={recipeCatalogRef} className="w-full space-y-4 scroll-mt-32">
+        <div className="w-full lg:w-fit mx-auto space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <h3 className="text-white text-lg lg:text-xl font-extrabold tracking-tight">
+              {t(`home.headings.${activeTab}`)}
+              {selectedCategory && ` • ${getPluralCategoryName(selectedCategory, t)}`}
+            </h3>
+            <span className="text-xs text-brand-muted font-medium">
+              {t('home.total_count', 'Показани:')} <strong className="text-slate-100">{paginatedRecipes.length} от {totalRecipes}</strong>
+              {totalPages > 1 && (
+                <span className="text-[11px] text-brand-muted ml-1.5 font-normal">
+                  (Стр. {currentPage}/{totalPages})
+                </span>
+              )}
+            </span>
+          </div>
+
+          {/* Author Filter Badge */}
+          {authorFilter && (
+            <div ref={authorFilterRef} className="scroll-mt-4 p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between shadow-md animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="material-symbols-outlined text-primary shrink-0">person_search</span>
+                <p className="text-xs font-bold text-slate-100 truncate">
+                  {t('home.author_filter', { name: authorNameFilter || t('home.author_default') })}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('author');
+                  newParams.delete('authorName');
+                  setSearchParams(newParams);
+                }}
+                className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer shrink-0 ml-2 flex items-center justify-center rounded-lg hover:bg-primary/20"
+                title={t('home.clear_filter')}
+              >
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+          )}
+
+          {/* Category Filter Pills (4 rows x 3 columns on both Desktop & Mobile, centered, enlarged width on Desktop) */}
+          <div className="grid grid-cols-3 lg:w-fit gap-2 lg:gap-3 py-1">
+            {renderAllCategoriesPill()}
+            {rootCategories.map(renderCategoryPill)}
+          </div>
         </div>
 
-        {/* Author Filter Badge */}
-        {authorFilter && (
-          <div ref={authorFilterRef} className="scroll-mt-4 mb-4 p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between shadow-md animate-in fade-in duration-200">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="material-symbols-outlined text-primary shrink-0">person_search</span>
-              <p className="text-xs font-bold text-slate-100 truncate">
-                {t('home.author_filter', { name: authorNameFilter || t('home.author_default') })}
-              </p>
-            </div>
-            <button 
-              onClick={() => {
-                const newParams = new URLSearchParams(searchParams);
-                newParams.delete('author');
-                newParams.delete('authorName');
-                setSearchParams(newParams);
-              }}
-              className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer shrink-0 ml-2 flex items-center justify-center rounded-lg hover:bg-primary/20"
-              title={t('home.clear_filter')}
-            >
-              <span className="material-symbols-outlined text-base">close</span>
+        {/* Instant Recipe Search (desktop & mobile, directly before Recipe Grid) */}
+        <div ref={searchInputRef} className="relative group scroll-mt-24">
+          <input 
+            type="text"
+            placeholder={t('home.search_placeholder')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-surface-dark border-2 border-primary/20 rounded-xl py-3 pl-11 pr-10 text-slate-100 placeholder:text-slate-500 focus:border-primary/50 focus:outline-none transition-all shadow-md text-sm"
+          />
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-primary text-xl">search</span>
+          {searchQuery && (
+            <button onClick={() => { setSearchQuery(''); setSearchParams({}); }} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer">
+              <span className="material-symbols-outlined text-xl">close</span>
             </button>
-          </div>
-        )}
-
-        {/* Category Quick Filters */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
-              selectedCategory === null
-                ? 'bg-primary text-background-dark shadow-md shadow-primary/20 scale-[1.02]'
-                : 'bg-surface-dark text-slate-300 border border-primary/10 hover:border-primary/20'
-            }`}
-          >
-            <span>🍽️</span>
-            <span>{t('home.all_categories')}</span>
-          </button>
-          {getRootCategories().map(cat => {
-            const isActive = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(isActive ? null : cat.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
-                  isActive
-                    ? 'bg-primary text-background-dark shadow-md shadow-primary/20 scale-[1.02]'
-                    : 'bg-surface-dark text-slate-300 border border-primary/10 hover:border-primary/20'
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{getPluralCategoryName(cat.id, t)}</span>
-              </button>
-            );
-          })}
+          )}
         </div>
         
-        <div className="grid grid-cols-1 gap-5">
+        {/* Recipe Grid (1 column on mobile < lg; 3-4 columns on desktop >= lg) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {loading ? (
-            <div className="flex justify-center p-10"><span className="material-symbols-outlined animate-spin text-primary">refresh</span></div>
+            <div className="col-span-full flex justify-center p-12"><span className="material-symbols-outlined animate-spin text-primary text-3xl">refresh</span></div>
           ) : fetchError ? (
-            <div className="text-center py-10 px-6 border border-rose-500/20 rounded-2xl bg-rose-500/5">
+            <div className="col-span-full text-center py-10 px-6 border border-rose-500/20 rounded-2xl bg-rose-500/5">
               <span className="material-symbols-outlined text-rose-500 text-4xl mb-2">error</span>
               <p className="text-rose-500 text-sm font-bold uppercase tracking-tight">{t('home.load_error')}</p>
               <p className="text-[10px] text-slate-400 mt-1 mb-4">{fetchError}</p>
@@ -684,10 +884,10 @@ const Home = () => {
               )}
             </div>
           ) : realRecipes.length === 0 ? (
-            <div className="text-center py-10 text-slate-500 uppercase text-[10px] tracking-widest font-bold border border-primary/10 rounded-2xl bg-surface-dark/30">
+            <div className="col-span-full text-center py-12 text-slate-400 uppercase text-xs tracking-widest font-bold border border-brand-border rounded-2xl bg-brand-surface/40">
               {t('home.empty_recipes')}
             </div>
-          ) : realRecipes.map(recipe => {
+          ) : paginatedRecipes.map(recipe => {
             const title = getLocalizedRecipeTitle(recipe, i18n.language);
             const prepTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
             const difficulty = t(`home.difficulty.${recipe.difficulty || 'medium'}`);
@@ -699,8 +899,13 @@ const Home = () => {
             const isLongTitle = typeof title === 'string' && title.trim().length > 20;
 
             return (
-              <div key={recipe.id} className="bg-surface-dark/90 backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 shadow-lg hover:border-primary/50 transition-colors flex flex-col group cursor-pointer relative hover:z-10" onClick={() => navigate(`/recipe/${recipe.id}`)}>
-                <div className="flex h-auto min-h-[10rem]">
+              <div 
+                key={recipe.id} 
+                className="bg-surface-dark/95 lg:bg-brand-surface backdrop-blur-md rounded-2xl overflow-hidden border border-primary/20 lg:border-brand-border shadow-lg hover:border-primary/50 lg:hover:border-brand-amber transition-all duration-300 flex flex-col justify-between group cursor-pointer relative" 
+                onClick={() => navigate(`/recipe/${recipe.id}`)}
+              >
+                {/* MOBILE VIEW (< lg): Classic horizontal layout in 1 column */}
+                <div className="flex lg:hidden h-auto min-h-[10rem]">
                   <div className="w-[35%] overflow-hidden relative">
                     <img className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" alt={title} src={imageUrl}/>
                   </div>
@@ -715,8 +920,8 @@ const Home = () => {
                         </h4>
                         {isLongTitle && (
                           <div className="pointer-events-none absolute left-0 top-full mt-1.5 z-30 opacity-0 invisible group-hover/title:opacity-100 group-hover/title:visible transition-all duration-200 w-full">
-                            <div className="relative bg-[#161b26]/95 backdrop-blur-md text-slate-100 text-xs font-semibold p-2.5 rounded-xl border border-primary/40 shadow-2xl shadow-black/80 flex items-start gap-1.5">
-                              <div className="absolute -top-1 left-4 size-2 rotate-45 bg-[#161b26] border-t border-l border-primary/40"></div>
+                            <div className="relative bg-surface-dark/95 backdrop-blur-md text-slate-100 text-xs font-semibold p-2.5 rounded-xl border border-primary/40 shadow-2xl shadow-black/20 dark:shadow-black/80 flex items-start gap-1.5">
+                              <div className="absolute -top-1 left-4 size-2 rotate-45 bg-surface-dark border-t border-l border-primary/40"></div>
                               <span className="material-symbols-outlined text-primary text-sm shrink-0 mt-0.5">restaurant_menu</span>
                               <span className="leading-snug break-words text-slate-100 drop-shadow-sm">{title}</span>
                             </div>
@@ -768,85 +973,155 @@ const Home = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* DESKTOP VIEW (>= lg): Vertical Gourmet Artisan Card from Stitch */}
+                <div className="hidden lg:flex flex-col h-full justify-between">
+                  <div>
+                    <div className="relative h-48 w-full overflow-hidden bg-brand-charcoal shrink-0">
+                      <img className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" alt={title} src={imageUrl} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background-dark/80 via-transparent to-transparent"></div>
+                      <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5 max-w-[85%]">
+                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-brand-amber text-brand-charcoal shadow-sm">
+                          {cuisineName}
+                        </span>
+                        {tags.slice(0, 1).map(tag => (
+                          <span key={tag} className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-emerald-500/80 text-white shadow-sm">
+                            {translateTag(tag, i18n.language)}
+                          </span>
+                        ))}
+                      </div>
+                      {recipe.video_url && (
+                        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] font-bold text-white border border-white/20">
+                          <span className="material-symbols-outlined text-[13px] text-rose-500">smart_display</span>
+                          <span>Видео</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-4 space-y-2">
+                      <h4 className="text-white font-bold text-base leading-snug line-clamp-2 group-hover:text-brand-amber transition-colors" title={title}>
+                        {title}
+                      </h4>
+                      <div className="flex flex-col gap-1.5 text-xs text-brand-muted pt-1">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="flex items-center gap-1 text-slate-300">
+                            <span className="material-symbols-outlined text-[14px] text-brand-amber">schedule</span>
+                            <span>{prepTime}m</span>
+                          </span>
+                          <span className="flex items-center gap-1 text-slate-300">
+                            <span className="material-symbols-outlined text-[14px] text-brand-amber">local_fire_department</span>
+                            <span>{difficulty}</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-brand-amber font-bold">
+                          <span className="material-symbols-outlined text-[14px] fill-[1]">star</span>
+                          <span className="text-slate-100">{(recipe.rating || 0).toFixed(1)}</span>
+                          <span className="text-[10px] text-brand-muted">({getVotesCount(recipe)})</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-3.5 py-2.5 bg-brand-charcoal/80 border-t border-brand-border/60 flex items-center justify-between gap-2 mt-2">
+                    {calculateEstimatedPrice(recipe, ingredientsList) ? (
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-brand-emeraldBg border border-brand-emerald/30 text-emerald-400 text-[11px] font-bold whitespace-nowrap">
+                        <span className="material-symbols-outlined text-[13px] shrink-0">payments</span>
+                        <span>~{calculateEstimatedPrice(recipe, ingredientsList)} € / порция</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-brand-muted font-bold uppercase tracking-wider truncate">The Best Idea</span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/recipe/${recipe.id}`);
+                      }}
+                      className="size-8 shrink-0 rounded-full bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal flex items-center justify-center transition-all shadow-md active:scale-90 cursor-pointer"
+                      title={t('common.buttons.view', 'Прегледай')}
+                    >
+                      <span className="material-symbols-outlined text-base">arrow_forward</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             );
           })}
         </div>
 
-        {allPublicRecipes.length > 0 && (
-          <div className="mt-8 px-2">
+        {/* Pagination Controls (< 1 2 3 ... 16 >) */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 pt-8 pb-4 select-none" data-purpose="pagination">
+            {/* Previous Page (<) */}
             <button 
-              onClick={() => setShowTop10(!showTop10)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-dark border border-primary/20 text-primary font-bold hover:bg-primary/10 transition-colors shadow-md cursor-pointer"
+              type="button"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="size-8 rounded-lg bg-brand-surface border border-brand-border text-brand-muted hover:text-brand-amber hover:border-brand-amber/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title={t('common.pagination.prev', 'Предишна страница')}
+              aria-label="Previous Page"
             >
-              <span className="material-symbols-outlined">{showTop10 ? 'expand_less' : 'workspace_premium'}</span>
-              {t('home.top_ingredients_btn')}
+              <span className="material-symbols-outlined text-lg leading-none">chevron_left</span>
             </button>
 
-            {showTop10 && (
-              <div className="mt-4 grid grid-cols-3 gap-3 pb-4">
-                {top10Ingredients.map((ing, idx) => {
-                  const ingName = getLocalizedField(ing, 'name', i18n.language) || ing[`name_${i18n.language}`] || (isBg ? ing.name_bg : ing.name_en) || ing.name_en || ing.name_bg || ing.id;
-                  return (
-                    <button
-                      key={ing.id}
-                      onClick={() => handleIngredientClick(ingName)}
-                      className="w-full bg-surface-dark/80 rounded-2xl p-2.5 border border-primary/10 flex flex-col items-center justify-center text-center shadow-lg relative hover:border-primary/50 hover:bg-primary/10 hover:scale-[1.03] transition-all cursor-pointer group"
-                      title={t('home.search_with_ingredient', { name: ingName })}
-                    >
-                      <div className="absolute -top-0.5 -left-0.5 w-6 h-6 rounded-full bg-gradient-to-br from-primary to-[#b8860b] text-background-dark font-black text-[10px] flex items-center justify-center shadow-md border border-background-dark">
-                        {idx + 1}
-                      </div>
-                      <span className="material-symbols-outlined text-3xl text-primary/50 group-hover:text-primary mb-2 transition-colors">
-                        {ing.icon || 'restaurant'}
-                      </span>
-                      <span className="text-slate-100 group-hover:text-primary text-[11px] font-bold line-clamp-2 leading-tight h-8 flex items-center underline decoration-primary/30 group-hover:decoration-primary underline-offset-2 transition-colors">
-                        {ingName}
-                      </span>
-                      <span className="text-primary text-[10px] mt-1 font-bold bg-primary/10 group-hover:bg-primary/20 px-2 py-0.5 rounded-full transition-colors">
-                        {t('home.recipes_count', { count: ing.count })}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            {/* Page Numbers with Ellipsis */}
+            {getPageNumbers().map((p, idx) => {
+              if (p === '...') {
+                return (
+                  <span key={`ellipsis-${idx}`} className="text-xs text-brand-muted px-1 select-none">
+                    ...
+                  </span>
+                );
+              }
+
+              const isCurrent = p === currentPage;
+              return (
+                <button
+                  key={`page-${p}`}
+                  type="button"
+                  onClick={() => handlePageChange(p)}
+                  className={`size-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                    isCurrent
+                      ? 'bg-brand-amber text-brand-charcoal font-black shadow-md'
+                      : 'bg-brand-surface border border-brand-border text-brand-cream hover:border-brand-amber/50 hover:text-brand-amber'
+                  }`}
+                  aria-current={isCurrent ? 'page' : undefined}
+                >
+                  {p}
+                </button>
+              );
+            })}
+
+            {/* Next Page (>) */}
+            <button 
+              type="button"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="size-8 rounded-lg bg-brand-surface border border-brand-border text-brand-muted hover:text-brand-amber hover:border-brand-amber/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title={t('common.pagination.next', 'Следваща страница')}
+              aria-label="Next Page"
+            >
+              <span className="material-symbols-outlined text-lg leading-none">chevron_right</span>
+            </button>
           </div>
         )}
       </section>
 
-      <section className="px-4 mt-10">
-        <div className="bg-gradient-to-br from-primary/20 via-surface-dark to-background-dark p-6 rounded-3xl border border-primary/30 relative overflow-hidden shadow-2xl">
-          <div className="relative z-10">
-            <h4 className="text-primary font-extrabold text-xl mb-2">{t('home.what_to_cook')}</h4>
-            <p className="text-slate-300 text-sm mb-6 font-medium">{t('home.find_based_on_ingredients')}</p>
-            <Link
-              to="/ai-assistant"
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] hover:from-[#e6c863] text-background-dark font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all cursor-pointer"
-              title={t('pantry.chef_ai_btn')}
-            >
-              <span className="material-symbols-outlined text-base font-black">auto_awesome</span>
-              <span>{t('pantry.chef_ai_btn')}</span>
-            </Link>
-          </div>
-          <span className="material-symbols-outlined absolute -right-6 -bottom-6 text-primary/10 text-[140px] rotate-12">lightbulb</span>
-        </div>
-      </section>
-
-      <section className="px-4 mt-8 pb-8">
-        <h3 className="text-slate-100 text-2xl font-bold tracking-tight mb-4">{t('home.discover_plan')}</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <Link to="/planner" className="bg-surface-dark border border-primary/20 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-md group">
-            <span className="material-symbols-outlined text-3xl text-primary group-hover:scale-110 transition-transform">calendar_month</span>
-            <span className="text-sm font-bold text-slate-100 text-center">{t('home.weekly_menu')}</span>
+      <section className="w-full pt-4 pb-6">
+        <h3 className="text-slate-100 text-lg lg:text-xl font-extrabold tracking-tight mb-4">{t('home.discover_plan')}</h3>
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-4 lg:gap-6">
+          <Link to="/planner" className="bg-surface-dark lg:bg-brand-surface border border-primary/20 lg:border-brand-border p-3 sm:p-5 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 lg:hover:border-brand-amber hover:bg-primary/5 transition-all shadow-md group">
+            <span className="material-symbols-outlined text-2xl sm:text-3xl text-primary lg:text-brand-amber group-hover:scale-110 transition-transform">calendar_month</span>
+            <span className="text-xs sm:text-sm font-bold text-slate-100 text-center leading-tight">{t('home.weekly_menu')}</span>
           </Link>
-          <Link to="/seasonal" className="bg-surface-dark border border-primary/20 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-md group">
-            <span className="material-symbols-outlined text-3xl text-primary group-hover:scale-110 transition-transform">ac_unit</span>
-            <span className="text-sm font-bold text-slate-100 text-center">{t('home.seasonal_menu')}</span>
+          <Link to="/seasonal" className="bg-surface-dark lg:bg-brand-surface border border-primary/20 lg:border-brand-border p-3 sm:p-5 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 lg:hover:border-brand-amber hover:bg-primary/5 transition-all shadow-md group">
+            <span className="material-symbols-outlined text-2xl sm:text-3xl text-primary lg:text-brand-amber group-hover:scale-110 transition-transform">ac_unit</span>
+            <span className="text-xs sm:text-sm font-bold text-slate-100 text-center leading-tight">{t('home.seasonal_menu')}</span>
           </Link>
-          <Link to="/cuisines" className="bg-surface-dark border border-primary/20 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all shadow-md group col-span-2">
-            <span className="material-symbols-outlined text-3xl text-primary group-hover:scale-110 transition-transform">public</span>
-            <span className="text-sm font-bold text-slate-100">{t('home.explore_cuisines')}</span>
+          <Link to="/cuisines" className="bg-surface-dark lg:bg-brand-surface border border-primary/20 lg:border-brand-border p-3 sm:p-5 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 lg:hover:border-brand-amber hover:bg-primary/5 transition-all shadow-md group">
+            <span className="material-symbols-outlined text-2xl sm:text-3xl text-primary lg:text-brand-amber group-hover:scale-110 transition-transform">public</span>
+            <span className="text-xs sm:text-sm font-bold text-slate-100 text-center leading-tight">{t('home.explore_cuisines')}</span>
           </Link>
         </div>
       </section>

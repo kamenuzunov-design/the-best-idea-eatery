@@ -23,7 +23,7 @@ import {
   translateRecipeTo5Languages,
   slugifyRecipeTitle
 } from '../../lib/communityUtils';
-import { calculateNutritionFromIngredients } from '../../lib/recipeNutrition';
+import { calculateNutritionFromIngredients, findDbIngredient } from '../../lib/recipeNutrition';
 import { getGeminiApiKey } from '../../lib/geminiClient';
 
 const ManageRecipes = () => {
@@ -115,6 +115,13 @@ const ManageRecipes = () => {
   const [activeTargetRowId, setActiveTargetRowId] = useState(null);
   const [isSubRecipeModalOpen, setIsSubRecipeModalOpen] = useState(false);
   const [subRecipeSearchTerm, setSubRecipeSearchTerm] = useState('');
+
+  // Missing Products Audit Modal State
+  const [missingAuditModal, setMissingAuditModal] = useState({
+    isOpen: false,
+    results: [],
+    isGenerating: false
+  });
 
   useEffect(() => {
     const unsubRecipes = onSnapshot(query(collection(db, 'recipes')), (snapshot) => {
@@ -271,6 +278,92 @@ const ManageRecipes = () => {
     setSubRecipeSearchTerm('');
     setActiveTargetRowId(null);
   }, [activeTargetRowId, measurementsList]);
+
+  // Quick-create master ingredient in Firestore if missing from master nomenclature
+  const handleQuickCreateProduct = async (ingRow) => {
+    const rawNameBg = (ingRow.name?.bg || ingRow.ingredient_bg || (typeof ingRow.name === 'string' ? ingRow.name : '') || ingRow.ingredient_id || '').trim();
+    const rawNameEn = (ingRow.name?.en || ingRow.ingredient_en || '').trim();
+    const displayName = rawNameBg || rawNameEn || 'Продукт';
+
+    const fallbackSlug = (rawNameEn || rawNameBg)
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яё-]+/gi, '-')
+      .replace(/(^-|-$)+/g, '');
+    const finalSlug = ingRow.ingredient_id && /^[a-z0-9-]+$/.test(ingRow.ingredient_id)
+      ? ingRow.ingredient_id
+      : (fallbackSlug || `ing_${Date.now()}`);
+
+    const promptPrice = window.prompt(
+      t('recipes.prompt_product_price', 'Въведете прогнозна цена в Евро за 100 грама за "{{name}}":', { name: displayName }),
+      '1.30'
+    );
+    if (promptPrice === null) return;
+
+    const pricePer100 = parseFloat(promptPrice) || 1.30;
+    const lowerName = (displayName + ' ' + rawNameEn).toLowerCase();
+    
+    let mainGroup = 'other';
+    let subGroup = 'other';
+    if (lowerName.includes('агне') || lowerName.includes('lamb') || lowerName.includes('месо') || lowerName.includes('meat') || lowerName.includes('пиле') || lowerName.includes('свинско') || lowerName.includes('телешко')) {
+      mainGroup = 'meat';
+      subGroup = (lowerName.includes('агне') || lowerName.includes('lamb')) ? 'meat_lamb' : 'meat_general';
+    } else if (lowerName.includes('сирене') || lowerName.includes('мляко') || lowerName.includes('масло') || lowerName.includes('кашкавал') || lowerName.includes('cheese') || lowerName.includes('milk')) {
+      mainGroup = 'dairy';
+      subGroup = 'dairy_general';
+    } else if (lowerName.includes('чушк') || lowerName.includes('домат') || lowerName.includes('краставиц') || lowerName.includes('картоф') || lowerName.includes('лук') || lowerName.includes('морков')) {
+      mainGroup = 'vegetables';
+      subGroup = 'fresh_vegetables';
+    }
+
+    const newProductDoc = {
+      id: finalSlug,
+      slug: finalSlug,
+      name: {
+        bg: rawNameBg || displayName,
+        en: rawNameEn || displayName,
+        es: ingRow.name?.es || rawNameEn || displayName,
+        it: ingRow.name?.it || rawNameEn || displayName,
+        fr: ingRow.name?.fr || rawNameEn || displayName,
+        de: ingRow.name?.de || rawNameEn || displayName
+      },
+      name_bg: rawNameBg || displayName,
+      name_en: rawNameEn || displayName,
+      classification: {
+        main_group: mainGroup,
+        sub_group: subGroup,
+        cuisine_origin: 'european'
+      },
+      nutrition_per_100: {
+        calories: mainGroup === 'meat' ? 240 : 120,
+        proteins: mainGroup === 'meat' ? 20 : 3,
+        carbs: mainGroup === 'meat' ? 0 : 15,
+        fats: mainGroup === 'meat' ? 17 : 1
+      },
+      price_per_100: pricePer100,
+      currency: 'EUR',
+      units_mapping: [
+        { unit_id: 'gram', weight_grams: 1 },
+        { unit_id: 'kilogram', weight_grams: 1000 },
+        { unit_id: 'piece', weight_grams: 12000 }
+      ],
+      is_active: true,
+      is_deleted: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(doc(db, 'ingredients', finalSlug), newProductDoc);
+      updateIngredientRow(ingRow.id, 'ingredient_id', finalSlug);
+      alert(t('recipes.product_created_success', 'Продуктът "{{name}}" беше успешно добавен в Продукти с цена {{price}} € / 100g!', {
+        name: displayName,
+        price: pricePer100.toFixed(2)
+      }));
+    } catch (err) {
+      console.error('Error creating product:', err);
+      alert(t('recipes.product_created_error', 'Грешка при създаване на продукт: ') + err.message);
+    }
+  };
 
   const filteredMasterIngs = React.useMemo(() => {
     if (!ingSearchTerm) return ingredientsList;
@@ -668,6 +761,29 @@ const ManageRecipes = () => {
       };
 
       recipeData.tags = getRecipeTags(recipeData, ingredientsList);
+
+      // Audit ingredients in this recipe to set or auto-clear needs_product_review
+      const unlinkedIngsInThisRecipe = (recipeData.ingredients || []).filter(ing => {
+        if (ing.type === 'recipe') {
+          const subId = ing.recipe_id || ing.ingredient_id;
+          return !recipes.some(r => r.id === subId || r.slug === subId);
+        }
+        const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id || i.slug === ing.ingredient_id) || findDbIngredient(ing, ingredientsList);
+        const hasTextOrId = Boolean(ing.ingredient_id || ing.name?.bg || ing.ingredient_bg || ing.name_bg || ing.name?.en || ing.ingredient_en);
+        return !dbIng && hasTextOrId;
+      });
+
+      if (unlinkedIngsInThisRecipe.length > 0) {
+        recipeData.needs_product_review = true;
+        recipeData.missing_products_summary = unlinkedIngsInThisRecipe.map(ing => {
+          return ing.name?.bg || ing.ingredient_bg || ing.name_bg || ing.name?.en || ing.ingredient_en || ing.ingredient_id || 'Неизвестен продукт';
+        });
+        recipeData.missing_products_count = unlinkedIngsInThisRecipe.length;
+      } else {
+        recipeData.needs_product_review = false;
+        recipeData.missing_products_summary = null;
+        recipeData.missing_products_count = 0;
+      }
 
       if (editingId) {
         // Archive before update
@@ -1113,6 +1229,127 @@ const ManageRecipes = () => {
     setLoading(false);
   };
 
+  const handleCheckMissingProducts = () => {
+    if (!ingredientsList || ingredientsList.length === 0 || !recipes || recipes.length === 0) {
+      alert(t('recipes.tags_not_loaded', 'Моля, изчакайте данните да се заредят напълно.'));
+      return;
+    }
+
+    const unlinkedResults = [];
+
+    recipes.forEach(r => {
+      if (!Array.isArray(r.ingredients) || r.ingredients.length === 0) return;
+
+      const unlinkedForRecipe = [];
+
+      r.ingredients.forEach(ing => {
+        if (ing.type === 'recipe') {
+          const subId = ing.recipe_id || ing.ingredient_id;
+          const foundSub = recipes.find(rec => rec.id === subId || rec.slug === subId);
+          if (!foundSub) {
+            unlinkedForRecipe.push({
+              name: ing.name?.bg || ing.name_bg || ing.ingredient_id || 'Неизвестна подрецепта',
+              type: 'subrecipe'
+            });
+          }
+          return;
+        }
+
+        const dbIng = ingredientsList.find(i => i.id === ing.ingredient_id || i.slug === ing.ingredient_id) || findDbIngredient(ing, ingredientsList);
+        const hasTextOrId = Boolean(ing.ingredient_id || ing.name?.bg || ing.ingredient_bg || ing.name_bg || ing.name?.en || ing.ingredient_en);
+
+        if (!dbIng && hasTextOrId) {
+          const displayName = ing.name?.bg || ing.ingredient_bg || ing.name_bg || ing.name?.en || ing.ingredient_en || ing.ingredient_id;
+          unlinkedForRecipe.push({
+            name: displayName,
+            amount: ing.amount,
+            unit_id: ing.unit_id,
+            type: 'ingredient'
+          });
+        }
+      });
+
+      if (unlinkedForRecipe.length > 0) {
+        unlinkedResults.push({
+          recipe: r,
+          missingList: unlinkedForRecipe,
+          missingCount: unlinkedForRecipe.length
+        });
+      }
+    });
+
+    if (unlinkedResults.length === 0) {
+      alert(t('recipes.missing_audit_all_ok'));
+      return;
+    }
+
+    setMissingAuditModal({
+      isOpen: true,
+      results: unlinkedResults,
+      isGenerating: false
+    });
+  };
+
+  const handleGenerateModerationList = async () => {
+    if (missingAuditModal.results.length === 0) return;
+    setMissingAuditModal(prev => ({ ...prev, isGenerating: true }));
+
+    try {
+      const BATCH_SIZE = 400;
+      const flaggedIds = new Set(missingAuditModal.results.map(res => res.recipe.id));
+
+      // Batch 1: Flag affected recipes with missing products info
+      for (let offset = 0; offset < missingAuditModal.results.length; offset += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        const slice = missingAuditModal.results.slice(offset, offset + BATCH_SIZE);
+        slice.forEach(res => {
+          const recRef = doc(db, 'recipes', res.recipe.id);
+          batch.update(recRef, {
+            needs_product_review: true,
+            missing_products_summary: res.missingList.map(m => m.name),
+            missing_products_count: res.missingCount,
+            updatedAt: new Date().toISOString()
+          });
+        });
+        await batch.commit();
+      }
+
+      // Batch 2: Clear previously flagged recipes that no longer have missing products
+      const previouslyFlagged = recipes.filter(r => r.needs_product_review && !flaggedIds.has(r.id));
+      if (previouslyFlagged.length > 0) {
+        for (let offset = 0; offset < previouslyFlagged.length; offset += BATCH_SIZE) {
+          const batch = writeBatch(db);
+          const slice = previouslyFlagged.slice(offset, offset + BATCH_SIZE);
+          slice.forEach(r => {
+            batch.update(doc(db, 'recipes', r.id), {
+              needs_product_review: false,
+              missing_products_summary: null,
+              missing_products_count: 0
+            });
+          });
+          await batch.commit();
+        }
+      }
+
+      await logActivity(
+        user?.uid,
+        user?.email,
+        'generate_missing_products_moderation',
+        `Flagged ${missingAuditModal.results.length} recipes for missing products moderation`
+      );
+
+      setMissingAuditModal({ isOpen: false, results: [], isGenerating: false });
+
+      if (window.confirm(t('recipes.send_to_moderation_success'))) {
+        navigate('/admin/moderation?tab=missing_products');
+      }
+    } catch (err) {
+      console.error('Error generating moderation list:', err);
+      alert('Error: ' + err.message);
+      setMissingAuditModal(prev => ({ ...prev, isGenerating: false }));
+    }
+  };
+
   const handleServingsChange = (newServingsVal) => {
     const nextServings = parseInt(newServingsVal) || 1;
     const prevServings = parseInt(servings) || 1;
@@ -1450,8 +1687,8 @@ const ManageRecipes = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 h-screen">
-      <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 space-y-3">
+    <div className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto lg:pt-5 bg-background-dark pb-24 h-screen">
+      <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl space-y-3">
         {/* Header Block: Row 1 (Back, Title, Buttons) & Row 2 (Spacer, Count) */}
         <div className="flex flex-col space-y-0.5">
           <div className="flex items-center justify-between">
@@ -1520,14 +1757,24 @@ const ManageRecipes = () => {
                 {t('recipes.total_count', { count: recipes.length })}
               </span>
               {isPowerUser && (
-                <button
-                  onClick={handleRecalculateTags}
-                  title={t('recipes.recalculate_tags')}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20"
-                >
-                  <span className="material-symbols-outlined text-[16px]">label</span>
-                  {t('recipes.tags_btn')}
-                </button>
+                <>
+                  <button
+                    onClick={handleRecalculateTags}
+                    title={t('recipes.recalculate_tags')}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors text-xs font-bold border border-amber-500/20 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">label</span>
+                    {t('recipes.tags_btn')}
+                  </button>
+                  <button
+                    onClick={handleCheckMissingProducts}
+                    title={t('recipes.check_missing_products_tooltip')}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors text-xs font-bold border border-rose-500/20 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">production_quantity_limits</span>
+                    {t('recipes.missing_products_btn')}
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -1925,6 +2172,7 @@ const ManageRecipes = () => {
                 const isSubRecipe = ing.type === 'recipe';
                 const subRec = isSubRecipe ? recipes.find(r => r.id === (ing.recipe_id || ing.ingredient_id) || r.slug === (ing.recipe_id || ing.ingredient_id)) : null;
                 const dbIng = !isSubRecipe ? ingredientsList.find(i => i.id === ing.ingredient_id || i.slug === ing.ingredient_id) : null;
+                const isUnlinked = !isSubRecipe && Boolean(ing.ingredient_id || ing.name?.bg || ing.ingredient_bg) && !dbIng;
                 const hasSpecificUnits = dbIng?.units_mapping?.length > 0;
                 const mappedUnitIds = hasSpecificUnits ? dbIng.units_mapping.map(um => um.unit_id) : null;
 
@@ -1964,16 +2212,23 @@ const ManageRecipes = () => {
                         <button
                           type="button"
                           onClick={() => handleOpenIngModal(ing.id)}
-                          className={`w-32 sm:w-[152px] bg-surface-dark border rounded px-1.5 py-1 text-[11px] text-left flex items-center justify-between shrink-0 transition-colors cursor-pointer ${
-                            ing.ingredient_id
-                              ? 'border-[#b8860b]/50 text-slate-100 font-bold bg-[#b8860b]/5'
-                              : 'border-primary/20 text-slate-400 hover:border-primary/50'
+                          className={`w-32 sm:w-[152px] border rounded px-1.5 py-1 text-[11px] text-left flex items-center justify-between shrink-0 transition-colors cursor-pointer ${
+                            isUnlinked
+                              ? 'border-amber-500/80 bg-amber-500/10 text-amber-200 font-bold'
+                              : ing.ingredient_id
+                                ? 'bg-surface-dark border-[#b8860b]/50 text-slate-100 font-bold bg-[#b8860b]/5'
+                                : 'bg-surface-dark border-primary/20 text-slate-400 hover:border-primary/50'
                           }`}
-                          title={t('recipes.select_ingredient_tooltip')}
+                          title={isUnlinked ? t('recipes.unlinked_ingredient_tooltip') : t('recipes.select_ingredient_tooltip')}
                         >
-                          <span className="truncate">
-                            {dbIng ? (getLocalizedField(dbIng, 'name', currentLang) || dbIng.name_bg || dbIng.name_en) : (ing.name?.[currentLang] || ing.ingredient_bg || ing.ingredient_en || t('recipes.ingredient_placeholder'))}
-                          </span>
+                          <div className="flex items-center gap-1 truncate min-w-0">
+                            {isUnlinked && (
+                              <span className="material-symbols-outlined text-amber-400 text-[13px] shrink-0" title={t('recipes.unlinked_ingredient_tooltip')}>warning</span>
+                            )}
+                            <span className="truncate">
+                              {dbIng ? (getLocalizedField(dbIng, 'name', currentLang) || dbIng.name_bg || dbIng.name_en) : (ing.name?.[currentLang] || ing.ingredient_bg || ing.ingredient_en || t('recipes.ingredient_placeholder'))}
+                            </span>
+                          </div>
                           <span className="material-symbols-outlined text-primary text-sm shrink-0 ml-1">search</span>
                         </button>
                       )}
@@ -2066,6 +2321,27 @@ const ManageRecipes = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Unlinked Ingredient Warning & Quick-Create Banner */}
+                    {isUnlinked && (
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] animate-in fade-in duration-150">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="material-symbols-outlined text-amber-400 text-xs shrink-0">warning</span>
+                          <span className="font-semibold truncate">
+                            {t('recipes.unlinked_ingredient_warning')}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickCreateProduct(ing)}
+                          className="px-2 py-0.5 rounded bg-amber-500/25 hover:bg-amber-500/40 text-amber-100 border border-amber-500/50 text-[10px] font-extrabold transition-all shrink-0 cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
+                          title={t('recipes.create_in_products_tooltip')}
+                        >
+                          <span className="material-symbols-outlined text-[13px]">add_circle</span>
+                          <span>{t('recipes.create_in_products_btn')}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -2520,6 +2796,100 @@ const ManageRecipes = () => {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Missing Products Audit Modal */}
+      {missingAuditModal.isOpen && (
+        <div className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-surface-dark border border-primary/30 rounded-2xl sm:rounded-3xl w-full max-w-sm sm:max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[75vh] sm:max-h-[80vh] my-auto">
+            {/* Header */}
+            <div className="flex justify-between items-center p-3.5 sm:p-4 border-b border-primary/20 bg-background-dark shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                <div className="size-8 sm:size-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                  <span className="material-symbols-outlined text-[18px] sm:text-[20px]">production_quantity_limits</span>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-100 truncate">
+                    {t('recipes.missing_audit_modal_title')}
+                  </h3>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 line-clamp-1">
+                    {t('recipes.missing_audit_summary', {
+                      recipeCount: missingAuditModal.results.length,
+                      missingCount: missingAuditModal.results.reduce((acc, curr) => acc + curr.missingCount, 0)
+                    })}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMissingAuditModal(prev => ({ ...prev, isOpen: false }))}
+                className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer shrink-0"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            {/* Scrollable List */}
+            <div className="p-3 sm:p-4 overflow-y-auto space-y-2.5 flex-1 min-h-0 custom-scrollbar">
+              {missingAuditModal.results.map(({ recipe, missingList, missingCount }) => {
+                const title = getLocalizedField(recipe, 'title', currentLang) || recipe.title?.en || recipe.id;
+                return (
+                  <div
+                    key={recipe.id}
+                    className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-background-dark/80 border border-primary/15 hover:border-amber-500/40 transition-colors space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-xs text-slate-100 truncate">
+                        {title}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-black shrink-0 border border-rose-500/30">
+                        {missingCount} {t('recipes.unlinked_badge', 'Липсва')}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {missingList.map((m, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px] sm:text-[11px] font-medium flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[12px] sm:text-[13px]">warning</span>
+                          {m.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Fixed Footer */}
+            <div className="p-3 sm:p-3.5 border-t border-primary/20 bg-background-dark/95 shrink-0 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setMissingAuditModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer shrink-0"
+              >
+                {t('common.buttons.cancel', 'Затвори')}
+              </button>
+              <button
+                type="button"
+                disabled={missingAuditModal.isGenerating}
+                onClick={handleGenerateModerationList}
+                className="px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-primary to-[#b8860b] text-background-dark font-extrabold text-xs uppercase tracking-wider shadow-md hover:brightness-110 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                <span className={`material-symbols-outlined text-base ${missingAuditModal.isGenerating ? 'animate-spin' : ''}`}>
+                  {missingAuditModal.isGenerating ? 'sync' : 'playlist_add_check'}
+                </span>
+                <span>
+                  {missingAuditModal.isGenerating
+                    ? t('common.loading', 'Генериране...')
+                    : t('recipes.send_to_moderation_btn')}
+                </span>
+              </button>
             </div>
           </div>
         </div>

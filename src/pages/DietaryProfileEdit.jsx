@@ -99,9 +99,9 @@ const DietaryProfileEdit = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24">
+    <div className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto bg-background-dark lg:pt-5 pb-6">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-10 flex items-center p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
+      <div className="sticky top-0 z-10 flex items-center p-4 bg-surface-dark/90 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl">
         <button type="button" onClick={() => navigate(-1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
@@ -115,7 +115,7 @@ const DietaryProfileEdit = () => {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="px-6 pt-6 pb-2">
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-500 text-sm font-medium">

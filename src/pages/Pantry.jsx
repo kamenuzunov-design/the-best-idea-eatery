@@ -292,7 +292,18 @@ const Pantry = () => {
   };
 
   return (
-    <div className="flex-1 pb-32 relative flex flex-col min-h-screen bg-background-dark">
+    <div className="flex-1 w-full lg:max-w-[1000px] mx-auto pb-4 relative flex flex-col bg-background-dark">
+      {/* Page Title & Subtitle (above Dietary Profile) */}
+      <div className="px-4 pt-5 pb-3.5 flex justify-between items-center border-b border-primary/10">
+        <div>
+          <h2 className="text-2xl font-extrabold text-slate-100 leading-none">{t('pantry.title')}</h2>
+          <h3 className="text-primary text-xs font-bold tracking-[0.2em] uppercase mt-1.5">{t('pantry.subtitle')}</h3>
+        </div>
+        <div className="text-xs text-slate-400 font-bold bg-surface-dark border border-primary/20 px-3 py-1 rounded-full shadow-inner shrink-0">
+          {pantry.length === 1 ? t('pantry.items_count_one', { count: pantry.length }) : t('pantry.items_count_other', { count: pantry.length })}
+        </div>
+      </div>
+
       {/* Dietary Profile Button */}
       <div className="px-4 py-4 bg-surface-dark border-b border-primary/20 flex justify-between items-center shadow-md">
         <div className="flex items-center gap-2.5">
@@ -318,44 +329,35 @@ const Pantry = () => {
         </button>
       </div>
 
-      <div className="px-4 py-4 flex justify-between items-end border-b border-primary/10">
-        <div className="flex items-end gap-3 flex-wrap">
-          <div>
-            <h3 className="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-1">{t('pantry.subtitle')}</h3>
-            <h2 className="text-2xl font-extrabold text-slate-100 leading-none">{t('pantry.title')}</h2>
-          </div>
-          <div className="inline-flex flex-col gap-2">
-            {pantry.length > 0 && (
-              <button 
-                type="button"
-                onClick={() => navigate('/ai-search')}
-                className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(16,185,129,0.25)] cursor-pointer"
-                title={t('what_to_cook.header_title')}
-              >
-                <span className="material-symbols-outlined text-[16px] font-black">restaurant_menu</span>
-                <span>{t('what_to_cook.header_title')}</span>
-              </button>
-            )}
+      <div className="px-4 py-4 border-b border-primary/10">
+        <div className={`grid gap-2.5 w-full ${pantry.length > 0 ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2'}`}>
+          <button 
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-[1.02] transition-all active:scale-95 px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px] font-black">add</span>
+            <span>{t('pantry.add_btn')}</span>
+          </button>
+          {pantry.length > 0 && (
             <button 
               type="button"
-              onClick={() => setShowAddModal(true)}
-              className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
+              onClick={() => navigate('/ai-search')}
+              className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-[1.02] transition-all active:scale-95 px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
+              title={t('what_to_cook.header_title')}
             >
-              <span className="material-symbols-outlined text-[16px] font-black">add</span>
-              <span>{t('pantry.add_btn')}</span>
+              <span className="material-symbols-outlined text-[16px] font-black">restaurant_menu</span>
+              <span>{t('what_to_cook.header_title')}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => navigate('/scanner?mode=receipt')}
-              className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/35 hover:bg-amber-500/25 hover:scale-105 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px] font-black">receipt_long</span>
-              <span>{t('pantry.scan_receipt_btn')}</span>
-            </button>
-          </div>
-        </div>
-        <div className="text-xs text-slate-400 font-bold bg-surface-dark border border-primary/20 px-3 py-1 rounded-full shadow-inner">
-          {pantry.length === 1 ? t('pantry.items_count_one', { count: pantry.length }) : t('pantry.items_count_other', { count: pantry.length })}
+          )}
+          <button
+            type="button"
+            onClick={() => navigate('/scanner?mode=receipt')}
+            className="w-full justify-center text-xs font-extrabold uppercase tracking-wider bg-primary text-background-dark hover:bg-primary/90 hover:scale-[1.02] transition-all active:scale-95 px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[0_4px_12px_rgba(212,175,53,0.15)] cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px] font-black">receipt_long</span>
+            <span>{t('pantry.scan_receipt_btn')}</span>
+          </button>
         </div>
       </div>
 
@@ -393,7 +395,7 @@ const Pantry = () => {
         );
       })()}
 
-      <div className="px-4 py-6 space-y-6">
+      <div className="px-4 pt-5 pb-2 space-y-6">
         {pantry.length === 0 ? (
           <div className="text-center py-10 opacity-50">
             <span className="material-symbols-outlined text-6xl text-primary mb-2">kitchen</span>
@@ -408,91 +410,101 @@ const Pantry = () => {
             grouped[groupVal].push(item);
           });
 
-          // Sort groups (localized)
+          // Sort groups by item count descending, then alphabetically (with 'other' last on ties)
           const sortedGroupKeys = Object.keys(grouped).sort((a, b) => {
+            const countDiff = grouped[b].length - grouped[a].length;
+            if (countDiff !== 0) return countDiff;
             if (a === 'other') return 1;
             if (b === 'other') return -1;
             return getGroupName(a).localeCompare(getGroupName(b));
           });
 
-          return sortedGroupKeys.map(groupKey => (
-            <div key={groupKey} className="space-y-3">
-              <div className="flex items-center gap-3 px-2">
-                <span className="h-[1px] flex-1 bg-primary/20"></span>
-                <div className="flex items-center gap-2 text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
-                    {groupKey === 'other' ? 'inventory_2' : getGroupIcon(groupKey)}
-                  </span>
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em]">
-                    {groupKey === 'other' ? t('pantry.others').toUpperCase() : getGroupName(groupKey).toUpperCase()}
-                  </h3>
-                </div>
-                <span className="h-[1px] flex-1 bg-primary/20"></span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                {grouped[groupKey].map(item => {
-                  const daysLeft = getDaysUntilExpiration(item.expirationDate);
-                  const isExpiringSoon = daysLeft <= 3 && daysLeft >= 0;
-                  const isExpired = daysLeft < 0;
-                  const name = getItemName(item);
-
-                  return (
-                    <div key={item.id} className="bg-surface-dark/50 border border-primary/10 hover:border-primary/30 rounded-xl p-3 flex justify-between items-center group/card transition-all duration-300">
-                      <div className="flex gap-3 items-center w-full overflow-hidden pr-2">
-                        <div className="size-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary relative">
-                          {item.imageUrl && !item.imageUrl.includes('placeholder') ? (
-                            <img alt={name} className="w-full h-full object-cover rounded-full" src={item.imageUrl} />
-                          ) : (
-                            <span className="material-symbols-outlined text-[20px]">{getGroupIcon(item.category)}</span>
-                          )}
-                          {isExpired && <div className="absolute -top-1 -right-1 size-3 bg-rose-500 rounded-full border-2 border-background-dark"></div>}
-                          {!isExpired && isExpiringSoon && <div className="absolute -top-1 -right-1 size-3 bg-amber-500 rounded-full border-2 border-background-dark"></div>}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 
-                            onClick={() => handleEditClick(item)} 
-                            className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors text-sm"
-                          >
-                            {name}
-                          </h4>
-                          <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 mt-1 items-center">
-                            <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 font-extrabold uppercase">
-                              {formatQuantity(item.quantity)} <span className="text-[9px] font-medium text-primary/70">{getUnitName(item.unit)}</span>
-                            </span>
-                            <span className={`font-bold flex items-center gap-1 uppercase tracking-widest text-[9px] ${isExpired ? 'text-rose-500' : isExpiringSoon ? 'text-amber-500' : 'text-emerald-400'}`}>
-                              <span className="material-symbols-outlined text-[12px]">event</span>
-                              {isExpired ? t('pantry.expired_badge') : t('pantry.in_days', { count: daysLeft })}
-                            </span>
-                          </div>
-                          {/* Mini Expiration Progress Line */}
-                          <div className="mt-2 h-1 w-full bg-background-dark/50 rounded-full overflow-hidden border border-white/5 shadow-inner">
-                            <div className={`h-full rounded-full transition-all duration-1000 ${isExpired ? 'bg-rose-500 w-full' : isExpiringSoon ? 'bg-amber-500 w-1/4' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 w-3/4'}`}></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity duration-200">
-                        <button 
-                          onClick={() => handleEditClick(item)} 
-                          className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg" 
-                          title={t('pantry.edit_btn')}
-                        >
-                          <span className="material-symbols-outlined text-[16px]">edit</span>
-                        </button>
-                        <button 
-                          onClick={() => { if(window.confirm(t('pantry.delete_confirm', { name }))) removePantryItem(item.id); }} 
-                          className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg" 
-                          title={t('pantry.delete_btn')}
-                        >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
-                        </button>
-                      </div>
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
+              {sortedGroupKeys.map(groupKey => (
+                <div
+                  key={groupKey}
+                  className="bg-surface-dark/40 lg:bg-brand-surface/70 border border-primary/15 lg:border-brand-border rounded-2xl p-4 space-y-3 shadow-md"
+                >
+                  <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-primary/15 lg:border-brand-border">
+                    <div className="flex items-center gap-2 text-primary lg:text-brand-amber min-w-0">
+                      <span className="material-symbols-outlined text-[22px] shrink-0">
+                        {groupKey === 'other' ? 'inventory_2' : getGroupIcon(groupKey)}
+                      </span>
+                      <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] truncate">
+                        {groupKey === 'other' ? t('pantry.others').toUpperCase() : getGroupName(groupKey).toUpperCase()}
+                      </h3>
                     </div>
-                  );
-                })}
-              </div>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-primary/10 text-primary lg:bg-brand-amber/15 lg:text-brand-amber border border-primary/20 lg:border-brand-amber/30 shrink-0">
+                      {grouped[groupKey].length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {grouped[groupKey].map(item => {
+                      const daysLeft = getDaysUntilExpiration(item.expirationDate);
+                      const isExpiringSoon = daysLeft <= 3 && daysLeft >= 0;
+                      const isExpired = daysLeft < 0;
+                      const name = getItemName(item);
+
+                      return (
+                        <div key={item.id} className="bg-surface-dark/60 lg:bg-brand-charcoal/70 border border-primary/10 lg:border-brand-border/80 hover:border-primary/30 lg:hover:border-brand-amber/50 rounded-xl p-3 flex justify-between items-center group/card transition-all duration-300">
+                          <div className="flex gap-3 items-center w-full overflow-hidden pr-2">
+                            <div className="size-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary relative">
+                              {item.imageUrl && !item.imageUrl.includes('placeholder') ? (
+                                <img alt={name} className="w-full h-full object-cover rounded-full" src={item.imageUrl} />
+                              ) : (
+                                <span className="material-symbols-outlined text-[20px]">{getGroupIcon(item.category)}</span>
+                              )}
+                              {isExpired && <div className="absolute -top-1 -right-1 size-3 bg-rose-500 rounded-full border-2 border-background-dark"></div>}
+                              {!isExpired && isExpiringSoon && <div className="absolute -top-1 -right-1 size-3 bg-amber-500 rounded-full border-2 border-background-dark"></div>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 
+                                onClick={() => handleEditClick(item)} 
+                                className="font-bold text-slate-100 truncate hover:text-primary cursor-pointer transition-colors text-sm"
+                              >
+                                {name}
+                              </h4>
+                              <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 mt-1 items-center">
+                                <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 font-extrabold uppercase">
+                                  {formatQuantity(item.quantity)} <span className="text-[9px] font-medium text-primary/70">{getUnitName(item.unit)}</span>
+                                </span>
+                                <span className={`font-bold flex items-center gap-1 uppercase tracking-widest text-[9px] ${isExpired ? 'text-rose-500' : isExpiringSoon ? 'text-amber-500' : 'text-emerald-400'}`}>
+                                  <span className="material-symbols-outlined text-[12px]">event</span>
+                                  {isExpired ? t('pantry.expired_badge') : t('pantry.in_days', { count: daysLeft })}
+                                </span>
+                              </div>
+                              {/* Mini Expiration Progress Line */}
+                              <div className="mt-2 h-1 w-full bg-background-dark/50 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                                <div className={`h-full rounded-full transition-all duration-1000 ${isExpired ? 'bg-rose-500 w-full' : isExpiringSoon ? 'bg-amber-500 w-1/4' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 w-3/4'}`}></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="shrink-0 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity duration-200">
+                            <button 
+                              onClick={() => handleEditClick(item)} 
+                              className="p-1.5 text-slate-400 hover:text-blue-400 transition-colors bg-background-dark/50 rounded-lg cursor-pointer" 
+                              title={t('pantry.edit_btn')}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">edit</span>
+                            </button>
+                            <button 
+                              onClick={() => { if(window.confirm(t('pantry.delete_confirm', { name }))) removePantryItem(item.id); }} 
+                              className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors bg-background-dark/50 rounded-lg cursor-pointer" 
+                              title={t('pantry.delete_btn')}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-          ));
+          );
         })()}
 
         {/* Large Full-Width Chef AI Button at Bottom (below available products) */}
@@ -507,16 +519,6 @@ const Pantry = () => {
             <span>{t('pantry.chef_ai_btn')}</span>
           </button>
         </div>
-      </div>
-
-      {/* Floating Add Button */}
-      <div className="fixed bottom-24 left-0 right-0 max-w-md mx-auto z-40 flex justify-end px-6 pointer-events-none">
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-br from-primary to-[#b8860b] size-14 rounded-full flex items-center justify-center text-background-dark shadow-[0_5px_20px_rgba(212,175,53,0.5)] border border-white/20 hover:scale-110 active:scale-95 transition-all duration-300 pointer-events-auto"
-        >
-          <span className="material-symbols-outlined text-3xl font-bold">add</span>
-        </button>
       </div>
 
       {/* Add Modal */}

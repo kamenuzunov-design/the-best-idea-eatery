@@ -148,8 +148,8 @@ const ActivityLog = () => {
   });
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
-      <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
+    <div className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto lg:pt-5 bg-background-dark pb-24 min-h-screen">
+      <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/90 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl">
         <div className="flex items-center">
           <button 
             onClick={() => navigate(-1)} 

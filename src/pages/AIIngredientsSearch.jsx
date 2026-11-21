@@ -291,7 +291,7 @@ const AIIngredientsSearch = () => {
   }, [searchTerm, ingredientsDB, currentLang]);
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32">
+    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-8">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs shadow-2xl flex items-center gap-2 border border-emerald-400/40 animate-in fade-in slide-in-from-top-4 duration-200">
@@ -301,7 +301,7 @@ const AIIngredientsSearch = () => {
       )}
 
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3.5 border-b border-primary/20 bg-surface-dark/95 backdrop-blur-md sticky top-0 z-20 shadow-md">
+      <header className="flex items-center justify-between px-4 py-3.5 border-b lg:border border-primary/20 bg-surface-dark/95 backdrop-blur-md sticky top-0 z-20 shadow-md w-full lg:max-w-[1000px] mx-auto lg:mt-4 lg:rounded-2xl">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)} 
@@ -333,7 +333,7 @@ const AIIngredientsSearch = () => {
         </button>
       </header>
 
-      <main className="flex-1 flex flex-col p-4 gap-5 max-w-2xl mx-auto w-full">
+      <main className="flex-1 flex flex-col p-4 gap-5 max-w-2xl lg:max-w-[1000px] mx-auto w-full">
         {/* Active Ingredients Box */}
         <section className="bg-surface-dark/80 p-3.5 rounded-2xl border border-primary/20 shadow-inner space-y-3">
           <div className="flex items-center justify-between">
@@ -462,9 +462,11 @@ const AIIngredientsSearch = () => {
                       {classified.readyToCook.length}
                     </span>
                   </h2>
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    {t('what_to_cook.tier_ready.subtitle')}
-                  </p>
+                  {classified.readyToCook.length > 0 && (
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      {t('what_to_cook.tier_ready.subtitle')}
+                    </p>
+                  )}
                 </div>
 
                 {classified.readyToCook.length > 3 && (
@@ -685,7 +687,7 @@ const AIIngredientsSearch = () => {
                             className={`py-2 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer ${
                               isAdded
                                 ? 'bg-emerald-600/20 border border-emerald-500/50 text-emerald-400'
-                                : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950'
+                                : 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950'
                             }`}
                           >
                             <span className="material-symbols-outlined text-sm font-black">
@@ -817,7 +819,7 @@ const AIIngredientsSearch = () => {
                             className={`py-2 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer ${
                               isAdded
                                 ? 'bg-emerald-600/20 border border-emerald-500/50 text-emerald-400'
-                                : 'bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-slate-950'
+                                : 'bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-slate-950'
                             }`}
                           >
                             <span className="material-symbols-outlined text-sm font-black">

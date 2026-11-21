@@ -2,6 +2,8 @@
   "app": {
     "title": "The Best Idea",
     "subtitle": "Eatery",
+    "full_name": "The Best Idea Eatery",
+    "header_subtitle": "Culinary Intelligence & Pantry",
     "tagline": "Smart Culinary Ecosystem"
   },
   "common": {
@@ -38,7 +40,7 @@
     "recipes": "Recipes",
     "pantry": "Pantry",
     "scanner": "Food Scanner",
-    "ai": "AI Cook",
+    "ai": "Chef AI",
     "saved": "Saved",
     "profile": "Profile",
     "my_profile": "My Profile",
@@ -52,6 +54,21 @@
     "not_logged_in": "Not logged in",
     "events": "Events",
     "community": "Community"
+  },
+  "desktop_nav": {
+    "weekly_planner": "Weekly Planner",
+    "seasonal_menu": "Seasonal Menu",
+    "cuisines": "World Cuisines",
+    "get_android_app": "Get Android App",
+    "pantry_status": "Pantry: {{count}} Available Ingredients",
+    "view_pantry": "View pantry inventory",
+    "search_placeholder": "Search recipes, ingredients, cuisines..."
+  },
+  "desktop_footer": {
+    "rights": "All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "advertise": "Advertise & Contact"
   },
   "auth": {
     "headings": {
@@ -162,7 +179,13 @@
     "discover_plan": "Discover & Plan",
     "weekly_menu": "Weekly Menu",
     "seasonal_menu": "Seasonal Menu",
-    "explore_cuisines": "Explore Cuisines"
+    "explore_cuisines": "Explore Cuisines",
+    "views_label": "views",
+    "views_title": "View count",
+    "ratings_count": "ratings",
+    "view_btn": "View",
+    "cook_now_btn": "Cook now",
+    "find_by_pantry": "Find recipes"
   },
   "categories": {
     "salad": "Salads",
@@ -177,7 +200,7 @@
     "special": "Special Occasion"
   },
   "pantry": {
-    "title": "Your Pantry",
+    "title": "My Pantry",
     "subtitle": "Inventory and Expirations",
     "search": "Search ingredients...",
     "all": "All",
@@ -260,7 +283,7 @@
     "generate": "Generate Recipes",
     "suggested": "Suggested for you",
     "uses_ingredients": "Uses your ingredients!",
-    "chef_greeting": "Hello! I am **Chef AI** – your personal gourmet culinary assistant. 🧑‍🍳\n\nI see you have **{{count}} items** in your pantry. I can suggest recipes from our selection, fully customized to your dietary preferences, exclusions, and allergies.\n\nWhat would you like to cook today?",
+    "chef_greeting": "Hello! I am your **Chef AI** – personal culinary assistant. 🧑‍🍳\n\nI see you have **{{count}} items** in your pantry. I can suggest recipes from our selection, fully customized to your dietary preferences, exclusions, and allergies.\n\nWhat would you like to cook today?",
     "fallback_expiring_with_items": "The following items in your pantry are expiring soon: **{{names}}**. I recommend cooking one of these recipes to reduce food waste:",
     "fallback_expiring_none": "You don't have any items expiring in the next 3 days. Here are the best recipe suggestions using your pantry items:",
     "fallback_keto": "Sure thing! Here are our top **Keto** recipes matching your dietary profile:",
@@ -288,6 +311,13 @@
     "chip_keto": "Keto recipes",
     "chip_substitutes": "Ingredient substitutes",
     "input_placeholder": "Ask Chef AI for a recipe...",
+    "prompt_question": "What delicious dish shall we cook together today?",
+    "prompt_question_missing": "How shall we turn your available ingredients into something wonderful today?",
+    "prompt_question_seasonal": "What fresh seasonal dish shall we prepare together today?",
+    "prompt_question_cuisine": "Which culinary journey shall we explore together today?",
+    "prompt_question_events": "What special menu shall we craft for your occasion today?",
+    "prompt_question_contextual": "How shall we build on this delicious idea together today?",
+    "send_prompt_label": "Send",
     "dietary_profile_title": "Your Dietary Profile:",
     "excluded_items_count": "{{count}} excluded items",
     "no_dietary_restrictions": "No diet preferences configured",
@@ -741,6 +771,13 @@
     "view_list": "List View",
     "recalculate_tags": "Recalculate Tags",
     "tags_btn": "Tags",
+    "missing_products_btn": "Missing Products",
+    "check_missing_products_tooltip": "Check for recipes with missing or unlinked products in the database",
+    "missing_audit_all_ok": "All recipes verified! All ingredients are correctly linked to products in the database.",
+    "missing_audit_modal_title": "Missing Products Audit",
+    "missing_audit_summary": "Found {{recipeCount}} recipes with a total of {{missingCount}} missing or unlinked ingredients.",
+    "send_to_moderation_btn": "📋 Generate List in Moderation",
+    "send_to_moderation_success": "List generated successfully in Moderation! Would you like to go to Moderation now?",
     "filter_all": "All",
     "filter_pending": "Pending",
     "filter_active": "Active",
@@ -789,6 +826,14 @@
     "sub_recipe": "Sub-Recipe",
     "no_ingredients": "No ingredients added",
     "recipe_badge": "RECIPE",
+    "unlinked_ingredient_tooltip": "⚠️ This ingredient is not linked to any item in Products (cost and calories will not be counted).",
+    "unlinked_ingredient_warning": "Missing from Products — cost and nutrition cannot be calculated!",
+    "unlinked_badge": "Missing from Products",
+    "create_in_products_btn": "+ Add to Products",
+    "create_in_products_tooltip": "Create this ingredient as an official master product in Products",
+    "prompt_product_price": "Enter estimated EUR price per 100 grams for \"{{name}}\":",
+    "product_created_success": "Product \"{{name}}\" was successfully added to Products with price {{price}} € / 100g!",
+    "product_created_error": "Error creating product: ",
     "change_sub_recipe_tooltip": "Click to change sub-recipe",
     "select_ingredient_tooltip": "Click to search and select ingredient",
     "ingredient_placeholder": "-- Ingredient --",
@@ -1004,8 +1049,17 @@
       "all": "All",
       "translation": "Needs Translation",
       "approval": "Pending Approval",
+      "missing_products": "Missing Products",
       "community": "Gourmet Community"
     },
+    "missing_products_banner_title": "Recipes with missing products",
+    "missing_products_banner_desc_one": "1 recipe is waiting for ingredients to be linked to products in the database",
+    "missing_products_banner_desc_other": "{{count}} recipes are waiting for ingredients to be linked to products in the database",
+    "missing_products_badge": "Missing products ({{count}})",
+    "missing_ingredients_label": "Unlinked ingredients:",
+    "mark_reviewed_btn": "Mark as reviewed",
+    "mark_reviewed_tooltip": "Remove recipe from the missing products review queue",
+    "empty_missing_products": "No recipes with missing products. All ingredients are properly linked!",
     "empty_translation": "No items pending translation.",
     "empty_approval": "No pending content for approval.",
     "empty_all": "Queue is completely clear.",

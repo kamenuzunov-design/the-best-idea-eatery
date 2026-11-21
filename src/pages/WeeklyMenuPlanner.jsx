@@ -683,7 +683,7 @@ const WeeklyMenuPlanner = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark font-display pb-32">
+    <div className="relative flex min-h-screen w-full lg:max-w-3xl mx-auto flex-col overflow-x-hidden bg-background-dark font-display lg:pt-5 pb-32 lg:pb-8">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] bg-surface-dark border-2 border-primary text-slate-100 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 max-w-[416px] w-[92%]">
@@ -724,8 +724,8 @@ const WeeklyMenuPlanner = () => {
       </header>
 
       {/* 7-Day Selector Grid (No Horizontal Scrollbar) */}
-      <div className="bg-surface-dark border-b border-primary/15 px-3 py-3.5 shadow-inner">
-        <div className="max-w-3xl mx-auto grid grid-cols-7 gap-1.5">
+      <div className="bg-surface-dark border-b border-primary/15 px-4 py-3.5 shadow-inner">
+        <div className="w-full grid grid-cols-7 gap-1.5">
           {days.map(day => {
             const isActive = activeDay === day.id;
             const daySlots = weeklyMenu[day.id] || {};

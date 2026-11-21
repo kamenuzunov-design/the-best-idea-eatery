@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -20,17 +20,19 @@ import { notifyRecipeApproved } from '../../lib/notificationService';
 const Moderation = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const currentLang = i18n.language || 'bg';
 
   const [pendingApprovalItems, setPendingApprovalItems] = useState([]);
   const [translationRecipes, setTranslationRecipes] = useState([]);
   const [translationIngs, setTranslationIngs] = useState([]);
+  const [missingProductRecipes, setMissingProductRecipes] = useState([]);
   const [communityReports, setCommunityReports] = useState([]);
   const [communityPosts, setCommunityPosts] = useState([]);
   const [usersRoleMap, setUsersRoleMap] = useState(new Map());
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'translation' | 'approval' | 'community'
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'all'); // 'all' | 'translation' | 'approval' | 'missing_products' | 'community'
   const [communitySubView, setCommunitySubView] = useState('reports'); // 'reports' | 'feed'
   const [translatingKey, setTranslatingKey] = useState(null);
   const [isBulkTranslating, setIsBulkTranslating] = useState(false);
@@ -59,7 +61,14 @@ const Moderation = () => {
       setTranslationIngs(data);
     });
 
-    // 4. Community Reports
+    // 4. Recipes with missing products
+    const qMissing = query(collection(db, 'recipes'), where('needs_product_review', '==', true));
+    const unsubMissing = onSnapshot(qMissing, (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data(), type: 'recipe', isMissingProducts: true }));
+      setMissingProductRecipes(data);
+    });
+
+    // 5. Community Reports
     const reportsRef = doc(db, 'campaigns', 'community_reports');
     const unsubReports = onSnapshot(reportsRef, (snap) => {
       if (snap.exists() && Array.isArray(snap.data().reports)) {
@@ -69,7 +78,7 @@ const Moderation = () => {
       }
     });
 
-    // 5. Community Feed (for direct inspection & moderation)
+    // 6. Community Feed (for direct inspection & moderation)
     const feedRef = doc(db, 'campaigns', 'community_feed');
     const unsubFeed = onSnapshot(feedRef, (snap) => {
       if (snap.exists() && Array.isArray(snap.data().posts)) {
@@ -79,7 +88,7 @@ const Moderation = () => {
       }
     });
 
-    // 6. Users collection for live role resolution
+    // 7. Users collection for live role resolution
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       const map = new Map();
       snap.forEach((docSnap) => {
@@ -97,6 +106,7 @@ const Moderation = () => {
       unsubPending();
       unsubTransRecipes();
       unsubTransIngs();
+      unsubMissing();
       unsubReports();
       unsubFeed();
       unsubUsers();
@@ -116,10 +126,24 @@ const Moderation = () => {
         map.set(key, { ...item, isNeedsTranslation: true });
       }
     });
+    missingProductRecipes.forEach(item => {
+      const key = `${item.type}_${item.id}`;
+      if (map.has(key)) {
+        map.set(key, {
+          ...map.get(key),
+          isMissingProducts: true,
+          missing_products_summary: item.missing_products_summary,
+          missing_products_count: item.missing_products_count
+        });
+      } else {
+        map.set(key, { ...item, isMissingProducts: true });
+      }
+    });
     return Array.from(map.values());
-  }, [pendingApprovalItems, translationRecipes, translationIngs]);
+  }, [pendingApprovalItems, translationRecipes, translationIngs, missingProductRecipes]);
 
   const translationCount = translationRecipes.length + translationIngs.length;
+  const missingProductsCount = missingProductRecipes.length;
   const pendingReports = React.useMemo(
     () => communityReports.filter(r => r.status === 'pending'),
     [communityReports]
@@ -132,6 +156,9 @@ const Moderation = () => {
     }
     if (activeTab === 'approval') {
       return allItems.filter(item => item.isPendingApproval);
+    }
+    if (activeTab === 'missing_products') {
+      return allItems.filter(item => item.isMissingProducts);
     }
     return allItems;
   }, [allItems, activeTab]);
@@ -510,9 +537,29 @@ const Moderation = () => {
     }
   };
 
+  const handleMarkProductReviewed = async (recipeId, recipeTitle) => {
+    try {
+      await updateDoc(doc(db, 'recipes', recipeId), {
+        needs_product_review: false,
+        missing_products_summary: null,
+        missing_products_count: 0,
+        updatedAt: new Date().toISOString()
+      });
+      await logActivity(
+        user?.uid,
+        user?.email,
+        'mark_recipe_products_reviewed',
+        `Marked recipe products as reviewed: ${recipeTitle}`
+      );
+    } catch (err) {
+      console.error('Error marking recipe products reviewed:', err);
+      alert(t('moderation.error_action', 'Грешка при обработката.'));
+    }
+  };
+
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
-      <div className="sticky top-0 z-10 flex items-center p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
+    <div className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto lg:pt-5 bg-background-dark pb-24 min-h-screen">
+      <div className="sticky top-0 z-10 flex items-center p-4 bg-surface-dark/90 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl">
         <button 
           onClick={() => navigate('/admin')} 
           aria-label={t('common.buttons.back')}
@@ -615,6 +662,34 @@ const Moderation = () => {
           </div>
         )}
 
+        {/* Banner: Recipes with missing products */}
+        {missingProductsCount > 0 && activeTab !== 'missing_products' && (
+          <div
+            onClick={() => setActiveTab('missing_products')}
+            className="flex items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-rose-500/20 via-amber-500/20 to-rose-600/20 border-2 border-rose-500/50 hover:border-rose-400 rounded-2xl cursor-pointer transition-all shadow-lg group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform shrink-0">
+                <span className="material-symbols-outlined text-[22px]">production_quantity_limits</span>
+              </div>
+              <div>
+                <p className="text-xs font-black text-rose-300 uppercase tracking-wide">
+                  {t('moderation.missing_products_banner_title')}
+                </p>
+                <p className="text-[11px] text-slate-300">
+                  {missingProductsCount === 1
+                    ? t('moderation.missing_products_banner_desc_one')
+                    : t('moderation.missing_products_banner_desc_other', { count: missingProductsCount })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-500 text-white rounded-full font-black text-xs shrink-0">
+              <span>{missingProductsCount}</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </div>
+          </div>
+        )}
+
         {/* Filter Tabs */}
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
           <button
@@ -656,6 +731,22 @@ const Moderation = () => {
             {pendingApprovalItems.length > 0 && (
               <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${activeTab === 'approval' ? 'bg-white text-blue-600' : 'bg-blue-500/20 text-blue-300'}`}>
                 {pendingApprovalItems.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('missing_products')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 border cursor-pointer shrink-0 ${
+              activeTab === 'missing_products'
+                ? 'bg-rose-500 text-white border-rose-500 font-black'
+                : 'bg-surface-dark/80 text-rose-400 border-rose-500/30 hover:border-rose-500/60'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">production_quantity_limits</span>
+            {t('moderation.tabs.missing_products')}
+            {missingProductsCount > 0 && (
+              <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${activeTab === 'missing_products' ? 'bg-white text-rose-600' : 'bg-rose-500/20 text-rose-300'}`}>
+                {missingProductsCount}
               </span>
             )}
           </button>
@@ -1108,7 +1199,9 @@ const Moderation = () => {
                   ? t('moderation.empty_translation')
                   : activeTab === 'approval'
                     ? t('moderation.empty_approval')
-                    : t('moderation.empty_all')}
+                    : activeTab === 'missing_products'
+                      ? t('moderation.empty_missing_products')
+                      : t('moderation.empty_all')}
               </p>
             </div>
           ) : (
@@ -1141,6 +1234,12 @@ const Moderation = () => {
                           {t('moderation.pending_approval_badge')}
                         </span>
                       )}
+                      {item.isMissingProducts && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px]">production_quantity_limits</span>
+                          {t('moderation.missing_products_badge', { count: item.missing_products_count || item.missing_products_summary?.length || 1 })}
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs text-slate-400">{t('moderation.by_author', { author })}</span>
                   </div>
@@ -1163,6 +1262,25 @@ const Moderation = () => {
                   </div>
 
                   <p className="text-sm text-slate-400 line-clamp-2">{description}</p>
+
+                  {item.isMissingProducts && item.missing_products_summary?.length > 0 && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                        <span className="material-symbols-outlined text-sm">warning</span>
+                        <span>{t('moderation.missing_ingredients_label')}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {item.missing_products_summary.map((pName, pIdx) => (
+                          <span
+                            key={pIdx}
+                            className="px-2 py-0.5 rounded-md bg-background-dark/80 text-amber-200 border border-amber-500/20 text-xs font-medium"
+                          >
+                            {pName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-primary/10 pt-3">
                     {item.isNeedsTranslation && (
@@ -1197,6 +1315,18 @@ const Moderation = () => {
                       <span className="material-symbols-outlined text-[16px]">edit_note</span>
                       {t('moderation.buttons.translate_edit')}
                     </button>
+
+                    {item.isMissingProducts && (
+                      <button 
+                        type="button"
+                        onClick={() => handleMarkProductReviewed(item.id, titleEn)}
+                        className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-bold py-2 px-3 rounded-lg transition-colors border border-emerald-500/30 flex items-center justify-center gap-1 text-xs cursor-pointer"
+                        title={t('moderation.mark_reviewed_tooltip')}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                        {t('moderation.mark_reviewed_btn')}
+                      </button>
+                    )}
 
                     {item.isNeedsTranslation && !item.isPendingApproval && (
                       <button 

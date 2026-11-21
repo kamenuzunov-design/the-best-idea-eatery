@@ -368,8 +368,8 @@ const EditProfile = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24">
-      <div className="sticky top-0 z-10 flex flex-col pt-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20">
+    <div className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto bg-background-dark lg:pt-5 pb-12 lg:pb-4">
+      <div className="sticky top-0 z-10 flex flex-col pt-4 pb-3 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 lg:rounded-t-2xl">
         <div className="flex items-center px-4 mb-2">
           <button onClick={() => navigate(isEditingOther ? `/profile?uid=${queryUid}` : -1)} className="p-2 mr-2 text-slate-400 hover:text-primary transition-colors">
             <span className="material-symbols-outlined">arrow_back</span>
@@ -381,34 +381,38 @@ const EditProfile = () => {
           </h1>
         </div>
         
-        {/* Tabs */}
-        <div className="flex px-4 gap-4 mt-2">
-          <button 
-            type="button"
-            onClick={() => setActiveTab('profile')}
-            className={`pb-3 px-2 text-sm font-bold uppercase tracking-widest transition-all ${
-              activeTab === 'profile' 
-                ? 'text-primary border-b-2 border-primary' 
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {t('profile.edit.tabs.basic')}
-          </button>
-          <button 
-            type="button"
-            onClick={() => setActiveTab('preferences')}
-            className={`pb-3 px-2 text-sm font-bold uppercase tracking-widest transition-all ${
-              activeTab === 'preferences' 
-                ? 'text-primary border-b-2 border-primary' 
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {t('profile.edit.tabs.preferences')}
-          </button>
+        {/* Clear, High-Visibility Segmented Tabs (Mobile & Desktop) */}
+        <div className="px-4 mt-1">
+          <div className="grid grid-cols-2 gap-2 p-1.5 bg-background-dark/80 border border-primary/25 rounded-2xl shadow-inner">
+            <button 
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'profile' 
+                  ? 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark shadow-md' 
+                  : 'bg-surface-dark/80 text-slate-200 border border-primary/20 hover:border-primary/50 hover:text-primary'
+              }`}
+            >
+              <span className="material-symbols-outlined text-base sm:text-lg">person</span>
+              <span>{t('profile.edit.tabs.basic')}</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActiveTab('preferences')}
+              className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'preferences' 
+                  ? 'bg-gradient-to-r from-primary to-[#b8860b] text-background-dark shadow-md' 
+                  : 'bg-surface-dark/80 text-slate-200 border border-primary/20 hover:border-primary/50 hover:text-primary'
+              }`}
+            >
+              <span className="material-symbols-outlined text-base sm:text-lg">tune</span>
+              <span>{t('profile.edit.tabs.preferences')}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="px-6 pt-6 pb-3">
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-500 text-sm font-medium">
@@ -613,50 +617,6 @@ const EditProfile = () => {
               </div>
 
               {/* Delete Account Section */}
-              {!isEditingOther && !isGuest && (
-                <div className="pt-8 mt-4 border-t border-rose-500/10">
-                  {deleteStep === 0 ? (
-                    <button 
-                      type="button"
-                      onClick={() => setDeleteStep(1)}
-                      className="w-full py-4 text-xs font-bold text-rose-500/50 hover:text-rose-500 transition-colors uppercase tracking-widest flex items-center justify-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-sm">person_remove</span>
-                      {t('profile.edit.delete_account')}
-                    </button>
-                  ) : (
-                    <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
-                      <div className="text-center space-y-2">
-                        <h4 className="text-rose-500 font-black uppercase tracking-tight">
-                          {deleteStep === 1 ? t('profile.edit.delete_confirm_title') : t('profile.edit.delete_final_confirm')}
-                        </h4>
-                        <p className="text-xs text-slate-400 leading-relaxed">
-                          {t('profile.edit.delete_confirm_desc')}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <button 
-                          type="button"
-                          onClick={handleDeleteAccount}
-                          disabled={isDeleting}
-                          className="w-full py-3 bg-rose-500 text-white font-black rounded-xl hover:bg-rose-600 transition-colors disabled:opacity-50"
-                        >
-                          {isDeleting ? '...' : (deleteStep === 1 ? t('profile.edit.delete_yes') : t('profile.edit.delete_confirm_btn'))}
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={() => setDeleteStep(0)}
-                          disabled={isDeleting}
-                          className="w-full py-3 bg-transparent text-slate-400 font-bold hover:text-slate-200 transition-colors"
-                        >
-                          {t('profile.edit.cancel')}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
             </div>
           )}
 
@@ -667,9 +627,9 @@ const EditProfile = () => {
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold px-1 text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-sm text-primary">language</span>
-                  {t('profile.preferred_language')}
+                  {t('profile.edit.preferred_language')}
                 </label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
                   {SUPPORTED_LANGUAGES.map((code) => {
                     const meta = LANGUAGE_LABELS[code] || { name: code.toUpperCase() };
                     const isSelected = preferredLanguage === code;
@@ -678,7 +638,7 @@ const EditProfile = () => {
                         key={code}
                         type="button"
                         onClick={() => setPreferredLanguage(code)}
-                        className={`h-12 rounded-xl flex items-center justify-center gap-1.5 text-xs font-extrabold transition-all border cursor-pointer ${
+                        className={`h-9 sm:h-10 px-1 rounded-xl flex items-center justify-center gap-1 text-[11px] sm:text-xs font-extrabold transition-all border cursor-pointer ${
                           isSelected
                             ? 'bg-primary/20 text-primary border-primary shadow-sm shadow-primary/20 scale-[1.02]'
                             : 'bg-surface-dark/60 text-slate-300 border-primary/20 hover:border-primary/40 hover:bg-primary/5'
@@ -869,6 +829,50 @@ const EditProfile = () => {
               )}
             </button>
           </div>
+
+          {activeTab === 'profile' && !isEditingOther && !isGuest && (
+            <div className="pt-6 mt-2 border-t border-rose-500/10">
+              {deleteStep === 0 ? (
+                <button 
+                  type="button"
+                  onClick={() => setDeleteStep(1)}
+                  className="w-full py-4 text-xs font-bold text-rose-500/50 hover:text-rose-500 transition-colors uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">person_remove</span>
+                  {t('profile.edit.delete_account')}
+                </button>
+              ) : (
+                <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
+                  <div className="text-center space-y-2">
+                    <h4 className="text-rose-500 font-black uppercase tracking-tight">
+                      {deleteStep === 1 ? t('profile.edit.delete_confirm_title') : t('profile.edit.delete_final_confirm')}
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      {t('profile.edit.delete_confirm_desc')}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className="w-full py-3 bg-rose-500 text-white font-black rounded-xl hover:bg-rose-600 transition-colors disabled:opacity-50"
+                    >
+                      {isDeleting ? '...' : (deleteStep === 1 ? t('profile.edit.delete_yes') : t('profile.edit.delete_confirm_btn'))}
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setDeleteStep(0)}
+                      disabled={isDeleting}
+                      className="w-full py-3 bg-transparent text-slate-400 font-bold hover:text-slate-200 transition-colors"
+                    >
+                      {t('profile.edit.cancel')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </form>
       </div>
     </div>

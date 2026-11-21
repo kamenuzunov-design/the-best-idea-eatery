@@ -297,7 +297,7 @@ const ProfileSettings = () => {
   const editPreferencesUrl = isViewingOther ? `/profile/edit?uid=${displayUser.uid}&tab=preferences` : '/profile/edit?tab=preferences';
 
   return (
-    <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
+    <div className="flex-1 w-full lg:max-w-[1000px] mx-auto overflow-y-auto no-scrollbar lg:pt-5 pb-6">
       {isViewingOther && (
         <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20">
           <button 
@@ -313,128 +313,134 @@ const ProfileSettings = () => {
         </div>
       )}
 
-      <section className="flex flex-col items-center py-10 px-4 bg-gradient-to-b from-surface-dark to-background-dark border-b border-primary/10">
-        <div className="relative group">
-          <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 border-4 border-primary shadow-[0_0_30px_rgba(212,175,53,0.3)] flex items-center justify-center bg-primary/10 overflow-hidden">
-            {displayUser.profile?.avatar && !displayIsGuest ? (
-              <img src={displayUser.profile.avatar} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <span className="material-symbols-outlined text-6xl text-primary">person</span>
-            )}
-          </div>
-          {canEdit && (
-            <Link to={editProfileUrl} className="absolute bottom-1 right-1 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark rounded-full p-2 shadow-lg hover:scale-110 transition-transform cursor-pointer">
-              <span className="material-symbols-outlined text-sm font-extrabold">photo_camera</span>
-            </Link>
-          )}
-        </div>
-        
-        <div className="mt-5 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">
-            {displayUser.profile?.nickname || (displayIsGuest ? t('profile.roles.guest') : (displayUser.name || t('profile.roles.default_user')))}
-          </h1>
-          <p className="text-primary/80 font-bold text-xs uppercase tracking-widest mt-1">
-            {displayUser.reputation && !displayIsGuest ? `${getReputationLabel(displayUser.reputation.score, currentLang)} • ` : ''}
-            {displayIsAdmin ? t('profile.roles.admin') : displayIsOwner ? t('profile.roles.owner') : displayIsModerator ? t('profile.roles.moderator') : displayIsGuest ? t('profile.roles.guest') : t('profile.roles.user')}
-          </p>
-          {displayUser.email && <p className="text-slate-400 text-sm mt-1">{displayUser.email}</p>}
-          {!isViewingOther && !user.isVerified && !isGuest && (
-            <div className="mt-3 flex flex-col items-center">
-              <button 
-                onClick={handleResendEmail}
-                disabled={resendStatus === 'loading' || resendStatus === 'sent'}
-                className="flex items-center justify-center gap-1 bg-rose-500/10 border border-rose-500/20 py-1 px-3 rounded-full hover:bg-rose-500/20 active:scale-95 transition-all disabled:opacity-70 disabled:hover:scale-100"
-              >
-                {resendStatus === 'loading' ? (
-                  <span className="material-symbols-outlined text-[14px] text-rose-500 animate-spin">refresh</span>
-                ) : resendStatus === 'sent' ? (
-                  <span className="material-symbols-outlined text-[14px] text-emerald-500">check_circle</span>
-                ) : (
-                  <span className="material-symbols-outlined text-[14px] text-rose-500">warning</span>
-                )}
-                <span className={`text-xs font-medium ${resendStatus === 'sent' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                  {resendStatus === 'loading' 
-                    ? t('profile.verification.sending')
-                    : resendStatus === 'sent'
-                      ? t('profile.verification.sent_success')
-                      : t('profile.verification.unverified_badge')}
-                </span>
-              </button>
-              {resendStatus === 'error' && (
-                <p className="text-[10px] text-rose-500 mt-1">
-                  {t('profile.verification.error')}
-                </p>
+      <section className="py-10 px-4 lg:px-8 bg-gradient-to-b from-surface-dark to-background-dark border-b border-primary/10">
+        <div className="flex flex-col lg:flex-row items-center justify-center gap-5 lg:gap-[120px]">
+          {/* Avatar (Left & Larger on Desktop) */}
+          <div className="relative group shrink-0">
+            <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 lg:h-44 lg:w-44 border-4 border-primary shadow-[0_0_30px_rgba(212,175,53,0.3)] flex items-center justify-center bg-primary/10 overflow-hidden">
+              {displayUser.profile?.avatar && !displayIsGuest ? (
+                <img src={displayUser.profile.avatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <span className="material-symbols-outlined text-6xl lg:text-7xl text-primary">person</span>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Role Invitation Button (Under photo for Owner or Admin viewing another user) */}
-        {canInvite && (
-          <div className="mt-4 w-full max-w-xs flex flex-col items-center gap-1.5 px-4">
-            <button
-              type="button"
-              disabled={isAlreadyInvited || inviteLoading}
-              onClick={handleInviteRole}
-              className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all active:scale-95 shadow-md ${
-                isAlreadyInvited
-                  ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 cursor-not-allowed opacity-90'
-                  : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-background-dark shadow-[0_0_20px_rgba(245,158,11,0.35)]'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {inviteLoading ? 'refresh' : isAlreadyInvited ? 'mark_email_read' : 'mail'}
-              </span>
-              {isAlreadyInvited 
-                ? t('manage_users.modal.invitation_sent')
-                : (displayRole === ROLES.USER ? t('manage_users.modal.invite_moderator') : t('manage_users.modal.invite_admin'))}
-            </button>
-            {displayUser.invited_role && (
-              <button
-                type="button"
-                onClick={handleCancelInvite}
-                disabled={inviteLoading}
-                className="text-[11px] text-rose-400/80 hover:text-rose-300 hover:underline flex items-center gap-1 mt-0.5"
-              >
-                <span className="material-symbols-outlined text-[13px]">cancel</span>
-                Оттегли поканата
-              </button>
+            {canEdit && (
+              <Link to={editProfileUrl} className="absolute bottom-1 right-1 lg:bottom-2 lg:right-2 bg-gradient-to-r from-primary to-[#b8860b] text-background-dark rounded-full p-2 lg:p-2.5 shadow-lg hover:scale-110 transition-transform cursor-pointer">
+                <span className="material-symbols-outlined text-sm lg:text-base font-extrabold">photo_camera</span>
+              </Link>
             )}
           </div>
-        )}
-
-        {!displayIsGuest && (() => {
-          const bioText = displayUser.profile?.[`bio_${currentLang}`] || displayUser.profile?.bio_en || displayUser.profile?.bio_bg || displayUser.profile?.bio || '';
-          return bioText ? (
-            <div className="mt-4 px-6 max-w-sm w-full">
-              <p className="text-slate-300 text-sm italic border-l-2 border-primary/30 pl-3 text-left">
-                {bioText}
+          
+          {/* Text & Edit Profile Button (Right on Desktop) */}
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left min-w-0">
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-100">
+                {displayUser.profile?.nickname || (displayIsGuest ? t('profile.roles.guest') : (displayUser.name || t('profile.roles.default_user')))}
+              </h1>
+              <p className="text-primary/80 font-bold text-xs uppercase tracking-widest mt-1">
+                {displayUser.reputation && !displayIsGuest ? `${getReputationLabel(displayUser.reputation.score, currentLang)} • ` : ''}
+                {displayIsAdmin ? t('profile.roles.admin') : displayIsOwner ? t('profile.roles.owner') : displayIsModerator ? t('profile.roles.moderator') : displayIsGuest ? t('profile.roles.guest') : t('profile.roles.user')}
               </p>
+              {displayUser.email && <p className="text-slate-400 text-sm mt-1">{displayUser.email}</p>}
+              {!isViewingOther && !user.isVerified && !isGuest && (
+                <div className="mt-3 flex flex-col items-center lg:items-start">
+                  <button 
+                    onClick={handleResendEmail}
+                    disabled={resendStatus === 'loading' || resendStatus === 'sent'}
+                    className="flex items-center justify-center gap-1 bg-rose-500/10 border border-rose-500/20 py-1 px-3 rounded-full hover:bg-rose-500/20 active:scale-95 transition-all disabled:opacity-70 disabled:hover:scale-100"
+                  >
+                    {resendStatus === 'loading' ? (
+                      <span className="material-symbols-outlined text-[14px] text-rose-500 animate-spin">refresh</span>
+                    ) : resendStatus === 'sent' ? (
+                      <span className="material-symbols-outlined text-[14px] text-emerald-500">check_circle</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-[14px] text-rose-500">warning</span>
+                    )}
+                    <span className={`text-xs font-medium ${resendStatus === 'sent' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {resendStatus === 'loading' 
+                        ? t('profile.verification.sending')
+                        : resendStatus === 'sent'
+                          ? t('profile.verification.sent_success')
+                          : t('profile.verification.unverified_badge')}
+                    </span>
+                  </button>
+                  {resendStatus === 'error' && (
+                    <p className="text-[10px] text-rose-500 mt-1">
+                      {t('profile.verification.error')}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-          ) : null;
-        })()}
 
-        {!displayIsGuest && displayUser.profile?.location?.show_location && (() => {
-          const loc = displayUser.profile.location;
-          const city = loc?.[`city_${currentLang}`] || loc?.city_en || loc?.city_bg || '';
-          const country = loc?.[`country_${currentLang}`] || loc?.country_en || loc?.country_bg || '';
-          const locString = [city, country].filter(Boolean).join(', ');
-          return locString ? (
-            <div className="mt-3 flex items-center gap-1.5 text-slate-400 text-xs font-medium">
-              <span className="material-symbols-outlined text-primary text-base">location_on</span>
-              <span>{locString}</span>
-            </div>
-          ) : null;
-        })()}
-        
-        {canEdit && (
-          <div className="mt-6">
-            <Link to={editProfileUrl} className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary border border-primary/30 px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm active:scale-95">
-              <span className="material-symbols-outlined text-lg">edit</span>
-              {t('profile.buttons.edit_profile')}
-            </Link>
+            {/* Role Invitation Button (Under photo/info for Owner or Admin viewing another user) */}
+            {canInvite && (
+              <div className="mt-4 w-full max-w-xs flex flex-col items-center lg:items-start gap-1.5">
+                <button
+                  type="button"
+                  disabled={isAlreadyInvited || inviteLoading}
+                  onClick={handleInviteRole}
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all active:scale-95 shadow-md ${
+                    isAlreadyInvited
+                      ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400 cursor-not-allowed opacity-90'
+                      : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-background-dark shadow-[0_0_20px_rgba(245,158,11,0.35)]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {inviteLoading ? 'refresh' : isAlreadyInvited ? 'mark_email_read' : 'mail'}
+                  </span>
+                  {isAlreadyInvited 
+                    ? t('manage_users.modal.invitation_sent')
+                    : (displayRole === ROLES.USER ? t('manage_users.modal.invite_moderator') : t('manage_users.modal.invite_admin'))}
+                </button>
+                {displayUser.invited_role && (
+                  <button
+                    type="button"
+                    onClick={handleCancelInvite}
+                    disabled={inviteLoading}
+                    className="text-[11px] text-rose-400/80 hover:text-rose-300 hover:underline flex items-center gap-1 mt-0.5"
+                  >
+                    <span className="material-symbols-outlined text-[13px]">cancel</span>
+                    Оттегли поканата
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!displayIsGuest && (() => {
+              const bioText = displayUser.profile?.[`bio_${currentLang}`] || displayUser.profile?.bio_en || displayUser.profile?.bio_bg || displayUser.profile?.bio || '';
+              return bioText ? (
+                <div className="mt-4 max-w-md w-full">
+                  <p className="text-slate-300 text-sm italic border-l-2 border-primary/30 pl-3 text-left">
+                    {bioText}
+                  </p>
+                </div>
+              ) : null;
+            })()}
+
+            {!displayIsGuest && displayUser.profile?.location?.show_location && (() => {
+              const loc = displayUser.profile.location;
+              const city = loc?.[`city_${currentLang}`] || loc?.city_en || loc?.city_bg || '';
+              const country = loc?.[`country_${currentLang}`] || loc?.country_en || loc?.country_bg || '';
+              const locString = [city, country].filter(Boolean).join(', ');
+              return locString ? (
+                <div className="mt-3 flex items-center gap-1.5 text-slate-400 text-xs font-medium">
+                  <span className="material-symbols-outlined text-primary text-base">location_on</span>
+                  <span>{locString}</span>
+                </div>
+              ) : null;
+            })()}
+            
+            {canEdit && (
+              <div className="mt-6">
+                <Link to={editProfileUrl} className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary border border-primary/30 px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm active:scale-95">
+                  <span className="material-symbols-outlined text-lg">edit</span>
+                  {t('profile.buttons.edit_profile')}
+                </Link>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </section>
 
       {!isViewingOther && user.invited_role && (
@@ -725,7 +731,7 @@ const ProfileSettings = () => {
 
 
 
-      <section className="mt-4 px-4 pb-8">
+      <section className="mt-4 px-4 pb-2">
         <p 
           onClick={() => {
             const now = Date.now();

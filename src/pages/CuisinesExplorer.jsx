@@ -374,7 +374,7 @@ const CuisinesExplorer = () => {
     );
 
     return (
-      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark font-display pb-32">
+      <div className="relative flex flex-1 w-full lg:max-w-[1000px] mx-auto flex-col overflow-x-hidden bg-background-dark font-display lg:pt-5 pb-8">
         {/* Sticky Header */}
         <header className="flex items-center justify-between bg-surface-dark/95 backdrop-blur-md px-4 py-3.5 sticky top-0 z-20 border-b border-primary/20 shadow-md">
           <button
@@ -401,7 +401,7 @@ const CuisinesExplorer = () => {
           </button>
         </header>
 
-        <div className="max-w-5xl mx-auto w-full px-4 pt-4 flex flex-col gap-5">
+        <div className="w-full px-4 pt-4 flex flex-col gap-5">
           {/* Interactive Hierarchy Breadcrumbs */}
           <nav className="flex flex-wrap items-center gap-1.5 text-xs bg-surface-dark/80 border border-primary/15 px-3.5 py-2.5 rounded-2xl shadow-sm">
             <button
@@ -684,7 +684,7 @@ const CuisinesExplorer = () => {
   ];
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-dark font-display pb-32">
+    <div className="relative flex flex-1 w-full lg:max-w-[1000px] mx-auto flex-col overflow-x-hidden bg-background-dark font-display lg:pt-5 pb-8">
       {/* Header */}
       <header className="flex items-center bg-surface-dark/95 backdrop-blur-md p-4 sticky top-0 z-20 border-b border-primary/20 shadow-sm">
         <button
@@ -710,7 +710,7 @@ const CuisinesExplorer = () => {
         </button>
       </header>
 
-      <div className="max-w-5xl mx-auto w-full px-4 pt-5 flex flex-col gap-6">
+      <div className="w-full px-4 pt-5 flex flex-col gap-6">
         {/* Search & Catalog Filter Controls */}
         <div className="flex flex-col gap-3">
           {/* Row 1: Full-width Search Bar */}
@@ -853,7 +853,7 @@ const CuisinesExplorer = () => {
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {featuredCuisines.map(c => {
                     const stat = cuisineStats[c.id];
                     const crumbs = getCuisineBreadcrumbs(c.id, cuisinesList);
@@ -873,15 +873,13 @@ const CuisinesExplorer = () => {
                           alt={getLocalizedCuisine(c.id, currentLang, cuisinesList)}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/50 to-transparent opacity-95 group-hover:opacity-85 transition-opacity" />
-
                         <div className="absolute top-3 right-3">
                           <span className="bg-background-dark/80 backdrop-blur-md text-primary text-[10px] sm:text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border border-primary/35 shadow-md">
                             {formatRecipesCount(stat?.count || 0)}
                           </span>
                         </div>
 
-                        <div className="absolute bottom-0 left-0 p-4 sm:p-5 w-full">
+                        <div className="cuisine-glass-card backdrop-blur-md absolute bottom-0 left-0 p-4 sm:p-5 w-full border-t border-primary/15">
                           {parentName && (
                             <p className="text-[10px] sm:text-xs font-bold text-primary/90 uppercase tracking-wider truncate mb-0.5">
                               {parentName}
@@ -929,13 +927,13 @@ const CuisinesExplorer = () => {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                         <div className="absolute inset-0 bg-gradient-to-r from-background-dark via-background-dark/75 to-background-dark/30" />
-                        <div className="absolute inset-0 p-5 flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3.5">
-                            <div className="size-12 rounded-2xl bg-primary/20 backdrop-blur-md border border-primary/40 flex items-center justify-center text-primary shadow-md shrink-0">
+                        <div className="absolute inset-0 p-4 sm:p-5 flex items-center justify-between gap-4">
+                          <div className="cuisine-glass-card flex items-center gap-3.5 backdrop-blur-md px-3.5 py-2.5 border border-primary/20 shadow-md max-w-[80%]">
+                            <div className="size-11 rounded-xl bg-primary/20 backdrop-blur-md border border-primary/40 flex items-center justify-center text-primary shadow-md shrink-0">
                               <span className="material-symbols-outlined text-2xl">{rootIcon}</span>
                             </div>
-                            <div>
-                              <h3 className="text-lg sm:text-xl font-black text-white group-hover:text-primary transition-colors">
+                            <div className="min-w-0">
+                              <h3 className="text-base sm:text-xl font-black text-white group-hover:text-primary transition-colors truncate">
                                 {getLocalizedCuisine(root.id, currentLang, cuisinesList)}
                               </h3>
                               <p className="text-xs font-bold text-primary/90 mt-0.5">

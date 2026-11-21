@@ -409,8 +409,8 @@ const SavedRecipes = () => {
   };
 
   return (
-    <div className="flex-1 pb-32 px-4 py-8">
-      <h2 className="text-3xl font-extrabold text-slate-100 mb-8 tracking-tight">{t('saved.title')}</h2>
+    <div className="flex-1 w-full lg:max-w-[1000px] mx-auto px-4 pt-8 pb-8">
+      <h2 className="text-xl lg:text-2xl font-extrabold text-slate-100 mb-6 tracking-tight">{t('saved.title')}</h2>
       
       {/* Shopping List Section */}
       <div className="mb-10">
@@ -436,7 +436,7 @@ const SavedRecipes = () => {
                   <button
                     type="button"
                     onClick={handleToggleAllChecked}
-                    className="text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
+                    className="text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/35 hover:bg-amber-500/25 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm">
                       {checkedItems.size === shoppingList.length ? 'deselect' : 'done_all'}
@@ -445,14 +445,14 @@ const SavedRecipes = () => {
                   </button>
                   <button 
                     onClick={handleClearShoppingList}
-                    className="text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
+                    className="text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/35 hover:bg-amber-500/25 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm">delete_sweep</span>
                     {t('saved.clear_btn')}
                   </button>
                   <button 
                     onClick={handleStartEdit}
-                    className="text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm cursor-pointer"
+                    className="text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/35 hover:bg-amber-500/25 transition-all active:scale-95 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-sm">edit</span>
                     {t('saved.edit_btn')}
@@ -835,8 +835,8 @@ const SavedRecipes = () => {
                             </h4>
                             {isLongTitle && (
                               <div className="pointer-events-none absolute left-0 top-full mt-1.5 z-30 opacity-0 invisible group-hover/title:opacity-100 group-hover/title:visible transition-all duration-200 w-full">
-                                <div className="relative bg-[#161b26]/95 backdrop-blur-md text-slate-100 text-xs font-semibold p-2.5 rounded-xl border border-primary/40 shadow-2xl shadow-black/80 flex items-start gap-1.5">
-                                  <div className="absolute -top-1 left-4 size-2 rotate-45 bg-[#161b26] border-t border-l border-primary/40"></div>
+                                <div className="relative bg-surface-dark/95 backdrop-blur-md text-slate-100 text-xs font-semibold p-2.5 rounded-xl border border-primary/40 shadow-2xl shadow-black/20 dark:shadow-black/80 flex items-start gap-1.5">
+                                  <div className="absolute -top-1 left-4 size-2 rotate-45 bg-surface-dark border-t border-l border-primary/40"></div>
                                   <span className="material-symbols-outlined text-primary text-sm shrink-0 mt-0.5">restaurant_menu</span>
                                   <span className="leading-snug break-words text-slate-100 drop-shadow-sm">{title}</span>
                                 </div>

@@ -141,6 +141,14 @@ html.light .from-background-dark\/90,
 html.light .from-background-dark\/80 {
   --tw-gradient-from: #faf8f3 var(--tw-gradient-from-position) !important;
 }
+
+html.light .via-background-dark\/80,
+html.light .via-background-dark\/75,
+html.light .via-background-dark\/70,
+html.light .via-background-dark\/55,
+html.light .via-background-dark\/50 {
+  --tw-gradient-via: rgba(250, 248, 243, 0.85) var(--tw-gradient-via-position) !important;
+}
 html.light section.bg-gradient-to-b.from-surface-dark.to-background-dark {
   background-image: linear-gradient(to bottom, #ffffff, #faf8f3) !important;
 }
@@ -241,11 +249,19 @@ html.light .text-primary\/60 {
   color: #8a6914 !important;
 }
 
+html.light .text-amber-200,
 html.light .text-amber-300,
 html.light .text-amber-400,
 html.light .text-amber-400\/90,
 html.light .text-amber-500 {
   color: #946c0a !important;
+}
+
+html.light .text-orange-200,
+html.light .text-orange-300,
+html.light .text-orange-400,
+html.light .text-orange-500 {
+  color: #b45309 !important;
 }
 
 /* Darken light-green / emerald / teal text in Light Mode so tags, prices & badges are crisp and readable */
@@ -367,6 +383,19 @@ html.light .relative.overflow-hidden > div[style*="background-image"] + .bg-grad
   ) !important;
 }
 
+@media (min-width: 1024px) {
+  html.light .relative.overflow-hidden > img + .bg-gradient-to-t,
+  html.light .relative > img + .bg-gradient-to-t,
+  html.light .relative.overflow-hidden > div[style*="background-image"] + .bg-gradient-to-t {
+    background-image: linear-gradient(
+      to top,
+      rgba(255, 255, 255, 0.72) 0%,
+      rgba(255, 255, 255, 0.25) 18%,
+      transparent 38%
+    ) !important;
+  }
+}
+
 /* 5. Wine Pairing Badges & Overlay Elements Light Mode Harmony */
 html.light .wine-badge-red {
   background-color: rgba(255, 241, 242, 0.95) !important;
@@ -400,12 +429,204 @@ html.light .to-rose-950\/30 {
   --tw-gradient-to: rgba(179, 68, 81, 0.06) var(--tw-gradient-to-position) !important;
 }
 
+/* 6. Desktop Gourmet Portal (brand-* tokens) Light Mode */
+html.light .bg-brand-charcoal,
+html.light .bg-brand-cardDark,
+html.light .lg\:bg-brand-charcoal {
+  background-color: #faf8f3 !important;
+}
+
+html.light .bg-brand-charcoal\/95,
+html.light .bg-brand-charcoal\/80,
+html.light .lg\:bg-brand-charcoal\/70 {
+  background-color: rgba(250, 248, 243, 0.94) !important;
+}
+
+html.light .bg-brand-surface,
+html.light .lg\:bg-brand-surface {
+  background-color: #ffffff !important;
+  box-shadow: 0 6px 22px rgba(180, 145, 55, 0.08);
+}
+
+html.light .bg-brand-surface\/60,
+html.light .bg-brand-surface\/40,
+html.light .lg\:bg-brand-surface\/70 {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+}
+
+html.light .bg-brand-surfaceMuted,
+html.light .hover\:bg-brand-surfaceMuted:hover,
+html.light .hover\:bg-brand-surface:hover {
+  background-color: #f3efe6 !important;
+}
+
+html.light .bg-brand-amber {
+  background-color: #f3cc54 !important;
+}
+
+html.light .hover\:bg-brand-amberHover:hover {
+  background-color: #f8dc7a !important;
+}
+
+html.light .bg-brand-amber\/15,
+html.light .lg\:bg-brand-amber\/15,
+html.light .hover\:bg-brand-amber\/10:hover {
+  background-color: rgba(212, 175, 53, 0.16) !important;
+}
+
+html.light .bg-brand-emeraldBg,
+html.light .bg-brand-emeraldBg\/90 {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+}
+
+html.light .bg-brand-border,
+html.light .bg-brand-border\/70 {
+  background-color: rgba(180, 145, 55, 0.28) !important;
+}
+
+html.light .from-brand-surface {
+  --tw-gradient-from: #ffffff var(--tw-gradient-from-position) !important;
+}
+
+html.light .to-brand-surfaceMuted {
+  --tw-gradient-to: #f7f3ea var(--tw-gradient-to-position) !important;
+}
+
+html.light .border-brand-border,
+html.light .lg\:border-brand-border,
+html.light .border-brand-border\/90,
+html.light .border-brand-border\/80,
+html.light .lg\:border-brand-border\/80,
+html.light .border-brand-border\/70,
+html.light .border-brand-border\/60,
+html.light .border-brand-border\/40,
+html.light .hover\:border-brand-border:hover {
+  border-color: rgba(180, 145, 55, 0.25) !important;
+}
+
+html.light .border-brand-amber,
+html.light .border-brand-amber\/80,
+html.light .border-brand-amber\/40,
+html.light .border-brand-amber\/30,
+html.light .lg\:border-brand-amber\/30,
+html.light .hover\:border-brand-amber:hover,
+html.light .lg\:hover\:border-brand-amber:hover,
+html.light .hover\:border-brand-amber\/60:hover,
+html.light .lg\:hover\:border-brand-amber\/60:hover,
+html.light .hover\:border-brand-amber\/50:hover,
+html.light .lg\:hover\:border-brand-amber\/50:hover,
+html.light .group:hover .group-hover\:border-brand-amber {
+  border-color: #c79a20 !important;
+}
+
+html.light .border-brand-emerald\/30,
+html.light .border-brand-emerald\/40 {
+  border-color: rgba(4, 120, 87, 0.35) !important;
+}
+
+html.light .text-brand-cream,
+html.light .text-brand-cream\/85 {
+  color: #1c1917 !important;
+}
+
+html.light .text-brand-muted {
+  color: #655e55 !important;
+}
+
+html.light .text-brand-amber,
+html.light .lg\:text-brand-amber,
+html.light .text-brand-amber\/90,
+html.light .hover\:text-brand-amber:hover,
+html.light .group:hover .group-hover\:text-brand-amber {
+  color: #967316 !important;
+}
+
+html.light .text-brand-emerald {
+  color: #047857 !important;
+}
+
+html.light .text-brand-charcoal {
+  color: #1a1812 !important;
+}
+
+/* CuisinesExplorer translucent glass overlays */
+html.light .cuisine-glass-card {
+  background-color: rgba(255, 255, 255, 0.32) !important;
+}
+html.dark .cuisine-glass-card {
+  background-color: rgba(26, 24, 18, 0.35) !important;
+}
+html.light .cuisine-glass-scrim {
+  background-image: linear-gradient(to top, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.28) 55%, transparent 100%) !important;
+}
+html.dark .cuisine-glass-scrim {
+  background-image: linear-gradient(to top, rgba(26, 24, 18, 0.72) 0%, rgba(26, 24, 18, 0.32) 55%, transparent 100%) !important;
+}
+
 @layer utilities {
-  .hide-scrollbar::-webkit-scrollbar {
+  .hide-scrollbar::-webkit-scrollbar,
+  .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  .hide-scrollbar {
+  .hide-scrollbar,
+  .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+/* Global 1/3 border-radius reduction for all buttons and button-like links across the application */
+:is(button, [role="button"], a[class*="px-"][class*="py-"], a[class*="h-"]).rounded-sm {
+  border-radius: 0.083rem !important;
+}
+:is(button, [role="button"], a[class*="px-"][class*="py-"], a[class*="h-"]).rounded {
+  border-radius: 0.167rem !important;
+}
+:is(button, [role="button"], a[class*="px-"][class*="py-"], a[class*="h-"]).rounded-md {
+  border-radius: 0.25rem !important;
+}
+:is(button, [role="button"], a[class*="px-"][class*="py-"], a[class*="h-"]).rounded-lg {
+  border-radius: 0.333rem !important;
+}
+:is(button, [role="button"], a[class*="px-"][class*="py-"], a[class*="h-"]).rounded-xl {
+  border-radius: 0.5rem !important;
+}
+:is(button, [role="button"], a[class*="px-"][class*="py-"], a[class*="h-"]).rounded-2xl {
+  border-radius: 0.667rem !important;
+}
+:is(button, [role="button"], a[class*="px-"][class*="py-"], a[class*="h-"]).rounded-3xl {
+  border-radius: 1rem !important;
+}
+:is(button, [role="button"], a[class*="px-"][class*="py-"], a[class*="h-"]).rounded-full:is([class*="px-3"], [class*="px-4"], [class*="px-5"], [class*="px-6"], [class*="px-8"], [class*="w-full"]):not([class*="size-"]) {
+  border-radius: 0.5rem !important;
+}
+
+/* Global ~10-12% font-size reduction on primary section & page headings (h1, h2, h3) across the project */
+:is(h1, h2, h3).text-xl {
+  font-size: 1.125rem !important;
+}
+:is(h1, h2, h3).text-2xl {
+  font-size: 1.35rem !important;
+}
+:is(h1, h2, h3).text-3xl {
+  font-size: 1.65rem !important;
+}
+@media (min-width: 640px) {
+  :is(h1, h2, h3).sm\:text-2xl {
+    font-size: 1.35rem !important;
+  }
+  :is(h1, h2, h3).sm\:text-3xl {
+    font-size: 1.65rem !important;
+  }
+}
+@media (min-width: 1024px) {
+  :is(h1, h2, h3).lg\:text-xl {
+    font-size: 1.125rem !important;
+  }
+  :is(h1, h2, h3).lg\:text-2xl {
+    font-size: 1.35rem !important;
+  }
+  :is(h1, h2, h3).lg\:text-3xl {
+    font-size: 1.65rem !important;
   }
 }

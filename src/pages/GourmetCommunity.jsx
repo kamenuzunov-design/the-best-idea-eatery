@@ -1010,7 +1010,7 @@ const GourmetCommunity = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32 overflow-x-hidden">
+    <div className="relative flex min-h-screen w-full lg:max-w-[800px] mx-auto flex-col bg-background-dark font-display pb-32 lg:pb-8 overflow-x-hidden">
       {/* Toast Notification */}
       {toastMsg && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[90] bg-primary text-background-dark font-extrabold text-xs px-4 py-2.5 rounded-full shadow-[0_8px_25px_rgba(212,175,53,0.45)] flex items-center gap-2 animate-bounce">

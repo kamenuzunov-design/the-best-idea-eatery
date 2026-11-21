@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collection, doc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -52,6 +52,11 @@ const SeasonalMenu = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('seasonal'); // 'seasonal' | 'rating' | 'fast'
   const [toastMsg, setToastMsg] = useState('');
+
+  // Pagination (12 recipes per page)
+  const RECIPES_PER_PAGE = 12;
+  const [currentPage, setCurrentPage] = useState(1);
+  const recipeListRef = useRef(null);
 
   // 1. Subscribe to active public recipes
   useEffect(() => {
@@ -277,6 +282,44 @@ const SeasonalMenu = () => {
     return sorted;
   }, [preCourseFiltered, activeCourseTab, sortBy]);
 
+  // Reset pagination to page 1 when season, filters, search, or sort changes
+  const currentFilterKey = `${activeSeason}|${selectedProduceId || ''}|${activeCourseTab}|${searchQuery}|${sortBy}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(currentFilterKey);
+  if (currentFilterKey !== prevFilterKey) {
+    setPrevFilterKey(currentFilterKey);
+    setCurrentPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(displayedEntries.length / RECIPES_PER_PAGE));
+
+  const paginatedEntries = useMemo(() => {
+    const startIndex = (currentPage - 1) * RECIPES_PER_PAGE;
+    return displayedEntries.slice(startIndex, startIndex + RECIPES_PER_PAGE);
+  }, [displayedEntries, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    if (recipeListRef.current) {
+      recipeListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 350, behavior: 'smooth' });
+    }
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+  };
+
   // Contextual prompt for Chef AI
   const handleAskChefAI = () => {
     const seasonName = t(`seasonal_menu.seasons.${activeSeason}.name`);
@@ -311,7 +354,7 @@ const SeasonalMenu = () => {
   const seasonNameLocalized = t(`seasonal_menu.seasons.${activeSeason}.name`);
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-16 overflow-x-hidden">
+    <div className="relative flex flex-1 w-full lg:max-w-[1000px] mx-auto flex-col bg-background-dark font-display pb-4 overflow-x-hidden">
       {/* Toast Notification */}
       {toastMsg && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] max-w-[380px] w-[90%] bg-emerald-500 text-background-dark px-4 py-3 rounded-2xl font-extrabold text-xs shadow-2xl flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-200">
@@ -369,7 +412,88 @@ const SeasonalMenu = () => {
 
       {/* Dynamic Seasonal Hero Section */}
       <section className="px-4 py-2">
-        <div className="relative min-h-[19rem] w-full overflow-hidden rounded-3xl border border-primary/30 shadow-[0_10px_30px_rgba(212,175,53,0.18)] flex flex-col justify-end">
+        {/* Desktop Hero Ribbon (>= lg) — 1:1 with Home Hero */}
+        <div
+          onClick={() => heroHighlight && navigate(`/recipe/${heroHighlight.recipe.id}`)}
+          className={`hidden lg:flex relative rounded-2xl bg-brand-surface border border-brand-border overflow-hidden shadow-xl min-h-[220px] transition-all hover:border-brand-amber/50 group ${
+            heroHighlight ? 'cursor-pointer' : ''
+          }`}
+        >
+          {/* Left 50% Image Container */}
+          <div className="relative w-1/2 min-h-[220px] overflow-hidden shrink-0">
+            <img
+              src={heroImageUrl}
+              alt={seasonNameLocalized}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/images/recipe-placeholder.png';
+              }}
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <span className={`absolute top-3.5 left-3.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-gradient-to-r ${seasonMeta.badgeGradient} text-brand-charcoal shadow-md`}>
+              <span>{seasonMeta.emoji}</span>
+              <span>{t('seasonal_menu.page_badge')}</span>
+            </span>
+          </div>
+
+          {/* Right 50% Information Content */}
+          <div className="w-1/2 p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                {activeSeason === currentCalendarSeason && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wide">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    <span>{t('seasonal_menu.now_in_season')}</span>
+                  </span>
+                )}
+                <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-brand-amber/15 text-brand-amber border border-brand-amber/40">
+                  {t('seasonal_menu.recipes_count', { count: currentSeasonEntries.length })}
+                </span>
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-black text-white tracking-tight leading-snug group-hover:text-brand-amber transition-colors">
+                  {seasonNameLocalized}
+                </h2>
+                <p className={`text-xs font-extrabold italic mt-0.5 ${seasonMeta.accentText}`}>
+                  {t(`seasonal_menu.seasons.${activeSeason}.subtitle`)}
+                </p>
+              </div>
+
+              <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">
+                {t(`seasonal_menu.seasons.${activeSeason}.description`)}
+              </p>
+            </div>
+
+            {/* Featured Recipe Action Row */}
+            {heroHighlight && (
+              <div className="flex items-center justify-between gap-3 pt-2 border-t border-brand-border/60">
+                <div className="min-w-0">
+                  <span className="block text-[9px] font-black uppercase tracking-wider text-brand-amber">
+                    {t('seasonal_menu.featured_pick')}
+                  </span>
+                  <span className="block text-xs font-bold text-slate-100 truncate group-hover:text-brand-amber transition-colors">
+                    {getLocalizedRecipeTitle(heroHighlight.recipe, currentLang)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/recipe/${heroHighlight.recipe.id}`);
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-brand-amber hover:bg-brand-amberHover text-brand-charcoal font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
+                >
+                  <span className="material-symbols-outlined text-base">visibility</span>
+                  <span>{t('home.view_btn', 'Прегледай')}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Hero Card (< lg) */}
+        <div className="lg:hidden relative min-h-[19rem] w-full overflow-hidden rounded-3xl border border-primary/30 shadow-[0_10px_30px_rgba(212,175,53,0.18)] flex flex-col justify-end">
           <img
             src={heroImageUrl}
             alt={seasonNameLocalized}
@@ -573,9 +697,14 @@ const SeasonalMenu = () => {
         </div>
 
         {/* Section Heading & Sort Buttons */}
-        <div className="pt-2 flex items-center justify-between gap-2 flex-wrap">
+        <div ref={recipeListRef} className="pt-2 flex items-center justify-between gap-2 flex-wrap scroll-mt-4">
           <h3 className="text-slate-100 text-lg font-extrabold tracking-tight">
             {t('seasonal_menu.favorites_heading', { season: seasonNameLocalized })}
+            {totalPages > 1 && (
+              <span className="text-xs font-normal text-slate-400 ml-2">
+                (Стр. {currentPage}/{totalPages})
+              </span>
+            )}
           </h3>
 
           <div className="flex items-center gap-1 bg-surface-dark p-1 rounded-xl border border-primary/15">
@@ -602,7 +731,7 @@ const SeasonalMenu = () => {
       </section>
 
       {/* Recipes List */}
-      <section className="px-4 pt-3 pb-8">
+      <section className="px-4 pt-3 pb-2">
         {loading ? (
           <div className="flex justify-center py-14">
             <span className="material-symbols-outlined animate-spin text-primary text-3xl">refresh</span>
@@ -626,8 +755,9 @@ const SeasonalMenu = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {displayedEntries.map(({ recipe, matchedProduce }) => {
+          <>
+            <div className="grid grid-cols-1 gap-4">
+              {paginatedEntries.map(({ recipe, matchedProduce }) => {
               const title = getLocalizedRecipeTitle(recipe, currentLang);
               const desc = getLocalizedField(recipe, 'description', currentLang);
               const totalTime = getRecipeTotalTime(recipe);
@@ -756,7 +886,65 @@ const SeasonalMenu = () => {
                 </div>
               );
             })}
-          </div>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 pt-6 pb-2 select-none" data-purpose="pagination">
+                {/* Previous Page (<) */}
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="size-8 rounded-lg bg-brand-surface border border-brand-border text-brand-muted hover:text-white hover:border-brand-amber/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title={t('common.pagination.prev', 'Предишна страница')}
+                  aria-label="Previous Page"
+                >
+                  <span className="material-symbols-outlined text-lg leading-none">chevron_left</span>
+                </button>
+
+                {/* Page Numbers with Ellipsis */}
+                {getPageNumbers().map((p, idx) => {
+                  if (p === '...') {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="text-xs text-brand-muted px-1 select-none">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  const isCurrent = p === currentPage;
+                  return (
+                    <button
+                      key={`page-${p}`}
+                      type="button"
+                      onClick={() => handlePageChange(p)}
+                      className={`size-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                        isCurrent
+                          ? 'bg-brand-amber text-brand-charcoal font-black shadow-md'
+                          : 'bg-brand-surface border border-brand-border text-brand-cream hover:border-brand-amber/50 hover:text-white'
+                      }`}
+                      aria-current={isCurrent ? 'page' : undefined}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+
+                {/* Next Page (>) */}
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="size-8 rounded-lg bg-brand-surface border border-brand-border text-brand-muted hover:text-white hover:border-brand-amber/50 flex items-center justify-center cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title={t('common.pagination.next', 'Следваща страница')}
+                  aria-label="Next Page"
+                >
+                  <span className="material-symbols-outlined text-lg leading-none">chevron_right</span>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

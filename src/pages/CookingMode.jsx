@@ -924,61 +924,64 @@ const CookingMode = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark overflow-x-hidden font-display pb-10">
       {/* Top Navigation & Controls */}
-      <header className="sticky top-0 z-20 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-lg">
-        <div className="flex items-center p-3 justify-between w-full max-w-3xl mx-auto gap-2">
-          {/* Back & Recipe Title */}
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      <header className="sticky top-0 z-20 w-full lg:max-w-[1000px] mx-auto lg:mt-4 bg-surface-dark/95 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl shadow-lg">
+        <div className="flex flex-col lg:flex-row lg:items-center p-3 justify-between w-full gap-2.5 lg:gap-3">
+          {/* Row 1 (Mobile) / Left (Desktop): Close & App/Recipe Title */}
+          <div className="flex items-center gap-2.5 min-w-0 w-full lg:flex-1">
             <button 
               onClick={() => navigate(-1)} 
-              className="text-slate-100 flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+              className="text-slate-100 flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-xl font-bold">close</span>
             </button>
             <div className="min-w-0 flex-1">
-              <h2 className="text-[9px] font-extrabold uppercase tracking-widest text-primary/90">The Best Idea Eatery</h2>
+              <h2 className="text-[10px] font-extrabold uppercase tracking-wider text-primary/90 truncate">{t('app.full_name')}</h2>
               <h1 className="text-xs md:text-sm font-black leading-tight text-slate-100 truncate">{recipeTitle}</h1>
             </div>
           </div>
 
-          {/* Quick Action Tools: Voice + Ingredients + Finish */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Hands-Free Voice Control Toggle */}
-            <button
-              onClick={toggleVoiceControl}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md ${
-                isVoiceActive
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/60 shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse'
-                  : 'bg-surface-dark text-slate-300 border border-primary/30 hover:border-primary hover:text-white'
-              }`}
-              title={isVoiceActive ? t('cooking_mode.voice_listening') : t('cooking_mode.voice_control_btn')}
-            >
-              <span className={`material-symbols-outlined text-base ${isVoiceActive ? 'text-rose-400' : 'text-primary'}`}>
-                {isVoiceActive ? 'mic' : 'mic_none'}
-              </span>
-              <span className="hidden sm:inline">
-                {isVoiceActive ? t('cooking_mode.voice_listening').slice(0, 7) + '...' : t('cooking_mode.voice_control_btn')}
-              </span>
-            </button>
-
-            {/* Ingredients Drawer Button */}
-            <button
-              onClick={() => setIsIngredientsDrawerOpen(true)}
-              className="bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
-              title={t('cooking_mode.ingredients_drawer_title')}
-            >
-              <span className="material-symbols-outlined text-base">format_list_bulleted</span>
-              <span className="hidden sm:inline">{t('cooking_mode.ingredients_drawer_btn')}</span>
-              {recipeIngredients.length > 0 && (
-                <span className="bg-primary text-background-dark text-[10px] font-black px-1.5 py-0.2 rounded-full">
-                  {recipeIngredients.length}
+          {/* Row 2 & 3 (Mobile) / Right (Desktop): Quick Action Tools */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-2 w-full lg:w-auto shrink-0">
+            {/* Row 2 on mobile: Voice + Ingredients */}
+            <div className="grid grid-cols-2 lg:flex lg:items-center gap-2">
+              {/* Hands-Free Voice Control Toggle */}
+              <button
+                onClick={toggleVoiceControl}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] lg:text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md min-w-0 ${
+                  isVoiceActive
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/60 shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-pulse'
+                    : 'bg-surface-dark text-slate-300 border border-primary/30 hover:border-primary hover:text-white'
+                }`}
+                title={isVoiceActive ? t('cooking_mode.voice_listening') : t('cooking_mode.voice_control_btn')}
+              >
+                <span className={`material-symbols-outlined text-base shrink-0 ${isVoiceActive ? 'text-rose-400' : 'text-primary'}`}>
+                  {isVoiceActive ? 'mic' : 'mic_none'}
                 </span>
-              )}
-            </button>
+                <span className="truncate">
+                  {isVoiceActive ? t('cooking_mode.voice_listening').slice(0, 7) + '...' : t('cooking_mode.voice_control_btn')}
+                </span>
+              </button>
 
-            {/* Finish Button */}
+              {/* Ingredients Drawer Button */}
+              <button
+                onClick={() => setIsIngredientsDrawerOpen(true)}
+                className="bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-full text-[11px] lg:text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5 min-w-0"
+                title={t('cooking_mode.ingredients_drawer_title')}
+              >
+                <span className="material-symbols-outlined text-base shrink-0">format_list_bulleted</span>
+                <span className="truncate">{t('cooking_mode.ingredients_drawer_btn')}</span>
+                {recipeIngredients.length > 0 && (
+                  <span className="bg-primary text-background-dark text-[10px] font-black px-1.5 py-0.2 rounded-full shrink-0">
+                    {recipeIngredients.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Row 3 on mobile: Finish Button */}
             <button 
               onClick={handleFinishCooking} 
-              className="bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+              className="w-full lg:w-auto bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors shadow-sm cursor-pointer flex items-center justify-center"
             >
               {t('cooking_mode.finish_btn')}
             </button>
@@ -1006,7 +1009,7 @@ const CookingMode = () => {
         )}
 
         {/* Progress Bar & Phase Title */}
-        <div className="px-4 pb-3 pt-2 w-full max-w-3xl mx-auto">
+        <div className="px-4 pb-3 pt-2 w-full max-w-3xl lg:max-w-[1000px] mx-auto">
           <div className="flex justify-between items-center mb-1.5">
             <p className="text-[10px] font-bold text-primary/80 uppercase tracking-widest">
               {t('cooking_mode.phase')}: <span className="text-slate-200">{currentStep.phase}</span>
@@ -1024,7 +1027,7 @@ const CookingMode = () => {
         </div>
 
         {/* Step Selector Grid (Compact 2-Column Grid Layout) */}
-        <div className="grid grid-cols-2 gap-2 px-4 pb-3 w-full max-w-3xl mx-auto">
+        <div className="grid grid-cols-2 gap-2 px-4 pb-3 w-full max-w-3xl lg:max-w-[1000px] mx-auto">
           {steps.map((st, idx) => (
             <button
               key={idx}
@@ -1052,7 +1055,7 @@ const CookingMode = () => {
 
       {/* Notification Banner if permissions default/denied */}
       {notificationPerm !== 'granted' && (
-        <div className="mx-4 mt-3 max-w-3xl md:mx-auto p-3 bg-primary/10 border border-primary/30 rounded-2xl flex items-center justify-between gap-3 text-slate-300 shadow-md">
+        <div className="mx-4 mt-3 max-w-3xl lg:max-w-[1000px] md:mx-auto p-3 bg-primary/10 border border-primary/30 rounded-2xl flex items-center justify-between gap-3 text-slate-300 shadow-md">
           <div className="flex items-center gap-2 text-xs">
             <span className="material-symbols-outlined text-primary text-lg shrink-0">notifications_active</span>
             <span className="text-[11px] leading-snug">
@@ -1069,7 +1072,7 @@ const CookingMode = () => {
       )}
 
       {/* Main Step Visual and Instructions */}
-      <main className="flex-1 w-full max-w-3xl mx-auto flex flex-col justify-between p-4 gap-4">
+      <main className="flex-1 w-full max-w-3xl lg:max-w-[1000px] mx-auto flex flex-col justify-between p-4 gap-4">
         <div className="space-y-4">
           {/* Main Step Visual Container */}
           <div className="relative group rounded-3xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.6)] border border-primary/20 bg-surface-dark">

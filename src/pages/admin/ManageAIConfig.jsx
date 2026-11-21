@@ -260,9 +260,9 @@ const ManageAIConfig = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 text-slate-100 min-h-screen">
+    <div className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto lg:pt-5 bg-background-dark pb-24 text-slate-100 min-h-screen">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-md">
+      <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface-dark/95 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl shadow-md">
         <div className="flex items-center">
           <button 
             onClick={() => navigate('/admin')} 
@@ -281,7 +281,7 @@ const ManageAIConfig = () => {
         </div>
       </div>
 
-      <div className="p-4 max-w-3xl mx-auto w-full space-y-6">
+      <div className="p-4 w-full space-y-6">
         {/* Current Active Status Card */}
         <div className="bg-surface-dark/90 rounded-2xl p-5 border border-primary/25 shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />

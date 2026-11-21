@@ -217,17 +217,17 @@ const AdBanner = () => {
   return (
     <div 
       onClick={(e) => handleAdClick(e, false)}
-      className="mx-4 my-6 rounded-2xl overflow-hidden border border-primary/20 shadow-xl cursor-pointer group relative transition-all duration-300"
+      className="mx-4 my-6 lg:my-8 lg:max-w-4xl lg:mx-auto rounded-2xl overflow-hidden border border-primary/20 lg:border-brand-border/80 shadow-xl cursor-pointer group relative transition-all duration-300 bg-surface-dark lg:bg-brand-surface"
     >
       {currentAd.type === 'image' ? (
-        <div className="relative h-44 sm:h-48">
+        <div className="relative h-44 sm:h-52 lg:h-64">
           <img src={currentAd.contentUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Advertisement" />
           <div className="absolute inset-0 bg-gradient-to-t from-background-dark/90 via-transparent to-transparent"></div>
         </div>
       ) : isVideo ? (
         isYT ? (
           /* Social Media YouTube Card with Cover & Play Button */
-          <div className="relative h-44 sm:h-52 overflow-hidden bg-black group/video">
+          <div className="relative h-44 sm:h-52 lg:h-64 overflow-hidden bg-black group/video">
             <img 
               src={ytThumb || currentAd.thumbnailUrl || "/images/recipe-placeholder.png"} 
               alt={adTitle}
@@ -258,7 +258,7 @@ const AdBanner = () => {
           </div>
         ) : (
           /* Direct Video Card */
-          <div className="relative h-44 sm:h-52 overflow-hidden bg-black group/video">
+          <div className="relative h-44 sm:h-52 lg:h-64 overflow-hidden bg-black group/video">
             <video src={currentAd.contentUrl} className="w-full h-full object-cover opacity-85" />
             <div className="absolute inset-0 bg-gradient-to-t from-background-dark/95 via-background-dark/30 to-black/40"></div>
             <div className="absolute inset-0 flex items-center justify-center">
@@ -278,7 +278,7 @@ const AdBanner = () => {
         )
       ) : (
         /* HTML / Code Ad */
-        <div className="bg-surface-dark p-4 min-h-[100px] flex items-center justify-center text-center" dangerouslySetInnerHTML={{ __html: currentAd.contentUrl }} />
+        <div className="bg-surface-dark lg:bg-brand-surface p-4 min-h-[100px] lg:min-h-[120px] flex items-center justify-center text-center w-full" dangerouslySetInnerHTML={{ __html: currentAd.contentUrl }} />
       )}
 
       {currentAd.type !== 'html' && (

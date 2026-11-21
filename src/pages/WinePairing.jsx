@@ -540,7 +540,7 @@ const WinePairing = () => {
   const cuisineName = recipe.cuisine ? getLocalizedCuisine(recipe.cuisine, currentLang) : null;
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark overflow-x-hidden pb-28 text-slate-100">
+    <div className="relative flex min-h-screen w-full flex-col bg-background-dark overflow-x-hidden pb-7 text-slate-100">
       {/* Тост нотификация за копиран линк */}
       {copiedToast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-600/95 text-white px-5 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 border border-emerald-400/40 text-xs font-bold animate-in fade-in slide-in-from-top-4">
@@ -550,8 +550,8 @@ const WinePairing = () => {
       )}
 
       {/* 1. Header Bar */}
-      <header className="sticky top-0 z-30 bg-surface-dark/95 backdrop-blur-xl border-b border-primary/20 shadow-xl">
-        <div className="flex items-center justify-between p-4 max-w-3xl mx-auto">
+      <header className="sticky top-0 z-30 w-full lg:max-w-[1000px] mx-auto lg:mt-4 bg-surface-dark/95 backdrop-blur-xl border-b lg:border border-primary/20 lg:rounded-2xl shadow-xl">
+        <div className="flex items-center justify-between p-4 max-w-3xl lg:max-w-none mx-auto">
           <button
             onClick={() => navigate(-1)}
             aria-label={t('common.buttons.back')}
@@ -581,7 +581,7 @@ const WinePairing = () => {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-6 w-full">
+      <main className="max-w-3xl lg:max-w-[1000px] mx-auto px-4 py-6 space-y-6 w-full">
         {/* 2. Featured Recipe Hero Banner */}
         <section
           onClick={() => navigate(`/recipe/${recipe.id}`)}

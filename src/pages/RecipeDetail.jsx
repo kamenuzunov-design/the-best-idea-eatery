@@ -972,7 +972,7 @@ const RecipeDetail = () => {
   if (allImages.length === 0) allImages.push(placeholderImg);
 
   return (
-    <div className="relative flex h-auto min-h-screen w-full flex-col bg-background-dark overflow-x-hidden pb-24">
+    <div className="relative flex h-auto w-full flex-col bg-background-dark overflow-x-hidden pb-4 lg:pb-6">
       {/* Header Navigation */}
       <div className="sticky top-0 z-10 flex items-center bg-surface-dark/80 backdrop-blur-md p-4 justify-between border-b border-primary/10">
         <div onClick={() => navigate(-1)} className="text-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors">
@@ -994,6 +994,157 @@ const RecipeDetail = () => {
         </div>
       </div>
 
+      {/* Desktop Hero Ribbon (>= lg) — 1:1 match with Home Featured Hero Ribbon (without Featured badge), capped at 1000px */}
+      <div className="hidden lg:block w-full lg:max-w-[1000px] mx-auto px-4 pt-5">
+        <div className="flex relative rounded-2xl bg-brand-surface border border-brand-border overflow-hidden shadow-xl min-h-[260px] transition-all">
+          {/* Left 50% Image Container */}
+          <div className="relative w-1/2 min-h-[260px] max-h-[380px] overflow-hidden shrink-0 bg-brand-charcoal">
+            <img
+              className="w-full h-full object-cover transition-all duration-500"
+              alt={title}
+              src={allImages[activeImageIndex]}
+            />
+            {parentRecipe && (
+              <div className="absolute top-3.5 left-3.5 right-3.5 z-10">
+                <button
+                  onClick={() => navigate(`/recipe/${parentRecipe.id}`)}
+                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-background-dark/75 backdrop-blur-md border border-brand-amber/40 text-brand-amber text-[10px] font-bold uppercase tracking-widest hover:bg-background-dark/90 transition-all shadow-lg cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[15px]">alt_route</span>
+                  {t('recipe_detail.based_on', { title: getLocalizedField(parentRecipe, 'title', currentLang) || parentRecipe.title_bg || parentRecipe.title_en })}
+                </button>
+              </div>
+            )}
+            {allImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveImageIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1))}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background-dark/65 border border-brand-amber/30 text-brand-amber hover:bg-background-dark/90 hover:text-white transition-all cursor-pointer shadow-md"
+                >
+                  <span className="material-symbols-outlined select-none text-lg">chevron_left</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1))}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background-dark/65 border border-brand-amber/30 text-brand-amber hover:bg-background-dark/90 hover:text-white transition-all cursor-pointer shadow-md"
+                >
+                  <span className="material-symbols-outlined select-none text-lg">chevron_right</span>
+                </button>
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-background-dark/75 px-2 py-1.5 rounded-xl border border-brand-border backdrop-blur-md shadow-lg">
+                  {allImages.map((imgUrl, idx) => (
+                    <button
+                      type="button"
+                      key={idx}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`w-10 h-10 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                        activeImageIndex === idx
+                          ? 'border-brand-amber scale-105 shadow-md'
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={imgUrl} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Right 50% Information Content */}
+          <div className="w-1/2 p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-brand-amber/15 text-brand-amber border border-brand-amber/40">
+                  {cuisineName}
+                </span>
+                {tags.map(tag => (
+                  <span key={tag} className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    {translateTag(tag, currentLang)}
+                  </span>
+                ))}
+                <span className="text-xs text-brand-muted">•</span>
+                <span className="text-xs text-brand-cream font-medium">⏱ {prepTime} мин</span>
+              </div>
+
+              <h1 className="text-2xl font-black text-white tracking-tight leading-snug">
+                {title}
+              </h1>
+
+              {(() => {
+                const desc = getLocalizedField(recipe, 'description', currentLang) || recipe.description_bg || recipe.description_en;
+                return desc ? (
+                  <p className="text-brand-cream/85 text-sm leading-relaxed font-medium line-clamp-4">
+                    {desc}
+                  </p>
+                ) : null;
+              })()}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-brand-border/60">
+              {/* Interactive Star Rating */}
+              <div className="flex items-center gap-2">
+                <div className="flex gap-0.5" onMouseLeave={() => setHoverStar(0)}>
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const isFilled = hoverStar > 0 ? hoverStar >= star : (userVote ? userVote >= star : false);
+                    const isHovered = hoverStar > 0 && hoverStar >= star;
+                    return (
+                      <button
+                        key={star}
+                        disabled={!user || isVoting}
+                        onClick={() => {
+                          setHoverStar(0);
+                          handleVote(star);
+                        }}
+                        onMouseEnter={() => user && !isVoting && setHoverStar(star)}
+                        className={`material-symbols-outlined text-[18px] transition-all ${
+                          isFilled
+                            ? isHovered ? 'text-amber-400 fill-1' : 'text-brand-amber fill-1'
+                            : 'text-slate-500'
+                        } ${(user && !isVoting) ? 'hover:scale-125 cursor-pointer' : 'cursor-default'}`}
+                        style={{ fontVariationSettings: isFilled ? "'FILL' 1" : "'FILL' 0" }}
+                        title={userVote ? t('recipe_detail.rating.your_rating_change', { vote: userVote }) : t('recipe_detail.rating.rate_stars', { star })}
+                      >
+                        star
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-xs text-white font-extrabold">{(recipe.rating || 0).toFixed(1)}</span>
+                <span className="text-[11px] text-brand-muted">
+                  ({recipe.votes_count || 0} {t('recipe_detail.rating.votes')})
+                </span>
+                {userVote && (
+                  <span className="text-[11px] text-brand-amber font-semibold">
+                    • {t('recipe_detail.rating.your_rating', { vote: userVote })}
+                  </span>
+                )}
+              </div>
+
+              <div className="h-3 w-[1px] bg-brand-border"></div>
+
+              <div className="flex items-center gap-1.5 text-xs font-bold text-brand-cream" title={t('home.views_title', 'Брой гледания')}>
+                <span className="material-symbols-outlined text-[15px] text-brand-amber">visibility</span>
+                <span className="text-white font-extrabold">{recipe.views_count || 0}</span>
+                <span className="text-brand-muted font-normal text-[11px]">{t('home.views_label', 'гледания')}</span>
+              </div>
+
+              {calculateEstimatedPrice(recipe, ingredientsList) && (
+                <>
+                  <div className="h-3 w-[1px] bg-brand-border"></div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-emeraldBg/90 border border-brand-emerald/40 text-brand-emerald text-xs font-bold">
+                    <span className="material-symbols-outlined text-[14px]">payments</span>
+                    <span>~{calculateEstimatedPrice(recipe, ingredientsList)} € / порция</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Hero Section (< lg) */}
+      <div className="lg:hidden">
       {/* Hero Section */}
       <div className="relative w-full aspect-[4/5] overflow-hidden">
         <div 
@@ -1119,10 +1270,13 @@ const RecipeDetail = () => {
           ) : null;
         })()}
       </div>
+      </div>
 
-      {/* Action Bar: Row 1 (Edit / My Version), Row 2 (Save / Wine Pairing) */}
-      <div className="px-4 pt-4 flex flex-col gap-2.5">
-        <div className="flex gap-2.5">
+      {/* Desktop 1000px Content Wrapper for Action Bar & All Sections Below */}
+      <div className="w-full lg:max-w-[1000px] mx-auto">
+      {/* Action Bar: Mobile 2 rows (< lg), Desktop 1 proportional row (= 1000px) */}
+      <div className="px-4 pt-4 flex flex-col lg:flex-row gap-2.5">
+        <div className="flex gap-2.5 lg:contents">
           {isPowerUser && (
             <button 
               onClick={() => navigate('/admin/recipes')} 
@@ -1141,7 +1295,7 @@ const RecipeDetail = () => {
           </button>
         </div>
 
-        <div className="flex gap-2.5">
+        <div className="flex gap-2.5 lg:contents">
           <button 
             onClick={handleToggleSave} 
             className={`flex-1 flex items-center justify-center gap-2 border py-3 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer ${isSaved ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/30' : 'bg-surface-dark border-slate-500/30 text-slate-400 hover:bg-slate-800'}`}
@@ -1637,7 +1791,7 @@ const RecipeDetail = () => {
 
 
       {/* Action Button */}
-      <div className="p-6 pb-8">
+      <div className="px-6 pt-6 pb-2">
         <button 
           onClick={handleToggleSave}
           className={`w-full font-extrabold py-4 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -1668,6 +1822,7 @@ const RecipeDetail = () => {
             {t('recipe_detail.actions.wine_pairing')}
           </button>
         )}
+      </div>
       </div>
 
       {/* Repeating Products Confirmation Modal */}

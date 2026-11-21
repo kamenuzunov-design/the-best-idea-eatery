@@ -2,6 +2,8 @@
   "app": {
     "title": "La Mejor Idea",
     "subtitle": "El Arte del Buen Gusto",
+    "full_name": "La Mejor Idea · El Arte del Buen Gusto",
+    "header_subtitle": "Inteligencia Culinaria y Despensa",
     "tagline": "Ecosistema Culinario Inteligente"
   },
   "common": {
@@ -38,7 +40,7 @@
     "recipes": "Recetas",
     "pantry": "Despensa",
     "scanner": "Escáner de Alimentos",
-    "ai": "Chef IA",
+    "ai": "Chef AI",
     "saved": "Guardados",
     "profile": "Perfil",
     "my_profile": "Mi Perfil",
@@ -52,6 +54,21 @@
     "not_logged_in": "Sin iniciar sesión",
     "events": "Eventos",
     "community": "Comunidad"
+  },
+  "desktop_nav": {
+    "weekly_planner": "Menú semanal",
+    "seasonal_menu": "Menú de temporada",
+    "cuisines": "Cocinas del mundo",
+    "get_android_app": "Descargar para Android",
+    "pantry_status": "Despensa: {{count}} Ingredientes disponibles",
+    "view_pantry": "Ver despensa",
+    "search_placeholder": "Buscar recetas, ingredientes, cocinas..."
+  },
+  "desktop_footer": {
+    "rights": "Todos los derechos reservados.",
+    "privacy": "Política de privacidad",
+    "terms": "Términos de servicio",
+    "advertise": "Publicidad y Contacto"
   },
   "auth": {
     "headings": {
@@ -162,7 +179,13 @@
     "discover_plan": "Descubrir y Planificar",
     "weekly_menu": "Menú Semanal",
     "seasonal_menu": "Menú de Temporada",
-    "explore_cuisines": "Explorar Cocinas"
+    "explore_cuisines": "Explorar Cocinas",
+    "views_label": "vistas",
+    "views_title": "Número de vistas",
+    "ratings_count": "valoraciones",
+    "view_btn": "Ver",
+    "cook_now_btn": "Cocinar ahora",
+    "find_by_pantry": "Buscar recetas"
   },
   "categories": {
     "salad": "Ensaladas",
@@ -177,7 +200,7 @@
     "special": "Ocasiones Especiales"
   },
   "pantry": {
-    "title": "Tu Despensa",
+    "title": "Mi Despensa",
     "subtitle": "Inventario y Caducidades",
     "search": "Buscar ingredientes...",
     "all": "Todos",
@@ -260,7 +283,7 @@
     "generate": "Generar Recetas",
     "suggested": "Sugeridas para ti",
     "uses_ingredients": "¡Usa tus ingredientes!",
-    "chef_greeting": "¡Hola! Soy **Chef IA** – tu asistente culinario gourmet personal. 🧑‍🍳\n\nVeo que tienes **{{count}} productos** en tu despensa. Puedo sugerirte recetas de nuestra selección, totalmente adaptadas a tus preferencias dietéticas, exclusiones y alergias.\n\n¿Qué te apetece cocinar hoy?",
+    "chef_greeting": "¡Hola! Soy tu **Chef AI** – asistente culinario personal. 🧑‍🍳\n\nVeo que tienes **{{count}} productos** en tu despensa. Puedo sugerirte recetas de nuestra selección, totalmente adaptadas a tus preferencias dietéticas, exclusiones y alergias.\n\n¿Qué te apetece cocinar hoy?",
     "fallback_expiring_with_items": "Los siguientes productos de tu despensa caducan pronto: **{{names}}**. Te recomiendo preparar una de estas recetas para evitar el desperdicio de alimentos:",
     "fallback_expiring_none": "No tienes productos que caduquen en los próximos 3 días. Aquí tienes las mejores sugerencias de recetas con los ingredientes de tu despensa:",
     "fallback_keto": "¡Por supuesto! Aquí tienes nuestras mejores recetas **Keto** adaptadas a tu perfil dietético:",
@@ -288,6 +311,13 @@
     "chip_keto": "Recetas Keto",
     "chip_substitutes": "Sustitutos de ingredientes",
     "input_placeholder": "Pídele una receta a Chef IA...",
+    "prompt_question": "¿Qué plato delicioso cocinamos juntos hoy?",
+    "prompt_question_missing": "¿Cómo convertimos tus ingredientes disponibles en un gran plato hoy?",
+    "prompt_question_seasonal": "¿Qué plato fresco de temporada preparamos juntos hoy?",
+    "prompt_question_cuisine": "¿A qué viaje culinario nos embarcamos juntos hoy?",
+    "prompt_question_events": "¿Qué menú especial preparamos hoy para tu ocasión?",
+    "prompt_question_contextual": "¿Cómo seguimos desarrollando juntos esta deliciosa idea hoy?",
+    "send_prompt_label": "Enviar",
     "dietary_profile_title": "Tu Perfil Dietético:",
     "excluded_items_count": "{{count}} ingredientes excluidos",
     "no_dietary_restrictions": "Sin preferencias dietéticas configuradas",
@@ -741,6 +771,13 @@
     "view_list": "Vista de lista",
     "recalculate_tags": "Recalcular Etiquetas",
     "tags_btn": "Etiquetas",
+    "missing_products_btn": "Productos faltantes",
+    "check_missing_products_tooltip": "Comprobar recetas con productos faltantes o no vinculados en la base de datos",
+    "missing_audit_all_ok": "¡Todas las recetas verificadas! Todos los ingredientes están correctamente vinculados a productos en la base de datos.",
+    "missing_audit_modal_title": "Auditoría de productos faltantes",
+    "missing_audit_summary": "Se encontraron {{recipeCount}} recetas con un total de {{missingCount}} ingredientes faltantes o no vinculados.",
+    "send_to_moderation_btn": "📋 Generar lista en Moderación",
+    "send_to_moderation_success": "¡Lista generada con éxito en Moderación! ¿Desea ir a Moderación ahora?",
     "filter_all": "Todas",
     "filter_pending": "Pendientes",
     "filter_active": "Activas",
@@ -789,6 +826,14 @@
     "sub_recipe": "Subreceta",
     "no_ingredients": "No se han añadido ingredientes",
     "recipe_badge": "RECETA",
+    "unlinked_ingredient_tooltip": "⚠️ Este ingrediente no está vinculado a ningún elemento en Productos (el precio y las calorías no se calcularán).",
+    "unlinked_ingredient_warning": "Falta en Productos — ¡no se pueden calcular el precio ni las calorías!",
+    "unlinked_badge": "Falta en Productos",
+    "create_in_products_btn": "+ Añadir a Productos",
+    "create_in_products_tooltip": "Crear este ingrediente como producto oficial en la nomenclatura",
+    "prompt_product_price": "Introduce el precio estimado en EUR por 100 gramos para \"{{name}}\":",
+    "product_created_success": "¡El producto \"{{name}}\" se añadió con éxito a Productos con precio {{price}} € / 100g!",
+    "product_created_error": "Error al crear el producto: ",
     "change_sub_recipe_tooltip": "Haz clic para cambiar la subreceta",
     "select_ingredient_tooltip": "Haz clic para buscar y seleccionar un ingrediente",
     "ingredient_placeholder": "-- Ingrediente --",
@@ -1004,8 +1049,17 @@
       "all": "Todos",
       "translation": "Pendientes de Traducción",
       "approval": "Pendientes de Aprobación",
+      "missing_products": "Productos faltantes",
       "community": "Comunidad Gourmet"
     },
+    "missing_products_banner_title": "Recetas con productos faltantes",
+    "missing_products_banner_desc_one": "1 receta está esperando la vinculación de ingredientes con productos en la base de datos",
+    "missing_products_banner_desc_other": "{{count}} recetas están esperando la vinculación de ingredientes con productos en la base de datos",
+    "missing_products_badge": "Productos faltantes ({{count}})",
+    "missing_ingredients_label": "Ingredientes no vinculados:",
+    "mark_reviewed_btn": "Marcar como revisada",
+    "mark_reviewed_tooltip": "Eliminar receta de la cola de revisión de productos faltantes",
+    "empty_missing_products": "No hay recetas con productos faltantes. ¡Todos los ingredientes están vinculados!",
     "empty_translation": "No hay elementos pendientes de traducción.",
     "empty_approval": "No hay contenido pendiente de aprobación.",
     "empty_all": "La cola está completamente despejada.",

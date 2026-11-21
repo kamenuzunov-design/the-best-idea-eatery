@@ -9802,6 +9802,126 @@
     "updatedAt": "2026-09-27T17:58:58.316Z"
   },
   {
+    "id": "whole-lamb",
+    "slug": "whole-lamb",
+    "name": {
+      "en": "Whole lamb (with bone)",
+      "bg": "Цяло агне (агнешко месо с кост)",
+      "it": "Agnello intero (con osso)",
+      "fr": "Agneau entier (avec os)",
+      "de": "Ganzes Lamm (mit Knochen)",
+      "es": "Cordero entero (con hueso)"
+    },
+    "name_en": "Whole lamb (with bone)",
+    "name_bg": "Цяло агне (агнешко месо с кост)",
+    "name_it": "Agnello intero (con osso)",
+    "name_fr": "Agneau entier (avec os)",
+    "name_de": "Ganzes Lamm (mit Knochen)",
+    "name_es": "Cordero entero (con hueso)",
+    "classification": {
+      "main_group": "meat",
+      "sub_group": "meat_lamb",
+      "cuisine_origin": "european"
+    },
+    "nutrition_per_100": {
+      "calories": 230,
+      "proteins": 20,
+      "carbs": 0,
+      "fats": 17
+    },
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "keto",
+        "gluten-free",
+        "high-protein"
+      ],
+      "average_shelf_life_days": 4,
+      "is_liquid": false
+    },
+    "price_per_100": 1.3,
+    "currency": "EUR",
+    "units_mapping": [
+      {
+        "unit_id": "gram",
+        "weight_grams": 1
+      },
+      {
+        "unit_id": "kilogram",
+        "weight_grams": 1000
+      },
+      {
+        "unit_id": "piece",
+        "weight_grams": 12000
+      }
+    ],
+    "is_active": true,
+    "is_deleted": false,
+    "needs_translation": false,
+    "translation_reason": null,
+    "updatedAt": "2026-11-14T08:00:00.000Z"
+  },
+  {
+    "id": "lamb-meat",
+    "slug": "lamb-meat",
+    "name": {
+      "en": "Lamb meat",
+      "bg": "Агнешко месо",
+      "it": "Carne d'agnello",
+      "fr": "Viande d'agneau",
+      "de": "Lammfleisch",
+      "es": "Carne de cordero"
+    },
+    "name_en": "Lamb meat",
+    "name_bg": "Агнешко месо",
+    "name_it": "Carne d'agnello",
+    "name_fr": "Viande d'agneau",
+    "name_de": "Lammfleisch",
+    "name_es": "Carne de cordero",
+    "classification": {
+      "main_group": "meat",
+      "sub_group": "meat_lamb",
+      "cuisine_origin": "european"
+    },
+    "nutrition_per_100": {
+      "calories": 250,
+      "proteins": 22,
+      "carbs": 0,
+      "fats": 18
+    },
+    "meta": {
+      "allergens": [],
+      "tags": [
+        "keto",
+        "gluten-free",
+        "high-protein"
+      ],
+      "average_shelf_life_days": 4,
+      "is_liquid": false
+    },
+    "price_per_100": 1.5,
+    "currency": "EUR",
+    "units_mapping": [
+      {
+        "unit_id": "gram",
+        "weight_grams": 1
+      },
+      {
+        "unit_id": "kilogram",
+        "weight_grams": 1000
+      },
+      {
+        "unit_id": "portion",
+        "weight_grams": 250
+      }
+    ],
+    "is_active": true,
+    "is_deleted": false,
+    "needs_translation": false,
+    "translation_reason": null,
+    "updatedAt": "2026-11-14T08:00:00.000Z"
+  },
+  {
     "id": "lard",
     "slug": "lard",
     "name": {

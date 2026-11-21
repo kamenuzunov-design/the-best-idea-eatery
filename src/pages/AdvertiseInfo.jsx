@@ -41,8 +41,8 @@ const AdvertiseInfo = () => {
   }, [currentLang, t]);
 
   return (
-    <div className="flex-1 bg-background-dark animate-in fade-in duration-500">
-      <header className="p-6 bg-surface-dark border-b border-primary/20 sticky top-0 z-10 flex items-center gap-4 shadow-md">
+    <div className="flex-1 w-full lg:max-w-[1000px] mx-auto lg:pt-5 bg-background-dark animate-in fade-in duration-500">
+      <header className="p-6 bg-surface-dark border-b lg:border border-primary/20 lg:rounded-2xl sticky top-0 z-10 flex items-center gap-4 shadow-md">
         <button 
           onClick={() => navigate(-1)} 
           className="text-primary hover:text-white transition-colors bg-primary/10 size-10 rounded-full flex items-center justify-center border border-primary/30 cursor-pointer"

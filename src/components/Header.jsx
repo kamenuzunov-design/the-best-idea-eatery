@@ -174,7 +174,7 @@ const Header = () => {
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-2xl">restaurant_menu</span>
                 <span className="text-sm font-extrabold text-slate-100 tracking-wider">
-                  The Best Idea Eatery
+                  {t('app.full_name')}
                 </span>
               </div>
               <button 

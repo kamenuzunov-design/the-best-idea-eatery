@@ -104,6 +104,85 @@ const ManageIngredients = () => {
     };
   }, []);
 
+  // Auto-seed missing core meat ingredients (whole-lamb, lamb-meat) for Admins/Owners
+  useEffect(() => {
+    if (!ingredients || ingredients.length === 0 || (!isAdmin && !isOwner)) return;
+    const hasWholeLamb = ingredients.some(i => i.id === 'whole-lamb' || i.slug === 'whole-lamb');
+    const hasLambMeat = ingredients.some(i => i.id === 'lamb-meat' || i.slug === 'lamb-meat');
+
+    if (!hasWholeLamb || !hasLambMeat) {
+      const batch = writeBatch(db);
+      let needed = false;
+      const now = new Date().toISOString();
+
+      if (!hasWholeLamb) {
+        batch.set(doc(db, 'ingredients', 'whole-lamb'), {
+          id: 'whole-lamb',
+          slug: 'whole-lamb',
+          name_bg: 'Цяло агне (агнешко месо с кост)',
+          name_en: 'Whole lamb (with bone)',
+          name: {
+            bg: 'Цяло агне (агнешко месо с кост)',
+            en: 'Whole lamb (with bone)',
+            es: 'Cordero entero (con hueso)',
+            it: 'Agnello intero (con osso)',
+            fr: 'Agneau entier (avec os)',
+            de: 'Ganzes Lamm (mit Knochen)'
+          },
+          classification: { main_group: 'meat', sub_group: 'meat_lamb', cuisine_origin: 'european' },
+          nutrition_per_100: { calories: 230, proteins: 20, carbs: 0, fats: 17 },
+          price_per_100: 1.30,
+          currency: 'EUR',
+          units_mapping: [
+            { unit_id: 'gram', weight_grams: 1 },
+            { unit_id: 'kilogram', weight_grams: 1000 },
+            { unit_id: 'piece', weight_grams: 12000 }
+          ],
+          is_active: true,
+          is_deleted: false,
+          createdAt: now,
+          updatedAt: now
+        });
+        needed = true;
+      }
+
+      if (!hasLambMeat) {
+        batch.set(doc(db, 'ingredients', 'lamb-meat'), {
+          id: 'lamb-meat',
+          slug: 'lamb-meat',
+          name_bg: 'Агнешко месо',
+          name_en: 'Lamb meat',
+          name: {
+            bg: 'Агнешко месо',
+            en: 'Lamb meat',
+            es: 'Carne de cordero',
+            it: 'Carne d\'agnello',
+            fr: 'Viande d\'agneau',
+            de: 'Lammfleisch'
+          },
+          classification: { main_group: 'meat', sub_group: 'meat_lamb', cuisine_origin: 'european' },
+          nutrition_per_100: { calories: 250, proteins: 22, carbs: 0, fats: 18 },
+          price_per_100: 1.50,
+          currency: 'EUR',
+          units_mapping: [
+            { unit_id: 'gram', weight_grams: 1 },
+            { unit_id: 'kilogram', weight_grams: 1000 },
+            { unit_id: 'portion', weight_grams: 250 }
+          ],
+          is_active: true,
+          is_deleted: false,
+          createdAt: now,
+          updatedAt: now
+        });
+        needed = true;
+      }
+
+      if (needed) {
+        batch.commit().catch(err => console.warn('Could not auto-seed lamb ingredients:', err));
+      }
+    }
+  }, [ingredients, isAdmin, isOwner]);
+
   const handleNameEnChange = (e) => {
     const val = e.target.value;
     setNamesByLang(prev => ({ ...prev, en: val }));
@@ -927,8 +1006,8 @@ const ManageIngredients = () => {
   });
 
   return (
-    <div className="flex-1 flex flex-col bg-background-dark pb-24 min-h-screen">
-      <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b border-primary/20 space-y-3">
+    <div className="flex-1 flex flex-col w-full lg:max-w-[1000px] mx-auto lg:pt-5 bg-background-dark pb-24 min-h-screen">
+      <div className="sticky top-0 z-10 p-4 bg-surface-dark/90 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl space-y-3">
         {/* Header Block: Row 1 & Row 2 */}
         <div className="flex flex-col space-y-1">
           {/* Row 1: Back Button, Title, Export CSV, Import CSV, View Toggle */}

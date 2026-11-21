@@ -421,7 +421,7 @@ const OrderHistory = () => {
   }, [history, justCookedId]);
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-32 overflow-x-hidden">
+    <div className="relative flex min-h-screen w-full flex-col bg-background-dark font-display pb-8 overflow-x-hidden">
       {/* Toast Notification */}
       {toastMsg && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[150] bg-emerald-500 text-background-dark px-5 py-2.5 rounded-2xl font-extrabold text-xs uppercase tracking-wider shadow-2xl flex items-center gap-2 animate-in fade-in duration-200">
@@ -431,7 +431,7 @@ const OrderHistory = () => {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-surface-dark/95 backdrop-blur-md border-b border-primary/20 shadow-sm">
+      <header className="sticky top-0 z-10 w-full lg:max-w-[1000px] mx-auto bg-surface-dark/95 backdrop-blur-md border-b lg:border border-primary/20 lg:rounded-2xl lg:mt-4 shadow-sm">
         <div className="flex items-center p-4 justify-between">
           <button
             onClick={() => navigate('/profile')}
@@ -459,7 +459,7 @@ const OrderHistory = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-4 py-5 space-y-5">
+      <main className="flex-1 w-full lg:max-w-[1000px] mx-auto overflow-y-auto px-4 py-5 space-y-5">
         {/* Celebratory Banner if redirected from CookingMode */}
         {justCookedEntry && (
           <div className="bg-gradient-to-r from-emerald-500/15 via-surface-dark to-primary/15 border-2 border-emerald-500/40 rounded-2xl p-4 shadow-lg flex flex-col gap-3">
