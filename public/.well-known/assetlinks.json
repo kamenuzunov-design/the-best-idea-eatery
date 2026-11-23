@@ -1,16 +1,23 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "app.bestideaeatery.twa",
       "sha256_cert_fingerprints": [
-        "EC:73:BE:71:4C:50:1F:EA:C1:C6:1B:CF:EC:36:C6:C2:D7:F8:4B:B2:0A:CA:E5:47:9A:FE:C9:38:59:D8:1E:1B"
+        "EC:73:BE:71:4C:50:1F:EA:C1:C6:1B:CF:EC:36:C6:C2:D7:F8:4B:B2:0A:CA:E5:47:9A:FE:C9:38:59:D8:1E:1B",
+        "08:86:06:66:E6:DF:36:6B:56:F9:59:6F:E9:EB:9F:77:B9:46:F0:81:AB:61:D1:6A:82:8C:E6:9F:D1:CC:C5:B0",
+        "F2:09:EE:84:F5:A9:27:A3:FA:CF:7B:B6:46:40:6D:CE:68:D3:AD:C6:82:C5:07:B1:78:9D:76:06:28:8A:7C:03",
+        "4D:E9:1B:84:72:B2:60:8B:32:00:7A:9A:25:CC:C9:2B:D1:06:8F:4C:F7:73:12:AA:11:44:1A:B7:7C:46:19:35"
       ]
     }
   },
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.thebestideaeatery.app",

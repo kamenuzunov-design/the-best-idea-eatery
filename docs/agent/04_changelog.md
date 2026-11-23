@@ -3,6 +3,11 @@
 Всички забележителни промени в проекта "The Best Idea Eatery" ще бъдат документирани в този файл.
 Файловият формат е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-11-23] - Digital Asset Links (Google Play / `bestideaeatery.app`)
+### Поправено (Fixed)
+- **Обновен `public/.well-known/assetlinks.json`**: Добавени са всички 4 SHA-256 отпечатъка за `app.bestideaeatery.twa` (вкл. `08:86:...`, `F2:09:...` и `4D:E9:...` от Google Play Console) и са запазени двата отпечатъка за `com.thebestideaeatery.app`.
+- **Поправен `firebase.json` за `.well-known`**: Премахнат е глобалният игнор `"**/.*"`, който блокираше качването на скритата папка `dist/.well-known/` при деплой към Firebase Hosting, и е добавен explicit header `Content-Type: application/json` за `/.well-known/assetlinks.json`.
+
 ## [2026-11-21] - Светла тема: Етап 1 (Глобален `brand-*` слой и Десктоп рамка)
 ### Поправено / Подобрено (Fixed / Enhanced)
 - **Пълна поддръжка на `brand-*` токените в светла тема (`src/index.css`)**: Добавена е секция `6. Desktop Gourmet Portal (brand-* tokens) Light Mode`, която мапва всички 52 използвани `brand-*` класа (`bg-brand-charcoal`, `bg-brand-surface`, `bg-brand-surfaceMuted`, `bg-brand-cardDark`, `bg-brand-emeraldBg`, `border-brand-border*`, `border-brand-amber*`, `text-brand-cream`, `text-brand-muted`, `text-brand-amber`, `text-brand-emerald`, `text-brand-charcoal` и `lg:` / `hover:` вариантите им) към светлата палитра *Warm Ivory & Champagne Gold* (`#faf8f3`, `#ffffff`, `#f3efe6`, `#1c1917`, `#967316`).
